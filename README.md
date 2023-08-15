@@ -1,2 +1,2 @@
-# gemuboy-color
+# GBX (Game Boy Color Emulator)
 Gameboy (Color) emulator
