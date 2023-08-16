@@ -1,3 +1,6 @@
+/* ***********************************************************************************************************
+    INCLUDES
+*********************************************************************************************************** */
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
@@ -7,12 +10,19 @@
 #include <SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 //#include <vulkan/vulkan_beta.h>
+#include "logger.h"
 
+/* ***********************************************************************************************************
+    DEFINES
+*********************************************************************************************************** */
 //#define IMGUI_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
 
+/* ***********************************************************************************************************
+    VULKAN/IMGUI CONTEXT VARIABLES
+*********************************************************************************************************** */
 // Data
 static VkAllocationCallbacks* g_Allocator = nullptr;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -28,6 +38,15 @@ static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
 
+/* ***********************************************************************************************************
+ *
+ *  VULKAN RENDER *****
+ *
+*********************************************************************************************************** */
+
+/* ***********************************************************************************************************
+    VULKAN CHECK RESULT
+*********************************************************************************************************** */
 static void check_vk_result(VkResult err)
 {
     if (err == 0)
@@ -37,6 +56,9 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
+/* ***********************************************************************************************************
+    VULKAN DEBUG
+*********************************************************************************************************** */
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
@@ -46,6 +68,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, 
 }
 #endif // IMGUI_VULKAN_DEBUG_REPORT
 
+/* ***********************************************************************************************************
+    VULKAN CHECK EXTENSION
+*********************************************************************************************************** */
 static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properties, const char* extension)
 {
     for (const VkExtensionProperties& p : properties)
@@ -54,6 +79,9 @@ static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properti
     return false;
 }
 
+/* ***********************************************************************************************************
+    VULKAN INIT PHYSICAL DEVICE
+*********************************************************************************************************** */
 static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice()
 {
     uint32_t gpu_count;
@@ -83,6 +111,9 @@ static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice()
     return VK_NULL_HANDLE;
 }
 
+/* ***********************************************************************************************************
+    VULKAN SETUP
+*********************************************************************************************************** */
 static void SetupVulkan(ImVector<const char*> instance_extensions)
 {
     VkResult err;
@@ -210,6 +241,9 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
     }
 }
 
+/* ***********************************************************************************************************
+    VULKAN WINDOW SETUP
+*********************************************************************************************************** */
 // All the ImGui_ImplVulkanH_XXX structures/functions are optional helpers used by the demo.
 // Your real engine/app may not use them.
 static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
@@ -244,6 +278,9 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
     ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
 }
 
+/* ***********************************************************************************************************
+    VULKAN CLEAN
+*********************************************************************************************************** */
 static void CleanupVulkan()
 {
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
@@ -258,11 +295,17 @@ static void CleanupVulkan()
     vkDestroyInstance(g_Instance, g_Allocator);
 }
 
+/* ***********************************************************************************************************
+    CLEAR SCREEN
+*********************************************************************************************************** */
 static void CleanupVulkanWindow()
 {
     ImGui_ImplVulkanH_DestroyWindow(g_Instance, g_Device, &g_MainWindowData, g_Allocator);
 }
 
+/* ***********************************************************************************************************
+    FRAME RENDER
+*********************************************************************************************************** */
 static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
 {
     VkResult err;
@@ -330,6 +373,9 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
     }
 }
 
+/* ***********************************************************************************************************
+    FRAME PRESENT
+*********************************************************************************************************** */
 static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 {
     if (g_SwapChainRebuild)
@@ -352,13 +398,15 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
 }
 
-// Main code
+/* ***********************************************************************************************************
+    MAIN
+*********************************************************************************************************** */
 int main(int, char**)
 {
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
     {
-        printf("Error: %s\n", SDL_GetError());
+        LOG_ERROR(SDL_GetError());
         return -1;
     }
 
@@ -578,3 +626,5 @@ int main(int, char**)
 
     return 0;
 }
+
+
