@@ -3,7 +3,7 @@
 #include <vector>
 #include "defs.h"
 
-typedef enum mapper_types {
+enum mapper_types {
 	ROM_ONLY,
 	MBC1,
 	MBC2,

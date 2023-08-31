@@ -23,7 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{3fe4ace0-5ac0-4fde-8177-956836a9a78f}</ProjectGuid>
     <RootNamespace>gameboyx</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -71,12 +71,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)include\SDL;$(ProjectDir)include\imgui;$(ProjectDir)include\imgui\backends;$(ProjectDir)include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include\SDL;$(ProjectDir)include\imgui;$(ProjectDir)include\imgui\backends;$(ProjectDir)include;$(ProjectDir)include\nfd;$(ProjectDir)include\logger;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)lib;$(ProjectDir)lib\x64\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)include\SDL;$(ProjectDir)include\imgui;$(ProjectDir)include\imgui\backends;$(ProjectDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)lib;$(ProjectDir)lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)include\SDL;$(ProjectDir)include\imgui;$(ProjectDir)include\imgui\backends;$(ProjectDir)include;$(ProjectDir)include\nfd;$(ProjectDir)include\logger;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)lib;$(ProjectDir)lib\x64\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(ProjectDir)include\SDL;$(ProjectDir)include\imgui;$(ProjectDir)include\imgui\backends;$(ProjectDir)include;$(IncludePath)</IncludePath>
@@ -120,9 +120,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -137,9 +137,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,22 +152,26 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Cartridge.cpp" />
+    <ClCompile Include="config_io.cpp" />
     <ClCompile Include="gameboy_x.cpp" />
+    <ClCompile Include="imgui_gameboy_x.cpp" />
     <ClCompile Include="include\imgui\backends\imgui_impl_sdl2.cpp" />
     <ClCompile Include="include\imgui\backends\imgui_impl_vulkan.cpp" />
     <ClCompile Include="include\imgui\imgui.cpp" />
-    <ClCompile Include="include\imgui\imgui_demo.cpp" />
     <ClCompile Include="include\imgui\imgui_draw.cpp" />
     <ClCompile Include="include\imgui\imgui_tables.cpp" />
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="simple_logger.cpp" />
-    <ClCompile Include="vulkan_context.cpp" />
+    <ClCompile Include="include\logger\simple_logger.cpp" />
+    <ClCompile Include="include\nfd\nfd_common.c" />
+    <ClCompile Include="include\nfd\nfd_win.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="cartridge_info.h" />
     <ClInclude Include="config.h" />
+    <ClInclude Include="config_io.h" />
     <ClInclude Include="defs.h" />
+    <ClInclude Include="imgui_gameboy_x.h" />
     <ClInclude Include="include\imgui\backends\imgui_impl_sdl2.h" />
     <ClInclude Include="include\imgui\backends\imgui_impl_vulkan.h" />
     <ClInclude Include="include\imgui\imconfig.h" />
@@ -176,8 +180,14 @@
     <ClInclude Include="include\imgui\imstb_rectpack.h" />
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
-    <ClInclude Include="logger.h" />
-    <ClInclude Include="vulkan_context.h" />
+    <ClInclude Include="include\logger\logger.h" />
+    <ClInclude Include="include\nfd\common.h" />
+    <ClInclude Include="include\nfd\nfd.h" />
+    <ClInclude Include="include\nfd\nfd_common.h" />
+    <ClInclude Include="include\nfd\simple_exec.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="nfd_cocoa.m" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

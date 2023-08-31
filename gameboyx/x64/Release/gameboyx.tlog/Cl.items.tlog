@@ -1,0 +1,13 @@
+E:\_Workspace\_github\gameboyx\gameboyx\Cartridge.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\Cartridge.obj
+E:\_Workspace\_github\gameboyx\gameboyx\config_io.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\config_io.obj
+E:\_Workspace\_github\gameboyx\gameboyx\gameboy_x.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\gameboy_x.obj
+E:\_Workspace\_github\gameboyx\gameboyx\imgui_gameboy_x.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\imgui_gameboy_x.obj
+E:\_Workspace\_github\gameboyx\gameboyx\include\imgui\backends\imgui_impl_sdl2.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\imgui_impl_sdl2.obj
+E:\_Workspace\_github\gameboyx\gameboyx\include\imgui\backends\imgui_impl_vulkan.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\imgui_impl_vulkan.obj
+E:\_Workspace\_github\gameboyx\gameboyx\include\imgui\imgui.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\imgui.obj
+E:\_Workspace\_github\gameboyx\gameboyx\include\imgui\imgui_draw.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\imgui_draw.obj
+E:\_Workspace\_github\gameboyx\gameboyx\include\imgui\imgui_tables.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\imgui_tables.obj
+E:\_Workspace\_github\gameboyx\gameboyx\include\imgui\imgui_widgets.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\imgui_widgets.obj
+E:\_Workspace\_github\gameboyx\gameboyx\include\logger\simple_logger.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\simple_logger.obj
+E:\_Workspace\_github\gameboyx\gameboyx\include\nfd\nfd_common.c;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\nfd_common.obj
+E:\_Workspace\_github\gameboyx\gameboyx\include\nfd\nfd_win.cpp;E:\_Workspace\_github\gameboyx\gameboyx\x64\Release\nfd_win.obj
