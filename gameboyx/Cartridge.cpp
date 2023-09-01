@@ -1,59 +1,91 @@
 #include "Cartridge.h"
 
 #include <fstream>
-#include "config.h"
 
-Cartridge::Cartridge(char* file_path){
-	this->file_path = file_path;
-	read_buffer = std::vector<char>();
+#include "config.h"
+#include "logger.h"
+#include "game_info.h"
+
+Cartridge::Cartridge(game_info& game_ctx) :
+	game_ctx(&game_ctx)
+{}
+
+bool Cartridge::ReadData() {
+	if (!read_rom_to_buffer(*this->game_ctx, vec_read_rom)) return false;
+	if(!read_header_info(*this->game_ctx, vec_read_rom)) return false;
+
+	// TODO: load cartridge data for execution
+
+	return true;
 }
 
-bool Cartridge::read_data() {
-	// read cartridge data to buffer
-	printf("\nFile to load: %s\n", file_path);
+bool Cartridge::read_header_info(game_info& game_ctx, vector<byte>& vec_read_rom) {
+	// read header info -----
 
-	std::ifstream file(file_path, std::ios::binary | std::ios::ate);
+	// cgb/sgb flags
+	game_ctx.is_gbc = vec_read_rom[ROM_HEAD_CGBFLAG] == byte{ 0x80 } || vec_read_rom[ROM_HEAD_CGBFLAG] == byte{ 0xC0 };
+	game_ctx.is_sgb = vec_read_rom[ROM_HEAD_SGBFLAG] == byte{ 0x03 };
+
+	// title
+	string title = "";
+	int title_size_max = (game_ctx.is_gbc ? ROM_HEAD_TITLE_SIZE_CGB : ROM_HEAD_TITLE_SIZE_GB);
+	for (int i = 0; vec_read_rom[ROM_HEAD_TITLE + i] != byte{0x00} && i < title_size_max; i++) {
+		title += (char)vec_read_rom[ROM_HEAD_TITLE + i];
+	}
+	game_ctx.title = title;
+
+	// licensee
+	string licensee_code("");
+	licensee_code += (char)vec_read_rom[ROM_HEAD_NEWLIC];
+	licensee_code += (char)vec_read_rom[ROM_HEAD_NEWLIC + 1];
+
+	game_ctx.licensee = get_licensee(vec_read_rom[ROM_HEAD_OLDLIC], licensee_code);
+
+	// cart type
+	game_ctx.cart_type = get_cart_type(vec_read_rom[ROM_HEAD_HW_TYPE]);
+
+	// checksum
+	game_ctx.chksum = to_integer<u8>(vec_read_rom[ROM_HEAD_CHKSUM]);
+	u8 chksum_calulated = 0;
+	for (int i = ROM_HEAD_TITLE; i <= ROM_HEAD_MASK; i++) {
+		chksum_calulated -= (to_integer<u8>(vec_read_rom[i]) + 1);
+	}
+
+	game_ctx.chksum_passed = (game_ctx.chksum.compare(to_string(chksum_calulated)) == 0);
+	LOG_INFO("Header read (checksum passed: ", (game_ctx.chksum_passed ? "true" : "false"), ")");
+	return true;
+}
+
+bool Cartridge::read_rom_to_buffer(const game_info& game_ctx, vector<byte> &vec_read_rom) {
+	LOG_INFO("Reading file");
+
+	vec_read_rom.clear();
+	auto read_buffer = vector<char>();
+
+	string full_file_path = get_full_file_path(game_ctx);
+
+	ifstream file(full_file_path, ios::binary | ios::ate);
 	if (!file) {
-		printf("\nFailed to open file\n");
+		LOG_ERROR("Failed to open file");
 		return false;
 	}
 
-	std::streamsize size = file.tellg();
-	file.seekg(0, std::ios::beg);
+	streamsize size = file.tellg();
+	file.seekg(0, ios::beg);
 
-	read_buffer = std::vector<char>(size);
+	read_buffer = vector<char>(size);
 
 	if (!file.read(read_buffer.data(), size)) {
-		printf("\nFailed to read file\n");
+		LOG_ERROR("Failed to read file");
+		file.close();
 		return false;
 	}
 
+	vec_read_rom = vector<byte>(read_buffer.size());
+
+	for (char c : read_buffer) {
+		vec_read_rom.push_back((byte)(c & 0xff));
+	}
 	file.close();
-
-#ifdef DEBUG_READ
-	printf("\nSize:\t\t\t%i Bytes / %.2f kB\n", (int)read_buffer.size(), read_buffer.size() / 1000.0);
-
-	printf("\n\n ----- ROM DATA -----\n\nAddr.\t  ");
-	for (int i = 0; i < 0x10; i++) {
-		printf("0x%.2x ", i);
-	}
-	printf("\n\n");
-	for (int y = 0; y < read_buffer.size() / 0x10; y++) {
-		printf("0x%.6x\t", y * 0x10);
-		for (int x = 0; x < 0x10; x++) {
-			printf("  %.2x ", read_buffer[y * 0x10 + x] & 0xff);
-		}
-		printf("\n");
-	}
-#endif
-
-	// interprete rom header
-
-
-
-
-
-
-
 	return true;
 }

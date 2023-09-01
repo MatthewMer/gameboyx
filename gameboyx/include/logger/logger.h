@@ -165,9 +165,9 @@ inline void _logInfo(size_t lineNumber, const char* file, const Args &... args) 
 
 // Faster shortcut if no variadic arguments are used
 template<size_t N>
-inline void _logInfo(size_t lineNumber, const char* file, const char (& message)[N]) {
+inline void _logInfo(size_t lineNumber, const char* file, const char(&message)[N]) {
     //logInfo(0, 0, "Correct", 0);
-    logInfo(lineNumber, file, message, N-1);
+    logInfo(lineNumber, file, message, N - 1);
 }
 
 template<typename... Args>
@@ -179,9 +179,9 @@ inline void _logWarn(size_t lineNumber, const char* file, const Args &... args) 
 
 // Faster shortcut if no variadic arguments are used
 template<size_t N>
-inline void _logWarn(size_t lineNumber, const char* file, const char (& message)[N]) {
+inline void _logWarn(size_t lineNumber, const char* file, const char(&message)[N]) {
     //logInfo(0, 0, "Correct", 0);
-    logWarn(lineNumber, file, message, N-1);
+    logWarn(lineNumber, file, message, N - 1);
 }
 
 template<typename... Args>
@@ -193,7 +193,7 @@ inline void _logError(size_t lineNumber, const char* file, const Args &... args)
 
 // Faster shortcut if no variadic arguments are used
 template<size_t N>
-inline void _logError(size_t lineNumber, const char* file, const char (& message)[N]) {
+inline void _logError(size_t lineNumber, const char* file, const char(&message)[N]) {
     //logInfo(0, 0, "Correct", 0);
-    logError(lineNumber, file, message, N-1);
+    logError(lineNumber, file, message, N - 1);
 }

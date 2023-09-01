@@ -152,9 +152,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Cartridge.cpp" />
-    <ClCompile Include="config_io.cpp" />
-    <ClCompile Include="gameboy_x.cpp" />
-    <ClCompile Include="imgui_gameboy_x.cpp" />
+    <ClCompile Include="games_config_io.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="game_info.cpp" />
+    <ClCompile Include="ImGuiGameboyX.cpp" />
     <ClCompile Include="include\imgui\backends\imgui_impl_sdl2.cpp" />
     <ClCompile Include="include\imgui\backends\imgui_impl_vulkan.cpp" />
     <ClCompile Include="include\imgui\imgui.cpp" />
@@ -167,11 +168,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cartridge.h" />
-    <ClInclude Include="cartridge_info.h" />
     <ClInclude Include="config.h" />
-    <ClInclude Include="config_io.h" />
+    <ClInclude Include="games_config_io.h" />
     <ClInclude Include="defs.h" />
-    <ClInclude Include="imgui_gameboy_x.h" />
+    <ClInclude Include="game_info.h" />
+    <ClInclude Include="ImGuiGameboyX.h" />
     <ClInclude Include="include\imgui\backends\imgui_impl_sdl2.h" />
     <ClInclude Include="include\imgui\backends\imgui_impl_vulkan.h" />
     <ClInclude Include="include\imgui\imconfig.h" />

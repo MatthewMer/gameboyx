@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="gameboy_x.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Cartridge.cpp">
@@ -39,10 +39,10 @@
     <ClCompile Include="include\imgui\backends\imgui_impl_vulkan.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_gameboy_x.cpp">
+    <ClCompile Include="ImGuiGameboyX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_io.cpp">
+    <ClCompile Include="games_config_io.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="include\nfd\nfd_common.c">
@@ -54,12 +54,12 @@
     <ClCompile Include="include\logger\simple_logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="game_info.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cartridge.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="cartridge_info.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config.h">
@@ -92,10 +92,10 @@
     <ClInclude Include="include\imgui\backends\imgui_impl_vulkan.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="imgui_gameboy_x.h">
+    <ClInclude Include="ImGuiGameboyX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_io.h">
+    <ClInclude Include="games_config_io.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\nfd\common.h">
@@ -111,6 +111,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\logger\logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_info.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
