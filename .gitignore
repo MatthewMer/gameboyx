@@ -49,11 +49,11 @@ Thumbs.db
 *.exe
 
 #directories
-x64
+/x64
 Win32
-x64/Debug
+/x64/Debug
 Win32/Debug
-x64/Release
+/x64/Release
 Win32/Release
 gameboyx/rom
 gameboyx/config
