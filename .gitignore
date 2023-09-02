@@ -51,8 +51,14 @@ Thumbs.db
 #directories
 x64
 Win32
+x64/Debug
+Win32/Debug
+x64/Release
+Win32/Release
 gameboyx/rom
 gameboyx/config
+Release
+Debug
 
 *.gbc
 *.gb
