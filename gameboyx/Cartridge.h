@@ -16,13 +16,14 @@ class Cartridge
 {
 private:
 	// vec_read_rom
-	std::vector<std::byte> vec_read_rom;
+	std::vector<u8> vec_read_rom;
 	game_info* game_ctx;
 
 public:
 	explicit Cartridge(game_info& game_ctx);
 	bool ReadData();
 
-	static bool read_header_info(game_info& game_info, std::vector<std::byte>& vec_read_rom);
-	static bool read_rom_to_buffer(const game_info& game_info, std::vector<std::byte> &vec_read_rom);
+	static bool read_header_info(game_info& game_info, std::vector<u8>& vec_rom);
+	static bool read_rom_to_buffer(const game_info& game_info, std::vector<u8> &vec_rom);
+	static bool copy_rom_to_rom_folder(game_info& game_info, const std::vector<u8>& vec_rom, const std::string& new_file_path);
 };

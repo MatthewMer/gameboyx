@@ -17,7 +17,6 @@ const string licensee = "licensee";
 const string dest_code = "dest_code";
 const string is_gbc = "is_gbc";
 const string is_sgb = "is_sgb";
-const string chksum = "chksum";
 const string file_path = "file_path";
 
 
@@ -69,14 +68,6 @@ bool read_games_from_config(vector<game_info>& games, const string& config_path)
                 else if (param[0].compare(game_ver) == 0) {
                     entry.game_ver = param[1];
                 }
-                else if (param[0].compare(chksum) == 0) {
-                    if (param[1].length() != 2) {
-                        LOG_ERROR("Faulty entry (semantics) on line ", i, ": \"", c_line, "\"");
-                    }
-                    else {
-                        entry.chksum = param[1];
-                    }
-                }
             }
             else if(strcmp(c_line, "") != 0) {
                 LOG_ERROR("Faulty entry (syntax) on line ", i, ": \"", c_line, "\"");
@@ -118,7 +109,6 @@ bool write_game_to_config(const game_info& game_ctx, const string& config_path) 
     fs << cart_type << "=" << game_ctx.cart_type << endl;
     fs << licensee << "=" << game_ctx.licensee << endl;
     fs << dest_code << "=" << game_ctx.dest_code << endl;
-    fs << chksum << "=" << game_ctx.chksum << endl;
 
     fs.close();
 

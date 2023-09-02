@@ -103,9 +103,9 @@ void ImGuiGameboyX::ShowWindowAbout() {
 }
 
 void ImGuiGameboyX::ShowNewGameDialog() {
-    string s_path_rom = fs::current_path().string() + rom_folder;
+    string s_path_rom_folder = fs::current_path().string() + rom_folder;
 
-    if (!check_path(s_path_rom)) {
+    if (!check_path(s_path_rom_folder)) {
         LOG_ERROR("Couldn't create rom folder");
         show_new_game_dialog = false;
         return;
@@ -119,33 +119,39 @@ void ImGuiGameboyX::ShowNewGameDialog() {
         return;
     }
 
-    auto c_path_rom = s_path_rom.c_str();
-
     nfdchar_t* out_path = nullptr;
     auto filter_items = (nfdfilteritem_t*)malloc(sizeof(nfdfilteritem_t) * file_exts.size());
     for (int i = 0; i < file_exts.size(); i++) {
         filter_items[i] = {file_exts[i][0].c_str(), file_exts[i][1].c_str() };
     }
 
-    auto result = NFD_OpenDialog(&out_path, filter_items, 2, nullptr);
+    auto result = NFD_OpenDialog(&out_path, filter_items, 2, s_path_rom_folder.c_str());
     if (result == NFD_OKAY) {
         if (out_path != nullptr) {
-            string new_path_to_rom(out_path);
-            auto vec_new_path_to_rom = split_path(new_path_to_rom);
+            string path_to_rom(out_path);
+            auto vec_path_to_rom = split_path(path_to_rom);
 
-            if (!check_ext(vec_new_path_to_rom.back())) return;
+            if (!check_ext(vec_path_to_rom.back())) return;
 
-            auto game_ctx = game_info("");
+            auto game_ctx = game_info();
             game_ctx.file_path = "";
-            for (int i = 0; i < vec_new_path_to_rom.size() - 1; i++) {
-                game_ctx.file_path += vec_new_path_to_rom[i] + "\\";
+            for (int i = 0; i < vec_path_to_rom.size() - 1; i++) {
+                game_ctx.file_path += vec_path_to_rom[i] + "/";
             }
-            game_ctx.file_name = vec_new_path_to_rom.back();
+            game_ctx.file_name = vec_path_to_rom.back();
 
-            vector<byte> vec_rom;
+            vector<u8> vec_rom;
             if (!Cartridge::read_rom_to_buffer(game_ctx, vec_rom)) {
                 show_new_game_dialog = false;
                 return;
+            }
+
+            LOG_WARN(s_path_rom_folder, ",", game_ctx.file_path);
+
+            if (s_path_rom_folder.compare(game_ctx.file_path) != 0) {
+                if (!Cartridge::copy_rom_to_rom_folder(game_ctx, vec_rom, s_path_rom_folder)) {
+                    LOG_ERROR("Couldn't copy rom file to /rom. Fallback to given path");
+                }
             }
 
             if (!Cartridge::read_header_info(game_ctx, vec_rom)) {
@@ -213,7 +219,6 @@ void ImGuiGameboyX::KeyUp(SDL_Keycode key) {
 
 
 static bool check_ext(const string& file) {
-    LOG_WARN(file);
     string delimiter = ".";
     int ext_start = (int)file.find(delimiter) + 1;
     string file_ext = file.substr(ext_start, file.length() - ext_start);
@@ -230,10 +235,11 @@ static vector<string> split_path(const string& path) {
     vector<string> path_split;
     string path_copy = path;
 
-    string delimiter = "\\";
-    while (path_copy.find(delimiter) != string::npos) {
-        path_split.push_back(path_copy.substr(0, path_copy.find(delimiter)));
-        path_copy.erase(0, path_copy.find(delimiter) + delimiter.length());
+    const string delimiter = "\\";
+
+    while (int pos = path_copy.find(delimiter) != string::npos) {
+        path_split.push_back(path_copy.substr(0, pos));
+        path_copy.erase(0, pos + delimiter.length());
     }
     path_split.push_back(path_copy);
 
