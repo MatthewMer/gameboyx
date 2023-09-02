@@ -20,22 +20,22 @@ public:
 
 protected:
 	// constructor
-	ImGuiGameboyX() = default;
+	ImGuiGameboyX();
 	static ImGuiGameboyX* instance;
 
 private:
 	// variables
-	vector<game_info> games = vector<game_info>();
+	std::vector<game_info> games = std::vector<game_info>();
 
 	bool show_gui = true;
 	bool show_main_menu_bar = true;
 	bool show_win_about = false;
-	bool show_new_game_dialogue = false;
+	bool show_new_game_dialog = false;
 
 	// gui functions
 	void ShowMainMenuBar();
 	void ShowWindowAbout();
-	void ShowNewGameDialogue();
+	void ShowNewGameDialog();
 	void ShowGameSelect();
 
 	// misc functions

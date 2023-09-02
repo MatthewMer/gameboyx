@@ -6,6 +6,8 @@
 #include "logger.h"
 #include "game_info.h"
 
+using namespace std;
+
 Cartridge::Cartridge(game_info& game_ctx) :
 	game_ctx(&game_ctx)
 {}
@@ -19,36 +21,36 @@ bool Cartridge::ReadData() {
 	return true;
 }
 
-bool Cartridge::read_header_info(game_info& game_ctx, vector<byte>& vec_read_rom) {
+bool Cartridge::read_header_info(game_info& game_ctx, vector<byte>& vec_rom) {
 	// read header info -----
 
 	// cgb/sgb flags
-	game_ctx.is_gbc = vec_read_rom[ROM_HEAD_CGBFLAG] == byte{ 0x80 } || vec_read_rom[ROM_HEAD_CGBFLAG] == byte{ 0xC0 };
-	game_ctx.is_sgb = vec_read_rom[ROM_HEAD_SGBFLAG] == byte{ 0x03 };
+	game_ctx.is_gbc = vec_rom[ROM_HEAD_CGBFLAG] == byte{ 0x80 } || vec_rom[ROM_HEAD_CGBFLAG] == byte{ 0xC0 };
+	game_ctx.is_sgb = vec_rom[ROM_HEAD_SGBFLAG] == byte{ 0x03 };
 
 	// title
 	string title = "";
 	int title_size_max = (game_ctx.is_gbc ? ROM_HEAD_TITLE_SIZE_CGB : ROM_HEAD_TITLE_SIZE_GB);
-	for (int i = 0; vec_read_rom[ROM_HEAD_TITLE + i] != byte{0x00} && i < title_size_max; i++) {
-		title += (char)vec_read_rom[ROM_HEAD_TITLE + i];
+	for (int i = 0; vec_rom[ROM_HEAD_TITLE + i] != byte{0x00} && i < title_size_max; i++) {
+		title += (char)vec_rom[ROM_HEAD_TITLE + i];
 	}
 	game_ctx.title = title;
 
 	// licensee
 	string licensee_code("");
-	licensee_code += (char)vec_read_rom[ROM_HEAD_NEWLIC];
-	licensee_code += (char)vec_read_rom[ROM_HEAD_NEWLIC + 1];
+	licensee_code += (char)vec_rom[ROM_HEAD_NEWLIC];
+	licensee_code += (char)vec_rom[ROM_HEAD_NEWLIC + 1];
 
-	game_ctx.licensee = get_licensee(vec_read_rom[ROM_HEAD_OLDLIC], licensee_code);
+	game_ctx.licensee = get_licensee(vec_rom[ROM_HEAD_OLDLIC], licensee_code);
 
 	// cart type
-	game_ctx.cart_type = get_cart_type(vec_read_rom[ROM_HEAD_HW_TYPE]);
+	game_ctx.cart_type = get_cart_type(vec_rom[ROM_HEAD_HW_TYPE]);
 
 	// checksum
-	game_ctx.chksum = to_integer<u8>(vec_read_rom[ROM_HEAD_CHKSUM]);
+	game_ctx.chksum = to_integer<u8>(vec_rom[ROM_HEAD_CHKSUM]);
 	u8 chksum_calulated = 0;
 	for (int i = ROM_HEAD_TITLE; i <= ROM_HEAD_MASK; i++) {
-		chksum_calulated -= (to_integer<u8>(vec_read_rom[i]) + 1);
+		chksum_calulated -= (to_integer<u8>(vec_rom[i]) + 1);
 	}
 
 	game_ctx.chksum_passed = (game_ctx.chksum.compare(to_string(chksum_calulated)) == 0);
@@ -56,10 +58,10 @@ bool Cartridge::read_header_info(game_info& game_ctx, vector<byte>& vec_read_rom
 	return true;
 }
 
-bool Cartridge::read_rom_to_buffer(const game_info& game_ctx, vector<byte> &vec_read_rom) {
+bool Cartridge::read_rom_to_buffer(const game_info& game_ctx, vector<byte> &vec_rom) {
 	LOG_INFO("Reading file");
 
-	vec_read_rom.clear();
+	vec_rom.clear();
 	auto read_buffer = vector<char>();
 
 	string full_file_path = get_full_file_path(game_ctx);
@@ -81,10 +83,10 @@ bool Cartridge::read_rom_to_buffer(const game_info& game_ctx, vector<byte> &vec_
 		return false;
 	}
 
-	vec_read_rom = vector<byte>(read_buffer.size());
+	vec_rom = vector<byte>(read_buffer.size());
 
-	for (char c : read_buffer) {
-		vec_read_rom.push_back((byte)(c & 0xff));
+	for (const char& c : read_buffer) {
+		vec_rom.push_back((byte)(c & 0xff));
 	}
 	file.close();
 	return true;

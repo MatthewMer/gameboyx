@@ -46,19 +46,13 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
+*.exe
 
 #directories
-x64/Release/rom
-Release/rom
-x64/Debug/rom
-Debug/rom
+x64
+Win32
 gameboyx/rom
-
-x64/Release/games.ini
-Release/games.ini
-x64/Debug/games.ini
-Debug/games.ini
-gameboyx/games.ini
+gameboyx/config
 
 *.gbc
 *.gb

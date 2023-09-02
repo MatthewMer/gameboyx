@@ -2,7 +2,10 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>E:\_Workspace\_localcopies\gameboyx\x64\Release\gameboyx.exe</FullPath>
+      <FullPath>E:\_Workspace\github\gameboyx\x64\Release\SDL2.dll</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\_Workspace\github\gameboyx\x64\Release\gameboyx.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />
