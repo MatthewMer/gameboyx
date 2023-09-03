@@ -4,9 +4,9 @@
 #include "ImGuiGameboyX.h"
 #include "imgui.h"
 #include "config.h"
+#include "config_io.h"
 #include "nfd.h"
 #include "logger.h"
-#include "config_io.h"
 #include "helper_functions.h"
 
 using namespace std;
@@ -25,6 +25,12 @@ ImGuiGameboyX* ImGuiGameboyX::getInstance() {
 
 ImGuiGameboyX::ImGuiGameboyX() {
     NFD_Init();
+    check_and_create_folders();
+    if (check_and_create_files()) {
+        if (!read_games_from_config(this->games, config_folder + games_config_file)) {
+            LOG_ERROR("Error while reading games.ini");
+        }
+    }
 }
 
 void ImGuiGameboyX::ShowGUI() {
@@ -85,6 +91,7 @@ void ImGuiGameboyX::ShowWindowAbout() {
 
 void ImGuiGameboyX::ShowNewGameDialog() {
     if (!check_and_create_folders()) {
+        LOG_ERROR("Required subfolders don't exist");
         show_new_game_dialog = false;
         return;
     }
@@ -111,13 +118,13 @@ void ImGuiGameboyX::ShowNewGameDialog() {
 
             for (const auto& n : games) {
                 if (game_ctx == n) {
-                    LOG_WARN("Game already added");
+                    LOG_WARN("Game already added ! Process aborted");
                     show_new_game_dialog = false;
                     return;
                 }
             }
 
-            if (!Cartridge::write_new_game(game_ctx)) {
+            if (!write_new_game(game_ctx)) {
                 show_new_game_dialog = false;
                 return;
             }

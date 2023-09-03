@@ -3,7 +3,6 @@
 #include "Cartridge.h"
 #include <SDL.h>
 
-
 class ImGuiGameboyX {
 public:
 	// singleton instance access

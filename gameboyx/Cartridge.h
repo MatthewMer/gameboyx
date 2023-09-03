@@ -27,5 +27,4 @@ public:
 	static bool read_rom_to_buffer(const game_info& game_info, std::vector<u8> &vec_rom);
 	static bool copy_rom_to_rom_folder(game_info& game_info, std::vector<u8>& vec_rom, const std::string& new_file_path);
 	static bool read_new_game(game_info& game_ctx, const std::string& path_to_rom);
-	static bool write_new_game(const game_info& game_ctx);
 };

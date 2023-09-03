@@ -4,8 +4,6 @@
 
 #include "config.h"
 #include "logger.h"
-#include "game_info.h"
-#include "config_io.h"
 #include "helper_functions.h"
 
 using namespace std;
@@ -81,29 +79,29 @@ bool Cartridge::read_rom_to_buffer(const game_info& game_ctx, vector<u8> &vec_ro
 	return !vec_rom.empty();
 }
 
-bool Cartridge::copy_rom_to_rom_folder(game_info& game_info, std::vector<u8>& vec_rom, const string& new_file_path) {
-	if (new_file_path.compare(game_info.file_path) == 0) return true;
+bool Cartridge::copy_rom_to_rom_folder(game_info& game_ctx, std::vector<u8>& vec_rom, const string& new_file_path) {
+	if (new_file_path.compare(game_ctx.file_path) == 0) return true;
 	
-	LOG_INFO("Copying file to ./rom");
+	LOG_INFO("Copying file to .", rom_folder);
 
-	if (check_and_create_file(new_file_path + game_info.file_name)) {
-		LOG_WARN("File with same name already in ./rom");
+	if (check_and_create_file(rom_folder + game_ctx.file_name)) {
+		LOG_WARN("File with same name already in .", rom_folder);
 		return false;
 	}
 	
-	ofstream os(new_file_path + game_info.file_name, ios::binary | ios::beg);
+	ofstream os(new_file_path + game_ctx.file_name, ios::binary | ios::beg);
 	if (!os) { return false; }
 	copy(vec_rom.begin(), vec_rom.end(), ostream_iterator<u8>(os));
 	os.close();
 
-	ifstream is(new_file_path + game_info.file_name, ios::binary);
+	ifstream is(new_file_path + game_ctx.file_name, ios::binary);
 	if (!is) { return false; }
 	vector<u8> read_buffer((istreambuf_iterator<char>(is)), istreambuf_iterator<char>());
 	
 	if (!equal(vec_rom.begin(), vec_rom.end(), read_buffer.begin()) || vec_rom.size() != read_buffer.size()) { return false; }
 
 	vec_rom = read_buffer;
-	game_info.file_path = new_file_path;
+	game_ctx.file_path = new_file_path;
 	return true;
 }
 
@@ -138,10 +136,4 @@ bool Cartridge::read_new_game(game_info& game_ctx, const string& path_to_rom) {
 	}
 
 	return true;
-}
-
-bool Cartridge::write_new_game(const game_info& game_ctx) {
-	string current_path = get_current_path();
-	string s_path_config = current_path + config_folder;
-	return write_game_to_config(game_ctx, s_path_config + games_config_file);
 }
