@@ -1,16 +1,20 @@
 #pragma once
 
-// GBX DEFINES
+/* ***********************************************************************************************************
+    defines
+*********************************************************************************************************** */
+
+// GBX DEFINES *****
 #define _DEBUG_GBX
 
-#define GBX_RELEASE	"PRE-ALPHA"
-#define GBX_VERSION	1
-#define GBX_VERSION_SUB 0
-#define GBX_AUTHOR "MatthewMer"
+#define GBX_RELEASE					"PRE-ALPHA"
+#define GBX_VERSION					1
+#define GBX_VERSION_SUB				0
+#define GBX_AUTHOR					"MatthewMer"
 
 #define GUI_BG_BRIGHTNESS			0.9f
 
-// ROM HEADER
+// ROM HEADER *****
 #define ROM_HEAD_ADDR				0x0100
 #define ROM_HEAD_SIZE				0x0050
 
@@ -26,9 +30,16 @@
 #define ROM_HEAD_RAMSIZE			0x0149
 #define ROM_HEAD_DEST				0x014A				// 0x00 = japan, 0x01 = overseas
 #define ROM_HEAD_OLDLIC				0x014B
-#define ROM_HEAD_MASK				0x014C
+#define ROM_HEAD_VERSION			0x014C
 #define ROM_HEAD_CHKSUM				0x014D
 #define ROM_HEAD_CHKGLOB			0x014E
 
 #define ROM_HEAD_TITLE_SIZE_CGB		15
 #define ROM_HEAD_TITLE_SIZE_GB		16
+
+/* ***********************************************************************************************************
+    CONSTANTS
+*********************************************************************************************************** */
+inline const std::string rom_folder = "\\rom\\";
+inline const std::string config_folder = "\\config\\";
+inline const std::string games_config_file = "games.ini";

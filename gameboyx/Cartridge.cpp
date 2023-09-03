@@ -5,6 +5,8 @@
 #include "config.h"
 #include "logger.h"
 #include "game_info.h"
+#include "config_io.h"
+#include "helper_functions.h"
 
 using namespace std;
 
@@ -50,9 +52,15 @@ bool Cartridge::read_header_info(game_info& game_ctx, vector<u8>& vec_rom) {
 	// checksum
 	u8 chksum_expected = vec_rom[ROM_HEAD_CHKSUM];
 	u8 chksum_calulated = 0;
-	for (int i = ROM_HEAD_TITLE; i <= ROM_HEAD_MASK; i++) {
+	for (int i = ROM_HEAD_TITLE; i < ROM_HEAD_CHKSUM; i++) {
 		chksum_calulated -= ((vec_rom[i]) + 1);
 	}
+
+	// game version
+	game_ctx.game_ver = to_string(vec_rom[ROM_HEAD_VERSION]);
+
+	// destination code
+	game_ctx.dest_code = get_dest_code(vec_rom[ROM_HEAD_DEST]);
 
 	game_ctx.chksum_passed = chksum_expected == chksum_calulated;
 	LOG_INFO("Header read (checksum passed: ", (game_ctx.chksum_passed ? "true" : "false"), ")");
@@ -64,19 +72,26 @@ bool Cartridge::read_rom_to_buffer(const game_info& game_ctx, vector<u8> &vec_ro
 
 	string full_file_path = get_full_file_path(game_ctx);
 
-	ifstream is(full_file_path, ios::binary);
+	ifstream is(full_file_path, ios::binary | ios::beg);
 	if (!is) { return false; }
 	vector<u8> read_buffer((istreambuf_iterator<char>(is)), istreambuf_iterator<char>());
-	vec_rom = read_buffer;
-
 	is.close();
-	return true;
+
+	vec_rom = vector<u8>(read_buffer);
+	return !vec_rom.empty();
 }
 
-bool Cartridge::copy_rom_to_rom_folder(game_info& game_info, const std::vector<u8>& vec_rom, const string& new_file_path) {
-	LOG_INFO("Copying file to /rom");
+bool Cartridge::copy_rom_to_rom_folder(game_info& game_info, std::vector<u8>& vec_rom, const string& new_file_path) {
+	if (new_file_path.compare(game_info.file_path) == 0) return true;
 	
-	ofstream os(new_file_path + game_info.file_name, ios::binary);
+	LOG_INFO("Copying file to ./rom");
+
+	if (check_and_create_file(new_file_path + game_info.file_name)) {
+		LOG_WARN("File with same name already in ./rom");
+		return false;
+	}
+	
+	ofstream os(new_file_path + game_info.file_name, ios::binary | ios::beg);
 	if (!os) { return false; }
 	copy(vec_rom.begin(), vec_rom.end(), ostream_iterator<u8>(os));
 	os.close();
@@ -85,8 +100,48 @@ bool Cartridge::copy_rom_to_rom_folder(game_info& game_info, const std::vector<u
 	if (!is) { return false; }
 	vector<u8> read_buffer((istreambuf_iterator<char>(is)), istreambuf_iterator<char>());
 	
-	if (!equal(vec_rom.begin(), vec_rom.end(), read_buffer.begin())) { return false; }
+	if (!equal(vec_rom.begin(), vec_rom.end(), read_buffer.begin()) || vec_rom.size() != read_buffer.size()) { return false; }
 
+	vec_rom = read_buffer;
 	game_info.file_path = new_file_path;
 	return true;
+}
+
+bool Cartridge::read_new_game(game_info& game_ctx, const string& path_to_rom) {
+	auto vec_path_to_rom = split_string(path_to_rom, "\\");
+
+	string current_path = get_current_path();
+	string s_path_rom_folder = current_path + rom_folder;
+	string s_path_config = current_path + config_folder;
+
+	if (!check_ext(vec_path_to_rom.back())) return false;
+
+	game_ctx.file_path = "";
+	for (int i = 0; i < vec_path_to_rom.size() - 1; i++) {
+		game_ctx.file_path += vec_path_to_rom[i] + "\\";
+	}
+	game_ctx.file_name = vec_path_to_rom.back();
+
+	vector<u8> vec_rom;
+	if (!Cartridge::read_rom_to_buffer(game_ctx, vec_rom)) {
+		LOG_ERROR("Error while reading rom");
+		return false;
+	}
+
+	if (!Cartridge::copy_rom_to_rom_folder(game_ctx, vec_rom, s_path_rom_folder)) {
+		LOG_WARN("Fallback to given path");
+	}
+
+	if (!Cartridge::read_header_info(game_ctx, vec_rom)) {
+		LOG_ERROR("Rom header corrupted");
+		return false;
+	}
+
+	return true;
+}
+
+bool Cartridge::write_new_game(const game_info& game_ctx) {
+	string current_path = get_current_path();
+	string s_path_config = current_path + config_folder;
+	return write_game_to_config(game_ctx, s_path_config + games_config_file);
 }

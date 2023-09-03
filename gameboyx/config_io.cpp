@@ -2,6 +2,7 @@
 #include "game_info.h"
 #include "logger.h"
 #include "helper_functions.h"
+#include "config.h"
 
 #include <fstream>
 #include <string>
@@ -27,7 +28,7 @@ bool read_games_from_config(vector<game_info>& games, const string& config_path)
     }
 
 
-    
+    return true;
 }
 
 bool write_game_to_config(const game_info& game_ctx, const string& config_path) {
@@ -56,6 +57,25 @@ bool write_game_to_config(const game_info& game_ctx, const string& config_path) 
 bool delete_game_from_config(const game_info& game_ctx, const string& config_path) {
     if (!check_and_create_file(config_path)) return false;
 
+
+    return true;
+}
+
+bool check_and_create_folders() {
+    string current_path = get_current_path();
+    string s_path_rom_folder = current_path + rom_folder;
+
+    if (!check_and_create_path(s_path_rom_folder)) {
+        LOG_ERROR("Couldn't create rom folder");
+        return false;
+    }
+
+    string s_path_config = current_path + config_folder;
+
+    if (!check_and_create_path(s_path_config)) {
+        LOG_ERROR("Couldn't create config folder");
+        return false;
+    }
 
     return true;
 }

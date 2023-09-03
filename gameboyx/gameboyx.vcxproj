@@ -171,6 +171,7 @@
   <ItemGroup>
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="config_io.cpp" />
+    <ClCompile Include="helper_functions.cpp" />
     <ClCompile Include="include\simple_logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="game_info.cpp" />
