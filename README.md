@@ -4,8 +4,11 @@ This is a Gameboy (Color) emulator utilising [ImGui](https://github.com/ocornut/
 
 ### How do I get set up? ###
 
-* compile with Visual Studio 2022
-* The already compiled executable is located in ./bin
+* clone repository with following command (to clone the required submodules):
+```
+git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
+```
+* compile with Visual Studio 2022 (open ./gameboyx.sln, set to Release and your target platform and start the build process)
 
 ### Who do I talk to? ###
 

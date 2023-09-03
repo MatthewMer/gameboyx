@@ -57,8 +57,17 @@ Thumbs.db
 /Win32/Release
 /gameboyx/rom
 /gameboyx/config
+/gameboyx/x64
+/gameboyx/Win32
+/gameboyx/Debug
+/gameboyx/Release
 /Release
 /Debug
+
+/imgui-lib/Release
+/imgui-lib/x64
+/nfdext-lib/Release
+/nfdext-lib/x64
 
 *.gbc
 *.gb
