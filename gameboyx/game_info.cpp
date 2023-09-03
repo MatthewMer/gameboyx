@@ -1,10 +1,10 @@
 #include "game_info.h"
 #include "logger.h"
-#include "config.h"
+#include "imguigameboyx_config.h"
 
 using namespace std;
 
-const std::vector<std::pair<const u8, const std::string>> cart_type_map{
+const std::vector<std::pair<const u8, const std::string>> CART_TYPE_MAP{
     { 0x00,"ROM ONLY"},
     { 0x01,"MBC1"},
     { 0x02,"MBC1+RAM"},
@@ -35,7 +35,7 @@ const std::vector<std::pair<const u8, const std::string>> cart_type_map{
     { 0xFF,"HuC1+RAM+BATTERY"}
 };
 
-const std::vector<std::pair<const std::string, const std::string>> new_lic_map{           // only when old is set to 0x33
+const std::vector<std::pair<const std::string, const std::string>> NEW_LIC_MAP{           // only when old is set to 0x33
     {"00", "None"},
     {"01", "Nintendo R&D1"},
     {"08", "Capcom"},
@@ -99,12 +99,12 @@ const std::vector<std::pair<const std::string, const std::string>> new_lic_map{ 
     {"A4", "Konami (Yu-Gi-Oh!)"}
 };
 
-const std::vector<std::pair<u8, std::string>> dest_code_map{
+const std::vector<std::pair<u8, std::string>> DEST_CODE_MAP{
     { 0x00, "Japan"},
     { 0x01, "Western world"}
 };
 
-const std::vector<std::pair<const info_types, const std::string>> info_types_map = {
+const std::vector<std::pair<const info_types, const std::string>> INFO_TYPES_MAP = {
     { TITLE, "title" },
     { LICENSEE,"licensee" },
     { CART_TYPE,"cart_type" },
@@ -117,86 +117,86 @@ const std::vector<std::pair<const info_types, const std::string>> info_types_map
     { FILE_PATH,"file_path" }
 };
 
-string get_licensee(const u8& new_licensee, const string& licensee_code) {
-    if (new_licensee == 0x33) {
-        for (const auto& [code, licensee] : new_lic_map) {
-            if (licensee_code.compare(code) == 0) {
+string get_licensee(const u8& _new_licensee, const string& _licensee_code) {
+    if (_new_licensee == 0x33) {
+        for (const auto& [code, licensee] : NEW_LIC_MAP) {
+            if (_licensee_code.compare(code) == 0) {
                 return licensee;
             }
         }
-        return n_a;
+        return N_A;
     }
     else {
-        return old_lic;
+        return OLD_LIC;
     }
 }
 
-string get_cart_type(const u8& cart_type) {
-    for (const auto& [code, type] : cart_type_map) {
-        if (code == cart_type) {
+string get_cart_type(const u8& _cart_type) {
+    for (const auto& [code, type] : CART_TYPE_MAP) {
+        if (code == _cart_type) {
             return type;
         }
     }
-    return n_a;
+    return N_A;
 }
 
-string get_dest_code(const u8& dest_code) {
-    for (const auto& [code, dest] : dest_code_map) {
-        if (code == dest_code) {
+string get_dest_code(const u8& _dest_code) {
+    for (const auto& [code, dest] : DEST_CODE_MAP) {
+        if (code == _dest_code) {
             return dest;
         }
     }
-    return n_a;
+    return N_A;
 }
 
-string get_full_file_path(const game_info& game_ctx) {
-    return (game_ctx.file_path + game_ctx.file_name);
+string get_full_file_path(const game_info& _game_ctx) {
+    return (_game_ctx.file_path + _game_ctx.file_name);
 }
 
-bool check_ext(const string& file) {
+bool check_ext(const string& _file) {
     string delimiter = ".";
-    int ext_start = (int)file.find(delimiter) + 1;
-    string file_ext = file.substr(ext_start, file.length() - ext_start);
+    int ext_start = (int)_file.find(delimiter) + 1;
+    string file_ext = _file.substr(ext_start, _file.length() - ext_start);
 
-    for (const auto& n : file_exts) {
+    for (const auto& n : FILE_EXTS) {
         if (file_ext.compare(n[1]) == 0) return true;
     }
 
     return false;
 }
 
-string get_info_type_string(const info_types& info_type) {
-    for (const auto& [type, s_type] : info_types_map) {
-        if (info_type == type) return s_type;
+string get_info_type_string(const info_types& _info_type) {
+    for (const auto& [type, s_type] : INFO_TYPES_MAP) {
+        if (_info_type == type) return s_type;
     }
     
-    LOG_ERROR("Unknown type (.", games_config_file, "games.ini)");
+    LOG_ERROR("Unknown type (.", GAMES_CONFIG_FILE, ")");
     return string("");
 }
 
-info_types get_info_type_enum(const std::string& info_type_string) {
-    for (const auto& [type, s_type] : info_types_map) {
-        if (info_type_string.compare(s_type) == 0) return type;
+info_types get_info_type_enum(const std::string& _info_type_string) {
+    for (const auto& [type, s_type] : INFO_TYPES_MAP) {
+        if (_info_type_string.compare(s_type) == 0) return type;
     }
     
-    LOG_ERROR("Unknown type (.", games_config_file, "games.ini)");
+    LOG_ERROR("Unknown type (.", GAMES_CONFIG_FILE, "games.ini)");
     return NONE_INFO_TYPE;
 }
 
-bool check_game_info_integrity(const game_info& game_ctx) {
-    if (game_ctx.title.compare("") != 0 &&
-        game_ctx.licensee.compare("") != 0 &&
-        game_ctx.cart_type.compare("") != 0 &&
-        game_ctx.dest_code.compare("") != 0 &&
-        game_ctx.game_ver.compare("") != 0 &&
-        game_ctx.file_name.compare("") != 0 &&
-        game_ctx.file_path.compare("") != 0)
+bool check_game_info_integrity(const game_info& _game_ctx) {
+    if (_game_ctx.title.compare("") != 0 &&
+        _game_ctx.licensee.compare("") != 0 &&
+        _game_ctx.cart_type.compare("") != 0 &&
+        _game_ctx.dest_code.compare("") != 0 &&
+        _game_ctx.game_ver.compare("") != 0 &&
+        _game_ctx.file_name.compare("") != 0 &&
+        _game_ctx.file_path.compare("") != 0)
     {
-        LOG_INFO("All values for game \"", game_ctx.title, "\" set internaly");
+        LOG_INFO("All values for game \"", _game_ctx.title, "\" set internaly");
         return true;
     }
     else {
-        LOG_WARN("Missing internal values for game \"", game_ctx.title, "\"");
+        LOG_WARN("Missing internal values for game \"", _game_ctx.title, "\"");
         return false;
     }
 }

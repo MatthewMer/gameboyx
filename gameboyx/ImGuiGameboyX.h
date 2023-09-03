@@ -1,14 +1,16 @@
 #pragma once
 
-#include "Cartridge.h"
 #include <SDL.h>
+#include <imgui.h>
+#include <vector>
+#include "game_info.h"
 
 class ImGuiGameboyX {
 public:
 	// singleton instance access
 	static ImGuiGameboyX* getInstance();
 	// clone/assign protection
-	ImGuiGameboyX(ImGuiGameboyX& instance) = delete;
+	ImGuiGameboyX(ImGuiGameboyX& _instance) = delete;
 	void operator=(const ImGuiGameboyX&) = delete;
 
 	// functions
@@ -26,10 +28,12 @@ private:
 	// variables
 	std::vector<game_info> games = std::vector<game_info>();
 
-	bool show_gui = true;
-	bool show_main_menu_bar = true;
-	bool show_win_about = false;
-	bool show_new_game_dialog = false;
+	bool showGui = true;
+
+	bool showMainMenuBar = true;
+	bool showWinAbout = false;
+	bool showNewGameDialog = false;
+	bool showGameSelect = true;
 
 	// gui functions
 	void ShowMainMenuBar();

@@ -13,7 +13,7 @@
 
 #include "ImGuiGameboyX.h"
 #include "logger.h"
-#include "config.h"
+#include "imguigameboyx_config.h"
 
 /* ***********************************************************************************************************
     DEFINES
@@ -22,11 +22,6 @@
 #ifdef _DEBUG_GBX
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
-
-/* ***********************************************************************************************************
-    constants
-*********************************************************************************************************** */
-const char* app_title = "GameboyX";
 
 /* ***********************************************************************************************************
     VULKAN/IMGUI CONTEXT VARIABLES
@@ -50,14 +45,16 @@ static bool                     g_SwapChainRebuild = false;
     PROTOTYPES
 *********************************************************************************************************** */
 static void check_vk_result(VkResult err);
-static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properties, const char* extension);
-static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice();
-static void SetupVulkan(ImVector<const char*> instance_extensions);
-static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height);
-static void CleanupVulkan();
-static void CleanupVulkanWindow();
-static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data);
-static void FramePresent(ImGui_ImplVulkanH_Window* wd);
+static bool is_extension_available(const ImVector<VkExtensionProperties>& properties, const char* extension);
+static VkPhysicalDevice setup_vulkan_select_physikal_device();
+static void setup_vulkan(ImVector<const char*> instance_extensions);
+static void setup_vulkan_window(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height);
+static void cleanup_vulkan();
+static void cleanup_vulkan_window();
+static void frame_render(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data);
+static void frame_present(ImGui_ImplVulkanH_Window* wd);
+
+static void sdl_toggle_full_screen(SDL_Window* window);
 
 /* ***********************************************************************************************************
  *
@@ -83,7 +80,7 @@ int main(int, char**)
 
     // Create window with Vulkan graphics context
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow(app_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow(APP_TITLE.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, GUI_WIN_WIDTH, GUI_WIN_HEIGHT, window_flags);
     if (!window) {
         LOG_ERROR(SDL_GetError());
         return -2;
@@ -97,7 +94,7 @@ int main(int, char**)
     SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, nullptr);
     extensions.resize(extensions_count);
     SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, extensions.Data);
-    SetupVulkan(extensions);
+    setup_vulkan(extensions);
 
     // Create Window Surface
     VkSurfaceKHR surface;
@@ -114,7 +111,7 @@ int main(int, char**)
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
-    SetupVulkanWindow(wd, surface, w, h);
+    setup_vulkan_window(wd, surface, w, h);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -207,10 +204,21 @@ int main(int, char**)
                 done = true;
                 break;
             case SDL_KEYDOWN:
-                gbx_gui->KeyDown(event.key.keysym.sym);
+                switch (event.key.keysym.sym) {
+                case SDLK_F11:
+                    sdl_toggle_full_screen(window);
+                    break;
+                default:
+                    gbx_gui->KeyDown(event.key.keysym.sym);
+                    break;
+                }
                 break;
             case SDL_KEYUP:
-                gbx_gui->KeyUp(event.key.keysym.sym);
+                switch (event.key.keysym.sym) {
+                default:
+                    gbx_gui->KeyUp(event.key.keysym.sym);
+                    break;
+                }
                 break;
             default:
                 break;
@@ -290,8 +298,8 @@ int main(int, char**)
             wd->ClearValue.color.float32[1] = clear_color.y * clear_color.w;
             wd->ClearValue.color.float32[2] = clear_color.z * clear_color.w;
             wd->ClearValue.color.float32[3] = clear_color.w;
-            FrameRender(wd, draw_data);
-            FramePresent(wd);
+            frame_render(wd, draw_data);
+            frame_present(wd);
         }
     }
 
@@ -302,13 +310,28 @@ int main(int, char**)
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    CleanupVulkanWindow();
-    CleanupVulkan();
+    cleanup_vulkan_window();
+    cleanup_vulkan();
 
     SDL_DestroyWindow(window);
     SDL_Quit();
 
     return 0;
+}
+
+/* ***********************************************************************************************************
+    SDL CUSTOM FUNCTIONS
+*********************************************************************************************************** */
+static void sdl_toggle_full_screen(SDL_Window* window) {
+    // TODO: set resolution when toggling
+    //SDL_SetRelativeMouseMode(SDL_TRUE);
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) {
+        SDL_SetWindowFullscreen(window, 0);
+        //SDL_SetWindowDisplayMode(window, )
+    }
+    else {
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+    }
 }
 
 /* ***********************************************************************************************************
@@ -338,7 +361,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, 
 /* ***********************************************************************************************************
     VULKAN CHECK EXTENSION
 *********************************************************************************************************** */
-static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properties, const char* extension)
+static bool is_extension_available(const ImVector<VkExtensionProperties>& properties, const char* extension)
 {
     for (const VkExtensionProperties& p : properties)
         if (strcmp(p.extensionName, extension) == 0)
@@ -349,7 +372,7 @@ static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properti
 /* ***********************************************************************************************************
     VULKAN INIT PHYSICAL DEVICE
 *********************************************************************************************************** */
-static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice()
+static VkPhysicalDevice setup_vulkan_select_physikal_device()
 {
     uint32_t gpu_count;
     VkResult err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, nullptr);
@@ -392,7 +415,7 @@ static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice()
 /* ***********************************************************************************************************
     VULKAN SETUP
 *********************************************************************************************************** */
-static void SetupVulkan(ImVector<const char*> instance_extensions)
+static void setup_vulkan(ImVector<const char*> instance_extensions)
 {
     VkResult err;
 
@@ -410,10 +433,10 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         check_vk_result(err);
 
         // Enable required extensions
-        if (IsExtensionAvailable(properties, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+        if (is_extension_available(properties, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
             instance_extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 #ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
-        if (IsExtensionAvailable(properties, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
+        if (is_extension_available(properties, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
         {
             instance_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
             create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
@@ -458,7 +481,7 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
     }
 
     // Select Physical Device (GPU)
-    g_PhysicalDevice = SetupVulkan_SelectPhysicalDevice();
+    g_PhysicalDevice = setup_vulkan_select_physikal_device();
 
     // Select graphics queue family
     {
@@ -533,7 +556,7 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
 *********************************************************************************************************** */
 // All the ImGui_ImplVulkanH_XXX structures/functions are optional helpers used by the demo.
 // Your real engine/app may not use them.
-static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
+static void setup_vulkan_window(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
 {
     wd->Surface = surface;
 
@@ -568,7 +591,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
 /* ***********************************************************************************************************
     VULKAN CLEAN
 *********************************************************************************************************** */
-static void CleanupVulkan()
+static void cleanup_vulkan()
 {
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
 
@@ -585,7 +608,7 @@ static void CleanupVulkan()
 /* ***********************************************************************************************************
     CLEAR SCREEN
 *********************************************************************************************************** */
-static void CleanupVulkanWindow()
+static void cleanup_vulkan_window()
 {
     ImGui_ImplVulkanH_DestroyWindow(g_Instance, g_Device, &g_MainWindowData, g_Allocator);
 }
@@ -593,7 +616,7 @@ static void CleanupVulkanWindow()
 /* ***********************************************************************************************************
     FRAME RENDER
 *********************************************************************************************************** */
-static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
+static void frame_render(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
 {
     VkResult err;
 
@@ -663,7 +686,7 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
 /* ***********************************************************************************************************
     FRAME PRESENT
 *********************************************************************************************************** */
-static void FramePresent(ImGui_ImplVulkanH_Window* wd)
+static void frame_present(ImGui_ImplVulkanH_Window* wd)
 {
     if (g_SwapChainRebuild)
         return;

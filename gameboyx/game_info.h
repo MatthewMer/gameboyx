@@ -4,15 +4,15 @@
 #include <vector>
 #include <string>
 
-const inline std::vector<std::vector<std::string>> file_exts = {
+inline const std::vector<std::vector<std::string>> FILE_EXTS = {
     {"Gameboy Color", "gbc"}, {"Gameboy", "gb"}
 };
 
-const inline std::string old_lic = "Old licensee";
-const inline std::string n_a = "N/A";
+inline const std::string OLD_LIC = "Old licensee";
+inline const std::string N_A = "N/A";
 
-const inline std::string parameter_true = "true";
-const inline std::string parameter_false = "false";
+inline const std::string PARAMETER_TRUE = "true";
+inline const std::string PARAMETER_FALSE = "false";
 
 enum info_types{
     NONE_INFO_TYPE,
@@ -40,7 +40,9 @@ struct game_info {
     std::string file_name = "";
     std::string file_path = "";
 
-    explicit game_info(const std::string& title) : title(title) {};
+    //std::string date_last_played = "";
+
+    explicit constexpr game_info(const std::string& _title) : title(_title) {};
     game_info() = default;
 };
 
@@ -57,11 +59,11 @@ inline bool operator==(const game_info& n, const game_info& m) {
         n.file_path.compare(m.file_path) == 0;
 }
 
-std::string get_full_file_path(const game_info& game_ctx);
-std::string get_licensee(const u8& new_licensee, const std::string& licensee_code);
-std::string get_cart_type(const u8& cart_type);
-std::string get_dest_code(const u8& dest_code);
-std::string get_info_type_string(const info_types& info_type);
-info_types get_info_type_enum(const std::string& info_type_string);
-bool check_game_info_integrity(const game_info& game_ctx);
-bool check_ext(const std::string& file);
+std::string get_full_file_path(const game_info& _game_ctx);
+std::string get_licensee(const u8& _new_licensee, const std::string& _licensee_code);
+std::string get_cart_type(const u8& _cart_type);
+std::string get_dest_code(const u8& _dest_code);
+std::string get_info_type_string(const info_types& _info_type);
+info_types get_info_type_enum(const std::string& _info_type_string);
+bool check_game_info_integrity(const game_info& _game_ctx);
+bool check_ext(const std::string& _file);

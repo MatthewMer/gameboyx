@@ -8,34 +8,34 @@ namespace fs = filesystem;
 
 const string WHITESPACE = " \n\r\t\f\v";
 
-vector<string> split_string(const string& in_string, const string& delimiter) {
+vector<string> split_string(const string& _in_string, const string& _delimiter) {
     vector<string> vec_in_string;
-    string in_string_copy = in_string;
+    string in_string_copy = _in_string;
 
-    while (in_string_copy.find(delimiter) != string::npos) {
-        vec_in_string.push_back(in_string_copy.substr(0, in_string_copy.find(delimiter)));
-        in_string_copy.erase(0, in_string_copy.find(delimiter) + delimiter.length());
+    while (in_string_copy.find(_delimiter) != string::npos) {
+        vec_in_string.push_back(in_string_copy.substr(0, in_string_copy.find(_delimiter)));
+        in_string_copy.erase(0, in_string_copy.find(_delimiter) + _delimiter.length());
     }
     vec_in_string.push_back(in_string_copy);
 
     return vec_in_string;
 }
 
-bool check_and_create_file(const string& path_to_file_rel) {
+bool check_and_create_file(const string& _path_to_file_rel) {
     string current_path = get_current_path();
 
-    if (fs::exists(current_path + path_to_file_rel)) {
+    if (fs::exists(current_path + _path_to_file_rel)) {
         return true;
     }
     else {
-        ofstream(current_path + path_to_file_rel).close();
+        ofstream(current_path + _path_to_file_rel).close();
         return false;
     }
 }
 
-bool check_and_create_path(const string& path_rel) {
+bool check_and_create_path(const string& _path_rel) {
     string current_path = get_current_path();
-    string new_path = current_path + path_rel;
+    string new_path = current_path + _path_rel;
     if (!fs::is_directory(new_path) || !fs::exists(new_path)) {
         fs::create_directory(new_path);
     }
@@ -48,16 +48,16 @@ string get_current_path() {
     return current_path;
 }
 
-string trim(const string& in_string) {
-    return rtrim(ltrim(in_string));
+string trim(const string& _in_string) {
+    return rtrim(ltrim(_in_string));
 }
 
-string ltrim(const string& in_string) {
-    size_t start = in_string.find_first_not_of(WHITESPACE);
-    return (start == string::npos) ? "" : in_string.substr(start);
+string ltrim(const string& _in_string) {
+    size_t start = _in_string.find_first_not_of(WHITESPACE);
+    return (start == string::npos) ? "" : _in_string.substr(start);
 }
 
-string rtrim(const string& in_string) {
-    size_t end = in_string.find_last_not_of(WHITESPACE);
-    return (end == string::npos) ? "" : in_string.substr(0, end + 1);
+string rtrim(const string& _in_string) {
+    size_t end = _in_string.find_last_not_of(WHITESPACE);
+    return (end == string::npos) ? "" : _in_string.substr(0, end + 1);
 }
