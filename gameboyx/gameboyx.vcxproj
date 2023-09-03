@@ -170,7 +170,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Cartridge.cpp" />
-    <ClCompile Include="games_config_io.cpp" />
+    <ClCompile Include="config_io.cpp" />
     <ClCompile Include="include\simple_logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="game_info.cpp" />
@@ -179,9 +179,10 @@
   <ItemGroup>
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="config.h" />
-    <ClInclude Include="games_config_io.h" />
+    <ClInclude Include="config_io.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="game_info.h" />
+    <ClInclude Include="helper_functions.h" />
     <ClInclude Include="ImGuiGameboyX.h" />
     <ClInclude Include="include\logger.h" />
   </ItemGroup>

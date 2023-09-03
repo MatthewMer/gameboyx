@@ -2,24 +2,6 @@
 
 using namespace std;
 
-bool operator==(const game_info& n, const game_info& m)
-{
-    return (n.title == m.title &&
-        n.licensee == m.licensee &&
-        n.cart_type == m.cart_type &&
-        n.dest_code == m.dest_code &&
-        n.file_name == m.file_name &&
-        n.file_path == m.file_path &&
-        n.is_gbc == m.is_sgb &&
-        n.is_gbc == m.is_gbc &&
-        n.game_ver == m.game_ver &&
-        n.chksum_passed == m.chksum_passed);
-}
-
-string get_full_file_path(const game_info& game_ctx) {
-	return (game_ctx.file_path + game_ctx.file_name);
-}
-
 string get_licensee(const u8& new_licensee, const string& licensee_code) {
     if (new_licensee == 0x33) {
         for (const auto& [code, licensee] : new_lic_map) {
@@ -50,4 +32,20 @@ string get_dest_code(const u8& dest_code) {
         }
     }
     return n_a;
+}
+
+string get_full_file_path(const game_info& game_ctx) {
+    return (game_ctx.file_path + game_ctx.file_name);
+}
+
+bool check_ext(const string& file) {
+    string delimiter = ".";
+    int ext_start = (int)file.find(delimiter) + 1;
+    string file_ext = file.substr(ext_start, file.length() - ext_start);
+
+    for (const auto& n : file_exts) {
+        if (file_ext.compare(n[1]) == 0) return true;
+    }
+
+    return false;
 }

@@ -14,7 +14,6 @@
 #include "ImGuiGameboyX.h"
 #include "logger.h"
 #include "config.h"
-#include "games_config_io.h"
 
 /* ***********************************************************************************************************
     DEFINES

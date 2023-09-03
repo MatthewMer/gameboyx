@@ -4,7 +4,11 @@
 #include <vector>
 #include <string>
 
-const static std::vector<std::pair<const u8, const std::string>> cart_type_map{
+const inline std::vector<std::vector<std::string>> file_exts = {
+    {"Gameboy Color", "gbc"}, {"Gameboy", "gb"}
+};
+
+const inline std::vector<std::pair<const u8, const std::string>> cart_type_map{
     { 0x00,"ROM ONLY"},
     { 0x01,"MBC1"},
     { 0x02,"MBC1+RAM"},
@@ -35,7 +39,7 @@ const static std::vector<std::pair<const u8, const std::string>> cart_type_map{
     { 0xFF,"HuC1+RAM+BATTERY"}
 };
 
-const static std::vector<std::pair<const std::string, const std::string>> new_lic_map{           // only when old is set to 0x33
+const inline std::vector<std::pair<const std::string, const std::string>> new_lic_map{           // only when old is set to 0x33
     {"00", "None"},
     {"01", "Nintendo R&D1"},
     {"08", "Capcom"},
@@ -99,20 +103,31 @@ const static std::vector<std::pair<const std::string, const std::string>> new_li
     {"A4", "Konami (Yu-Gi-Oh!)"}
 };
 
-const static std::string old_lic = "Old licensee";
+const inline std::string old_lic = "Old licensee";
 
-const static std::string n_a = "N/A";
+const inline std::string n_a = "N/A";
 
-const static std::vector<std::pair<u8, std::string>> dest_code_map{
+const inline std::vector<std::pair<u8, std::string>> dest_code_map{
     { 0x00, "Japan"},
     { 0x01, "Western world"}
 };
+
+inline const std::string s_title = "title";
+inline const std::string s_licensee = "licensee";
+inline const std::string s_cart_type = "cart_type";
+inline const std::string s_is_cgb = "is_cgb";
+inline const std::string s_is_sgb = "is_sgb";
+inline const std::string s_dest_code = "dest_code";
+inline const std::string s_game_ver = "game_ver";
+inline const std::string s_chksum_passed = "chksum_passed";
+inline const std::string s_file_name = "file_name";
+inline const std::string s_file_path = "file_path";
 
 struct game_info {
 	std::string title = "";
     std::string licensee = "";
     std::string cart_type = "";
-	bool is_gbc = false;
+	bool is_cgb = false;
 	bool is_sgb = false;
     std::string dest_code = "";
 	std::string game_ver = "";
@@ -124,8 +139,21 @@ struct game_info {
     game_info() = default;
 };
 
-bool operator==(const game_info& n, const game_info& m);
+inline bool operator==(const game_info& n, const game_info& m) {
+    return n.title.compare(m.title) == 0 &&
+        n.licensee.compare(m.licensee) == 0 &&
+        n.cart_type.compare(m.cart_type) == 0 &&
+        n.is_cgb == m.is_cgb &&
+        n.is_sgb == m.is_sgb &&
+        n.dest_code.compare(m.dest_code) == 0 &&
+        n.game_ver.compare(m.game_ver) == 0 &&
+        n.chksum_passed == m.chksum_passed &&
+        n.file_name.compare(m.file_name) == 0 &&
+        n.file_path.compare(m.file_path) == 0;
+}
+
 std::string get_full_file_path(const game_info& game_ctx);
 std::string get_licensee(const u8& new_licensee, const std::string& licensee_code);
 std::string get_cart_type(const u8& cart_type);
 std::string get_dest_code(const u8& dest_code);
+bool check_ext(const std::string& file);

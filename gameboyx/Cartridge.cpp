@@ -23,14 +23,15 @@ bool Cartridge::ReadData() {
 
 bool Cartridge::read_header_info(game_info& game_ctx, vector<u8>& vec_rom) {
 	// read header info -----
+	LOG_INFO("Reading header info");
 
 	// cgb/sgb flags
-	game_ctx.is_gbc = vec_rom[ROM_HEAD_CGBFLAG] == 0x80 || vec_rom[ROM_HEAD_CGBFLAG] == 0xC0 ;
+	game_ctx.is_cgb = vec_rom[ROM_HEAD_CGBFLAG] == 0x80 || vec_rom[ROM_HEAD_CGBFLAG] == 0xC0 ;
 	game_ctx.is_sgb = vec_rom[ROM_HEAD_SGBFLAG] == 0x03;
 
 	// title
 	string title = "";
-	int title_size_max = (game_ctx.is_gbc ? ROM_HEAD_TITLE_SIZE_CGB : ROM_HEAD_TITLE_SIZE_GB);
+	int title_size_max = (game_ctx.is_cgb ? ROM_HEAD_TITLE_SIZE_CGB : ROM_HEAD_TITLE_SIZE_GB);
 	for (int i = 0; vec_rom[ROM_HEAD_TITLE + i] != 0x00 && i < title_size_max; i++) {
 		title += (char)vec_rom[ROM_HEAD_TITLE + i];
 	}
@@ -61,12 +62,14 @@ bool Cartridge::read_header_info(game_info& game_ctx, vector<u8>& vec_rom) {
 bool Cartridge::read_rom_to_buffer(const game_info& game_ctx, vector<u8> &vec_rom) {
 	LOG_INFO("Reading rom");
 
-	ifstream is(get_full_file_path(game_ctx), ios::binary | ios::beg);
+	string full_file_path = get_full_file_path(game_ctx);
+
+	ifstream is(full_file_path, ios::binary);
 	if (!is) { return false; }
 	vector<u8> read_buffer((istreambuf_iterator<char>(is)), istreambuf_iterator<char>());
-	is.close();
 	vec_rom = read_buffer;
 
+	is.close();
 	return true;
 }
 
@@ -78,7 +81,7 @@ bool Cartridge::copy_rom_to_rom_folder(game_info& game_info, const std::vector<u
 	copy(vec_rom.begin(), vec_rom.end(), ostream_iterator<u8>(os));
 	os.close();
 
-	ifstream is(new_file_path + game_info.file_name, ios::binary | ios::beg);
+	ifstream is(new_file_path + game_info.file_name, ios::binary);
 	if (!is) { return false; }
 	vector<u8> read_buffer((istreambuf_iterator<char>(is)), istreambuf_iterator<char>());
 	

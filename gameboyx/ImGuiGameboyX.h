@@ -37,7 +37,4 @@ private:
 	void ShowWindowAbout();
 	void ShowNewGameDialog();
 	void ShowGameSelect();
-
-	// misc functions
-	bool ReadGamesFromConfig();
 };

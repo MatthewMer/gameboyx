@@ -6,11 +6,11 @@
 #include "config.h"
 #include "nfd.h"
 #include "logger.h"
-#include "games_config_io.h"
-#include <filesystem>
+#include "config_io.h"
+#include "helper_functions.h"
 
 using namespace std;
-namespace fs = filesystem;
+
 
 /* ***********************************************************************************************************
     CONSTANTS
@@ -18,17 +18,6 @@ namespace fs = filesystem;
 const static string rom_folder = "\\rom\\";
 const static string config_folder = "\\config\\";
 const string games_config_file = "games.ini";
-
-const static vector<vector<string>> file_exts = {
-    {"Gameboy Color", "gbc"}, {"Gameboy", "gb"}
-};
-
-/* ***********************************************************************************************************
-    PROTOTYPES
-*********************************************************************************************************** */
-static bool check_ext(const string& file);
-static vector<string> split_path(const string& path);
-static bool check_path(const string& path);
 
 /* ***********************************************************************************************************
     IMGUIGAMEBOYX FUNCTIONS
@@ -105,7 +94,7 @@ void ImGuiGameboyX::ShowWindowAbout() {
 void ImGuiGameboyX::ShowNewGameDialog() {
     string s_path_rom_folder = fs::current_path().string() + rom_folder;
 
-    if (!check_path(s_path_rom_folder)) {
+    if (!check_and_create_path(s_path_rom_folder)) {
         LOG_ERROR("Couldn't create rom folder");
         show_new_game_dialog = false;
         return;
@@ -113,7 +102,7 @@ void ImGuiGameboyX::ShowNewGameDialog() {
 
     string s_path_config = fs::current_path().string() + config_folder;
 
-    if (!check_path(s_path_config)) {
+    if (!check_and_create_path(s_path_config)) {
         LOG_ERROR("Couldn't create config folder");
         show_new_game_dialog = false;
         return;
@@ -129,7 +118,7 @@ void ImGuiGameboyX::ShowNewGameDialog() {
     if (result == NFD_OKAY) {
         if (out_path != nullptr) {
             string path_to_rom(out_path);
-            auto vec_path_to_rom = split_path(path_to_rom);
+            auto vec_path_to_rom = split_string(path_to_rom, "\\");
 
             if (!check_ext(vec_path_to_rom.back())) return;
 
@@ -142,11 +131,10 @@ void ImGuiGameboyX::ShowNewGameDialog() {
 
             vector<u8> vec_rom;
             if (!Cartridge::read_rom_to_buffer(game_ctx, vec_rom)) {
+                LOG_ERROR("Error while reading rom");
                 show_new_game_dialog = false;
                 return;
             }
-
-            LOG_WARN(s_path_rom_folder, ",", game_ctx.file_path);
 
             if (s_path_rom_folder.compare(game_ctx.file_path) != 0) {
                 if (!Cartridge::copy_rom_to_rom_folder(game_ctx, vec_rom, s_path_rom_folder)) {
@@ -155,6 +143,7 @@ void ImGuiGameboyX::ShowNewGameDialog() {
             }
 
             if (!Cartridge::read_header_info(game_ctx, vec_rom)) {
+                LOG_ERROR("Rom header corrupted");
                 show_new_game_dialog = false;
                 return;
             }
@@ -186,10 +175,6 @@ void ImGuiGameboyX::ShowGameSelect() {
 
 }
 
-bool ImGuiGameboyX::ReadGamesFromConfig() {
-    return read_games_from_config(this->games, fs::current_path().string() + config_folder + games_config_file);
-}
-
 /* ***********************************************************************************************************
     IMGUIGAMEBOYX SDL FUNCTIONS
 *********************************************************************************************************** */
@@ -211,45 +196,4 @@ void ImGuiGameboyX::KeyUp(SDL_Keycode key) {
     default:
         break;
     }
-}
-
-/* ***********************************************************************************************************
-    STATIC FUNCTIONS
-*********************************************************************************************************** */
-
-
-static bool check_ext(const string& file) {
-    string delimiter = ".";
-    int ext_start = (int)file.find(delimiter) + 1;
-    string file_ext = file.substr(ext_start, file.length() - ext_start);
-
-    for (const auto& n : file_exts) {
-        if (file_ext.compare(n[1]) == 0) return true;
-    }
-
-    LOG_ERROR("Wrong file extension");
-    return false;
-}
-
-static vector<string> split_path(const string& path) {
-    vector<string> path_split;
-    string path_copy = path;
-
-    const string delimiter = "\\";
-
-    while (int pos = path_copy.find(delimiter) != string::npos) {
-        path_split.push_back(path_copy.substr(0, pos));
-        path_copy.erase(0, pos + delimiter.length());
-    }
-    path_split.push_back(path_copy);
-
-    return path_split;
-}
-
-static bool check_path(const string& path) {
-    if (!fs::is_directory(path) || !fs::exists(path)) {
-        fs::create_directory(path);
-    }
-
-    return fs::is_directory(path) || fs::exists(path);
 }
