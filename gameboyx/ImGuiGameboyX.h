@@ -9,6 +9,7 @@ class ImGuiGameboyX {
 public:
 	// singleton instance access
 	static ImGuiGameboyX* getInstance();
+	static void resetInstance();
 	// clone/assign protection
 	ImGuiGameboyX(ImGuiGameboyX& _instance) = delete;
 	void operator=(const ImGuiGameboyX&) = delete;
@@ -23,6 +24,8 @@ protected:
 	// constructor
 	ImGuiGameboyX();
 	static ImGuiGameboyX* instance;
+	// destructor
+	~ImGuiGameboyX() = default;
 
 private:
 	// special keys
@@ -56,6 +59,6 @@ private:
 
 	// helpers
 	void AddGameGuiCtx(const game_info& _game_ctx);
-	const std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
+	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
 	void InitGamesGuiCtx();
 };

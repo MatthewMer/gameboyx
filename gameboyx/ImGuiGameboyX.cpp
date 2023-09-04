@@ -25,6 +25,11 @@ ImGuiGameboyX* ImGuiGameboyX::getInstance() {
     return instance;
 }
 
+void ImGuiGameboyX::resetInstance() {
+    delete instance;
+    instance = nullptr;
+}
+
 ImGuiGameboyX::ImGuiGameboyX() {
     NFD_Init();
     check_and_create_folders();
@@ -316,7 +321,7 @@ void ImGuiGameboyX::AddGameGuiCtx(const game_info& _game_ctx) {
     gamesPrevIndex = gamesSelected.size() - 1;
 }
 
-const vector<game_info> ImGuiGameboyX::DeleteGamesGuiCtx(const vector<int>& _index) {
+vector<game_info> ImGuiGameboyX::DeleteGamesGuiCtx(const vector<int>& _index) {
     auto result = vector<game_info>();
 
     for (int i = _index.size(); i >= 0; i--) {
