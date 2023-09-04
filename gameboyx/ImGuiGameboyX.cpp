@@ -32,29 +32,45 @@ ImGuiGameboyX::ImGuiGameboyX() {
         if (!read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
             LOG_ERROR("Error while reading games.ini");
         }
+        else {
+            InitGamesGuiCtx();
+        }
     }
 }
 
-void ImGuiGameboyX::ShowGUI() {
+/* ***********************************************************************************************************
+    GUI PROCESS ENTRY POINT
+*********************************************************************************************************** */
+void ImGuiGameboyX::ProcessGUI() {
     IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
 
-    if (this->showGui) {
-        if (this->showWinAbout) ShowWindowAbout();
-        if (this->showGameSelect) ShowGameSelect();
+    if (showMainMenuBar) ShowMainMenuBar();
+    if (!runGame) {
+        // gui elements
+        if (showGameSelect) ShowGameSelect();
+        if (showWinAbout) ShowWindowAbout();
+        if (showNewGameDialog) ShowNewGameDialog();
+
+        // actions
+        if (deleteGames) ActionDeleteGames();
     }
-    if (this->showMainMenuBar) ShowMainMenuBar();
-    if (this->showNewGameDialog) ShowNewGameDialog();
 }
 
+/* ***********************************************************************************************************
+    GUI BUILDER
+*********************************************************************************************************** */
 void ImGuiGameboyX::ShowMainMenuBar() {
-    if (this->showMainMenuBar)
+    if (showMainMenuBar)
         if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("File")) {
-                ImGui::MenuItem("Add ROM", nullptr, &this->showNewGameDialog);
-                ImGui::EndMenu();
+            if (!runGame) {
+                if (ImGui::BeginMenu("File")) {
+                    ImGui::MenuItem("Add new game", nullptr, &showNewGameDialog);
+                    ImGui::MenuItem("Remove game(s)", nullptr, &deleteGames);
+                    ImGui::EndMenu();
+                }
             }
             if (ImGui::BeginMenu("Settings")) {
-                ImGui::MenuItem("Show menu bar", nullptr, &this->showMainMenuBar);
+                ImGui::MenuItem("Show menu bar", nullptr, &showMainMenuBar);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Control")) {
@@ -70,7 +86,7 @@ void ImGuiGameboyX::ShowMainMenuBar() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Help")) {
-                ImGui::MenuItem("About", nullptr, &this->showWinAbout);
+                ImGui::MenuItem("About", nullptr, &showWinAbout);
                 ImGui::EndMenu();
             }
             ImGui::EndMenu();
@@ -78,13 +94,13 @@ void ImGuiGameboyX::ShowMainMenuBar() {
 }
 
 void ImGuiGameboyX::ShowWindowAbout() {
-    if (this->showWinAbout) {
+    if (showWinAbout) {
         const ImGuiWindowFlags win_flags =
             ImGuiWindowFlags_NoScrollbar | 
             ImGuiWindowFlags_NoResize | 
             ImGuiWindowFlags_NoCollapse;
 
-        if (; ImGui::Begin("About", &this->showWinAbout, win_flags)) {
+        if (; ImGui::Begin("About", &showWinAbout, win_flags)) {
             ImGui::Text("GameboyX Emulator");
             ImGui::Text("Version: %s %d.%d", GBX_RELEASE, GBX_VERSION_MAJOR, GBX_VERSION_MINOR, GBX_VERSION_PATCH);
             ImGui::Text("Author: %s", GBX_AUTHOR);
@@ -97,44 +113,26 @@ void ImGuiGameboyX::ShowWindowAbout() {
 void ImGuiGameboyX::ShowNewGameDialog() {
     if (!check_and_create_folders()) {
         LOG_ERROR("Required subfolders don't exist");
-        this->showNewGameDialog = false;
+        showNewGameDialog = false;
         return;
-    }
-
-    nfdchar_t* out_path = nullptr;
-    auto filter_items = (nfdfilteritem_t*)malloc(sizeof(nfdfilteritem_t) * FILE_EXTS.size());
-    for (int i = 0; i < FILE_EXTS.size(); i++) {
-        filter_items[i] = { FILE_EXTS[i][0].c_str(), FILE_EXTS[i][1].c_str() };
     }
 
     string current_path = get_current_path();
     string s_path_rom_folder = current_path + ROM_FOLDER;
+    
+    auto filter_items = new nfdfilteritem_t[sizeof(nfdfilteritem_t) * FILE_EXTS.size()];
+    for (int i = 0; i < FILE_EXTS.size(); i++) {
+        filter_items[i] = { FILE_EXTS[i][0].c_str(), FILE_EXTS[i][1].c_str() };
+    }
 
+    nfdchar_t* out_path = nullptr;
     const auto result = NFD_OpenDialog(&out_path, filter_items, 2, s_path_rom_folder.c_str());
+    delete[] filter_items;
+
     if (result == NFD_OKAY) {
         if (out_path != nullptr) {
             string path_to_rom(out_path);
-            auto game_ctx = game_info();
-
-            if (!Cartridge::read_new_game(game_ctx, path_to_rom)) {
-                showNewGameDialog = false;
-                return;
-            }
-
-            for (const auto& n : games) {
-                if (game_ctx == n) {
-                    LOG_WARN("Game already added ! Process aborted");
-                    showNewGameDialog = false;
-                    return;
-                }
-            }
-
-            if (!write_new_game(game_ctx)) {
-                showNewGameDialog = false;
-                return;
-            }
-
-            this->games.push_back(game_ctx);
+            if (!ActionAddGame(path_to_rom)) { return; }
         }
         else {
             LOG_ERROR("No path (nullptr)");
@@ -160,6 +158,7 @@ void ImGuiGameboyX::ShowGameSelect() {
         ImGuiWindowFlags_NoCollapse | 
         ImGuiWindowFlags_NoBringToFrontOnFocus;
 
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, IMGUI_BG_COLOR);
     if (!ImGui::Begin("", nullptr, win_flags)) {
         ImGui::End();
         return;
@@ -171,40 +170,170 @@ void ImGuiGameboyX::ShowGameSelect() {
 
     const int column_num = GAMES_COLUMNS.size();
 
-    if (ImGui::BeginTable("game_list", column_num, table_flags, ImVec2(.0f, .0f), 3.f)) {
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 10, 10 });
+
+    if (ImGui::BeginTable("game_list", column_num, table_flags, ImVec2(.0f, .0f), .0f)) {
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, style.CellPadding.y * 2));
 
         const ImGuiTableColumnFlags col_flags = 0;
         
-        for (int i = 0; const auto& [label, divisor] : GAMES_COLUMNS) {
-            ImGui::TableSetupColumn(label.c_str(), col_flags, main_viewport->Size.x / divisor);
-            ImGui::TableSetupScrollFreeze(i++, 0);
+        for (int i = 0; const auto& [label, fraction] : GAMES_COLUMNS) {
+            ImGui::TableSetupColumn(label.c_str(), col_flags, main_viewport->Size.x * fraction);
+            ImGui::TableSetupScrollFreeze(i, 0);
+            i++;
         }
         ImGui::TableSetupColumn("", col_flags, main_viewport->Size.x / column_num);
         ImGui::TableSetupScrollFreeze(column_num - 1, 0);
         ImGui::TableHeadersRow();
 
-        // TODO: make entries selectable (and double click)
-        ImGuiSelectableFlags sel_flags =
-            ImGuiSelectableFlags_SpanAllColumns |
-            ImGuiSelectableFlags_AllowDoubleClick;
-
-        for (int i = 0; const auto & game : this->games) {
+        for (int i = 0; const auto & game : games) {
             ImGui::TableNextRow();
-            ImGui::Selectable("", false, sel_flags);
-
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(game.is_cgb ? GAMES_CONSOLES[1].c_str() : GAMES_CONSOLES[0].c_str());
+
+            // TODO: icon
+            ImGui::TableNextColumn();
+
+            ImGuiSelectableFlags sel_flags = ImGuiSelectableFlags_SpanAllColumns;
+            ImGui::Selectable((game.is_cgb ? GAMES_CONSOLES[1].c_str() : GAMES_CONSOLES[0].c_str()), gamesSelected[i], sel_flags);
+
+            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)){
+                for (int j = 0; j < gamesSelected.size();j++) {
+                    gamesSelected[i] = i == j;
+                }
+
+                runGame = true;
+                gameToRun = i;
+            }
+            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
+                if (sdlkShiftDown) {
+                    static int lower, upper;
+                    if (i <= gamesPrevIndex) {
+                        lower = i;
+                        upper = gamesPrevIndex;
+                    }
+                    else {
+                        lower = gamesPrevIndex;
+                        upper = i;
+                    }
+
+                    for (int j = 0; j < gamesSelected.size(); j++) {
+                        gamesSelected[j] = ((j >= lower) && (j <= upper)) || (sdlkCtrlDown ? gamesSelected[j] : false);
+                    }
+                }
+                else {
+                    for (int j = 0; j < gamesSelected.size(); j++) {
+                        gamesSelected[j] = (i == j ? !gamesSelected[j] : (sdlkCtrlDown ? gamesSelected[j] : false));
+                        gamesPrevIndex = i;
+                    }
+                    if (!sdlkCtrlDown) { 
+                        gamesPrevIndex = i; 
+                        gamesSelected[i] = true;
+                    }
+                }
+            } 
+            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(1)) {
+                // TODO: context menu
+            }
+
             ImGui::TableNextColumn();
             ImGui::TextUnformatted(game.title.c_str());
+            ImGui::SetItemTooltip(game.title.c_str());
             ImGui::TableNextColumn();
             ImGui::TextUnformatted(game.file_path.c_str());
+            ImGui::SetItemTooltip(game.file_path.c_str());
             ImGui::TableNextColumn();
             ImGui::TextUnformatted(game.file_name.c_str());
-        }
+            ImGui::SetItemTooltip(game.file_name.c_str());
 
-        ImGui::EndTable();
+            i++;
+        }
+        ImGui::PopStyleVar();
     }
-    ImGui::EndMenu();
+    ImGui::EndTable();
+    ImGui::PopStyleVar();
+    ImGui::End();
+}
+
+/* ***********************************************************************************************************
+    ACTIONS TO READ/WRITE/PROCESS DATA
+*********************************************************************************************************** */
+bool ImGuiGameboyX::ActionAddGame(const string& _path_to_rom) {
+    auto game_ctx = game_info();
+
+    if (!Cartridge::read_new_game(game_ctx, _path_to_rom)) {
+        showNewGameDialog = false;
+        return false;
+    }
+
+    for (const auto& n : games) {
+        if (game_ctx == n) {
+            LOG_WARN("Game already added ! Process aborted");
+            showNewGameDialog = false;
+            return false;
+        }
+    }
+
+    string current_path = get_current_path();
+    string s_path_config = current_path + CONFIG_FOLDER + GAMES_CONFIG_FILE;
+    if (!write_game_to_config(game_ctx, s_path_config)) {
+        showNewGameDialog = false;
+        return false;
+    }
+
+    AddGameGuiCtx(game_ctx);
+    return true;
+}
+
+void ImGuiGameboyX::ActionDeleteGames() {
+    auto index = vector<int>();
+    for (int i = 0; const auto & n : gamesSelected) {
+        if (n) index.push_back(i);
+    }
+
+    auto result = DeleteGamesGuiCtx(index);
+
+    string current_path = get_current_path();
+    string s_path_config = current_path + CONFIG_FOLDER + GAMES_CONFIG_FILE;
+    if (delete_games_from_config(result, s_path_config)) {}
+
+    InitGamesGuiCtx();
+
+    deleteGames = false;
+}
+
+/* ***********************************************************************************************************
+    HELPER FUNCTIONS FOR MANAGING MEMBERS OF GUI OBJECT
+*********************************************************************************************************** */
+void ImGuiGameboyX::AddGameGuiCtx(const game_info& _game_ctx) {
+    games.push_back(_game_ctx);
+    gamesSelected.clear();
+    for (const auto& game : games) {
+        gamesSelected.push_back(false);
+    }
+    gamesSelected.back() = true;
+    gamesPrevIndex = gamesSelected.size() - 1;
+}
+
+const vector<game_info> ImGuiGameboyX::DeleteGamesGuiCtx(const vector<int>& _index) {
+    auto result = vector<game_info>();
+
+    for (int i = _index.size(); i >= 0; i--) {
+        const game_info game_ctx = games[_index[i]];
+        result.push_back(game_ctx);
+        games.erase(games.begin() + _index[i]);
+        gamesSelected.erase(gamesSelected.begin() + _index[i]);
+    }
+    gamesPrevIndex = 0;
+
+    return result;
+}
+
+void ImGuiGameboyX::InitGamesGuiCtx() {
+    for (const auto& n : games) {
+        gamesSelected.push_back(false);
+    }
 }
 
 /* ***********************************************************************************************************
@@ -212,8 +341,12 @@ void ImGuiGameboyX::ShowGameSelect() {
 *********************************************************************************************************** */
 void ImGuiGameboyX::KeyDown(SDL_Keycode _key) {
     switch (_key) {
-    case SDLK_F10:
-        showMainMenuBar = !showMainMenuBar;
+    case SDLK_LSHIFT:
+        sdlkShiftDown = true;
+        break;
+    case SDLK_LCTRL:
+    case SDLK_RCTRL:
+        sdlkCtrlDown = true;
         break;
     default:
         break;
@@ -222,6 +355,18 @@ void ImGuiGameboyX::KeyDown(SDL_Keycode _key) {
 
 void ImGuiGameboyX::KeyUp(SDL_Keycode _key) {
     switch (_key) {
+    case SDLK_F10:
+        showMainMenuBar = !showMainMenuBar;
+        break;
+    case SDLK_LSHIFT:
+        sdlkShiftDown = false;
+        break;
+    case SDLK_LCTRL:
+    case SDLK_RCTRL:
+        sdlkCtrlDown = false;
+        break;
+    case SDLK_ESCAPE:
+        runGame = false;
     default:
         break;
     }

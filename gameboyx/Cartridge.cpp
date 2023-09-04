@@ -10,8 +10,8 @@
 using namespace std;
 
 bool Cartridge::ReadData() {
-	if (!read_rom_to_buffer(*this->gameCtx, this->vecRom)) return false;
-	if(!read_header_info(*this->gameCtx, this->vecRom)) return false;
+	if (!read_rom_to_buffer(*gameCtx, vecRom)) return false;
+	if(!read_header_info(*gameCtx, vecRom)) return false;
 
 	// TODO: load cartridge data for execution
 

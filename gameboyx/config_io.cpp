@@ -134,17 +134,13 @@ bool write_game_to_config(const game_info& _game_ctx, const string& _config_path
     return true;
 }
 
-bool delete_game_from_config(vector<game_info>& _games, const game_info& _game_ctx, const string& _config_path) {
-    if (!check_and_create_file(_config_path + GAMES_CONFIG_FILE)) { return false; }
-    // TODO
+bool delete_games_from_config(vector<game_info>& _games, const std::string& _config_path) {
+    if (!check_and_create_file(_config_path)) { return false; }
+    
+    // delete games from config
+    // TODO !!!!!!!
 
     return true;
-}
-
-bool write_new_game(const game_info& _game_ctx) {
-    string current_path = get_current_path();
-    string s_path_config = current_path + CONFIG_FOLDER;
-    return write_game_to_config(_game_ctx, s_path_config + GAMES_CONFIG_FILE);
 }
 
 bool check_and_create_folders() {

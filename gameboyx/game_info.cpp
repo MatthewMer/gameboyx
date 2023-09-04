@@ -192,7 +192,6 @@ bool check_game_info_integrity(const game_info& _game_ctx) {
         _game_ctx.file_name.compare("") != 0 &&
         _game_ctx.file_path.compare("") != 0)
     {
-        LOG_INFO("All values for game \"", _game_ctx.title, "\" set internaly");
         return true;
     }
     else {

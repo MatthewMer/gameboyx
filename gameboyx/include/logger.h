@@ -33,6 +33,8 @@
 #define LOG_ERROR(...) _logError(__LINE__, __FILE__, __VA_ARGS__)
 #endif
 
+// TODO: use global queue for messages and process output in GUI object
+
 // Logger backends only have to supply these functions:
 void initLogger(void);
 //void log(const char* message, size_t messageLength, size_t lineNumber, const char* file);

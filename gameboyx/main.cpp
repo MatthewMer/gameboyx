@@ -179,7 +179,7 @@ int main(int, char**)
     // Our state
     //bool show_demo_window = true;
     //bool show_another_window = false;
-    auto clear_color = ImVec4(GUI_BG_BRIGHTNESS, GUI_BG_BRIGHTNESS, GUI_BG_BRIGHTNESS, 1.00f);
+    auto clear_color = IMGUI_CLR_COLOR;
 
     // Main loop
     ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance();
@@ -205,9 +205,6 @@ int main(int, char**)
                 break;
             case SDL_KEYDOWN:
                 switch (event.key.keysym.sym) {
-                case SDLK_F11:
-                    sdl_toggle_full_screen(window);
-                    break;
                 default:
                     gbx_gui->KeyDown(event.key.keysym.sym);
                     break;
@@ -215,6 +212,10 @@ int main(int, char**)
                 break;
             case SDL_KEYUP:
                 switch (event.key.keysym.sym) {
+                case SDLK_F11:
+                    sdl_toggle_full_screen(window);
+                    break;
+                case SDLK_ESCAPE:
                 default:
                     gbx_gui->KeyUp(event.key.keysym.sym);
                     break;
@@ -245,7 +246,7 @@ int main(int, char**)
         ImGui::NewFrame();
 
         // ----- Show GUI elements
-        gbx_gui->ShowGUI();
+        gbx_gui->ProcessGUI();
 
         /*
         //**********************************************************
@@ -487,7 +488,7 @@ static void setup_vulkan(ImVector<const char*> instance_extensions)
     {
         uint32_t count;
         vkGetPhysicalDeviceQueueFamilyProperties(g_PhysicalDevice, &count, nullptr);
-        VkQueueFamilyProperties* queues = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties) * count);
+        VkQueueFamilyProperties* queues = new VkQueueFamilyProperties[sizeof(VkQueueFamilyProperties) * count];
         vkGetPhysicalDeviceQueueFamilyProperties(g_PhysicalDevice, &count, queues);
         for (uint32_t i = 0; i < count; i++)
             if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -495,7 +496,7 @@ static void setup_vulkan(ImVector<const char*> instance_extensions)
                 g_QueueFamily = i;
                 break;
             }
-        free(queues);
+        delete[] queues;
         IM_ASSERT(g_QueueFamily != (uint32_t)-1);
     }
 
