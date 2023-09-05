@@ -64,7 +64,7 @@ void ImGuiGameboyX::ProcessGUI() {
     GUI BUILDER
 *********************************************************************************************************** */
 void ImGuiGameboyX::ShowMainMenuBar() {
-    if (showMainMenuBar)
+    if (showMainMenuBar){
         if (ImGui::BeginMainMenuBar()) {
             if (!runGame) {
                 if (ImGui::BeginMenu("File")) {
@@ -93,8 +93,10 @@ void ImGuiGameboyX::ShowMainMenuBar() {
                 ImGui::MenuItem("About", nullptr, &showWinAbout);
                 ImGui::EndMenu();
             }
-            ImGui::EndMenu();
+
+            ImGui::EndMainMenuBar();
         }
+    }
 }
 
 void ImGuiGameboyX::ShowWindowAbout() {
@@ -159,101 +161,98 @@ void ImGuiGameboyX::ShowGameSelect() {
         ImGuiWindowFlags_NoBringToFrontOnFocus;
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, IMGUI_BG_COLOR);
-    if (!ImGui::Begin("", nullptr, win_flags)) {
-        ImGui::End();
-        return;
-    }
+    if (ImGui::Begin("games_select", nullptr, win_flags)) {
 
-    const ImGuiTableFlags table_flags =
-        ImGuiTableFlags_ScrollY |
-        ImGuiTableFlags_BordersInnerV;
+        static const ImGuiTableFlags table_flags =
+            ImGuiTableFlags_ScrollY |
+            ImGuiTableFlags_BordersInnerV;
 
-    const int column_num = GAMES_COLUMNS.size();
+        static const int column_num = GAMES_COLUMNS.size();
 
-    ImGuiStyle& style = ImGui::GetStyle();
-    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 10, 10 });
+        static const ImGuiTableColumnFlags col_flags = ImGuiTableColumnFlags_WidthFixed;
 
-    if (ImGui::BeginTable("game_list", column_num, table_flags, ImVec2(.0f, .0f), .0f)) {
+        ImGuiStyle& style = ImGui::GetStyle();
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 10, 10 });
 
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, style.CellPadding.y * 2));
+        if (ImGui::BeginTable("game_list", column_num, table_flags)) {
 
-        const ImGuiTableColumnFlags col_flags = 0;
-        
-        for (int i = 0; const auto& [label, fraction] : GAMES_COLUMNS) {
-            ImGui::TableSetupColumn(label.c_str(), col_flags, main_viewport->Size.x * fraction);
-            ImGui::TableSetupScrollFreeze(i, 0);
-            i++;
-        }
-        ImGui::TableSetupColumn("", col_flags, main_viewport->Size.x / column_num);
-        ImGui::TableSetupScrollFreeze(column_num - 1, 0);
-        ImGui::TableHeadersRow();
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, style.CellPadding.y * 2));
 
-        for (int i = 0; const auto & game : games) {
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-
-            // TODO: icon
-            ImGui::TableNextColumn();
-
-            ImGuiSelectableFlags sel_flags = ImGuiSelectableFlags_SpanAllColumns;
-            ImGui::Selectable((game.is_cgb ? GAMES_CONSOLES[1].c_str() : GAMES_CONSOLES[0].c_str()), gamesSelected[i], sel_flags);
-
-            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)){
-                for (int j = 0; j < gamesSelected.size();j++) {
-                    gamesSelected[i] = i == j;
-                }
-
-                runGame = true;
-                gameToRun = i;
+            for (int i = 0; const auto & [label, fraction] : GAMES_COLUMNS) {
+                ImGui::TableSetupColumn(label.c_str(), col_flags, main_viewport->Size.x * fraction);
+                ImGui::TableSetupScrollFreeze(i, 0);
+                i++;
             }
-            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
-                if (sdlkShiftDown) {
-                    static int lower, upper;
-                    if (i <= gamesPrevIndex) {
-                        lower = i;
-                        upper = gamesPrevIndex;
+            ImGui::TableHeadersRow();
+
+            for (int i = 0; const auto & game : games) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+
+                // TODO: icon
+                ImGui::TableNextColumn();
+
+                ImGuiSelectableFlags sel_flags = ImGuiSelectableFlags_SpanAllColumns;
+                ImGui::Selectable((game.is_cgb ? GAMES_CONSOLES[1].c_str() : GAMES_CONSOLES[0].c_str()), gamesSelected[i], sel_flags);
+
+                if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                    for (int j = 0; j < gamesSelected.size(); j++) {
+                        gamesSelected[i] = i == j;
+                    }
+
+                    runGame = true;
+                    gameToRun = i;
+                }
+                if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
+                    if (sdlkShiftDown) {
+                        static int lower, upper;
+                        if (i <= gamesPrevIndex) {
+                            lower = i;
+                            upper = gamesPrevIndex;
+                        }
+                        else {
+                            lower = gamesPrevIndex;
+                            upper = i;
+                        }
+
+                        for (int j = 0; j < gamesSelected.size(); j++) {
+                            gamesSelected[j] = ((j >= lower) && (j <= upper)) || (sdlkCtrlDown ? gamesSelected[j] : false);
+                        }
                     }
                     else {
-                        lower = gamesPrevIndex;
-                        upper = i;
+                        for (int j = 0; j < gamesSelected.size(); j++) {
+                            gamesSelected[j] = (i == j ? !gamesSelected[j] : (sdlkCtrlDown ? gamesSelected[j] : false));
+                            gamesPrevIndex = i;
+                        }
+                        if (!sdlkCtrlDown) {
+                            gamesPrevIndex = i;
+                            gamesSelected[i] = true;
+                        }
                     }
+                }
+                if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(1)) {
+                    // TODO: context menu
+                }
 
-                    for (int j = 0; j < gamesSelected.size(); j++) {
-                        gamesSelected[j] = ((j >= lower) && (j <= upper)) || (sdlkCtrlDown ? gamesSelected[j] : false);
-                    }
-                }
-                else {
-                    for (int j = 0; j < gamesSelected.size(); j++) {
-                        gamesSelected[j] = (i == j ? !gamesSelected[j] : (sdlkCtrlDown ? gamesSelected[j] : false));
-                        gamesPrevIndex = i;
-                    }
-                    if (!sdlkCtrlDown) { 
-                        gamesPrevIndex = i; 
-                        gamesSelected[i] = true;
-                    }
-                }
-            } 
-            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(1)) {
-                // TODO: context menu
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(game.title.c_str());
+                ImGui::SetItemTooltip(game.title.c_str());
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(game.file_path.c_str());
+                ImGui::SetItemTooltip(game.file_path.c_str());
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(game.file_name.c_str());
+                ImGui::SetItemTooltip(game.file_name.c_str());
+
+                i++;
             }
-
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(game.title.c_str());
-            ImGui::SetItemTooltip(game.title.c_str());
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(game.file_path.c_str());
-            ImGui::SetItemTooltip(game.file_path.c_str());
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(game.file_name.c_str());
-            ImGui::SetItemTooltip(game.file_name.c_str());
-
-            i++;
+            ImGui::PopStyleVar();
         }
         ImGui::PopStyleVar();
+        ImGui::EndTable();
+        ImGui::End();
     }
-    ImGui::EndTable();
-    ImGui::PopStyleVar();
-    ImGui::End();
+    ImGui::PopStyleColor();
 }
 
 /* ***********************************************************************************************************
