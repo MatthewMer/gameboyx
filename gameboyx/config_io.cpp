@@ -10,21 +10,120 @@
 
 using namespace std;
 
-bool read_games_from_config(vector<game_info>& _games, const string& _games_config_path) {
-    if (!check_and_create_file(_games_config_path)) { return false; }
 
-    string full_config_path = get_current_path() + _games_config_path;
+
+
+bool read_config(vector<string>& _config_input, const string& _config_path_rel);
+bool write_config(const vector<game_info>& _games, const string& _config_path_rel, bool _rewrite);
+
+void process_games(vector<game_info>& _games, const vector<string>& _config_games);
+bool filter_parameter_enum(game_info& _game_ctx, const vector<string>& _parameter);
+
+
+
+
+
+
+bool read_games_from_config(vector<game_info>& _games, const string& _config_path_rel) {
+    if (auto config_games = vector<string>(); read_config(config_games, _config_path_rel)) {
+        process_games(_games, config_games);
+        //LOG_INFO(_games.size(), " game(s) found in ." + _config_path_rel);
+        return true;
+    }
+
+    return false;
+}
+
+
+bool write_games_to_config(const vector<game_info>& _games, const string& _config_path_rel, bool _rewrite) {
+    if (write_config(_games, _config_path_rel, _rewrite)) {
+        if(!_rewrite) LOG_INFO(_games.size(), " game(s) added to ." + _config_path_rel);
+        return true; 
+    }
+
+    return false;
+}
+
+
+
+
+bool delete_games_from_config(vector<game_info>& _games, const std::string& _config_path_rel) {
+    auto games = vector<game_info>();
+    if (!read_games_from_config(games, _config_path_rel)) {
+        return false;
+    }
+
+    for (int i = games.size() - 1; i >= 0; i--) {
+        for (const auto& m : _games) {
+            if (games[i] == m) {
+                games.erase(games.begin() + i);
+            }
+        }
+    }
+
+    if (!write_games_to_config(games, _config_path_rel, true)) {
+        return false;
+    }
+
+    LOG_INFO(_games.size(), " games removed from .", _config_path_rel);
+
+    return true;
+}
+
+
+
+bool read_config(vector<string>& _config_input, const string& _config_path_rel) {
+    string full_config_path = check_and_create_file(_config_path_rel);
 
     ifstream is(full_config_path, ios::beg);
-    if (!is) { return false; }
+    if (!is) { 
+        LOG_WARN("Couldn't read ", full_config_path);
+        return false; 
+    }
+    string line;
+    _config_input.clear();
+    while (getline(is, line)) {
+        _config_input.push_back(line);
+    }
 
+    is.close();
+    return true;
+}
+
+bool write_config(const vector<game_info>& _games, const string& _config_path_rel, bool _rewrite) {
+    string full_config_path = check_and_create_file(_config_path_rel);
+    
+    ofstream os(full_config_path, (_rewrite ? ios::trunc : ios::app));
+    if (!os.is_open()) {
+        LOG_WARN("Couldn't write ", full_config_path);
+        return false;
+    }
+
+    for (const auto& n : _games) {
+        os << endl;
+        os << "[" << n.title << "]" << endl;
+        os << get_info_type_string(FILE_NAME) << "=" << n.file_name << endl;
+        os << get_info_type_string(FILE_PATH) << "=" << n.file_path << endl;
+        os << get_info_type_string(GAME_VER) << "=" << n.game_ver << endl;
+        os << get_info_type_string(IS_CGB) << "=" << (n.is_cgb ? PARAMETER_TRUE : PARAMETER_FALSE) << endl;
+        os << get_info_type_string(IS_SGB) << "=" << (n.is_sgb ? PARAMETER_TRUE : PARAMETER_FALSE) << endl;
+        os << get_info_type_string(CART_TYPE) << "=" << n.cart_type << endl;
+        os << get_info_type_string(LICENSEE) << "=" << n.licensee << endl;
+        os << get_info_type_string(DEST_CODE) << "=" << n.dest_code << endl;
+    }
+
+    os.close();
+    return true;
+}
+
+void process_games(vector<game_info>& _games, const vector<string>& _config_games) {
     game_info game_ctx("");
     string line;
+    _games.clear();
 
-    for (int line_count = 1; getline(is, line); line_count++) {
-        if (line.compare("") == 0) continue;
-
-        line = trim(line);
+    for (int i = 0; i < _config_games.size(); i++) {
+        if (_config_games[i].compare("") == 0) { continue; }
+        line = trim(_config_games[i]);
 
         // find start of entry
         if (line.find("[") == 0 && line.find("]") == line.length() - 1) {
@@ -33,123 +132,93 @@ bool read_games_from_config(vector<game_info>& _games, const string& _games_conf
             }
 
             game_ctx = game_info(line.substr(1, line.length() - 2));
-        } 
+        }
         // filter entry parameters
         else if (game_ctx.title.compare("") != 0) {
             const auto parameter = split_string(line, "=");
 
             if (parameter.size() != 2) {
-                LOG_WARN("Faulty parameter on line ", line_count);
+                LOG_WARN("Multiple '=' on line ", (i + 1));
                 continue;
             }
 
-            switch (get_info_type_enum(trim(parameter[0]))) {
-            case TITLE:
-                game_ctx.title = trim(parameter[1]);
-                break;
-            case LICENSEE:
-                game_ctx.licensee = trim(parameter[1]);
-                break;
-            case CART_TYPE:
-                game_ctx.cart_type = trim(parameter[1]);
-                break;
-            case IS_CGB: {
-                string value = trim(parameter[1]);
-                bool result = (value.compare(PARAMETER_TRUE) == 0 ? true : false);
-                if (!result && value.compare(PARAMETER_FALSE) != 0) {
-                    LOG_WARN("Faulty boolean on line ", line_count, ", fallback to false");
-                }
-                game_ctx.is_cgb = result;
-            }
-                break;
-            case IS_SGB: {
-                string value = trim(parameter[1]);
-                bool result = (value.compare(PARAMETER_TRUE) == 0 ? true : false);
-                if (!result && value.compare(PARAMETER_FALSE) != 0) {
-                    LOG_WARN("Faulty boolean on line ", line_count, ", fallback to false");
-                }
-                game_ctx.is_sgb = result;
-            }
-                break;
-            case DEST_CODE:
-                game_ctx.dest_code = trim(parameter[1]);
-                break;
-            case GAME_VER:
-                game_ctx.game_ver = trim(parameter[1]);
-                break;
-            case CHKSUM_PASSED: {
-                string value = trim(parameter[1]);
-                bool result = (value.compare(PARAMETER_TRUE) == 0 ? true : false);
-                if (!result && value.compare(PARAMETER_FALSE) != 0) {
-                    LOG_WARN("Faulty boolean on line ", line_count, ", fallback to false");
-                }
-                game_ctx.chksum_passed = result;
-            }
-                break;
-            case FILE_NAME:
-                game_ctx.file_name = trim(parameter[1]);
-                break;
-            case FILE_PATH:
-                game_ctx.file_path = trim(parameter[1]);
-                break;
-            case NONE_INFO_TYPE:
-            default:
-                LOG_ERROR("Unknown internal info type for line ", line_count);
-                continue;
-                break;
+            if (!filter_parameter_enum(game_ctx, parameter)) {
+                LOG_WARN("Faulty parameter on line ", (i + 1));
             }
         }
     }
 
-    if(game_ctx.title.compare("") != 0)
+    if (game_ctx.title.compare("") != 0)
         _games.push_back(game_ctx);
 
-    LOG_INFO(_games.size(), " game entries found in .", _games_config_path);
+    return;
+}
 
+bool filter_parameter_enum(game_info& _game_ctx, const vector<string>& _parameter) {
+    switch (get_info_type_enum(trim(_parameter[0]))) {
+    case TITLE:
+        _game_ctx.title = trim(_parameter[1]);
+        break;
+    case LICENSEE:
+        _game_ctx.licensee = trim(_parameter[1]);
+        break;
+    case CART_TYPE:
+        _game_ctx.cart_type = trim(_parameter[1]);
+        break;
+    case IS_CGB: {
+        string value = trim(_parameter[1]);
+        bool result = (value.compare(PARAMETER_TRUE) == 0 ? true : false);
+        _game_ctx.is_cgb = result;
+        if (!result && value.compare(PARAMETER_FALSE) != 0) {
+            return false;
+        }
+    }
+        break;
+    case IS_SGB: {
+        string value = trim(_parameter[1]);
+        bool result = (value.compare(PARAMETER_TRUE) == 0 ? true : false);
+        _game_ctx.is_sgb = result;
+        if (!result && value.compare(PARAMETER_FALSE) != 0) {
+            return false;
+        }
+    }
+        break;
+    case DEST_CODE:
+        _game_ctx.dest_code = trim(_parameter[1]);
+        break;
+    case GAME_VER:
+        _game_ctx.game_ver = trim(_parameter[1]);
+        break;
+    case CHKSUM_PASSED: {
+        string value = trim(_parameter[1]);
+        bool result = (value.compare(PARAMETER_TRUE) == 0 ? true : false);
+        _game_ctx.chksum_passed = result;
+        if (!result && value.compare(PARAMETER_FALSE) != 0) {
+            return false;
+        }
+    }
+        break;
+    case FILE_NAME:
+        _game_ctx.file_name = trim(_parameter[1]);
+        break;
+    case FILE_PATH:
+        _game_ctx.file_path = trim(_parameter[1]);
+        break;
+    default:
+        return false;
+        break;
+    }
     return true;
 }
 
 
 
-bool write_game_to_config(const game_info& _game_ctx, const string& _config_path) {
-    ofstream os(_config_path, ios_base::out | ios_base::app);
 
-    LOG_INFO("Writing new data to games.ini");
-
-    if (!os.is_open()) return false;
-
-    os << endl;
-    os << "[" << _game_ctx.title << "]" << endl;
-    os << get_info_type_string(FILE_NAME) << "=" << _game_ctx.file_name << endl;
-    os << get_info_type_string(FILE_PATH) << "=" << _game_ctx.file_path << endl;
-    os << get_info_type_string(GAME_VER) << "=" << _game_ctx.game_ver << endl;
-    os << get_info_type_string(IS_CGB) << "=" << (_game_ctx.is_cgb ? PARAMETER_TRUE : PARAMETER_FALSE) << endl;
-    os << get_info_type_string(IS_SGB) << "=" << (_game_ctx.is_sgb ? PARAMETER_TRUE : PARAMETER_FALSE) << endl;
-    os << get_info_type_string(CART_TYPE) << "=" << _game_ctx.cart_type << endl;
-    os << get_info_type_string(LICENSEE) << "=" << _game_ctx.licensee << endl;
-    os << get_info_type_string(DEST_CODE) << "=" << _game_ctx.dest_code << endl;
-
-    os.close();
-
-    return true;
+void check_and_create_config_folders() {
+    check_and_create_path(ROM_FOLDER);
+    check_and_create_path(CONFIG_FOLDER);
 }
 
-bool delete_games_from_config(vector<game_info>& _games, const std::string& _config_path) {
-    if (!check_and_create_file(_config_path)) { return false; }
-    
-    // delete games from config
-    // TODO !!!!!!!
-
-    return true;
-}
-
-bool check_and_create_folders() {
-    if (!check_and_create_path(ROM_FOLDER)) { return false; }
-    if (!check_and_create_path(CONFIG_FOLDER)) { return false; }
-    return true;
-}
-
-bool check_and_create_files() {
-    if (!check_and_create_file(CONFIG_FOLDER + GAMES_CONFIG_FILE)) { return false; }
-    return true;
+void check_and_create_config_files() {
+    check_and_create_file(CONFIG_FOLDER + GAMES_CONFIG_FILE);
 }

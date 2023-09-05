@@ -32,14 +32,10 @@ void ImGuiGameboyX::resetInstance() {
 
 ImGuiGameboyX::ImGuiGameboyX() {
     NFD_Init();
-    check_and_create_folders();
-    if (check_and_create_files()) {
-        if (!read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
-            LOG_ERROR("Error while reading games.ini");
-        }
-        else {
-            InitGamesGuiCtx();
-        }
+    check_and_create_config_folders();
+    check_and_create_config_files();
+    if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
+        InitGamesGuiCtx();
     }
 }
 
@@ -58,6 +54,9 @@ void ImGuiGameboyX::ProcessGUI() {
 
         // actions
         if (deleteGames) ActionDeleteGames();
+
+        // special funktions
+        ActionProcessSpecialKeys();
     }
 }
 
@@ -116,11 +115,7 @@ void ImGuiGameboyX::ShowWindowAbout() {
 }
 
 void ImGuiGameboyX::ShowNewGameDialog() {
-    if (!check_and_create_folders()) {
-        LOG_ERROR("Required subfolders don't exist");
-        showNewGameDialog = false;
-        return;
-    }
+    check_and_create_config_folders();
 
     string current_path = get_current_path();
     string s_path_rom_folder = current_path + ROM_FOLDER;
@@ -262,7 +257,7 @@ void ImGuiGameboyX::ShowGameSelect() {
 }
 
 /* ***********************************************************************************************************
-    ACTIONS TO READ/WRITE/PROCESS DATA
+    ACTIONS TO READ/WRITE/PROCESS DATA ETC.
 *********************************************************************************************************** */
 bool ImGuiGameboyX::ActionAddGame(const string& _path_to_rom) {
     auto game_ctx = game_info();
@@ -280,9 +275,7 @@ bool ImGuiGameboyX::ActionAddGame(const string& _path_to_rom) {
         }
     }
 
-    string current_path = get_current_path();
-    string s_path_config = current_path + CONFIG_FOLDER + GAMES_CONFIG_FILE;
-    if (!write_game_to_config(game_ctx, s_path_config)) {
+    if (const vector<game_info> new_game = { game_ctx }; !write_games_to_config(new_game, CONFIG_FOLDER + GAMES_CONFIG_FILE, false)) {
         showNewGameDialog = false;
         return false;
     }
@@ -295,17 +288,32 @@ void ImGuiGameboyX::ActionDeleteGames() {
     auto index = vector<int>();
     for (int i = 0; const auto & n : gamesSelected) {
         if (n) index.push_back(i);
+        i++;
     }
 
-    auto result = DeleteGamesGuiCtx(index);
+    auto games_delete = DeleteGamesGuiCtx(index);
 
-    string current_path = get_current_path();
-    string s_path_config = current_path + CONFIG_FOLDER + GAMES_CONFIG_FILE;
-    if (delete_games_from_config(result, s_path_config)) {}
+    if (games_delete.size() > 0) {
+        delete_games_from_config(games_delete, CONFIG_FOLDER + GAMES_CONFIG_FILE);
+    }
 
     InitGamesGuiCtx();
 
     deleteGames = false;
+}
+
+void ImGuiGameboyX::ActionProcessSpecialKeys() {
+    if (sdlkCtrlDown) {
+        if (sdlkADown && sdlkCtrlDownFirst) {
+            for (int i = 0; i < gamesSelected.size(); i++) {
+                gamesSelected[i] = true;
+            }
+        }
+    }
+    if (sdlkDelDown) {
+        ActionDeleteGames();
+        sdlkDelDown = false;
+    }
 }
 
 /* ***********************************************************************************************************
@@ -324,7 +332,7 @@ void ImGuiGameboyX::AddGameGuiCtx(const game_info& _game_ctx) {
 vector<game_info> ImGuiGameboyX::DeleteGamesGuiCtx(const vector<int>& _index) {
     auto result = vector<game_info>();
 
-    for (int i = _index.size(); i >= 0; i--) {
+    for (int i = _index.size() - 1; i >= 0; i--) {
         const game_info game_ctx = games[_index[i]];
         result.push_back(game_ctx);
         games.erase(games.begin() + _index[i]);
@@ -346,12 +354,19 @@ void ImGuiGameboyX::InitGamesGuiCtx() {
 *********************************************************************************************************** */
 void ImGuiGameboyX::KeyDown(SDL_Keycode _key) {
     switch (_key) {
+    case SDLK_a:
+        sdlkADown = true;
+        break;
     case SDLK_LSHIFT:
         sdlkShiftDown = true;
         break;
     case SDLK_LCTRL:
     case SDLK_RCTRL:
         sdlkCtrlDown = true;
+        sdlkCtrlDownFirst = !sdlkADown;
+        break;
+    case SDLK_DELETE:
+        sdlkDelDown = true;
         break;
     default:
         break;
@@ -360,6 +375,9 @@ void ImGuiGameboyX::KeyDown(SDL_Keycode _key) {
 
 void ImGuiGameboyX::KeyUp(SDL_Keycode _key) {
     switch (_key) {
+    case SDLK_a:
+        sdlkADown = false;
+        break;
     case SDLK_F10:
         showMainMenuBar = !showMainMenuBar;
         break;
@@ -372,6 +390,10 @@ void ImGuiGameboyX::KeyUp(SDL_Keycode _key) {
         break;
     case SDLK_ESCAPE:
         runGame = false;
+        break;
+    case SDLK_DELETE:
+        sdlkDelDown = false;
+        break;
     default:
         break;
     }

@@ -215,7 +215,7 @@ int main(int, char**)
                 case SDLK_F11:
                     sdl_toggle_full_screen(window);
                     break;
-                case SDLK_ESCAPE:
+                //case SDLK_ESCAPE:
                 default:
                     gbx_gui->KeyUp(event.key.keysym.sym);
                     break;

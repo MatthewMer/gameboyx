@@ -21,26 +21,23 @@ vector<string> split_string(const string& _in_string, const string& _delimiter) 
     return vec_in_string;
 }
 
-bool check_and_create_file(const string& _path_to_file_rel) {
-    string current_path = get_current_path();
+string check_and_create_file(const string& _path_to_file_rel) {
+    string full_file_path = get_current_path() + _path_to_file_rel;
 
-    if (fs::exists(current_path + _path_to_file_rel)) {
-        return true;
+    if (!fs::exists(full_file_path)) {
+        ofstream(full_file_path).close();
     }
-    else {
-        ofstream(current_path + _path_to_file_rel).close();
-        return false;
-    }
+    
+    return full_file_path;
 }
 
-bool check_and_create_path(const string& _path_rel) {
-    string current_path = get_current_path();
-    string new_path = current_path + _path_rel;
-    if (!fs::is_directory(new_path) || !fs::exists(new_path)) {
-        fs::create_directory(new_path);
+string check_and_create_path(const string& _path_rel) {
+    string full_path = get_current_path() + _path_rel;
+    if (!fs::is_directory(full_path) || !fs::exists(full_path)) {
+        fs::create_directory(full_path);
     }
 
-    return fs::is_directory(new_path) || fs::exists(new_path);
+    return full_path;
 }
 
 string get_current_path() {

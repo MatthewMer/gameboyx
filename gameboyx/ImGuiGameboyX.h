@@ -30,7 +30,10 @@ protected:
 private:
 	// special keys
 	bool sdlkCtrlDown = false;
+	bool sdlkCtrlDownFirst = false;
 	bool sdlkShiftDown = false;
+	bool sdlkDelDown = false;
+	bool sdlkADown = false;
 
 	// variables
 	std::vector<game_info> games = std::vector<game_info>();
@@ -56,6 +59,7 @@ private:
 	// actions
 	void ActionDeleteGames();
 	bool ActionAddGame(const std::string& _path_to_rom);
+	void ActionProcessSpecialKeys();
 
 	// helpers
 	void AddGameGuiCtx(const game_info& _game_ctx);
