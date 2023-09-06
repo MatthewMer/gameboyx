@@ -9,7 +9,8 @@
 #include "nfd.h"
 #include "logger.h"
 #include "helper_functions.h"
-#include "imguigameboyx_config.h"
+#include "guigameboyx_config.h"
+#include "io_config.h"
 
 using namespace std;
 
@@ -19,14 +20,20 @@ using namespace std;
 ImGuiGameboyX* ImGuiGameboyX::instance = nullptr;
 
 ImGuiGameboyX* ImGuiGameboyX::getInstance() {
-    if (instance == nullptr) {
-        instance = new ImGuiGameboyX();
+    if (instance != nullptr) {
+        delete instance;
+        instance = nullptr;
     }
+
+    instance = new ImGuiGameboyX();
     return instance;
 }
 
 void ImGuiGameboyX::resetInstance() {
-    delete instance;
+    if (instance != nullptr) {
+        delete instance;
+        instance = nullptr;
+    }
     instance = nullptr;
 }
 
@@ -46,7 +53,7 @@ void ImGuiGameboyX::ProcessGUI() {
     IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
 
     if (showMainMenuBar) ShowMainMenuBar();
-    if (!runGame) {
+    if (!startGame) {
         // gui elements
         if (showGameSelect) ShowGameSelect();
         if (showWinAbout) ShowWindowAbout();
@@ -66,7 +73,7 @@ void ImGuiGameboyX::ProcessGUI() {
 void ImGuiGameboyX::ShowMainMenuBar() {
     if (showMainMenuBar){
         if (ImGui::BeginMainMenuBar()) {
-            if (!runGame) {
+            if (!startGame) {
                 if (ImGui::BeginMenu("File")) {
                     ImGui::MenuItem("Add new game", nullptr, &showNewGameDialog);
                     ImGui::MenuItem("Remove game(s)", nullptr, &deleteGames);
@@ -200,8 +207,7 @@ void ImGuiGameboyX::ShowGameSelect() {
                         gamesSelected[i] = i == j;
                     }
 
-                    runGame = true;
-                    gameToRun = i;
+                    StartGame(i);
                 }
                 if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
                     if (sdlkShiftDown) {
@@ -348,10 +354,25 @@ void ImGuiGameboyX::InitGamesGuiCtx() {
     }
 }
 
+void ImGuiGameboyX::StartGame(int _index) {
+    startGame = true;
+    gameToStart = _index;
+}
+
+void ImGuiGameboyX::EndGame() {
+    if (startGame) {
+        for (int i = 0; i < gamesSelected.size(); i++) {
+            gamesSelected[i] = false;
+        }
+        gamesSelected[gameToStart] = true;
+    }
+    startGame = false;
+}
+
 /* ***********************************************************************************************************
     IMGUIGAMEBOYX SDL FUNCTIONS
 *********************************************************************************************************** */
-void ImGuiGameboyX::KeyDown(SDL_Keycode _key) {
+void ImGuiGameboyX::KeyDown(const SDL_Keycode& _key) {
     switch (_key) {
     case SDLK_a:
         sdlkADown = true;
@@ -372,7 +393,7 @@ void ImGuiGameboyX::KeyDown(SDL_Keycode _key) {
     }
 }
 
-void ImGuiGameboyX::KeyUp(SDL_Keycode _key) {
+void ImGuiGameboyX::KeyUp(const SDL_Keycode& _key) {
     switch (_key) {
     case SDLK_a:
         sdlkADown = false;
@@ -388,7 +409,7 @@ void ImGuiGameboyX::KeyUp(SDL_Keycode _key) {
         sdlkCtrlDown = false;
         break;
     case SDLK_ESCAPE:
-        runGame = false;
+        EndGame();
         break;
     case SDLK_DELETE:
         sdlkDelDown = false;
@@ -396,4 +417,13 @@ void ImGuiGameboyX::KeyUp(SDL_Keycode _key) {
     default:
         break;
     }
+}
+
+/* ***********************************************************************************************************
+    HELPER FUNCTIONS
+*********************************************************************************************************** */
+void create_fs_hierarchy() {
+    check_and_create_config_folders();
+    check_and_create_config_files();
+    Cartridge::check_and_create_rom_folder();
 }

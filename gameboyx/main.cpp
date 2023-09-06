@@ -13,7 +13,7 @@
 
 #include "ImGuiGameboyX.h"
 #include "logger.h"
-#include "imguigameboyx_config.h"
+#include "guigameboyx_config.h"
 
 /* ***********************************************************************************************************
     DEFINES

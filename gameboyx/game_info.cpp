@@ -1,6 +1,4 @@
 #include "game_info.h"
-#include "logger.h"
-#include "imguigameboyx_config.h"
 
 using namespace std;
 
@@ -170,7 +168,6 @@ string get_info_type_string(const info_types& _info_type) {
         if (_info_type == type) return s_type;
     }
     
-    LOG_ERROR("Unknown type (.", GAMES_CONFIG_FILE, ")");
     return string("");
 }
 
@@ -179,7 +176,6 @@ info_types get_info_type_enum(const std::string& _info_type_string) {
         if (_info_type_string.compare(s_type) == 0) return type;
     }
     
-    LOG_ERROR("Unknown type (.", GAMES_CONFIG_FILE, "games.ini)");
     return NONE_INFO_TYPE;
 }
 
@@ -195,7 +191,6 @@ bool check_game_info_integrity(const game_info& _game_ctx) {
         return true;
     }
     else {
-        LOG_WARN("Missing internal values for game \"", _game_ctx.title, "\"");
         return false;
     }
 }

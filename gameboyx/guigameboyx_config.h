@@ -2,6 +2,7 @@
 
 #include "imgui.h"
 #include <vector>
+#include <string>
 
 /* ***********************************************************************************************************
     GBX DEFINES
@@ -15,13 +16,6 @@
 #define GBX_AUTHOR					"MatthewMer"
 
 /* ***********************************************************************************************************
-    CONFIG IO AND ROM CONSTANTS
-*********************************************************************************************************** */
-inline const std::string ROM_FOLDER = "\\rom\\";
-inline const std::string CONFIG_FOLDER = "\\config\\";
-inline const std::string GAMES_CONFIG_FILE = "games.ini";
-
-/* ***********************************************************************************************************
     IMGUI GBX CONSTANTS/DEFINES
 *********************************************************************************************************** */
 #define GUI_WIN_WIDTH               1280
@@ -31,10 +25,10 @@ inline const std::string APP_TITLE = "GameboyX";
 
 inline const std::vector<std::pair<std::string, float>> GAMES_COLUMNS = { 
     {"", 1 / 12.f},
-    {"Console", 1 / 6.f},
+    {"Console", 1 / 12.f},
     {"Title", 1 / 6.f},
     {"File path", 1 / 3.f},
-    {"File name", 3 / 12.f},
+    {"File name", 4 / 12.f},
 };
 inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Color" };
 

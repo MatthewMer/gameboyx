@@ -1,6 +1,6 @@
 #include "Cartridge.h"
 
-#include "imguigameboyx_config.h"
+#include "io_config.h"
 #include "gameboy_config.h"
 #include "logger.h"
 #include "helper_functions.h"
@@ -9,16 +9,36 @@
 
 using namespace std;
 
+Cartridge* Cartridge::instance = nullptr;
+
+Cartridge* Cartridge::getInstance(const game_info& _game_ctx) {
+	if (instance != nullptr) {
+		delete instance;
+		instance = nullptr;
+	}
+
+	instance = new Cartridge(_game_ctx);
+	return instance;
+}
+
+void Cartridge::resetInstance() {
+	if (instance != nullptr) {
+		delete instance;
+		instance = nullptr;
+	}
+}
+
+
 bool Cartridge::ReadData() {
 	if (!read_rom_to_buffer(*gameCtx, vecRom)) return false;
-	if(!read_header_info(*gameCtx, vecRom)) return false;
+	//if (!read_basic_header_info(*gameCtx, vecRom)) return false;
 
 	// TODO: load cartridge data for execution
 
 	return true;
 }
 
-bool Cartridge::read_header_info(game_info& _game_ctx, vector<u8>& _vec_rom) {
+bool Cartridge::read_basic_header_info(game_info& _game_ctx, vector<u8>& _vec_rom) {
 	// read header info -----
 	LOG_INFO("Reading header info");
 
@@ -62,18 +82,18 @@ bool Cartridge::read_header_info(game_info& _game_ctx, vector<u8>& _vec_rom) {
 	return true;
 }
 
-bool Cartridge::read_rom_to_buffer(const game_info& _game_ctx, vector<u8> & _vec_rom) {
+bool Cartridge::read_rom_to_buffer(const game_info& _game_ctx, std::vector<u8>& _vec_rom) {
 	LOG_INFO("Reading rom");
 
 	string full_file_path = get_full_file_path(_game_ctx);
 
 	ifstream is(full_file_path, ios::binary | ios::beg);
 	if (!is) { return false; }
-	vector<u8> read_buffer((istreambuf_iterator<char>(is)), istreambuf_iterator<char>());
+	const vector<u8> read_buffer((istreambuf_iterator<char>(is)), istreambuf_iterator<char>());
 	is.close();
 
-	_vec_rom = vector<u8>(read_buffer);
-	return !_vec_rom.empty();
+	_vec_rom = read_buffer;
+	return true;
 }
 
 bool Cartridge::copy_rom_to_rom_folder(game_info& game_ctx, std::vector<u8>& _vec_rom, const string& _new_file_path) {
@@ -114,7 +134,7 @@ bool Cartridge::read_new_game(game_info& _game_ctx, const string& _path_to_rom) 
 	}
 	_game_ctx.file_name = vec_path_to_rom.back();
 
-	vector<u8> vec_rom;
+	auto vec_rom = vector<u8>();
 	if (!Cartridge::read_rom_to_buffer(_game_ctx, vec_rom)) {
 		LOG_ERROR("Error while reading rom");
 		return false;
@@ -124,10 +144,14 @@ bool Cartridge::read_new_game(game_info& _game_ctx, const string& _path_to_rom) 
 		LOG_WARN("Fallback to given path");
 	}
 
-	if (!Cartridge::read_header_info(_game_ctx, vec_rom)) {
+	if (!Cartridge::read_basic_header_info(_game_ctx, vec_rom)) {
 		LOG_ERROR("Rom header corrupted");
 		return false;
 	}
 
 	return true;
+}
+
+void Cartridge::check_and_create_rom_folder() {
+	check_and_create_path(ROM_FOLDER);
 }

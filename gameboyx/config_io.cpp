@@ -3,7 +3,7 @@
 #include "game_info.h"
 #include "logger.h"
 #include "helper_functions.h"
-#include "imguigameboyx_config.h"
+#include "io_config.h"
 
 #include <fstream>
 #include <string>
@@ -14,10 +14,11 @@ using namespace std;
 
 
 bool read_config(vector<string>& _config_input, const string& _config_path_rel);
-bool write_config(const vector<game_info>& _games, const string& _config_path_rel, bool _rewrite);
+bool write_config(const vector<string>& _games, const string& _config_path_rel, bool _rewrite);
 
-void process_games(vector<game_info>& _games, const vector<string>& _config_games);
-bool filter_parameter_enum(game_info& _game_ctx, const vector<string>& _parameter);
+void games_from_string(vector<game_info>& _games, const vector<string>& _config_games);
+void games_to_string(const vector<game_info>& _games, vector<string>& _config_games);
+bool filter_parameter_game_info_enum(game_info& _game_ctx, const vector<string>& _parameter);
 
 
 
@@ -26,8 +27,7 @@ bool filter_parameter_enum(game_info& _game_ctx, const vector<string>& _paramete
 
 bool read_games_from_config(vector<game_info>& _games, const string& _config_path_rel) {
     if (auto config_games = vector<string>(); read_config(config_games, _config_path_rel)) {
-        process_games(_games, config_games);
-        //LOG_INFO(_games.size(), " game(s) found in ." + _config_path_rel);
+        games_from_string(_games, config_games);
         return true;
     }
 
@@ -36,7 +36,10 @@ bool read_games_from_config(vector<game_info>& _games, const string& _config_pat
 
 
 bool write_games_to_config(const vector<game_info>& _games, const string& _config_path_rel, bool _rewrite) {
-    if (write_config(_games, _config_path_rel, _rewrite)) {
+    auto config_games = vector<string>();
+    games_to_string(_games, config_games);
+
+    if (write_config(config_games, _config_path_rel, _rewrite)) {
         if(!_rewrite) LOG_INFO(_games.size(), " game(s) added to ." + _config_path_rel);
         return true; 
     }
@@ -65,7 +68,7 @@ bool delete_games_from_config(vector<game_info>& _games, const std::string& _con
         return false;
     }
 
-    LOG_INFO(_games.size(), " games removed from .", _config_path_rel);
+    LOG_INFO(_games.size(), " game(s) removed from .", _config_path_rel);
 
     return true;
 }
@@ -77,7 +80,7 @@ bool read_config(vector<string>& _config_input, const string& _config_path_rel) 
 
     ifstream is(full_config_path, ios::beg);
     if (!is) { 
-        LOG_WARN("Couldn't read ", full_config_path);
+        LOG_WARN("Couldn't read .", _config_path_rel);
         return false; 
     }
     string line;
@@ -90,33 +93,24 @@ bool read_config(vector<string>& _config_input, const string& _config_path_rel) 
     return true;
 }
 
-bool write_config(const vector<game_info>& _games, const string& _config_path_rel, bool _rewrite) {
+bool write_config(const vector<string>& _config_output, const string& _config_path_rel, bool _rewrite) {
     string full_config_path = check_and_create_file(_config_path_rel);
     
     ofstream os(full_config_path, (_rewrite ? ios::trunc : ios::app));
     if (!os.is_open()) {
-        LOG_WARN("Couldn't write ", full_config_path);
+        LOG_WARN("Couldn't write .", _config_path_rel);
         return false;
     }
 
-    for (const auto& n : _games) {
-        os << endl;
-        os << "[" << n.title << "]" << endl;
-        os << get_info_type_string(FILE_NAME) << "=" << n.file_name << endl;
-        os << get_info_type_string(FILE_PATH) << "=" << n.file_path << endl;
-        os << get_info_type_string(GAME_VER) << "=" << n.game_ver << endl;
-        os << get_info_type_string(IS_CGB) << "=" << (n.is_cgb ? PARAMETER_TRUE : PARAMETER_FALSE) << endl;
-        os << get_info_type_string(IS_SGB) << "=" << (n.is_sgb ? PARAMETER_TRUE : PARAMETER_FALSE) << endl;
-        os << get_info_type_string(CART_TYPE) << "=" << n.cart_type << endl;
-        os << get_info_type_string(LICENSEE) << "=" << n.licensee << endl;
-        os << get_info_type_string(DEST_CODE) << "=" << n.dest_code << endl;
+    for (const auto& n : _config_output) {
+        os << n << endl;
     }
 
     os.close();
     return true;
 }
 
-void process_games(vector<game_info>& _games, const vector<string>& _config_games) {
+void games_from_string(vector<game_info>& _games, const vector<string>& _config_games) {
     game_info game_ctx("");
     string line;
     _games.clear();
@@ -142,9 +136,12 @@ void process_games(vector<game_info>& _games, const vector<string>& _config_game
                 continue;
             }
 
-            if (!filter_parameter_enum(game_ctx, parameter)) {
+            if (!filter_parameter_game_info_enum(game_ctx, parameter)) {
                 LOG_WARN("Faulty parameter on line ", (i + 1));
             }
+        }
+        else {
+            LOG_WARN("Game entry error line ", i);
         }
     }
 
@@ -154,7 +151,22 @@ void process_games(vector<game_info>& _games, const vector<string>& _config_game
     return;
 }
 
-bool filter_parameter_enum(game_info& _game_ctx, const vector<string>& _parameter) {
+void games_to_string(const vector<game_info>& _games, vector<string>& _config_games) {
+    _config_games.clear();
+    for (const auto& n : _games) {
+        _config_games.push_back("");
+        _config_games.push_back("[" + n.title + "]");
+        _config_games.push_back(get_info_type_string(FILE_NAME) + "=" + n.file_name);
+        _config_games.push_back(get_info_type_string(FILE_PATH) + "=" + n.file_path);
+        _config_games.push_back(get_info_type_string(GAME_VER) + "=" + n.game_ver);
+        _config_games.push_back(get_info_type_string(IS_CGB) + "=" + (n.is_sgb ? PARAMETER_TRUE : PARAMETER_FALSE));
+        _config_games.push_back(get_info_type_string(CART_TYPE) + "=" + n.cart_type);
+        _config_games.push_back(get_info_type_string(LICENSEE) + "=" + n.licensee);
+        _config_games.push_back(get_info_type_string(DEST_CODE) + "=" + n.dest_code);
+    }
+}
+
+bool filter_parameter_game_info_enum(game_info& _game_ctx, const vector<string>& _parameter) {
     switch (get_info_type_enum(trim(_parameter[0]))) {
     case TITLE:
         _game_ctx.title = trim(_parameter[1]);
@@ -215,7 +227,6 @@ bool filter_parameter_enum(game_info& _game_ctx, const vector<string>& _paramete
 
 
 void check_and_create_config_folders() {
-    check_and_create_path(ROM_FOLDER);
     check_and_create_path(CONFIG_FOLDER);
 }
 

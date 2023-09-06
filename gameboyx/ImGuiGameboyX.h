@@ -10,24 +10,25 @@ public:
 	// singleton instance access
 	static ImGuiGameboyX* getInstance();
 	static void resetInstance();
+
 	// clone/assign protection
-	ImGuiGameboyX(ImGuiGameboyX& _instance) = delete;
-	void operator=(const ImGuiGameboyX&) = delete;
+	ImGuiGameboyX(ImGuiGameboyX const&) = delete;
+	ImGuiGameboyX(ImGuiGameboyX &&) = delete;
+	ImGuiGameboyX& operator=(ImGuiGameboyX const&) = delete;
+	ImGuiGameboyX& operator=(ImGuiGameboyX &&) = delete;
 
 	// functions
 	void ProcessGUI();
 	// sdl functions
-	void KeyDown(SDL_Keycode key);
-	void KeyUp(SDL_Keycode key);
+	void KeyDown(const SDL_Keycode& _key);
+	void KeyUp(const SDL_Keycode& _key);
 
-protected:
+private:
 	// constructor
 	ImGuiGameboyX();
 	static ImGuiGameboyX* instance;
-	// destructor
 	~ImGuiGameboyX() = default;
 
-private:
 	// special keys
 	bool sdlkCtrlDown = false;
 	bool sdlkCtrlDownFirst = false;
@@ -42,8 +43,10 @@ private:
 	bool deleteGames;
 
 	// game run state
-	bool runGame = false;
-	int gameToRun = 0;
+	void StartGame(int _index);
+	void EndGame();
+	bool startGame = false;
+	int gameToStart = 0;
 
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;

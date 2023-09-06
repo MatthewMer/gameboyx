@@ -172,22 +172,32 @@
     <ClCompile Include="..\submodules\imgui\imgui_demo.cpp" />
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="config_io.cpp" />
+    <ClCompile Include="Core.cpp" />
+    <ClCompile Include="GraphicsUnit.cpp" />
     <ClCompile Include="helper_functions.cpp" />
     <ClCompile Include="include\simple_logger.cpp" />
+    <ClCompile Include="io_config.h" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="game_info.cpp" />
     <ClCompile Include="ImGuiGameboyX.cpp" />
+    <ClCompile Include="Memory.cpp" />
+    <ClCompile Include="Mmu.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cartridge.h" />
+    <ClInclude Include="Core.h" />
     <ClInclude Include="gameboy_config.h" />
     <ClInclude Include="config_io.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="game_info.h" />
+    <ClInclude Include="GraphicsUnit.h" />
     <ClInclude Include="helper_functions.h" />
     <ClInclude Include="ImGuiGameboyX.h" />
-    <ClInclude Include="imguigameboyx_config.h" />
+    <ClInclude Include="guigameboyx_config.h" />
     <ClInclude Include="include\logger.h" />
+    <ClInclude Include="Memory.h" />
+    <ClInclude Include="Mmu.h" />
+    <ClInclude Include="registers.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui-lib\imgui-lib.vcxproj">
