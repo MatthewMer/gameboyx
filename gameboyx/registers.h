@@ -2,10 +2,10 @@
 
 #include "defs.h"
 
-struct registers_gbc {
+struct coresm83_registers {
 
 	union {						// accumulator and flags
-		u16 AF;
+		u16 AF = 0;
 		struct {
 			u8 F;
 			u8 A;
@@ -13,7 +13,7 @@ struct registers_gbc {
 	};
 
 	union {
-		u16 BC;
+		u16 BC = 0;
 		struct {
 			u8 C;
 			u8 B;
@@ -21,7 +21,7 @@ struct registers_gbc {
 	};
 
 	union {
-		u16 DE;
+		u16 DE = 0;
 		struct {
 			u8 E;
 			u8 D;
@@ -29,13 +29,13 @@ struct registers_gbc {
 	};
 
 	union {
-		u16 HL;
+		u16 HL = 0;
 		struct {
 			u8 L;
 			u8 H;
 		}HL_;
 	};
 
-	u16 SP;						// stack pointer
-	u16 PC;						// program counter
+	u16 SP = 0;						// stack pointer
+	u16 PC = 0;						// program counter
 };

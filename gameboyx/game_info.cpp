@@ -2,7 +2,7 @@
 
 using namespace std;
 
-const std::vector<std::pair<const u8, const std::string>> CART_TYPE_MAP{
+const std::vector<std::pair<u8, std::string>> CART_TYPE_MAP{
     { 0x00,"ROM ONLY"},
     { 0x01,"MBC1"},
     { 0x02,"MBC1+RAM"},
@@ -33,7 +33,7 @@ const std::vector<std::pair<const u8, const std::string>> CART_TYPE_MAP{
     { 0xFF,"HuC1+RAM+BATTERY"}
 };
 
-const std::vector<std::pair<const std::string, const std::string>> NEW_LIC_MAP{           // only when old is set to 0x33
+const std::vector<std::pair<std::string, std::string>> NEW_LIC_MAP{           // only when old is set to 0x33
     {"00", "None"},
     {"01", "Nintendo R&D1"},
     {"08", "Capcom"},
@@ -102,7 +102,7 @@ const std::vector<std::pair<u8, std::string>> DEST_CODE_MAP{
     { 0x01, "Western world"}
 };
 
-const std::vector<std::pair<const info_types, const std::string>> INFO_TYPES_MAP = {
+const std::vector<std::pair<info_types, std::string>> INFO_TYPES_MAP = {
     { TITLE, "title" },
     { LICENSEE,"licensee" },
     { CART_TYPE,"cart_type" },

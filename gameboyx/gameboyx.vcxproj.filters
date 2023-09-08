@@ -54,6 +54,9 @@
     <ClCompile Include="GraphicsUnit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="core_sm83_instructionset.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cartridge.h">
@@ -96,6 +99,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GraphicsUnit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="core_sm83_instructionset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

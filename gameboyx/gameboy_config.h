@@ -21,3 +21,10 @@
 
 #define ROM_HEAD_TITLE_SIZE_CGB		15
 #define ROM_HEAD_TITLE_SIZE_GB		16
+
+// CPU DEFINES *****
+
+#define STACK_OFFSET                0xFF80
+#define STACK_ENTRY			        0xFFFE
+
+#define IE_OFFSET                   0xFFFF

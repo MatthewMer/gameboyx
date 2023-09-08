@@ -23,5 +23,4 @@ CoreSM83::CoreSM83(const Cartridge& _cart_obj) {
 	Mmu::resetInstance();
 	mmu_instance = Mmu::getInstance(_cart_obj);
 
-	regs = registers_gbc();
 }

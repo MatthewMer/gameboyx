@@ -35,7 +35,7 @@ bool read_games_from_config(vector<game_info>& _games, const string& _config_pat
 }
 
 
-bool write_games_to_config(const vector<game_info>& _games, const string& _config_path_rel, bool _rewrite) {
+bool write_games_to_config(const vector<game_info>& _games, const string& _config_path_rel, const bool& _rewrite) {
     auto config_games = vector<string>();
     games_to_string(_games, config_games);
 

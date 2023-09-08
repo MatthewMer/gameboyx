@@ -343,7 +343,10 @@ vector<game_info> ImGuiGameboyX::DeleteGamesGuiCtx(const vector<int>& _index) {
         games.erase(games.begin() + _index[i]);
         gamesSelected.erase(gamesSelected.begin() + _index[i]);
     }
-    gamesPrevIndex = 0;
+
+    if (result.size() > 0) {
+        gamesPrevIndex = 0;
+    }
 
     return result;
 }

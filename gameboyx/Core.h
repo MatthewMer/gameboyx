@@ -42,5 +42,5 @@ private:
 	~CoreSM83() = default;
 
 	// members
-	registers_gbc regs;
+	coresm83_registers regs = coresm83_registers();
 };
