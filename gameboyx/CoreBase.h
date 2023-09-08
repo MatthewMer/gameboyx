@@ -2,8 +2,7 @@
 
 #include "Cartridge.h"
 #include "registers.h"
-
-#include "Mmu.h"
+#include "MmuBase.h"
 
 class Core
 {
@@ -27,20 +26,4 @@ protected:
 private:
 	static Core* instance;
 	~Core() = default;
-};
-
-
-class CoreSM83 : protected Core
-{
-public:
-	friend class Core;
-
-private:
-	// constructor
-	explicit CoreSM83(const Cartridge& _cart_obj);
-	// destructor
-	~CoreSM83() = default;
-
-	// members
-	coresm83_registers regs = coresm83_registers();
 };

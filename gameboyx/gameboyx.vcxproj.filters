@@ -42,10 +42,10 @@
     <ClCompile Include="io_config.h">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="Core.cpp">
+    <ClCompile Include="CoreBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Mmu.cpp">
+    <ClCompile Include="MmuBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Memory.cpp">
@@ -54,7 +54,10 @@
     <ClCompile Include="GraphicsUnit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="core_sm83_instructionset.cpp">
+    <ClCompile Include="CoreSM83.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MmuSM83.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -86,13 +89,13 @@
     <ClInclude Include="guigameboyx_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Core.h">
+    <ClInclude Include="CoreBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="registers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Mmu.h">
+    <ClInclude Include="MmuBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Memory.h">
@@ -101,7 +104,10 @@
     <ClInclude Include="GraphicsUnit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="core_sm83_instructionset.h">
+    <ClInclude Include="CoreSM83.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MmuSM83.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -172,8 +172,8 @@
     <ClCompile Include="..\submodules\imgui\imgui_demo.cpp" />
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="config_io.cpp" />
-    <ClCompile Include="Core.cpp" />
-    <ClCompile Include="core_sm83_instructionset.cpp" />
+    <ClCompile Include="CoreBase.cpp" />
+    <ClCompile Include="CoreSM83.cpp" />
     <ClCompile Include="GraphicsUnit.cpp" />
     <ClCompile Include="helper_functions.cpp" />
     <ClCompile Include="include\simple_logger.cpp" />
@@ -182,12 +182,13 @@
     <ClCompile Include="game_info.cpp" />
     <ClCompile Include="ImGuiGameboyX.cpp" />
     <ClCompile Include="Memory.cpp" />
-    <ClCompile Include="Mmu.cpp" />
+    <ClCompile Include="MmuBase.cpp" />
+    <ClCompile Include="MmuSM83.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cartridge.h" />
-    <ClInclude Include="Core.h" />
-    <ClInclude Include="core_sm83_instructionset.h" />
+    <ClInclude Include="CoreBase.h" />
+    <ClInclude Include="CoreSM83.h" />
     <ClInclude Include="gameboy_config.h" />
     <ClInclude Include="config_io.h" />
     <ClInclude Include="defs.h" />
@@ -198,7 +199,8 @@
     <ClInclude Include="guigameboyx_config.h" />
     <ClInclude Include="include\logger.h" />
     <ClInclude Include="Memory.h" />
-    <ClInclude Include="Mmu.h" />
+    <ClInclude Include="MmuBase.h" />
+    <ClInclude Include="MmuSM83.h" />
     <ClInclude Include="registers.h" />
   </ItemGroup>
   <ItemGroup>

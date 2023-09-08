@@ -2,15 +2,11 @@
 
 #include "defs.h"
 
-struct coresm83_registers {
+// unions not allow for type-punning by the C++ standard but works fine with g++, Clang and MSVC (MSVC even uses it in its headers)
+struct gbc_registers {
 
-	union {						// accumulator and flags
-		u16 AF = 0;
-		struct {
-			u8 F;
-			u8 A;
-		}AF_;
-	};
+	u8 F;
+	u8 A;
 
 	union {
 		u16 BC = 0;

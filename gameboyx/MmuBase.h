@@ -16,6 +16,12 @@ public:
 	Mmu& operator=(Mmu const&) = delete;
 	Mmu& operator=(Mmu&&) = delete;
 
+	// members
+	virtual void Write8Bit(const u8& _data, const u16& _addr) = 0;
+	virtual void Write16Bit(const u16& _data, const u16& _addr) = 0;
+	virtual u8 Read8Bit(const u16& _addr) = 0;
+	virtual u16 Read16Bit(const u16& _addr) = 0;
+
 protected:
 	// constructor
 	Mmu() = default;
@@ -25,17 +31,4 @@ protected:
 private:
 	static Mmu* instance;
 	~Mmu() = default;
-};
-
-
-class MmuSM83 : protected Mmu
-{
-public:
-	friend class Mmu;
-
-private:
-	// constructor
-	explicit MmuSM83(const Cartridge& _cart_obj);
-	// destructor
-	~MmuSM83() = default;
 };

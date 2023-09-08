@@ -1,4 +1,6 @@
-#include "Core.h"
+#include "CoreBase.h"
+
+#include "CoreSM83.h"
 
 Core* Core::instance = nullptr;
 
@@ -17,10 +19,4 @@ void Core::resetInstance() {
 		delete instance;
 		instance = nullptr;
 	}
-}
-
-CoreSM83::CoreSM83(const Cartridge& _cart_obj) {
-	Mmu::resetInstance();
-	mmu_instance = Mmu::getInstance(_cart_obj);
-
 }
