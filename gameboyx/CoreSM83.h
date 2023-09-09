@@ -5,6 +5,8 @@
 #include "registers.h"
 #include "defs.h"
 
+#include <vector>
+
 class CoreSM83 : protected Core
 {
 public:
@@ -27,72 +29,97 @@ private:
 	bool opcode_cb = false;
 
 	// instruction members ****************
+	// lookup table
+	typedef void (CoreSM83::* instruction)();
+	std::tuple<u8, instruction, int>* instrPtr = nullptr;
+
+	// basic instructions
+	std::vector<std::tuple<u8, instruction, int>> instrMap;
+	void setupLookupTable();
+
+	// CB instructions
+	std::vector<std::tuple<u8, instruction, int>> instrMapCB;
+	void setupLookupTableCB();
+	 
+	// basic instruction set *****
+	void NoInstruction();
+	
 	// cpu control
-	void InstrNOP();
-	void InstrSTOP();
-	void InstrHALT();
-	void InstrCCF();
-	void InstrSCF();
-	void InstrDI();
-	void InstrEI();
-	void InstrCB();
+	void NOP();
+	void STOP();
+	void HALT();
+	void CCF();
+	void SCF();
+	void DI();
+	void EI();
+	void CB();
 
 	// load
-	void InstrLDfromA();
-	void InstrLDtoAfromRef();
-	void InstrLDd8();
-	void InstrLDd16();
-	void InstrLDHLref();
-	void InstrLDCref();
-	void InstrLDH();
-	void InstrLDtoB();
-	void InstrLDtoC();
-	void InstrLDtoD();
-	void InstrLDtoE();
-	void InstrLDtoH();
-	void InstrLDtoL();
-	void InstrLDtoHLref();
-	void InstrLDtoA();
-	void InstrLDregs();
-	void InstrHLSPr8();
-	void InstrPUSH();
-	void InstrPOP();
+	void LDfromAtoRef();
+	void LDtoAfromRef();
+
+	void LDd8();
+	void LDd16();
+
+	void LDCref();
+	void LDH();
+	void LDHa16();
+	void LDSPa16();
+
+	void LDtoB();
+	void LDtoC();
+	void LDtoD();
+	void LDtoE();
+	void LDtoH();
+	void LDtoL();
+	void LDtoHLref();
+	void LDtoA();
+
+	void LDregs();
+
+	void LDHLSPr8();
+
+	void PUSH();
+	void POP();
 
 	// arithmetic/logic
-	void InstrINC8();
-	void InstrINC16();
-	void InstrDEC8();
-	void InstrDEC16();
-	void InstrADD8();
-	void InstrADDHL();
-	void InstrADDSPr8();
-	void InstrADC();
-	void InstrSUB();
-	void InstrSBC();
-	void InstrDAA();
-	void InstrAND();
-	void InstrOR();
-	void InstrXOR();
-	void InstrCP();
-	void InstrCPL();
+	void INC8();
+	void INC16();
+	void DEC8();
+	void DEC16();
+	void ADD8();
+	void ADDHL();
+	void ADDSPr8();
+	void ADC();
+	void SUB();
+	void SBC();
+	void DAA();
+	void AND();
+	void OR();
+	void XOR();
+	void CP();
+	void CPL();
 
 	// rotate and shift
-	void InstrRLCA();
-	void InstrRRCA();
-	void InstrRLA();
-	void InstrRRA();
+	void RLCA();
+	void RRCA();
+	void RLA();
+	void RRA();
 
 	// jump
-	void InstrJP();
-	void InstrJR();
-	void InstrCALL();
-	void InstrRST();
-	void InstrRET();
-	void InstrRETI();
+	void JP();
+	void JR();
+	void CALL();
+	void RST();
+	void RET();
+	void RETI();
 
 	// instruction helpers
 	void jump_jp();
 	void jump_jr();
 	void call();
 	void ret();
+
+	// CB instruction set
+
 };
