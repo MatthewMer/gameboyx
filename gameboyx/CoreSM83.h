@@ -124,6 +124,44 @@ private:
 	void call();
 	void ret();
 
-	// CB instruction set
+	// CB instruction set *****
+	// shift/rotate
+	void RLC();
+	void RRC();
+	void RL();
+	void RR();
+	void SLA();
+	void SRA();
+	void SWAP();
+	void SRL();
 
+	// bit test
+	void BIT0();
+	void BIT1();
+	void BIT2();
+	void BIT3();
+	void BIT4();
+	void BIT5();
+	void BIT6();
+	void BIT7();
+
+	// reset bit
+	void RES0();
+	void RES1();
+	void RES2();
+	void RES3();
+	void RES4();
+	void RES5();
+	void RES6();
+	void RES7();
+
+	// set bit
+	void SET0();
+	void SET1();
+	void SET2();
+	void SET3();
+	void SET4();
+	void SET5();
+	void SET6();
+	void SET7();
 };

@@ -354,7 +354,7 @@ void CoreSM83::setupLookupTable() {
 
 /* ***********************************************************************************************************
 *
-*   GAMEBOY (COLOR) CORESM83 BASIC INSTRUCTIONSET
+*   GAMEBOY (COLOR) CORESM83 BASIC INSTRUCTION SET
 *
 *********************************************************************************************************** */
 
@@ -373,6 +373,11 @@ void CoreSM83::NOP() {
 
 // stop sm83_instruction
 void CoreSM83::STOP() {
+    data = mmu_instance->Read8Bit(Regs.PC);
+    Regs.PC++;
+
+    if (data) { LOG_ERROR("Wrong STOP opcode"); }
+
     // TODO
 }
 
@@ -836,7 +841,7 @@ void CoreSM83::POP() {
 }
 
 /* ***********************************************************************************************************
-    ARITHMETIC/LOGIC sm83_instrUCTIONS
+    ARITHMETIC/LOGIC INSTRUCTIONS
 *********************************************************************************************************** */
 // increment 8/16 bit
 void CoreSM83::INC8() {
@@ -1389,7 +1394,7 @@ void CoreSM83::RRA() {
 }
 
 /* ***********************************************************************************************************
-    JUMP sm83_instrUCTIONS
+    JUMP INSTRUCTIONS
 *********************************************************************************************************** */
 // jump to memory location
 void CoreSM83::JP() {
@@ -1651,289 +1656,1506 @@ void CoreSM83::ret() {
 
 /* ***********************************************************************************************************
 *
-*   GAMEBOY (COLOR) CORESM83 INSTRUCTION LOOKUP TABLE
+*   GAMEBOY (COLOR) CORESM83 CB INSTRUCTION LOOKUP TABLE
 *
 *********************************************************************************************************** */
 void CoreSM83::setupLookupTableCB() {
     instrMapCB.clear();
 
     // Elements: opcode, instruction function, machine cycles
-    instrMapCB.emplace_back(0x00, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x01, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x02, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x03, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x04, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x05, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x06, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x07, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x08, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x09, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x0a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x0b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x0c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x0d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x0e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x0f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x00, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x01, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x02, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x03, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x04, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x05, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x06, &CoreSM83::RLC, 4);
+    instrMapCB.emplace_back(0x07, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x08, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x09, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0a, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0b, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0c, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0d, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0e, &CoreSM83::RRC, 4);
+    instrMapCB.emplace_back(0x0f, &CoreSM83::RRC, 2);
 
-    instrMapCB.emplace_back(0x10, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x11, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x12, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x13, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x14, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x15, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x16, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x17, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x18, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x19, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x1a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x1b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x1c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x1d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x1e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x1f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x10, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x11, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x12, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x13, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x14, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x15, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x16, &CoreSM83::RL, 4);
+    instrMapCB.emplace_back(0x17, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x18, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x19, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1a, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1b, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1c, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1d, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1e, &CoreSM83::RR, 4);
+    instrMapCB.emplace_back(0x1f, &CoreSM83::RR, 2);
 
-    instrMapCB.emplace_back(0x20, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x21, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x22, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x23, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x24, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x25, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x26, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x27, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x28, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x29, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x2a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x2b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x2c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x2d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x2e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x2f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x20, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x21, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x22, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x23, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x24, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x25, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x26, &CoreSM83::SLA, 4);
+    instrMapCB.emplace_back(0x27, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x28, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x29, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2a, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2b, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2c, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2d, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2e, &CoreSM83::SRA, 4);
+    instrMapCB.emplace_back(0x2f, &CoreSM83::SRA, 2);
 
-    instrMapCB.emplace_back(0x30, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x31, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x32, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x33, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x34, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x35, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x36, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x37, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x38, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x39, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x3a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x3b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x3c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x3d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x3e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x3f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x30, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x31, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x32, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x33, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x34, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x35, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x36, &CoreSM83::SWAP, 4);
+    instrMapCB.emplace_back(0x37, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x38, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x39, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3a, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3b, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3c, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3d, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3e, &CoreSM83::SRL, 4);
+    instrMapCB.emplace_back(0x3f, &CoreSM83::SRL, 2);
 
-    instrMapCB.emplace_back(0x40, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x41, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x42, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x43, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x44, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x45, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x46, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x47, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x48, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x49, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x4a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x4b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x4c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x4d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x4e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x4f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x40, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x41, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x42, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x43, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x44, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x45, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x46, &CoreSM83::BIT0, 4);
+    instrMapCB.emplace_back(0x47, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x48, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x49, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4a, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4b, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4c, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4d, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4e, &CoreSM83::BIT1, 4);
+    instrMapCB.emplace_back(0x4f, &CoreSM83::BIT1, 2);
 
-    instrMapCB.emplace_back(0x50, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x51, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x52, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x53, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x54, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x55, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x56, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x57, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x58, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x59, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x5a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x5b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x5c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x5d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x5e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x5f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x50, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x51, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x52, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x53, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x54, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x55, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x56, &CoreSM83::BIT2, 4);
+    instrMapCB.emplace_back(0x57, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x58, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x59, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5a, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5b, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5c, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5d, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5e, &CoreSM83::BIT3, 4);
+    instrMapCB.emplace_back(0x5f, &CoreSM83::BIT3, 2);
 
-    instrMapCB.emplace_back(0x60, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x61, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x62, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x63, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x64, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x65, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x66, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x67, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x68, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x69, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x6a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x6b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x6c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x6d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x6e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x6f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x60, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x61, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x62, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x63, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x64, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x65, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x66, &CoreSM83::BIT4, 4);
+    instrMapCB.emplace_back(0x67, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x68, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x69, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6a, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6b, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6c, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6d, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6e, &CoreSM83::BIT5, 4);
+    instrMapCB.emplace_back(0x6f, &CoreSM83::BIT5, 2);
 
-    instrMapCB.emplace_back(0x70, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x71, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x72, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x73, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x74, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x75, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x76, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x77, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x78, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x79, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x7a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x7b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x7c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x7d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x7e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x7f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x70, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x71, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x72, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x73, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x74, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x75, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x76, &CoreSM83::BIT6, 4);
+    instrMapCB.emplace_back(0x77, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x78, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x79, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7a, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7b, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7c, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7d, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7e, &CoreSM83::BIT7, 4);
+    instrMapCB.emplace_back(0x7f, &CoreSM83::BIT7, 2);
 
-    instrMapCB.emplace_back(0x80, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x81, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x82, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x83, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x84, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x85, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x86, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x87, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x88, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x89, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x8a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x8b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x8c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x8d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x8e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x8f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x80, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x81, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x82, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x83, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x84, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x85, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x86, &CoreSM83::RES0, 4);
+    instrMapCB.emplace_back(0x87, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x88, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x89, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8a, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8b, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8c, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8d, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8e, &CoreSM83::RES1, 4);
+    instrMapCB.emplace_back(0x8f, &CoreSM83::RES1, 2);
 
-    instrMapCB.emplace_back(0x90, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x91, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x92, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x93, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x94, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x95, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x96, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x97, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x98, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x99, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x9a, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x9b, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x9c, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x9d, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x9e, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0x9f, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0x90, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x91, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x92, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x93, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x94, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x95, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x96, &CoreSM83::RES2, 4);
+    instrMapCB.emplace_back(0x97, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x98, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x99, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9a, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9b, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9c, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9d, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9e, &CoreSM83::RES3, 4);
+    instrMapCB.emplace_back(0x9f, &CoreSM83::RES3, 2);
 
-    instrMapCB.emplace_back(0xa0, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xa1, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xa2, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xa3, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xa4, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xa5, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xa6, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xa7, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xa8, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xa9, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xaa, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xab, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xac, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xad, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xae, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xaf, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0xa0, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa1, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa2, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa3, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa4, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa5, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa6, &CoreSM83::RES4, 4);
+    instrMapCB.emplace_back(0xa7, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa8, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xa9, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xaa, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xab, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xac, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xad, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xae, &CoreSM83::RES5, 4);
+    instrMapCB.emplace_back(0xaf, &CoreSM83::RES5, 2);
 
-    instrMapCB.emplace_back(0xb0, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xb1, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xb2, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xb3, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xb4, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xb5, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xb6, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xb7, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xb8, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xb9, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xba, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xbb, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xbc, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xbd, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xbe, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xbf, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0xb0, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb1, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb2, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb3, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb4, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb5, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb6, &CoreSM83::RES6, 4);
+    instrMapCB.emplace_back(0xb7, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb8, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xb9, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xba, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xbb, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xbc, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xbd, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xbe, &CoreSM83::RES7, 4);
+    instrMapCB.emplace_back(0xbf, &CoreSM83::RES7, 2);
 
-    instrMapCB.emplace_back(0xc0, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xc1, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xc2, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xc3, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xc4, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xc5, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xc6, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xc7, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xc8, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xc9, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xca, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xcb, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xcc, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xcd, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xce, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xcf, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0xc0, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc1, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc2, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc3, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc4, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc5, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc6, &CoreSM83::SET0, 4);
+    instrMapCB.emplace_back(0xc7, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc8, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xc9, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xca, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xcb, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xcc, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xcd, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xce, &CoreSM83::SET1, 4);
+    instrMapCB.emplace_back(0xcf, &CoreSM83::SET1, 2);
 
-    instrMapCB.emplace_back(0xd0, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xd1, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xd2, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xd3, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xd4, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xd5, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xd6, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xd7, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xd8, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xd9, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xda, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xdb, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xdc, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xdd, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xde, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xdf, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0xd0, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd1, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd2, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd3, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd4, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd5, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd6, &CoreSM83::SET2, 4);
+    instrMapCB.emplace_back(0xd7, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd8, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xd9, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xda, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xdb, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xdc, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xdd, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xde, &CoreSM83::SET3, 4);
+    instrMapCB.emplace_back(0xdf, &CoreSM83::SET3, 2);
 
-    instrMapCB.emplace_back(0xe0, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xe1, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xe2, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xe3, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xe4, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xe5, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xe6, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xe7, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xe8, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xe9, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xea, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xeb, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xec, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xed, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xee, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xef, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0xe0, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe1, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe2, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe3, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe4, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe5, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe6, &CoreSM83::SET4, 4);
+    instrMapCB.emplace_back(0xe7, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe8, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xe9, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xea, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xeb, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xec, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xed, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xee, &CoreSM83::SET5, 4);
+    instrMapCB.emplace_back(0xef, &CoreSM83::SET5, 2);
 
-    instrMapCB.emplace_back(0xf0, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xf1, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xf2, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xf3, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xf4, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xf5, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xf6, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xf7, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xf8, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xf9, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xfa, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xfb, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xfc, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xfd, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xfe, &CoreSM83::NOP, 1);
-    instrMapCB.emplace_back(0xff, &CoreSM83::NOP, 1);
+    instrMapCB.emplace_back(0xf0, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf1, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf2, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf3, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf4, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf5, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf6, &CoreSM83::SET6, 4);
+    instrMapCB.emplace_back(0xf7, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf8, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xf9, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfa, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfb, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfc, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfd, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfe, &CoreSM83::SET7, 4);
+    instrMapCB.emplace_back(0xff, &CoreSM83::SET7, 2);
 }
 
 /* ***********************************************************************************************************
 *
-*   GAMEBOY (COLOR) CORESM83 CB sm83_instrUCTIONSET
+*   GAMEBOY (COLOR) CORESM83 CB INSTRUCTION SET
 *
 *********************************************************************************************************** */
+// rotate left
+void CoreSM83::RLC() {
+    RESET_ALL_FLAGS(Regs.F);
 
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.F |= (Regs.BC_.B & MSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.B <<= 1;
+        Regs.BC_.B |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
+        ZERO_FLAG(Regs.BC_.B, Regs.F);
+        break;
+    case 0x01:
+        Regs.F |= (Regs.BC_.C & MSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.C <<= 1;
+        Regs.BC_.C |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
+        ZERO_FLAG(Regs.BC_.C, Regs.F);
+        break;
+    case 0x02:
+        Regs.F |= (Regs.DE_.D & MSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.D <<= 1;
+        Regs.DE_.D |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
+        ZERO_FLAG(Regs.DE_.D, Regs.F);
+        break;
+    case 0x03:
+        Regs.F |= (Regs.DE_.E & MSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.E <<= 1;
+        Regs.DE_.E |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
+        ZERO_FLAG(Regs.DE_.E, Regs.F);
+        break;
+    case 0x04:
+        Regs.F |= (Regs.HL_.H & MSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.H <<= 1;
+        Regs.HL_.H |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
+        ZERO_FLAG(Regs.HL_.H, Regs.F);
+        break;
+    case 0x05:
+        Regs.F |= (Regs.HL_.L & MSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.L <<= 1;
+        Regs.HL_.L |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
+        ZERO_FLAG(Regs.HL_.L, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        Regs.F |= (data & MSB ? FLAG_CARRY : 0x00);
+        data = (data << 1) & 0xFF;
+        data |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
+        ZERO_FLAG(data, Regs.F);
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
+        Regs.A <<= 1;
+        Regs.A |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
+        ZERO_FLAG(Regs.A, Regs.F);
+        break;
+    }
+}
+
+// rotate right
+void CoreSM83::RRC() {
+    RESET_ALL_FLAGS(Regs.F);
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.F |= (Regs.BC_.B & LSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.B >>= 1;
+        Regs.BC_.B |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
+        ZERO_FLAG(Regs.BC_.B, Regs.F);
+        break;
+    case 0x01:
+        Regs.F |= (Regs.BC_.C & LSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.C >>= 1;
+        Regs.BC_.C |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
+        ZERO_FLAG(Regs.BC_.C, Regs.F);
+        break;
+    case 0x02:
+        Regs.F |= (Regs.DE_.D & LSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.D >>= 1;
+        Regs.DE_.D |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
+        ZERO_FLAG(Regs.DE_.D, Regs.F);
+        break;
+    case 0x03:
+        Regs.F |= (Regs.DE_.E & LSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.E >>= 1;
+        Regs.DE_.E |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
+        ZERO_FLAG(Regs.DE_.E, Regs.F);
+        break;
+    case 0x04:
+        Regs.F |= (Regs.HL_.H & LSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.H >>= 1;
+        Regs.HL_.H |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
+        ZERO_FLAG(Regs.HL_.H, Regs.F);
+        break;
+    case 0x05:
+        Regs.F |= (Regs.HL_.L & LSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.L >>= 1;
+        Regs.HL_.L |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
+        ZERO_FLAG(Regs.HL_.L, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        Regs.F |= (data & LSB ? FLAG_CARRY : 0x00);
+        data = (data >> 1) & 0xFF;
+        data |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
+        ZERO_FLAG(data, Regs.F);
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
+        Regs.A >>= 1;
+        Regs.A |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
+        ZERO_FLAG(Regs.A, Regs.F);
+        break;
+    }
+}
+
+// rotate left through carry
+void CoreSM83::RL() {
+    static bool carry = Regs.F & FLAG_CARRY;
+    RESET_ALL_FLAGS(Regs.F);
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.F |= (Regs.BC_.B & MSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.B <<= 1;
+        Regs.BC_.B |= (carry ? LSB : 0x00);
+        ZERO_FLAG(Regs.BC_.B, Regs.F);
+        break;
+    case 0x01:
+        Regs.F |= (Regs.BC_.C & MSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.C <<= 1;
+        Regs.BC_.C |= (carry ? LSB : 0x00);
+        ZERO_FLAG(Regs.BC_.C, Regs.F);
+        break;
+    case 0x02:
+        Regs.F |= (Regs.DE_.D & MSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.D <<= 1;
+        Regs.DE_.D |= (carry ? LSB : 0x00);
+        ZERO_FLAG(Regs.DE_.D, Regs.F);
+        break;
+    case 0x03:
+        Regs.F |= (Regs.DE_.E & MSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.E <<= 1;
+        Regs.DE_.E |= (carry ? LSB : 0x00);
+        ZERO_FLAG(Regs.DE_.E, Regs.F);
+        break;
+    case 0x04:
+        Regs.F |= (Regs.HL_.H & MSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.H <<= 1;
+        Regs.HL_.H |= (carry ? LSB : 0x00);
+        ZERO_FLAG(Regs.HL_.H, Regs.F);
+        break;
+    case 0x05:
+        Regs.F |= (Regs.HL_.L & MSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.L <<= 1;
+        Regs.HL_.L |= (carry ? LSB : 0x00);
+        ZERO_FLAG(Regs.HL_.L, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        Regs.F |= (data & MSB ? FLAG_CARRY : 0x00);
+        data = (data << 1) & 0xFF;
+        data |= (carry ? LSB : 0x00);
+        ZERO_FLAG(data, Regs.F);
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
+        Regs.A <<= 1;
+        Regs.A |= (carry ? LSB : 0x00);
+        ZERO_FLAG(Regs.A, Regs.F);
+        break;
+    }
+}
+
+// rotate right through carry
+void CoreSM83::RR() {
+    static bool carry = Regs.F & FLAG_CARRY;
+    RESET_ALL_FLAGS(Regs.F);
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.F |= (Regs.BC_.B & LSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.B >>= 1;
+        Regs.BC_.B |= (carry ? MSB : 0x00);
+        ZERO_FLAG(Regs.BC_.B, Regs.F);
+        break;
+    case 0x01:
+        Regs.F |= (Regs.BC_.C & LSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.C >>= 1;
+        Regs.BC_.C |= (carry ? MSB : 0x00);
+        ZERO_FLAG(Regs.BC_.C, Regs.F);
+        break;
+    case 0x02:
+        Regs.F |= (Regs.DE_.D & LSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.D >>= 1;
+        Regs.DE_.D |= (carry ? MSB : 0x00);
+        ZERO_FLAG(Regs.DE_.D, Regs.F);
+        break;
+    case 0x03:
+        Regs.F |= (Regs.DE_.E & LSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.E >>= 1;
+        Regs.DE_.E |= (carry ? MSB : 0x00);
+        ZERO_FLAG(Regs.DE_.E, Regs.F);
+        break;
+    case 0x04:
+        Regs.F |= (Regs.HL_.H & LSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.H >>= 1;
+        Regs.HL_.H |= (carry ? MSB : 0x00);
+        ZERO_FLAG(Regs.HL_.H, Regs.F);
+        break;
+    case 0x05:
+        Regs.F |= (Regs.HL_.L & LSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.L >>= 1;
+        Regs.HL_.L |= (carry ? MSB : 0x00);
+        ZERO_FLAG(Regs.HL_.L, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        Regs.F |= (data & LSB ? FLAG_CARRY : 0x00);
+        data = (data >> 1) & 0xFF;
+        data |= (carry ? MSB : 0x00);
+        ZERO_FLAG(data, Regs.F);
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
+        Regs.A >>= 1;
+        Regs.A |= (carry ? MSB : 0x00);
+        ZERO_FLAG(Regs.A, Regs.F);
+        break;
+    }
+}
+
+// shift left arithmetic (multiply by 2)
+void CoreSM83::SLA() {
+    RESET_ALL_FLAGS(Regs.F);
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.F |= (Regs.BC_.B & MSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.B <<= 1;
+        ZERO_FLAG(Regs.BC_.B, Regs.F);
+        break;
+    case 0x01:
+        Regs.F |= (Regs.BC_.C & MSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.C <<= 1;
+        ZERO_FLAG(Regs.BC_.C, Regs.F);
+        break;
+    case 0x02:
+        Regs.F |= (Regs.DE_.D & MSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.D <<= 1;
+        ZERO_FLAG(Regs.DE_.D, Regs.F);
+        break;
+    case 0x03:
+        Regs.F |= (Regs.DE_.E & MSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.E <<= 1;
+        ZERO_FLAG(Regs.DE_.E, Regs.F);
+        break;
+    case 0x04:
+        Regs.F |= (Regs.HL_.H & MSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.H <<= 1;
+        ZERO_FLAG(Regs.HL_.H, Regs.F);
+        break;
+    case 0x05:
+        Regs.F |= (Regs.HL_.L & MSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.L <<= 1;
+        ZERO_FLAG(Regs.HL_.L, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        Regs.F |= (data & MSB ? FLAG_CARRY : 0x00);
+        data = (data << 1) & 0xFF;
+        ZERO_FLAG(data, Regs.F);
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
+        Regs.A <<= 1;
+        ZERO_FLAG(Regs.A, Regs.F);
+        break;
+    }
+}
+
+// shift right arithmetic
+void CoreSM83::SRA() {
+    RESET_ALL_FLAGS(Regs.F);
+    static bool msb;
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        msb = (Regs.BC_.B & MSB);
+        Regs.BC_.B >>= 1;
+        Regs.BC_.B |= (msb ? MSB : 0x00);
+        ZERO_FLAG(Regs.BC_.B, Regs.F);
+        break;
+    case 0x01:
+        msb = (Regs.BC_.C & MSB);
+        Regs.BC_.C >>= 1;
+        Regs.BC_.C |= (msb ? MSB : 0x00);
+        ZERO_FLAG(Regs.BC_.C, Regs.F);
+        break;
+    case 0x02:
+        msb = (Regs.DE_.D & MSB);
+        Regs.DE_.D >>= 1;
+        Regs.DE_.D |= (msb ? MSB : 0x00);
+        ZERO_FLAG(Regs.DE_.D, Regs.F);
+        break;
+    case 0x03:
+        msb = (Regs.DE_.E & MSB);
+        Regs.DE_.E >>= 1;
+        Regs.DE_.E |= (msb ? MSB : 0x00);
+        ZERO_FLAG(Regs.DE_.E, Regs.F);
+        break;
+    case 0x04:
+        msb = (Regs.HL_.H & MSB);
+        Regs.HL_.H >>= 1;
+        Regs.HL_.H |= (msb ? MSB : 0x00);
+        ZERO_FLAG(Regs.HL_.H, Regs.F);
+        break;
+    case 0x05:
+        msb = (Regs.HL_.L & MSB);
+        Regs.HL_.L >>= 1;
+        Regs.HL_.L |= (msb ? MSB : 0x00);
+        ZERO_FLAG(Regs.HL_.L, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        msb = (data & MSB);
+        data = (data >> 1) & 0xFF;
+        data |= (msb ? MSB : 0x00);
+        ZERO_FLAG(data, Regs.F);
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        msb = (Regs.A & MSB);
+        Regs.A >>= 1;
+        Regs.A |= (msb ? MSB : 0x00);
+        ZERO_FLAG(Regs.A, Regs.F);
+        break;
+    }
+}
+
+// swap lo<->hi nibble
+void CoreSM83::SWAP() {
+    RESET_ALL_FLAGS(Regs.F);
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B = (Regs.BC_.B >> 4) | (Regs.BC_.B << 4);
+        ZERO_FLAG(Regs.BC_.B, Regs.F);
+        break;
+    case 0x01:
+        Regs.BC_.C = (Regs.BC_.C >> 4) | (Regs.BC_.C << 4);
+        ZERO_FLAG(Regs.BC_.C, Regs.F);
+        break;
+    case 0x02:
+        Regs.DE_.D = (Regs.DE_.D >> 4) | (Regs.DE_.D << 4);
+        ZERO_FLAG(Regs.DE_.D, Regs.F);
+        break;
+    case 0x03:
+        Regs.DE_.E = (Regs.DE_.E >> 4) | (Regs.DE_.E << 4);
+        ZERO_FLAG(Regs.DE_.E, Regs.F);
+        break;
+    case 0x04:
+        Regs.HL_.H = (Regs.HL_.H >> 4) | (Regs.HL_.H << 4);
+        ZERO_FLAG(Regs.HL_.H, Regs.F);
+        break;
+    case 0x05:
+        Regs.HL_.L = (Regs.HL_.L >> 4) | (Regs.HL_.L << 4);
+        ZERO_FLAG(Regs.HL_.L, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data = (data >> 4) | ((data << 4) & 0xF0);
+        ZERO_FLAG(data, Regs.F);
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A = (Regs.A >> 4) | (Regs.A << 4);
+        ZERO_FLAG(Regs.A, Regs.F);
+        break;
+    }
+}
+
+// shift right logical
+void CoreSM83::SRL() {
+    RESET_ALL_FLAGS(Regs.F);
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.F |= (Regs.BC_.B & LSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.B >>= 1;
+        ZERO_FLAG(Regs.BC_.B, Regs.F);
+        break;
+    case 0x01:
+        Regs.F |= (Regs.BC_.C & LSB ? FLAG_CARRY : 0x00);
+        Regs.BC_.C >>= 1;
+        ZERO_FLAG(Regs.BC_.C, Regs.F);
+        break;
+    case 0x02:
+        Regs.F |= (Regs.DE_.D & LSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.D >>= 1;
+        ZERO_FLAG(Regs.DE_.D, Regs.F);
+        break;
+    case 0x03:
+        Regs.F |= (Regs.DE_.E & LSB ? FLAG_CARRY : 0x00);
+        Regs.DE_.E >>= 1;
+        ZERO_FLAG(Regs.DE_.E, Regs.F);
+        break;
+    case 0x04:
+        Regs.F |= (Regs.HL_.H & LSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.H >>= 1;
+        ZERO_FLAG(Regs.HL_.H, Regs.F);
+        break;
+    case 0x05:
+        Regs.F |= (Regs.HL_.L & LSB ? FLAG_CARRY : 0x00);
+        Regs.HL_.L >>= 1;
+        ZERO_FLAG(Regs.HL_.L, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        Regs.F |= (data & LSB ? FLAG_CARRY : 0x00);
+        data = (data >> 1) & 0xFF;
+        ZERO_FLAG(data, Regs.F);
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
+        Regs.A >>= 1;
+        ZERO_FLAG(Regs.A, Regs.F);
+        break;
+    }
+}
+
+// test bit 0
+void CoreSM83::BIT0() {
+    RESET_FLAGS(FLAG_ZERO | FLAG_SUB, Regs.F);
+    Regs.F |= FLAG_HCARRY;
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        ZERO_FLAG(Regs.BC_.B & 0x01, Regs.F);
+        break;
+    case 0x01:
+        ZERO_FLAG(Regs.BC_.C & 0x01, Regs.F);
+        break;
+    case 0x02:
+        ZERO_FLAG(Regs.DE_.D & 0x01, Regs.F);
+        break;
+    case 0x03:
+        ZERO_FLAG(Regs.DE_.E & 0x01, Regs.F);
+        break;
+    case 0x04:
+        ZERO_FLAG(Regs.HL_.H & 0x01, Regs.F);
+        break;
+    case 0x05:
+        ZERO_FLAG(Regs.HL_.L & 0x01, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        ZERO_FLAG(data & 0x01, Regs.F);
+        break;
+    case 0x07:
+        ZERO_FLAG(Regs.A & 0x01, Regs.F);
+        break;
+    }
+}
+
+// test bit 1
+void CoreSM83::BIT1() {
+    RESET_FLAGS(FLAG_ZERO | FLAG_SUB, Regs.F);
+    Regs.F |= FLAG_HCARRY;
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        ZERO_FLAG(Regs.BC_.B & 0x02, Regs.F);
+        break;
+    case 0x01:
+        ZERO_FLAG(Regs.BC_.C & 0x02, Regs.F);
+        break;
+    case 0x02:
+        ZERO_FLAG(Regs.DE_.D & 0x02, Regs.F);
+        break;
+    case 0x03:
+        ZERO_FLAG(Regs.DE_.E & 0x02, Regs.F);
+        break;
+    case 0x04:
+        ZERO_FLAG(Regs.HL_.H & 0x02, Regs.F);
+        break;
+    case 0x05:
+        ZERO_FLAG(Regs.HL_.L & 0x02, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        ZERO_FLAG(data & 0x02, Regs.F);
+        break;
+    case 0x07:
+        ZERO_FLAG(Regs.A & 0x02, Regs.F);
+        break;
+    }
+}
+
+// test bit 2
+void CoreSM83::BIT2() {
+    RESET_FLAGS(FLAG_ZERO | FLAG_SUB, Regs.F);
+    Regs.F |= FLAG_HCARRY;
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        ZERO_FLAG(Regs.BC_.B & 0x04, Regs.F);
+        break;
+    case 0x01:
+        ZERO_FLAG(Regs.BC_.C & 0x04, Regs.F);
+        break;
+    case 0x02:
+        ZERO_FLAG(Regs.DE_.D & 0x04, Regs.F);
+        break;
+    case 0x03:
+        ZERO_FLAG(Regs.DE_.E & 0x04, Regs.F);
+        break;
+    case 0x04:
+        ZERO_FLAG(Regs.HL_.H & 0x04, Regs.F);
+        break;
+    case 0x05:
+        ZERO_FLAG(Regs.HL_.L & 0x04, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        ZERO_FLAG(data & 0x04, Regs.F);
+        break;
+    case 0x07:
+        ZERO_FLAG(Regs.A & 0x04, Regs.F);
+        break;
+    }
+}
+
+// test bit 3
+void CoreSM83::BIT3() {
+    RESET_FLAGS(FLAG_ZERO | FLAG_SUB, Regs.F);
+    Regs.F |= FLAG_HCARRY;
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        ZERO_FLAG(Regs.BC_.B & 0x08, Regs.F);
+        break;
+    case 0x01:
+        ZERO_FLAG(Regs.BC_.C & 0x08, Regs.F);
+        break;
+    case 0x02:
+        ZERO_FLAG(Regs.DE_.D & 0x08, Regs.F);
+        break;
+    case 0x03:
+        ZERO_FLAG(Regs.DE_.E & 0x08, Regs.F);
+        break;
+    case 0x04:
+        ZERO_FLAG(Regs.HL_.H & 0x08, Regs.F);
+        break;
+    case 0x05:
+        ZERO_FLAG(Regs.HL_.L & 0x08, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        ZERO_FLAG(data & 0x08, Regs.F);
+        break;
+    case 0x07:
+        ZERO_FLAG(Regs.A & 0x08, Regs.F);
+        break;
+    }
+}
+
+// test bit 4
+void CoreSM83::BIT4() {
+    RESET_FLAGS(FLAG_ZERO | FLAG_SUB, Regs.F);
+    Regs.F |= FLAG_HCARRY;
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        ZERO_FLAG(Regs.BC_.B & 0x10, Regs.F);
+        break;
+    case 0x01:
+        ZERO_FLAG(Regs.BC_.C & 0x10, Regs.F);
+        break;
+    case 0x02:
+        ZERO_FLAG(Regs.DE_.D & 0x10, Regs.F);
+        break;
+    case 0x03:
+        ZERO_FLAG(Regs.DE_.E & 0x10, Regs.F);
+        break;
+    case 0x04:
+        ZERO_FLAG(Regs.HL_.H & 0x10, Regs.F);
+        break;
+    case 0x05:
+        ZERO_FLAG(Regs.HL_.L & 0x10, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        ZERO_FLAG(data & 0x10, Regs.F);
+        break;
+    case 0x07:
+        ZERO_FLAG(Regs.A & 0x10, Regs.F);
+        break;
+    }
+}
+
+// test bit 5
+void CoreSM83::BIT5() {
+    RESET_FLAGS(FLAG_ZERO | FLAG_SUB, Regs.F);
+    Regs.F |= FLAG_HCARRY;
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        ZERO_FLAG(Regs.BC_.B & 0x20, Regs.F);
+        break;
+    case 0x01:
+        ZERO_FLAG(Regs.BC_.C & 0x20, Regs.F);
+        break;
+    case 0x02:
+        ZERO_FLAG(Regs.DE_.D & 0x20, Regs.F);
+        break;
+    case 0x03:
+        ZERO_FLAG(Regs.DE_.E & 0x20, Regs.F);
+        break;
+    case 0x04:
+        ZERO_FLAG(Regs.HL_.H & 0x20, Regs.F);
+        break;
+    case 0x05:
+        ZERO_FLAG(Regs.HL_.L & 0x20, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        ZERO_FLAG(data & 0x20, Regs.F);
+        break;
+    case 0x07:
+        ZERO_FLAG(Regs.A & 0x20, Regs.F);
+        break;
+    }
+}
+
+// test bit 6
+void CoreSM83::BIT6() {
+    RESET_FLAGS(FLAG_ZERO | FLAG_SUB, Regs.F);
+    Regs.F |= FLAG_HCARRY;
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        ZERO_FLAG(Regs.BC_.B & 0x40, Regs.F);
+        break;
+    case 0x01:
+        ZERO_FLAG(Regs.BC_.C & 0x40, Regs.F);
+        break;
+    case 0x02:
+        ZERO_FLAG(Regs.DE_.D & 0x40, Regs.F);
+        break;
+    case 0x03:
+        ZERO_FLAG(Regs.DE_.E & 0x40, Regs.F);
+        break;
+    case 0x04:
+        ZERO_FLAG(Regs.HL_.H & 0x40, Regs.F);
+        break;
+    case 0x05:
+        ZERO_FLAG(Regs.HL_.L & 0x40, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        ZERO_FLAG(data & 0x40, Regs.F);
+        break;
+    case 0x07:
+        ZERO_FLAG(Regs.A & 0x40, Regs.F);
+        break;
+    }
+}
+
+// test bit 7
+void CoreSM83::BIT7() {
+    RESET_FLAGS(FLAG_ZERO | FLAG_SUB, Regs.F);
+    Regs.F |= FLAG_HCARRY;
+
+    switch (opcode & 0x07) {
+    case 0x00:
+        ZERO_FLAG(Regs.BC_.B & 0x80, Regs.F);
+        break;
+    case 0x01:
+        ZERO_FLAG(Regs.BC_.C & 0x80, Regs.F);
+        break;
+    case 0x02:
+        ZERO_FLAG(Regs.DE_.D & 0x80, Regs.F);
+        break;
+    case 0x03:
+        ZERO_FLAG(Regs.DE_.E & 0x80, Regs.F);
+        break;
+    case 0x04:
+        ZERO_FLAG(Regs.HL_.H & 0x80, Regs.F);
+        break;
+    case 0x05:
+        ZERO_FLAG(Regs.HL_.L & 0x80, Regs.F);
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        ZERO_FLAG(data & 0x80, Regs.F);
+        break;
+    case 0x07:
+        ZERO_FLAG(Regs.A & 0x80, Regs.F);
+        break;
+    }
+}
+
+// reset bit 0
+void CoreSM83::RES0() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B &= ~0x01;
+        break;
+    case 0x01:
+        Regs.BC_.C &= ~0x01;
+        break;
+    case 0x02:
+        Regs.DE_.D &= ~0x01;
+        break;
+    case 0x03:
+        Regs.DE_.E &= ~0x01;
+        break;
+    case 0x04:
+        Regs.HL_.H &= ~0x01;
+        break;
+    case 0x05:
+        Regs.HL_.L &= ~0x01;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data &= ~0x01;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A &= ~0x01;
+        break;
+    }
+}
+
+// reset bit 1
+void CoreSM83::RES1() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B &= ~0x02;
+        break;
+    case 0x01:
+        Regs.BC_.C &= ~0x02;
+        break;
+    case 0x02:
+        Regs.DE_.D &= ~0x02;
+        break;
+    case 0x03:
+        Regs.DE_.E &= ~0x02;
+        break;
+    case 0x04:
+        Regs.HL_.H &= ~0x02;
+        break;
+    case 0x05:
+        Regs.HL_.L &= ~0x02;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data &= ~0x02;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A &= ~0x02;
+        break;
+    }
+}
+
+// reset bit 2
+void CoreSM83::RES2() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B &= ~0x04;
+        break;
+    case 0x01:
+        Regs.BC_.C &= ~0x04;
+        break;
+    case 0x02:
+        Regs.DE_.D &= ~0x04;
+        break;
+    case 0x03:
+        Regs.DE_.E &= ~0x04;
+        break;
+    case 0x04:
+        Regs.HL_.H &= ~0x04;
+        break;
+    case 0x05:
+        Regs.HL_.L &= ~0x04;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data &= ~0x04;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A &= ~0x04;
+        break;
+    }
+}
+
+// reset bit 3
+void CoreSM83::RES3() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B &= ~0x08;
+        break;
+    case 0x01:
+        Regs.BC_.C &= ~0x08;
+        break;
+    case 0x02:
+        Regs.DE_.D &= ~0x08;
+        break;
+    case 0x03:
+        Regs.DE_.E &= ~0x08;
+        break;
+    case 0x04:
+        Regs.HL_.H &= ~0x08;
+        break;
+    case 0x05:
+        Regs.HL_.L &= ~0x08;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data &= ~0x08;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A &= ~0x08;
+        break;
+    }
+}
+
+// reset bit 4
+void CoreSM83::RES4() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B &= ~0x10;
+        break;
+    case 0x01:
+        Regs.BC_.C &= ~0x10;
+        break;
+    case 0x02:
+        Regs.DE_.D &= ~0x10;
+        break;
+    case 0x03:
+        Regs.DE_.E &= ~0x10;
+        break;
+    case 0x04:
+        Regs.HL_.H &= ~0x10;
+        break;
+    case 0x05:
+        Regs.HL_.L &= ~0x10;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data &= ~0x10;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A &= ~0x10;
+        break;
+    }
+}
+
+// reset bit 5
+void CoreSM83::RES5() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B &= ~0x20;
+        break;
+    case 0x01:
+        Regs.BC_.C &= ~0x20;
+        break;
+    case 0x02:
+        Regs.DE_.D &= ~0x20;
+        break;
+    case 0x03:
+        Regs.DE_.E &= ~0x20;
+        break;
+    case 0x04:
+        Regs.HL_.H &= ~0x20;
+        break;
+    case 0x05:
+        Regs.HL_.L &= ~0x20;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data &= ~0x20;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A &= ~0x20;
+        break;
+    }
+}
+
+// reset bit 6
+void CoreSM83::RES6() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B &= ~0x40;
+        break;
+    case 0x01:
+        Regs.BC_.C &= ~0x40;
+        break;
+    case 0x02:
+        Regs.DE_.D &= ~0x40;
+        break;
+    case 0x03:
+        Regs.DE_.E &= ~0x40;
+        break;
+    case 0x04:
+        Regs.HL_.H &= ~0x40;
+        break;
+    case 0x05:
+        Regs.HL_.L &= ~0x40;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data &= ~0x40;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A &= ~0x40;
+        break;
+    }
+}
+
+// reset bit 7
+void CoreSM83::RES7() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B &= ~0x80;
+        break;
+    case 0x01:
+        Regs.BC_.C &= ~0x80;
+        break;
+    case 0x02:
+        Regs.DE_.D &= ~0x80;
+        break;
+    case 0x03:
+        Regs.DE_.E &= ~0x80;
+        break;
+    case 0x04:
+        Regs.HL_.H &= ~0x80;
+        break;
+    case 0x05:
+        Regs.HL_.L &= ~0x80;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data &= ~0x80;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A &= ~0x80;
+        break;
+    }
+}
+
+// set bit 0
+void CoreSM83::SET0() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B |= 0x01;
+        break;
+    case 0x01:
+        Regs.BC_.C |= 0x01;
+        break;
+    case 0x02:
+        Regs.DE_.D |= 0x01;
+        break;
+    case 0x03:
+        Regs.DE_.E |= 0x01;
+        break;
+    case 0x04:
+        Regs.HL_.H |= 0x01;
+        break;
+    case 0x05:
+        Regs.HL_.L |= 0x01;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data |= 0x01;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A |= 0x01;
+        break;
+    }
+}
+
+// set bit 1
+void CoreSM83::SET1() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B |= 0x02;
+        break;
+    case 0x01:
+        Regs.BC_.C |= 0x02;
+        break;
+    case 0x02:
+        Regs.DE_.D |= 0x02;
+        break;
+    case 0x03:
+        Regs.DE_.E |= 0x02;
+        break;
+    case 0x04:
+        Regs.HL_.H |= 0x02;
+        break;
+    case 0x05:
+        Regs.HL_.L |= 0x02;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data |= 0x02;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A |= 0x02;
+        break;
+    }
+}
+
+// set bit 2
+void CoreSM83::SET2() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B |= 0x04;
+        break;
+    case 0x01:
+        Regs.BC_.C |= 0x04;
+        break;
+    case 0x02:
+        Regs.DE_.D |= 0x04;
+        break;
+    case 0x03:
+        Regs.DE_.E |= 0x04;
+        break;
+    case 0x04:
+        Regs.HL_.H |= 0x04;
+        break;
+    case 0x05:
+        Regs.HL_.L |= 0x04;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data |= 0x04;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A |= 0x04;
+        break;
+    }
+}
+
+// set bit 3
+void CoreSM83::SET3() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B |= 0x08;
+        break;
+    case 0x01:
+        Regs.BC_.C |= 0x08;
+        break;
+    case 0x02:
+        Regs.DE_.D |= 0x08;
+        break;
+    case 0x03:
+        Regs.DE_.E |= 0x08;
+        break;
+    case 0x04:
+        Regs.HL_.H |= 0x08;
+        break;
+    case 0x05:
+        Regs.HL_.L |= 0x08;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data |= 0x08;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A |= 0x08;
+        break;
+    }
+}
+
+// set bit 4
+void CoreSM83::SET4() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B |= 0x10;
+        break;
+    case 0x01:
+        Regs.BC_.C |= 0x10;
+        break;
+    case 0x02:
+        Regs.DE_.D |= 0x10;
+        break;
+    case 0x03:
+        Regs.DE_.E |= 0x10;
+        break;
+    case 0x04:
+        Regs.HL_.H |= 0x10;
+        break;
+    case 0x05:
+        Regs.HL_.L |= 0x10;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data |= 0x10;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A |= 0x10;
+        break;
+    }
+}
+
+// set bit 5
+void CoreSM83::SET5() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B |= 0x20;
+        break;
+    case 0x01:
+        Regs.BC_.C |= 0x20;
+        break;
+    case 0x02:
+        Regs.DE_.D |= 0x20;
+        break;
+    case 0x03:
+        Regs.DE_.E |= 0x20;
+        break;
+    case 0x04:
+        Regs.HL_.H |= 0x20;
+        break;
+    case 0x05:
+        Regs.HL_.L |= 0x20;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data |= 0x20;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A |= 0x20;
+        break;
+    }
+}
+
+// set bit 6
+void CoreSM83::SET6() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B |= 0x40;
+        break;
+    case 0x01:
+        Regs.BC_.C |= 0x40;
+        break;
+    case 0x02:
+        Regs.DE_.D |= 0x40;
+        break;
+    case 0x03:
+        Regs.DE_.E |= 0x40;
+        break;
+    case 0x04:
+        Regs.HL_.H |= 0x40;
+        break;
+    case 0x05:
+        Regs.HL_.L |= 0x40;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data |= 0x40;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A |= 0x40;
+        break;
+    }
+}
+
+// set bit 7
+void CoreSM83::SET7() {
+    switch (opcode & 0x07) {
+    case 0x00:
+        Regs.BC_.B |= 0x80;
+        break;
+    case 0x01:
+        Regs.BC_.C |= 0x80;
+        break;
+    case 0x02:
+        Regs.DE_.D |= 0x80;
+        break;
+    case 0x03:
+        Regs.DE_.E |= 0x80;
+        break;
+    case 0x04:
+        Regs.HL_.H |= 0x80;
+        break;
+    case 0x05:
+        Regs.HL_.L |= 0x80;
+        break;
+    case 0x06:
+        data = mmu_instance->Read8Bit(Regs.HL);
+        data |= 0x80;
+        mmu_instance->Write8Bit(data, Regs.HL);
+        break;
+    case 0x07:
+        Regs.A |= 0x80;
+        break;
+    }
+}
