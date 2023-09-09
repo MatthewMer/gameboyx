@@ -5,6 +5,8 @@
 *********************************************************************************************************** */
 #include "gameboy_config.h"
 
+#include "logger.h"
+
 using namespace std;
 
 /* ***********************************************************************************************************
@@ -70,7 +72,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x05, &CoreSM83::DEC8, 1);
     instrMap.emplace_back(0x06, &CoreSM83::LDd8, 2);
     instrMap.emplace_back(0x07, &CoreSM83::RLCA, 1);
-    instrMap.emplace_back(0x08, &CoreSM83::LDSPa16, 5);     // TODO
+    instrMap.emplace_back(0x08, &CoreSM83::LDSPa16, 5);
     instrMap.emplace_back(0x09, &CoreSM83::ADDHL, 2);
     instrMap.emplace_back(0x0a, &CoreSM83::LDtoAfromRef, 2);
     instrMap.emplace_back(0x0b, &CoreSM83::DEC16, 2);
@@ -341,7 +343,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0xf6, &CoreSM83::OR, 2);
     instrMap.emplace_back(0xf7, &CoreSM83::RST, 4);
     instrMap.emplace_back(0xf8, &CoreSM83::LDHLSPr8, 3);
-    instrMap.emplace_back(0xf9, &CoreSM83::NOP, 2);             //TODO
+    instrMap.emplace_back(0xf9, &CoreSM83::LDSPHL, 2);
     instrMap.emplace_back(0xfa, &CoreSM83::LDHa16, 4);
     instrMap.emplace_back(0xfb, &CoreSM83::EI, 1);
     instrMap.emplace_back(0xfc, &CoreSM83::NoInstruction, 0);
@@ -360,7 +362,9 @@ void CoreSM83::setupLookupTable() {
     CPU CONTROL
 *********************************************************************************************************** */
 // no instruction
-void CoreSM83::NoInstruction(){}
+void CoreSM83::NoInstruction(){
+    LOG_ERROR("No instruction");
+}
 
 // no operation
 void CoreSM83::NOP() {
@@ -782,6 +786,10 @@ void CoreSM83::LDHLSPr8() {
     RESET_ALL_FLAGS(Regs.F);
     ADD_8_FLAGS(Regs.HL, data, Regs.F);
     Regs.HL += *(i8*)&data;
+}
+
+void CoreSM83::LDSPHL() {
+    Regs.SP = Regs.HL;
 }
 
 // push PC to Stack
@@ -1388,30 +1396,55 @@ void CoreSM83::JP() {
     static bool carry;
     static bool zero;
 
+    if (opcode == 0xe9) {
+        data = Regs.HL;
+        jump_jp();
+        return;
+    }
+
     data = mmu_instance->Read16Bit(Regs.PC);
     Regs.PC += 2;
 
     switch (opcode) {
     case 0xCA:
         zero = Regs.F & FLAG_ZERO;
-        if (zero) { jump_jp(); }
+        if (zero) { 
+            jump_jp(); 
+            machineCycles += 4;
+            return;
+        }
         break;
     case 0xC2:
         zero = Regs.F & FLAG_ZERO;
-        if (!zero) { jump_jp(); }
+        if (!zero) { 
+            jump_jp(); 
+            machineCycles += 4;
+            return;
+        }
         break;
     case 0xDA:
         carry = Regs.F & FLAG_CARRY;
-        if (carry) { jump_jp(); }
+        if (carry) { 
+            jump_jp(); 
+            machineCycles += 4;
+            return;
+        }
         break;
     case 0xD2:
         carry = Regs.F & FLAG_CARRY;
-        if (!carry) { jump_jp(); }
+        if (!carry) { 
+            jump_jp(); 
+            machineCycles += 4;
+            return;
+        }
         break;
     default:
         jump_jp();
+        machineCycles += 4;
+        return;
         break;
     }
+    machineCycles += 3;
 }
 
 // jump relative to memory lecation
@@ -1425,24 +1458,41 @@ void CoreSM83::JR() {
     switch (opcode) {
     case 0x28:
         zero = Regs.F & FLAG_ZERO;
-        if (zero) { jump_jr(); }
+        if (zero) { 
+            jump_jr(); 
+            machineCycles += 3;
+            return;
+        }
         break;
     case 0x20:
         zero = Regs.F & FLAG_ZERO;
-        if (!zero) { jump_jr(); }
+        if (!zero) { 
+            jump_jr(); 
+            machineCycles += 3;
+            return;
+        }
         break;
     case 0x38:
         carry = Regs.F & FLAG_CARRY;
-        if (carry) { jump_jr(); }
+        if (carry) { 
+            jump_jr(); 
+            machineCycles += 3;
+            return;
+        }
         break;
     case 0x30:
         carry = Regs.F & FLAG_CARRY;
-        if (!carry) { jump_jr(); }
+        if (!carry) { 
+            jump_jr();
+            machineCycles += 3;
+            return;
+        }
         break;
     default:
         jump_jr();
         break;
     }
+    machineCycles += 2;
 }
 
 void CoreSM83::jump_jp() {
@@ -1464,24 +1514,44 @@ void CoreSM83::CALL() {
     switch (opcode) {
     case 0xCC:
         zero = Regs.F & FLAG_ZERO;
-        if (zero) { call(); }
+        if (zero) { 
+            call(); 
+            machineCycles += 6;
+            return;
+        }
         break;
     case 0xC4:
         zero = Regs.F & FLAG_ZERO;
-        if (!zero) { call(); }
+        if (!zero) { 
+            call(); 
+            machineCycles += 6;
+            return;
+        }
         break;
     case 0xDC:
         carry = Regs.F & FLAG_CARRY;
-        if (carry) { call(); }
+        if (carry) { 
+            call(); 
+            machineCycles += 6;
+            return;
+        }
         break;
     case 0xD4:
         carry = Regs.F & FLAG_CARRY;
-        if (!carry) { call(); }
+        if (!carry) { 
+            call(); 
+            machineCycles += 6;
+            return;
+        }
         break;
     default:
         call();
+        machineCycles += 6;
+        return;
         break;
     }
+    machineCycles += 3;
+    return;
 }
 
 // call to interrupt vectors
@@ -1529,24 +1599,43 @@ void CoreSM83::RET() {
     switch (opcode) {
     case 0xC8:
         zero = Regs.F & FLAG_ZERO;
-        if (zero) { ret(); }
+        if (zero) { 
+            ret(); 
+            machineCycles += 5;
+            return;
+        }
         break;
     case 0xC0:
         zero = Regs.F & FLAG_ZERO;
-        if (!zero) { ret(); }
+        if (!zero) { 
+            ret(); 
+            machineCycles += 5;
+            return;
+        }
         break;
     case 0xD8:
         carry = Regs.F & FLAG_CARRY;
-        if (carry) { ret(); }
+        if (carry) { 
+            ret(); 
+            machineCycles += 5;
+            return;
+        }
         break;
     case 0xD0:
         carry = Regs.F & FLAG_CARRY;
-        if (!carry) { ret(); }
+        if (!carry) { 
+            ret(); 
+            machineCycles += 5;
+            return;
+        }
         break;
     default:
         ret();
+        machineCycles += 4;
+        return;
         break;
     }
+    machineCycles += 2;
 }
 
 // return and enable interrupts

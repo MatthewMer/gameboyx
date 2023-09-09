@@ -14,9 +14,9 @@ void MmuSM83_MBC3::Write16Bit(const u16& _data, const u16& _addr) {
 }
 
 u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
-
+	return 0x00;
 }
 
 u16 MmuSM83_MBC3::Read16Bit(const u16& _addr) {
-
+	return 0x00;
 }

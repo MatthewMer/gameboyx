@@ -31,7 +31,10 @@ private:
 	// instruction members ****************
 	// lookup table
 	typedef void (CoreSM83::* instruction)();
+
+	// current instruction context
 	std::tuple<u8, instruction, int>* instrPtr = nullptr;
+	int machineCycles = 0;
 
 	// basic instructions
 	std::vector<std::tuple<u8, instruction, int>> instrMap;
@@ -65,6 +68,7 @@ private:
 	void LDH();
 	void LDHa16();
 	void LDSPa16();
+	void LDSPHL();
 
 	void LDtoB();
 	void LDtoC();
