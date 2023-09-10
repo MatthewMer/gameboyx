@@ -1,22 +1,22 @@
 #pragma once
 
 #include "Cartridge.h"
-#include "Memory.h"
+#include "MemoryBase.h"
 
 #include "defs.h"
 
-class Memory
+class MemorySM83 : private MemoryBase
 {
 public:
 	// get/reset instance
-	static Memory* getInstance(const Cartridge& _cart_obj);
+	static MemorySM83* getInstance(const Cartridge& _cart_obj);
 	static void resetInstance();
 
 	// clone/assign protection
-	Memory(Memory const&) = delete;
-	Memory(Memory&&) = delete;
-	Memory& operator=(Memory const&) = delete;
-	Memory& operator=(Memory&&) = delete;
+	MemorySM83(MemorySM83 const&) = delete;
+	MemorySM83(MemorySM83&&) = delete;
+	MemorySM83& operator=(MemorySM83 const&) = delete;
+	MemorySM83& operator=(MemorySM83&&) = delete;
 
 	// members for memory access
 	u8 ReadROM_0(const u16& _addr);
@@ -41,21 +41,18 @@ public:
 
 private:
 	// constructor
-	explicit Memory(const Cartridge& _cart_obj);
-	static Memory* instance;
+	explicit MemorySM83(const Cartridge& _cart_obj);
+	static MemorySM83* instance;
 	// destructor
-	~Memory() = default;
+	~MemorySM83() = default;
 
 	// members
-	void InitMemory(const Cartridge& _cart_obj);
-	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom);
-	bool CopyRom(const std::vector<u8>& _vec_rom);
+	void InitMemory(const Cartridge& _cart_obj) override;
+	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;
+	bool CopyRom(const std::vector<u8>& _vec_rom) override;
 
-	void AllocateMemory();
-	void CleanupMemory();
-
-	int romBankNum = 0;
-	int ramBankNum = 0;
+	void AllocateMemory() override;
+	void CleanupMemory() override;
 
 	bool isCgb = false;
 

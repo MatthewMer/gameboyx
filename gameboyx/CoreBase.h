@@ -17,17 +17,20 @@ public:
 	Core& operator=(Core const&) = delete;
 	Core& operator=(Core&&) = delete;
 
+	// public members
+	virtual void RunCycles() = 0;
+
 protected:
 	// constructor
 	Core() = default;
 	~Core() = default;
 
 	Mmu* mmu_instance;
-	
-private:
-	static Core* instance;
 
 	// members
 	virtual void InitCpu(const Cartridge& _cart_obj) = 0;
 	virtual void InitRegisterStates() = 0;
+	
+private:
+	static Core* instance;
 };

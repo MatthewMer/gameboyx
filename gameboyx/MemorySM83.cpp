@@ -1,4 +1,4 @@
-#include "Memory.h"
+#include "MemorySM83.h"
 
 #include "gameboy_config.h"
 
@@ -7,19 +7,19 @@ using namespace std;
 /* ***********************************************************************************************************
     CONSTRUCTOR AND (DE)INIT
 *********************************************************************************************************** */
-Memory* Memory::instance = nullptr;
+MemorySM83* MemorySM83::instance = nullptr;
 
-Memory* Memory::getInstance(const Cartridge& _cart_obj) {
+MemorySM83* MemorySM83::getInstance(const Cartridge& _cart_obj) {
     if (instance != nullptr) {
         delete instance;
         instance = nullptr;
     }
 
-    instance = new Memory(_cart_obj);
+    instance = new MemorySM83(_cart_obj);
     return instance;
 }
 
-void Memory::resetInstance() {
+void MemorySM83::resetInstance() {
     if (instance != nullptr) {
         instance->CleanupMemory();
 
@@ -29,7 +29,7 @@ void Memory::resetInstance() {
 }
 
 
-Memory::Memory(const Cartridge& _cart_obj) {
+MemorySM83::MemorySM83(const Cartridge& _cart_obj) {
     this->isCgb = _cart_obj.GetIsCgb();
 
     InitMemory(_cart_obj);
@@ -38,7 +38,7 @@ Memory::Memory(const Cartridge& _cart_obj) {
 /* ***********************************************************************************************************
     INITIALIZE MEMORY
 *********************************************************************************************************** */
-void Memory::InitMemory(const Cartridge& _cart_obj) {
+void MemorySM83::InitMemory(const Cartridge& _cart_obj) {
     const auto& vec_rom = _cart_obj.GetRomVector();
 
     if (!ReadRomHeaderInfo(vec_rom)) { return; }
@@ -49,7 +49,7 @@ void Memory::InitMemory(const Cartridge& _cart_obj) {
     }
 }
 
-bool Memory::CopyRom(const vector<u8>& _vec_rom) {
+bool MemorySM83::CopyRom(const vector<u8>& _vec_rom) {
     if (ROM_0 != nullptr) {
         for (int i = 0; i < ROM_BANK_0_SIZE; i++) {
             ROM_0[i] = _vec_rom[i];
@@ -79,7 +79,7 @@ bool Memory::CopyRom(const vector<u8>& _vec_rom) {
 /* ***********************************************************************************************************
     MANAGE ALLOCATED MEMORY
 *********************************************************************************************************** */
-void Memory::AllocateMemory() {
+void MemorySM83::AllocateMemory() {
     ROM_0 = new u8[ROM_BANK_0_SIZE];
     ROM_N = new u8 * [romBankNum];
     for (int i = 0; i < romBankNum; i++) {
@@ -109,7 +109,7 @@ void Memory::AllocateMemory() {
     HRAM = new u8[HRAM_SIZE];
 }
 
-void Memory::CleanupMemory() {
+void MemorySM83::CleanupMemory() {
     delete[] ROM_0;
     for (int i = 0; i < romBankNum; i++) {
         delete[] ROM_N[i];
@@ -142,7 +142,7 @@ void Memory::CleanupMemory() {
 /* ***********************************************************************************************************
     ROM HEADER DATA FOR MEMORY
 *********************************************************************************************************** */
-bool Memory::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
+bool MemorySM83::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
     if (_vec_rom.size() < ROM_HEAD_ADDR + ROM_HEAD_SIZE) { return false; }
 
     u8 value;
@@ -191,75 +191,75 @@ bool Memory::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
     MEMORY ACCESS
 *********************************************************************************************************** */
 // read *****
-u8 Memory::ReadROM_0(const u16& _addr) {
+u8 MemorySM83::ReadROM_0(const u16& _addr) {
     return ROM_0[_addr];
 }
 
-u8 Memory::ReadROM_N(const u16& _addr, const int& _bank) {
+u8 MemorySM83::ReadROM_N(const u16& _addr, const int& _bank) {
     return ROM_N[_bank][_addr - ROM_BANK_N_OFFSET];
 }
 
-u8 Memory::ReadVRAM_N(const u16& _addr, const int& _bank) {
+u8 MemorySM83::ReadVRAM_N(const u16& _addr, const int& _bank) {
     return VRAM_N[_bank][_addr - VRAM_N_OFFSET];
 }
 
-u8 Memory::ReadRAM_N(const u16& _addr, const int& _bank) {
+u8 MemorySM83::ReadRAM_N(const u16& _addr, const int& _bank) {
     return RAM_N[_bank][_addr - RAM_BANK_N_OFFSET];
 }
 
-u8 Memory::ReadWRAM_0(const u16& _addr) {
+u8 MemorySM83::ReadWRAM_0(const u16& _addr) {
     return WRAM_0[_addr - WRAM_0_OFFSET];
 }
 
-u8 Memory::ReadWRAM_N(const u16& _addr, const int& _bank) {
+u8 MemorySM83::ReadWRAM_N(const u16& _addr, const int& _bank) {
     return WRAM_N[_bank][_addr - WRAM_N_OFFSET];
 }
 
-u8 Memory::ReadOAM(const u16& _addr) {
+u8 MemorySM83::ReadOAM(const u16& _addr) {
     return OAM[_addr - OAM_OFFSET];
 }
 
-u8 Memory::ReadIO(const u16& _addr) {
+u8 MemorySM83::ReadIO(const u16& _addr) {
     return IO[_addr - IO_REGISTERS_OFFSET];
 }
 
-u8 Memory::ReadHRAM(const u16& _addr) {
+u8 MemorySM83::ReadHRAM(const u16& _addr) {
     return HRAM[_addr - HRAM_OFFSET];
 }
 
-u8 Memory::ReadIE() {
+u8 MemorySM83::ReadIE() {
     return IE;
 }
 
 // write *****
-void Memory::WriteVRAM_N(const u8& _data, const u16& _addr, const int& _bank) {
+void MemorySM83::WriteVRAM_N(const u8& _data, const u16& _addr, const int& _bank) {
     VRAM_N[_bank][_addr - VRAM_N_OFFSET] = _data;
 }
 
-void Memory::WriteRAM_N(const u8& _data, const u16& _addr, const int& _bank) {
+void MemorySM83::WriteRAM_N(const u8& _data, const u16& _addr, const int& _bank) {
     RAM_N[_bank][_addr - RAM_BANK_N_OFFSET] = _data;
 }
 
-void Memory::WriteWRAM_0(const u8& _data, const u16& _addr) {
+void MemorySM83::WriteWRAM_0(const u8& _data, const u16& _addr) {
     WRAM_0[_addr - WRAM_0_OFFSET] = _data;
 }
 
-void Memory::WriteWRAM_N(const u8& _data, const u16& _addr, const int& _bank) {
+void MemorySM83::WriteWRAM_N(const u8& _data, const u16& _addr, const int& _bank) {
     WRAM_N[_bank][_addr - WRAM_N_OFFSET] = _data;
 }
 
-void Memory::WriteOAM(const u8& _data, const u16& _addr) {
+void MemorySM83::WriteOAM(const u8& _data, const u16& _addr) {
     OAM[_addr - OAM_OFFSET] = _data;
 }
 
-void Memory::WriteIO(const u8& _data, const u16& _addr) {
+void MemorySM83::WriteIO(const u8& _data, const u16& _addr) {
     IO[_addr - IO_REGISTERS_OFFSET] = _data;
 }
 
-void Memory::WriteHRAM(const u8& _data, const u16& _addr) {
+void MemorySM83::WriteHRAM(const u8& _data, const u16& _addr) {
     HRAM[_addr - HRAM_OFFSET] = _data;
 }
 
-void Memory::WriteIE(const u8& _data) {
+void MemorySM83::WriteIE(const u8& _data) {
     IE = _data;
 }

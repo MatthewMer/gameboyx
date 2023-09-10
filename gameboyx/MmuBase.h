@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Cartridge.h"
-#include "Memory.h"
+#include "MemoryBase.h"
 
 class Mmu
 {
@@ -26,8 +26,6 @@ protected:
 	// constructor
 	Mmu() = default;
 	~Mmu() = default;
-
-	Memory* mem_instance;
 
 private:
 	static Mmu* instance;

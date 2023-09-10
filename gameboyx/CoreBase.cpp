@@ -1,5 +1,4 @@
 #include "CoreBase.h"
-
 #include "CoreSM83.h"
 
 Core* Core::instance = nullptr;

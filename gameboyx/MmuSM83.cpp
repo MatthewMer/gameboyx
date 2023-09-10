@@ -1,11 +1,25 @@
 #include "MmuSM83.h"
 
+#include "MemorySM83.h"
+
 #include "gameboy_config.h"
 
 /* ***********************************************************************************************************
 	DEFINES
 *********************************************************************************************************** */
-#define RAM_TIMER_ENABLE			
+// addresses
+#define RAM_TIMER_ENABLE			0x0000
+#define ROM_BANK_NUMBER_SELECT		0x2000
+
+#define RAM_BANK_NUMBER_OR_RTC_REG	0x4000
+#define LATCH_CLOCK_DATA			0x6000
+
+// masks
+#define ROM_BANK_MASK				0x7f
+#define RAM_ENABLE_MASK				0x0F
+
+// values
+#define RAM_ENABLE					0x0A
 
 /* ***********************************************************************************************************
 	CONSTRUCTOR
@@ -15,7 +29,7 @@ MmuSM83_MBC3::MmuSM83_MBC3(const Cartridge& _cart_obj) {
 
 	InitMmu(_cart_obj);
 
-	mem_instance = Memory::getInstance(_cart_obj);
+	mem_instance = MemorySM83::getInstance(_cart_obj);
 }
 
 /* ***********************************************************************************************************
@@ -24,11 +38,30 @@ MmuSM83_MBC3::MmuSM83_MBC3(const Cartridge& _cart_obj) {
 void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	// ROM Bank 0 -> RAM/Timer enable and ROM Bank select
 	if (_addr < ROM_BANK_N_OFFSET) {
-		// TODO
+		// RAM/TIMER enable
+		if (_addr < ROM_BANK_NUMBER_SELECT) {
+			timerRamEnable = (_data & RAM_ENABLE_MASK) == RAM_ENABLE;
+		}
+		// ROM Bank number
+		else {
+			romBankNumber = _data & ROM_BANK_MASK;
+			if (romBankNumber == 0) romBankNumber = 1;
+		}
 	}
 	// ROM Bank 1-n -> RAM Bank select or RTC register select or Latch Clock Data
 	else if (_addr < VRAM_N_OFFSET) {
-		// TODO
+		// RAM Bank number or RTC register select
+		if (_addr < LATCH_CLOCK_DATA) {
+			ramBankRtcNumber = _data;
+		}
+		else {
+			if (_data == 0x01 && rtcRegistersLastWrite == 0x00) {
+				LatchClock();
+			}
+			else {
+				rtcRegistersLastWrite = _data;
+			}
+		}
 	}
 	// VRAM 0-n
 	else if (_addr < RAM_BANK_N_OFFSET) {
@@ -36,7 +69,14 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// RAM 0-n -> RTC Registers 08-0C
 	else if (_addr < WRAM_0_OFFSET) {
-		// TODO
+		if (timerRamEnable) {
+			if (ramBankRtcNumber < 0x04) {
+				mem_instance->WriteRAM_N(_data, _addr, ramBankRtcNumber);
+			}
+			else if (ramBankRtcNumber > 0x07 && ramBankRtcNumber < 0x0D) {
+				WriteClock(_data);
+			}
+		}
 	}
 	// WRAM 0
 	else if (_addr < WRAM_N_OFFSET) {
@@ -93,7 +133,14 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		return mem_instance->ReadRAM_N(_addr, 0x00);
+		if (timerRamEnable) {
+			if (ramBankRtcNumber < 0x04) {
+				return mem_instance->ReadRAM_N(_addr, ramBankRtcNumber);
+			}
+			else if (ramBankRtcNumber > 0x07 && ramBankRtcNumber < 0x0D) {
+				ReadClock();
+			}
+		}
 	}
 	// WRAM 0
 	else if (_addr < WRAM_N_OFFSET) {
@@ -134,6 +181,22 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 u16 MmuSM83_MBC3::Read16Bit(const u16& _addr) {
 	dataBuffer = ((u16)Read8Bit(_addr + 1) << 8);
 	dataBuffer |= Read8Bit(_addr);
+	return dataBuffer;
+}
+
+/* ***********************************************************************************************************
+	RTC			TODO !!!!!
+*********************************************************************************************************** */
+void MmuSM83_MBC3::LatchClock() {
+
+}
+
+u8 MmuSM83_MBC3::ReadClock() {
+	return 0x00;
+}
+
+void MmuSM83_MBC3::WriteClock(const u8& _data) {
+
 }
 
 /* ***********************************************************************************************************
@@ -147,4 +210,6 @@ void MmuSM83_MBC3::InitMmu(const Cartridge& _cart_obj) {
 
 bool MmuSM83_MBC3::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
 	if (_vec_rom.size() < ROM_HEAD_ADDR + ROM_HEAD_SIZE) { return false; }
+
+	return true;
 }

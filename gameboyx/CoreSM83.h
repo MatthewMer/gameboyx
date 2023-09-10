@@ -7,10 +7,12 @@
 
 #include <vector>
 
-class CoreSM83 : protected Core
+class CoreSM83 : public Core
 {
 public:
 	friend class Core;
+
+	void RunCycles() override;
 
 private:
 	// constructor
