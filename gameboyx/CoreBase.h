@@ -20,10 +20,14 @@ public:
 protected:
 	// constructor
 	Core() = default;
+	~Core() = default;
 
 	Mmu* mmu_instance;
 	
 private:
 	static Core* instance;
-	~Core() = default;
+
+	// members
+	virtual void InitCpu(const Cartridge& _cart_obj) = 0;
+	virtual void InitRegisterStates() = 0;
 };

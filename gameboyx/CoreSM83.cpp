@@ -49,6 +49,8 @@ using namespace std;
     CONSTRUCTOR
 *********************************************************************************************************** */
 CoreSM83::CoreSM83(const Cartridge& _cart_obj) {
+    InitCpu(_cart_obj);
+
 	Mmu::resetInstance();
 	mmu_instance = Mmu::getInstance(_cart_obj);
 }
@@ -3157,5 +3159,42 @@ void CoreSM83::SET7() {
     case 0x07:
         Regs.A |= 0x80;
         break;
+    }
+}
+
+/* ***********************************************************************************************************
+*
+*   GAMEBOY (COLOR) CORESM83 FUNCTIONALITY
+*
+*********************************************************************************************************** */
+
+/* ***********************************************************************************************************
+    INIT CPU
+*********************************************************************************************************** */
+// initial cpu state
+void CoreSM83::InitCpu(const Cartridge& _cart_obj){
+    this->isCgb = _cart_obj.GetIsCgb();
+
+    InitRegisterStates();
+}
+
+// initial register states
+void CoreSM83::InitRegisterStates() {
+    Regs = gbc_registers();
+
+    Regs.A = (CGB_AF & 0xFF00) >> 8;
+    Regs.F = CGB_AF & 0xFF;
+
+    Regs.BC = CGB_BC;
+    Regs.SP = CGB_SP;
+    Regs.PC = CGB_PC;
+
+    if (isCgb) {
+        Regs.DE = CGB_CGB_DE;
+        Regs.HL = CGB_CGB_HL;
+    }
+    else {
+        Regs.DE = CGB_DMG_DE;
+        Regs.HL = CGB_DMG_HL;
     }
 }

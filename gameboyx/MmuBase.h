@@ -25,10 +25,13 @@ public:
 protected:
 	// constructor
 	Mmu() = default;
+	~Mmu() = default;
 
 	Memory* mem_instance;
 
 private:
 	static Mmu* instance;
-	~Mmu() = default;
+
+	// members
+	virtual void InitMmu(const Cartridge& _cart_obj) = 0;
 };

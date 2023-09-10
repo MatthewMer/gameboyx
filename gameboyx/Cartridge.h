@@ -24,6 +24,7 @@ public:
 	Cartridge& operator=(Cartridge const&) = delete;
 	Cartridge& operator=(Cartridge&&) = delete;
 
+	// static members
 	static bool read_basic_header_info(game_info& _game_info, std::vector<u8>& _vec_rom);
 	static bool read_rom_to_buffer(const game_info& _game_info, std::vector<u8>& _vec_rom);
 	static bool copy_rom_to_rom_folder(game_info& _game_info, std::vector<u8>& _vec_rom, const std::string& _new_file_path);
@@ -31,20 +32,34 @@ public:
 	static void check_and_create_rom_folder();
 
 	// getter
-	constexpr const game_info* GetGameInfo() const {
-		return std::to_address(gameCtx);
+	constexpr const game_info& GetGameInfo() const {
+		return gameCtx;
+	}
+
+	constexpr const std::vector<u8>& GetRomVector() const {
+		return vecRom;
+	}
+
+	constexpr const bool& GetIsCgb() const {
+		return isCgb;
 	}
 
 private:
 	// constructor
 	static Cartridge* instance;
-	explicit constexpr Cartridge(const game_info& _game_ctx) : gameCtx(&_game_ctx) {};
+	explicit Cartridge(const game_info& _game_ctx) : gameCtx(_game_ctx) {
+		ReadData();
+	};
 	// destructor
 	~Cartridge() = default;
 
-	// vec_read_rom
+	// basic game context and read buffer
 	std::vector<u8> vecRom = std::vector<u8>();
-	const game_info* gameCtx;
+	const game_info& gameCtx;
 
+	bool isCgb = false;
+
+	// member functions
 	bool ReadData();
+	bool ReadHeaderConsole();
 };

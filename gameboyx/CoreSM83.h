@@ -18,10 +18,16 @@ private:
 	// destructor
 	~CoreSM83() = default;
 
-	// members
+	// instruction data
 	u8 opcode;
 	u16 data;
+
+	// internals
 	gbc_registers Regs = gbc_registers();
+	void InitCpu(const Cartridge& _cart_obj) override;
+	void InitRegisterStates() override;
+
+	bool isCgb = false;
 
 	// cpu states
 	bool halt = false;

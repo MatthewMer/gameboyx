@@ -28,13 +28,16 @@ void Cartridge::resetInstance() {
 	}
 }
 
-
 bool Cartridge::ReadData() {
-	if (!read_rom_to_buffer(*gameCtx, vecRom)) return false;
-	//if (!read_basic_header_info(*gameCtx, vecRom)) return false;
+	if (!read_rom_to_buffer(gameCtx, vecRom)) { return false; }
+	if (!ReadHeaderConsole()) { return false; }
+	return true;
+}
 
-	// TODO: load cartridge data for execution
+bool Cartridge::ReadHeaderConsole() {
+	if (vecRom.size() < ROM_HEAD_ADDR + ROM_HEAD_SIZE) { return false; }
 
+	isCgb = vecRom[ROM_HEAD_CGBFLAG] == 0xc0 || vecRom[ROM_HEAD_CGBFLAG] == 0x80;
 	return true;
 }
 
