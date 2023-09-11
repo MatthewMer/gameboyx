@@ -2,17 +2,19 @@
 
 #include "MmuSM83.h"
 
-Mmu* Mmu::instance = nullptr;
+MmuBase* MmuBase::instance = nullptr;
 
-Mmu* Mmu::getInstance(const Cartridge& _cart_obj) {
+MmuBase* MmuBase::getInstance(const Cartridge& _cart_obj) {
 	if (instance == nullptr) {
+		delete instance;
+		instance = nullptr;
 		instance = new MmuSM83_MBC3(_cart_obj);
 	}
 
 	return instance;
 }
 
-void Mmu::resetInstance() {
+void MmuBase::resetInstance() {
 	if (instance != nullptr) {
 		delete instance;
 		instance = nullptr;

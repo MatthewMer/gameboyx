@@ -1,11 +1,10 @@
 #include "MmuSM83.h"
 
 #include "MemorySM83.h"
-
 #include "gameboy_config.h"
 
 /* ***********************************************************************************************************
-	DEFINES
+	MBC3 DEFINES
 *********************************************************************************************************** */
 // addresses
 #define RAM_TIMER_ENABLE			0x0000
@@ -65,7 +64,12 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// VRAM 0-n
 	else if (_addr < RAM_BANK_N_OFFSET) {
-		mem_instance->WriteVRAM_N(_data, _addr, 0x00);
+		if (isCgb) {
+			mem_instance->WriteVRAM_N(_data, _addr, mem_instance->ReadVRAMSelect());
+		}
+		else {
+			mem_instance->WriteVRAM_N(_data, _addr, 0);
+		}
 	}
 	// RAM 0-n -> RTC Registers 08-0C
 	else if (_addr < WRAM_0_OFFSET) {
@@ -84,7 +88,12 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// WRAM 1-n
 	else if (_addr < MIRROR_WRAM_OFFSET) {
-		mem_instance->WriteWRAM_N(_data, _addr, 0x00);
+		if (isCgb) {
+			mem_instance->WriteWRAM_N(_data, _addr, mem_instance->ReadWRAMSelect());
+		}
+		else {
+			mem_instance->WriteWRAM_N(_data, _addr, 0);
+		}
 	}
 	// MIRROR WRAM, prohibited
 	else if (_addr < OAM_OFFSET) {
@@ -125,11 +134,16 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	}
 	// ROM Bank 1-n
 	else if (_addr < VRAM_N_OFFSET) {
-		return mem_instance->ReadROM_N(_addr, 0x00);
+		return mem_instance->ReadROM_N(_addr, romBankNumber);
 	}
 	// VRAM 0-n
 	else if (_addr < RAM_BANK_N_OFFSET) {
-		return mem_instance->ReadVRAM_N(_addr, 0x00);
+		if (isCgb) {
+			return mem_instance->ReadVRAM_N(_addr, mem_instance->ReadVRAMSelect());
+		}
+		else {
+			return mem_instance->ReadVRAM_N(_addr, 0);
+		}
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
@@ -148,12 +162,16 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	}
 	// WRAM 1-n
 	else if (_addr < MIRROR_WRAM_OFFSET) {
-		return mem_instance->ReadWRAM_N(_addr, 0x00);
+		if (isCgb) {
+			return mem_instance->ReadWRAM_N(_addr, mem_instance->ReadWRAMSelect());
+		}
+		else {
+			return mem_instance->ReadWRAM_N(_addr, 0);
+		}
 	}
-	// MIRROR WRAM
+	// MIRROR WRAM (prohibited)
 	else if (_addr < OAM_OFFSET) {
-		//return mem_instance->ReadWRAM_0(_addr - MIRROR_WRAM_OFFSET);
-		return 0x00;
+		return mem_instance->ReadWRAM_0(_addr);
 	}
 	// OAM
 	else if (_addr < NOT_USED_MEMORY_OFFSET) {

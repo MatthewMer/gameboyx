@@ -174,7 +174,8 @@
     <ClCompile Include="config_io.cpp" />
     <ClCompile Include="CoreBase.cpp" />
     <ClCompile Include="CoreSM83.cpp" />
-    <ClCompile Include="GraphicsUnit.cpp" />
+    <ClCompile Include="GraphicsUnitBase.cpp" />
+    <ClCompile Include="GraphicsUnitSM83.cpp" />
     <ClCompile Include="helper_functions.cpp" />
     <ClCompile Include="include\simple_logger.cpp" />
     <ClCompile Include="io_config.h" />
@@ -193,7 +194,8 @@
     <ClInclude Include="config_io.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="game_info.h" />
-    <ClInclude Include="GraphicsUnit.h" />
+    <ClInclude Include="GraphicsUnitBase.h" />
+    <ClInclude Include="GraphicsUnitSM83.h" />
     <ClInclude Include="helper_functions.h" />
     <ClInclude Include="ImGuiGameboyX.h" />
     <ClInclude Include="guigameboyx_config.h" />

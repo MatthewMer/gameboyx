@@ -25,7 +25,7 @@ protected:
 	Core() = default;
 	~Core() = default;
 
-	Mmu* mmu_instance;
+	MmuBase* mmu_instance;
 
 	// members
 	virtual void InitCpu(const Cartridge& _cart_obj) = 0;

@@ -51,8 +51,8 @@ using namespace std;
 CoreSM83::CoreSM83(const Cartridge& _cart_obj) {
     InitCpu(_cart_obj);
 
-	Mmu::resetInstance();
-	mmu_instance = Mmu::getInstance(_cart_obj);
+	MmuBase::resetInstance();
+	mmu_instance = MmuBase::getInstance(_cart_obj);
 }
 
 /* ***********************************************************************************************************

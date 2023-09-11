@@ -51,13 +51,16 @@
     <ClCompile Include="MemorySM83.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GraphicsUnit.cpp">
+    <ClCompile Include="GraphicsUnitBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CoreSM83.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MmuSM83.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GraphicsUnitSM83.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -101,7 +104,7 @@
     <ClInclude Include="MemorySM83.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GraphicsUnit.h">
+    <ClInclude Include="GraphicsUnitBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CoreSM83.h">
@@ -111,6 +114,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MemoryBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphicsUnitSM83.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

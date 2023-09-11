@@ -3,18 +3,18 @@
 #include "Cartridge.h"
 #include "MemoryBase.h"
 
-class Mmu
+class MmuBase
 {
 public:
 	// get/reset instance
-	static Mmu* getInstance(const Cartridge& _cart_obj);
+	static MmuBase* getInstance(const Cartridge& _cart_obj);
 	static void resetInstance();
 
 	// clone/assign protection
-	Mmu(Mmu const&) = delete;
-	Mmu(Mmu&&) = delete;
-	Mmu& operator=(Mmu const&) = delete;
-	Mmu& operator=(Mmu&&) = delete;
+	MmuBase(MmuBase const&) = delete;
+	MmuBase(MmuBase&&) = delete;
+	MmuBase& operator=(MmuBase const&) = delete;
+	MmuBase& operator=(MmuBase&&) = delete;
 
 	// members
 	virtual void Write8Bit(const u8& _data, const u16& _addr) = 0;
@@ -24,11 +24,11 @@ public:
 
 protected:
 	// constructor
-	Mmu() = default;
-	~Mmu() = default;
+	MmuBase() = default;
+	~MmuBase() = default;
 
 private:
-	static Mmu* instance;
+	static MmuBase* instance;
 
 	// members
 	virtual void InitMmu(const Cartridge& _cart_obj) = 0;

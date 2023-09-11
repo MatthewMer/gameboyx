@@ -6,10 +6,10 @@
 
 #include "MemorySM83.h"
 
-class MmuSM83_MBC3 : protected Mmu
+class MmuSM83_MBC3 : protected MmuBase
 {
 public:
-	friend class Mmu;
+	friend class MmuBase;
 	
 	// members
 	void Write8Bit(const u8& _data, const u16& _addr) override;

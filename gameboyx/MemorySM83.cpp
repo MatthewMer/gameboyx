@@ -5,14 +5,37 @@
 using namespace std;
 
 /* ***********************************************************************************************************
+    (CGB) REGISTER DEFINES
+*********************************************************************************************************** */
+// SPEED SWITCH
+#define CGB_SPEED_SWITCH            0xFF4D
+    
+// VRAM BANK SELECT
+#define CGB_VRAM_SELECT             0xFF4F
+
+// VRAM DMA
+#define CGB_HDMA1                   0xFF51
+#define CGB_HDMA2                   0xFF52
+#define CGB_HDMA3                   0xFF53
+#define CGB_HDMA4                   0xFF54
+#define CGB_HDMA5                   0xFF55
+
+// OBJECT PRIORITY MODE
+#define CGB_OBJ_PRIO_MODE           0xFF6C
+
+// WRAM BANK SELECT
+#define CGB_WRAM_SELECT             0xFF70
+
+
+/* ***********************************************************************************************************
     CONSTRUCTOR AND (DE)INIT
 *********************************************************************************************************** */
 MemorySM83* MemorySM83::instance = nullptr;
 
 MemorySM83* MemorySM83::getInstance(const Cartridge& _cart_obj) {
     if (instance != nullptr) {
+        instance->CleanupMemory();
         delete instance;
-        instance = nullptr;
     }
 
     instance = new MemorySM83(_cart_obj);
@@ -107,6 +130,17 @@ void MemorySM83::AllocateMemory() {
     IO = new u8[IO_REGISTERS_SIZE];
 
     HRAM = new u8[HRAM_SIZE];
+
+    // map io registers
+    SPEEDSWITCH = &IO[CGB_SPEED_SWITCH - IO_REGISTERS_OFFSET];
+    VRAM_BANK = &IO[CGB_VRAM_SELECT - IO_REGISTERS_OFFSET];
+    HDMA1 = &IO[CGB_HDMA1 - IO_REGISTERS_OFFSET];
+    HDMA2 = &IO[CGB_HDMA2 - IO_REGISTERS_OFFSET];
+    HDMA3 = &IO[CGB_HDMA3 - IO_REGISTERS_OFFSET];
+    HDMA4 = &IO[CGB_HDMA4 - IO_REGISTERS_OFFSET];
+    HDMA5 = &IO[CGB_HDMA5 - IO_REGISTERS_OFFSET];
+    OBJ_PRIO = &IO[CGB_OBJ_PRIO_MODE - IO_REGISTERS_OFFSET];
+    WRAM_BANK = &IO[CGB_WRAM_SELECT - IO_REGISTERS_OFFSET];
 }
 
 void MemorySM83::CleanupMemory() {
@@ -262,4 +296,28 @@ void MemorySM83::WriteHRAM(const u8& _data, const u16& _addr) {
 
 void MemorySM83::WriteIE(const u8& _data) {
     IE = _data;
+}
+
+/* ***********************************************************************************************************
+    (CGB) MEMORY DIRECT ACCESS - IO REGISTERS
+*********************************************************************************************************** */
+u8 MemorySM83::ReadVRAMSelect() {
+    return (*VRAM_BANK & 0x01);
+}
+
+u8 MemorySM83::ReadWRAMSelect() {
+    u8 bank = (*WRAM_BANK & 0x07);
+    return (bank ? bank : 0x01);
+}
+
+u16 MemorySM83::ReadHDMASource() {
+    return 0;
+}
+
+u16 MemorySM83::ReadHDMADestination() {
+    return 0;
+}
+
+u8 MemorySM83::ReadHDMAMode() {
+    return 0;
 }
