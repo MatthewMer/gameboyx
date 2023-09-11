@@ -4,26 +4,26 @@
 #include "registers.h"
 #include "MmuBase.h"
 
-class Core
+class CoreBase
 {
 public:
 	// get/reset instance
-	static Core* getInstance(const Cartridge& _cart_obj);
+	static CoreBase* getInstance(const Cartridge& _cart_obj);
 	static void resetInstance();
 
 	// clone/assign protection
-	Core(Core const&) = delete;
-	Core(Core&&) = delete;
-	Core& operator=(Core const&) = delete;
-	Core& operator=(Core&&) = delete;
+	CoreBase(CoreBase const&) = delete;
+	CoreBase(CoreBase&&) = delete;
+	CoreBase& operator=(CoreBase const&) = delete;
+	CoreBase& operator=(CoreBase&&) = delete;
 
 	// public members
 	virtual void RunCycles() = 0;
 
 protected:
 	// constructor
-	Core() = default;
-	~Core() = default;
+	CoreBase() = default;
+	~CoreBase() = default;
 
 	MmuBase* mmu_instance;
 
@@ -32,5 +32,5 @@ protected:
 	virtual void InitRegisterStates() = 0;
 	
 private:
-	static Core* instance;
+	static CoreBase* instance;
 };

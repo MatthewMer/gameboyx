@@ -1,6 +1,7 @@
 #include "GraphicsUnitBase.h"
 
 #include "GraphicsUnitSM83.h"
+#include "logger.h"
 
 GraphicsUnitBase* GraphicsUnitBase::instance = nullptr;
 
@@ -18,5 +19,6 @@ void GraphicsUnitBase::resetInstance() {
 	if (instance != nullptr) {
 		delete instance;
 		instance = nullptr;
+		LOG_INFO("GPU resetted");
 	}
 }

@@ -3173,6 +3173,7 @@ void CoreSM83::SET7() {
 *********************************************************************************************************** */
 // initial cpu state
 void CoreSM83::InitCpu(const Cartridge& _cart_obj){
+    LOG_INFO("Init CPU");
     this->isCgb = _cart_obj.GetIsCgb();
 
     InitRegisterStates();

@@ -53,7 +53,7 @@ void ImGuiGameboyX::ProcessGUI() {
     IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
 
     if (showMainMenuBar) ShowMainMenuBar();
-    if (!startGame) {
+    if (!gameRunning) {
         // gui elements
         if (showGameSelect) ShowGameSelect();
         if (showWinAbout) ShowWindowAbout();
@@ -61,6 +61,7 @@ void ImGuiGameboyX::ProcessGUI() {
 
         // actions
         if (deleteGames) ActionDeleteGames();
+        if (startGame) ActionStartGame(gamesPrevIndex);
 
         // special funktions
         ActionProcessSpecialKeys();
@@ -73,10 +74,11 @@ void ImGuiGameboyX::ProcessGUI() {
 void ImGuiGameboyX::ShowMainMenuBar() {
     if (showMainMenuBar){
         if (ImGui::BeginMainMenuBar()) {
-            if (!startGame) {
+            if (!gameRunning) {
                 if (ImGui::BeginMenu("File")) {
                     ImGui::MenuItem("Add new game", nullptr, &showNewGameDialog);
                     ImGui::MenuItem("Remove game(s)", nullptr, &deleteGames);
+                    ImGui::MenuItem("Start game", nullptr, &startGame);
                     ImGui::EndMenu();
                 }
             }
@@ -207,7 +209,7 @@ void ImGuiGameboyX::ShowGameSelect() {
                         gamesSelected[i] = i == j;
                     }
 
-                    StartGame(i);
+                    ActionStartGame(i);
                 }
                 if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
                     if (sdlkShiftDown) {
@@ -321,6 +323,22 @@ void ImGuiGameboyX::ActionProcessSpecialKeys() {
     }
 }
 
+void ImGuiGameboyX::ActionStartGame(int _index) {
+    startGame = false;
+    pendingGameStart = true;
+    gameToStart = _index;
+}
+
+void ImGuiGameboyX::ActionEndGame() {
+    if (gameRunning) {
+        for (int i = 0; i < gamesSelected.size(); i++) {
+            gamesSelected[i] = false;
+        }
+        gamesSelected[gameToStart] = true;
+    }
+    gameRunning = false;
+}
+
 /* ***********************************************************************************************************
     HELPER FUNCTIONS FOR MANAGING MEMBERS OF GUI OBJECT
 *********************************************************************************************************** */
@@ -357,19 +375,30 @@ void ImGuiGameboyX::InitGamesGuiCtx() {
     }
 }
 
-void ImGuiGameboyX::StartGame(int _index) {
-    startGame = true;
-    gameToStart = _index;
+/* ***********************************************************************************************************
+    COMMUNICATION WITH MAIN
+*********************************************************************************************************** */
+bool ImGuiGameboyX::CheckPendingGameStart() const {
+    return pendingGameStart;
 }
 
-void ImGuiGameboyX::EndGame() {
-    if (startGame) {
-        for (int i = 0; i < gamesSelected.size(); i++) {
-            gamesSelected[i] = false;
-        }
-        gamesSelected[gameToStart] = true;
-    }
-    startGame = false;
+game_info& ImGuiGameboyX::SetGameStartAndGetContext() {
+    pendingGameStart = false;
+    gameRunning = true;
+    return games[gameToStart];
+}
+
+bool ImGuiGameboyX::CheckGameCancel() const {
+    return pendingGameStop;
+}
+
+void ImGuiGameboyX::ResetPendingGameStop() {
+    pendingGameStop = false;
+    ActionEndGame();
+}
+
+bool ImGuiGameboyX::CheckGameRunning() {
+    return gameRunning;
 }
 
 /* ***********************************************************************************************************
@@ -412,7 +441,7 @@ void ImGuiGameboyX::KeyUp(const SDL_Keycode& _key) {
         sdlkCtrlDown = false;
         break;
     case SDLK_ESCAPE:
-        EndGame();
+        pendingGameStop = true;
         break;
     case SDLK_DELETE:
         sdlkDelDown = false;

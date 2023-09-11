@@ -14,6 +14,8 @@
 #include "ImGuiGameboyX.h"
 #include "logger.h"
 #include "guigameboyx_config.h"
+#include "Cartridge.h"
+#include "VHardwareMgr.h"
 
 /* ***********************************************************************************************************
     DEFINES
@@ -183,11 +185,26 @@ int main(int, char**)
 
     // Main loop
     ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance();
+    VHardwareMgr* vhwmgr_obj = nullptr;
     LOG_INFO("Initialization completed");
 
     bool done = false;
     while (!done)
     {
+        // check game start
+        if (gbx_gui->CheckPendingGameStart()) {
+            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->SetGameStartAndGetContext());
+        }
+        if (gbx_gui->CheckGameCancel()) {
+            VHardwareMgr::resetInstance();
+            gbx_gui->ResetPendingGameStop();
+        }
+
+        // run virtual hardware
+        if (gbx_gui->CheckGameRunning()) {
+            vhwmgr_obj->RunHardware();
+        }
+
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.

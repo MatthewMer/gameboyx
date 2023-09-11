@@ -3,6 +3,8 @@
 #include "MemorySM83.h"
 #include "gameboy_config.h"
 
+#include "logger.h"
+
 /* ***********************************************************************************************************
 	MBC3 DEFINES
 *********************************************************************************************************** */
@@ -24,6 +26,8 @@
 	CONSTRUCTOR
 *********************************************************************************************************** */
 MmuSM83_MBC3::MmuSM83_MBC3(const Cartridge& _cart_obj) {
+	LOG_INFO("Init MMU");
+
 	this->isCgb = _cart_obj.GetIsCgb();
 
 	InitMmu(_cart_obj);
@@ -43,7 +47,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		}
 		// ROM Bank number
 		else {
-			romBankNumber = _data & ROM_BANK_MASK;
+			int romBankNumber = _data & ROM_BANK_MASK;
 			if (romBankNumber == 0) romBankNumber = 1;
 			mem_instance->SetRomBank(romBankNumber);
 		}
@@ -52,7 +56,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	else if (_addr < VRAM_N_OFFSET) {
 		// RAM Bank number or RTC register select
 		if (_addr < LATCH_CLOCK_DATA) {
-			ramBankRtcNumber = _data;
+			int ramBankRtcNumber = _data;
 			mem_instance->SetRamBank(ramBankRtcNumber);
 		}
 		else {
@@ -66,20 +70,16 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// VRAM 0-n
 	else if (_addr < RAM_BANK_N_OFFSET) {
-		if (isCgb) {
-			mem_instance->WriteVRAM_N(_data, _addr, mem_instance->ReadVRAMSelect());
-		}
-		else {
-			mem_instance->WriteVRAM_N(_data, _addr, 0);
-		}
+		mem_instance->WriteVRAM_N(_data, _addr);
 	}
 	// RAM 0-n -> RTC Registers 08-0C
 	else if (_addr < WRAM_0_OFFSET) {
 		if (timerRamEnable) {
-			if (ramBankRtcNumber < 0x04) {
-				mem_instance->WriteRAM_N(_data, _addr, ramBankRtcNumber);
+			int ramBankNumber = mem_instance->GetRamBank();
+			if (ramBankNumber < 0x04) {
+				mem_instance->WriteRAM_N(_data, _addr);
 			}
-			else if (ramBankRtcNumber > 0x07 && ramBankRtcNumber < 0x0D) {
+			else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
 				WriteClock(_data);
 			}
 		}
@@ -90,12 +90,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// WRAM 1-n
 	else if (_addr < MIRROR_WRAM_OFFSET) {
-		if (isCgb) {
-			mem_instance->WriteWRAM_N(_data, _addr, mem_instance->ReadWRAMSelect());
-		}
-		else {
-			mem_instance->WriteWRAM_N(_data, _addr, 0);
-		}
+		mem_instance->WriteWRAM_N(_data, _addr);
 	}
 	// MIRROR WRAM, prohibited
 	else if (_addr < OAM_OFFSET) {
@@ -136,25 +131,21 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	}
 	// ROM Bank 1-n
 	else if (_addr < VRAM_N_OFFSET) {
-		return mem_instance->ReadROM_N(_addr, romBankNumber);
+		return mem_instance->ReadROM_N(_addr);
 	}
 	// VRAM 0-n
 	else if (_addr < RAM_BANK_N_OFFSET) {
-		if (isCgb) {
-			return mem_instance->ReadVRAM_N(_addr, mem_instance->ReadVRAMSelect());
-		}
-		else {
-			return mem_instance->ReadVRAM_N(_addr, 0);
-		}
+		return mem_instance->ReadVRAM_N(_addr);
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
 		if (timerRamEnable) {
-			if (ramBankRtcNumber < 0x04) {
-				return mem_instance->ReadRAM_N(_addr, ramBankRtcNumber);
+			int ramBankNumber = mem_instance->GetRamBank();
+			if (ramBankNumber < 0x04) {
+				return mem_instance->ReadRAM_N(_addr);
 			}
-			else if (ramBankRtcNumber > 0x07 && ramBankRtcNumber < 0x0D) {
-				ReadClock();
+			else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
+				return ReadClock();
 			}
 		}
 	}
@@ -164,12 +155,7 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	}
 	// WRAM 1-n
 	else if (_addr < MIRROR_WRAM_OFFSET) {
-		if (isCgb) {
-			return mem_instance->ReadWRAM_N(_addr, mem_instance->ReadWRAMSelect());
-		}
-		else {
-			return mem_instance->ReadWRAM_N(_addr, 0);
-		}
+		return mem_instance->ReadWRAM_N(_addr);
 	}
 	// MIRROR WRAM (prohibited)
 	else if (_addr < OAM_OFFSET) {

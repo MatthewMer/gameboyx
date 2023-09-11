@@ -1,21 +1,26 @@
 #include "CoreBase.h"
 #include "CoreSM83.h"
 
-Core* Core::instance = nullptr;
+#include "logger.h"
 
-Core* Core::getInstance(const Cartridge& _cart_obj) {
+CoreBase* CoreBase::instance = nullptr;
+
+CoreBase* CoreBase::getInstance(const Cartridge& _cart_obj) {
 	if (instance != nullptr) {
 		delete instance;
 		instance = nullptr;
 	}
 
 	instance = new CoreSM83(_cart_obj);
+	LOG_INFO("CPU created");
 	return instance;
 }
 
-void Core::resetInstance() {
+void CoreBase::resetInstance() {
 	if (instance != nullptr) {
+		MmuBase::resetInstance();
 		delete instance;
 		instance = nullptr;
+		LOG_INFO("CPU resetted");
 	}
 }

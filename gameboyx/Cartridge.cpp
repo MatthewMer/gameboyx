@@ -12,10 +12,7 @@ using namespace std;
 Cartridge* Cartridge::instance = nullptr;
 
 Cartridge* Cartridge::getInstance(const game_info& _game_ctx) {
-	if (instance != nullptr) {
-		delete instance;
-		instance = nullptr;
-	}
+	resetInstance();
 
 	instance = new Cartridge(_game_ctx);
 	return instance;
@@ -25,6 +22,7 @@ void Cartridge::resetInstance() {
 	if (instance != nullptr) {
 		delete instance;
 		instance = nullptr;
+		LOG_INFO("Cartridge resetted");
 	}
 }
 

@@ -23,6 +23,7 @@ private:
 	// destructor
 	~MmuSM83_MBC3() = default;
 
+	void ResetChildMemoryInstances() { mem_instance->resetInstance(); }
 	MemorySM83* mem_instance;
 
 	// members
@@ -34,8 +35,6 @@ private:
 
 	// mbc3 control
 	bool timerRamEnable = false;
-	u8 romBankNumber = 1;
-	u8 ramBankRtcNumber = 0;
 	u8 rtcRegistersLastWrite = 0x00;
 
 	void LatchClock();

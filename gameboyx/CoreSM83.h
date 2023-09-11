@@ -7,10 +7,10 @@
 
 #include <vector>
 
-class CoreSM83 : public Core
+class CoreSM83 : public CoreBase
 {
 public:
-	friend class Core;
+	friend class CoreBase;
 
 	void RunCycles() override;
 
