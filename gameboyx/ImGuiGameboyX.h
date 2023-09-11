@@ -22,15 +22,13 @@ public:
 	// sdl functions
 	void KeyDown(const SDL_Keycode& _key);
 	void KeyUp(const SDL_Keycode& _key);
+
 	// main checks game start
 	bool CheckPendingGameStart() const;
 	// main gets game context
 	game_info& SetGameStartAndGetContext();
-	// main checks for pending game stop
-	bool CheckGameCancel() const;
-	// signal to GUI that game was stopped
-	void ResetPendingGameStop();
-	bool CheckGameRunning();
+	// main reenables gui
+	void GameStopped();
 
 private:
 	// constructor
@@ -55,9 +53,7 @@ private:
 	void ActionStartGame(int _index);
 	void ActionEndGame();
 	bool gameRunning = false;
-	bool pendingGameStop = false;
 	bool pendingGameStart = false;
-	bool startGame = false;
 	int gameToStart = 0;
 
 	bool showMainMenuBar = true;

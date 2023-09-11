@@ -12,7 +12,6 @@ CoreBase* CoreBase::getInstance(const Cartridge& _cart_obj) {
 	}
 
 	instance = new CoreSM83(_cart_obj);
-	LOG_INFO("CPU created");
 	return instance;
 }
 
@@ -21,6 +20,5 @@ void CoreBase::resetInstance() {
 		MmuBase::resetInstance();
 		delete instance;
 		instance = nullptr;
-		LOG_INFO("CPU resetted");
 	}
 }

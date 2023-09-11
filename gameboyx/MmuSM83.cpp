@@ -26,8 +26,6 @@
 	CONSTRUCTOR
 *********************************************************************************************************** */
 MmuSM83_MBC3::MmuSM83_MBC3(const Cartridge& _cart_obj) {
-	LOG_INFO("Init MMU");
-
 	this->isCgb = _cart_obj.GetIsCgb();
 
 	InitMmu(_cart_obj);

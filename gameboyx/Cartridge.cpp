@@ -22,7 +22,6 @@ void Cartridge::resetInstance() {
 	if (instance != nullptr) {
 		delete instance;
 		instance = nullptr;
-		LOG_INFO("Cartridge resetted");
 	}
 }
 
@@ -84,8 +83,6 @@ bool Cartridge::read_basic_header_info(game_info& _game_ctx, vector<u8>& _vec_ro
 }
 
 bool Cartridge::read_rom_to_buffer(const game_info& _game_ctx, std::vector<u8>& _vec_rom) {
-	LOG_INFO("Reading rom");
-
 	string full_file_path = get_full_file_path(_game_ctx);
 
 	ifstream is(full_file_path, ios::binary | ios::beg);

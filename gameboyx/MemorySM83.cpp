@@ -51,7 +51,6 @@ MemorySM83* MemorySM83::getInstance(const Cartridge& _cart_obj) {
     }
 
     instance = new MemorySM83(_cart_obj);
-    LOG_INFO("Memory created");
     return instance;
 }
 
@@ -61,13 +60,11 @@ void MemorySM83::resetInstance() {
 
         delete instance;
         instance = nullptr;
-        LOG_INFO("Memory resetted");
     }
 }
 
 
 MemorySM83::MemorySM83(const Cartridge& _cart_obj) {
-    LOG_INFO("Init memory");
     this->isCgb = _cart_obj.GetIsCgb();
 
     InitMemory(_cart_obj);

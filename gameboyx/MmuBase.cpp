@@ -10,7 +10,6 @@ MmuBase* MmuBase::getInstance(const Cartridge& _cart_obj) {
 		delete instance;
 		instance = nullptr;
 		instance = new MmuSM83_MBC3(_cart_obj);
-		LOG_INFO("MMU created");
 	}
 
 	return instance;
@@ -21,6 +20,5 @@ void MmuBase::resetInstance() {
 		instance->ResetChildMemoryInstances();
 		delete instance;
 		instance = nullptr;
-		LOG_INFO("MMU resetted");
 	}
 }

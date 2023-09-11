@@ -61,7 +61,7 @@ void ImGuiGameboyX::ProcessGUI() {
 
         // actions
         if (deleteGames) ActionDeleteGames();
-        if (startGame) ActionStartGame(gamesPrevIndex);
+        if (pendingGameStart) ActionStartGame(gamesPrevIndex);
 
         // special funktions
         ActionProcessSpecialKeys();
@@ -78,7 +78,7 @@ void ImGuiGameboyX::ShowMainMenuBar() {
                 if (ImGui::BeginMenu("File")) {
                     ImGui::MenuItem("Add new game", nullptr, &showNewGameDialog);
                     ImGui::MenuItem("Remove game(s)", nullptr, &deleteGames);
-                    ImGui::MenuItem("Start game", nullptr, &startGame);
+                    ImGui::MenuItem("Start game", nullptr, &pendingGameStart);
                     ImGui::EndMenu();
                 }
             }
@@ -94,9 +94,11 @@ void ImGuiGameboyX::ShowMainMenuBar() {
 
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Debug")) {
+            if (gameRunning) {
+                if (ImGui::BeginMenu("Debug")) {
 
-                ImGui::EndMenu();
+                    ImGui::EndMenu();
+                }
             }
             if (ImGui::BeginMenu("Help")) {
                 ImGui::MenuItem("About", nullptr, &showWinAbout);
@@ -324,7 +326,6 @@ void ImGuiGameboyX::ActionProcessSpecialKeys() {
 }
 
 void ImGuiGameboyX::ActionStartGame(int _index) {
-    startGame = false;
     pendingGameStart = true;
     gameToStart = _index;
 }
@@ -378,27 +379,18 @@ void ImGuiGameboyX::InitGamesGuiCtx() {
 /* ***********************************************************************************************************
     COMMUNICATION WITH MAIN
 *********************************************************************************************************** */
+game_info& ImGuiGameboyX::SetGameStartAndGetContext() {
+    gameRunning = true;
+    pendingGameStart = false;
+    return games[gameToStart];
+}
+
 bool ImGuiGameboyX::CheckPendingGameStart() const {
     return pendingGameStart;
 }
 
-game_info& ImGuiGameboyX::SetGameStartAndGetContext() {
-    pendingGameStart = false;
-    gameRunning = true;
-    return games[gameToStart];
-}
-
-bool ImGuiGameboyX::CheckGameCancel() const {
-    return pendingGameStop;
-}
-
-void ImGuiGameboyX::ResetPendingGameStop() {
-    pendingGameStop = false;
+void ImGuiGameboyX::GameStopped() {
     ActionEndGame();
-}
-
-bool ImGuiGameboyX::CheckGameRunning() {
-    return gameRunning;
 }
 
 /* ***********************************************************************************************************
@@ -439,9 +431,6 @@ void ImGuiGameboyX::KeyUp(const SDL_Keycode& _key) {
     case SDLK_LCTRL:
     case SDLK_RCTRL:
         sdlkCtrlDown = false;
-        break;
-    case SDLK_ESCAPE:
-        pendingGameStop = true;
         break;
     case SDLK_DELETE:
         sdlkDelDown = false;

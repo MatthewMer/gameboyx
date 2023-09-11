@@ -4,6 +4,8 @@
 #include "CoreBase.h"
 #include "GraphicsUnitBase.h"
 
+#include "SDL.h"
+
 
 class VHardwareMgr
 {
@@ -18,7 +20,11 @@ public:
 	VHardwareMgr& operator=(VHardwareMgr&&) = delete;
 
 	// members for running hardware
-	void RunHardware();
+	void ProcessNext();
+
+	// SDL
+	void KeyDown(const SDL_Keycode& _key);
+	void KeyUp(const SDL_Keycode& _key);
 
 private:
 	// constructor

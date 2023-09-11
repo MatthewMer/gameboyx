@@ -19,6 +19,5 @@ void GraphicsUnitBase::resetInstance() {
 	if (instance != nullptr) {
 		delete instance;
 		instance = nullptr;
-		LOG_INFO("GPU resetted");
 	}
 }

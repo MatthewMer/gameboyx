@@ -189,22 +189,10 @@ int main(int, char**)
     LOG_INFO("Initialization completed");
 
     bool done = false;
+    bool game_running = false;
+    bool game_cancel = false;
     while (!done)
     {
-        // check game start
-        if (gbx_gui->CheckPendingGameStart()) {
-            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->SetGameStartAndGetContext());
-        }
-        if (gbx_gui->CheckGameCancel()) {
-            VHardwareMgr::resetInstance();
-            gbx_gui->ResetPendingGameStop();
-        }
-
-        // run virtual hardware
-        if (gbx_gui->CheckGameRunning()) {
-            vhwmgr_obj->RunHardware();
-        }
-
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -216,31 +204,64 @@ int main(int, char**)
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
+
+            SDL_Keycode key;
             switch (event.type) {
             case SDL_QUIT:
                 done = true;
                 break;
             case SDL_KEYDOWN:
-                switch (event.key.keysym.sym) {
+                key = event.key.keysym.sym;
+                switch (key) {
+                case SDLK_F11:
+                    sdl_toggle_full_screen(window);
+                    break;
+                case SDLK_ESCAPE:
+                    game_cancel = true;
+                    break;
                 default:
-                    gbx_gui->KeyDown(event.key.keysym.sym);
+                    if (game_running) {
+                        vhwmgr_obj->KeyDown(key);
+                    }
+                    else {
+                        gbx_gui->KeyDown(key);
+                    }
                     break;
                 }
                 break;
             case SDL_KEYUP:
-                switch (event.key.keysym.sym) {
-                case SDLK_F11:
-                    sdl_toggle_full_screen(window);
-                    break;
-                //case SDLK_ESCAPE:
+                key = event.key.keysym.sym;
+                switch (key) {
                 default:
-                    gbx_gui->KeyUp(event.key.keysym.sym);
+                    if (game_running) {
+                        vhwmgr_obj->KeyUp(key);
+                    }
+                    else {
+                        gbx_gui->KeyUp(key);
+                    }
                     break;
                 }
                 break;
             default:
                 break;
             }
+        }
+
+        // game start/stop
+        if (gbx_gui->CheckPendingGameStart()) {
+            game_running = true;
+            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->SetGameStartAndGetContext());
+        }
+        if (game_cancel) {
+            VHardwareMgr::resetInstance();
+            gbx_gui->GameStopped();
+            game_running = false;
+            game_cancel = false;
+        }
+
+        // run virtual hardware
+        if (game_running) {
+            vhwmgr_obj->ProcessNext();
         }
 
         // Resize swap chain?

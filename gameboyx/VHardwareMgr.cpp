@@ -13,7 +13,6 @@ VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx) {
     }
 
     instance = new VHardwareMgr(_game_ctx);
-    LOG_INFO("Virtual hardware manager created");
     return instance;
 }
 
@@ -24,7 +23,6 @@ void VHardwareMgr::resetInstance() {
         Cartridge::resetInstance();
         delete instance;
         instance = nullptr;
-        LOG_INFO("Virtual hardware manager resetted");
     }
 }
 
@@ -38,7 +36,23 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx) {
 /* ***********************************************************************************************************
     FUNCTIONALITY
 *********************************************************************************************************** */
-void VHardwareMgr::RunHardware() {
+void VHardwareMgr::ProcessNext() {
     core_instance->RunCycles();
 }
 
+/* ***********************************************************************************************************
+    VHARDWAREMANAGER SDL FUNCTIONS
+*********************************************************************************************************** */
+void VHardwareMgr::KeyDown(const SDL_Keycode& _key) {
+    switch (_key) {
+    default:
+        break;
+    }
+}
+
+void VHardwareMgr::KeyUp(const SDL_Keycode& _key) {
+    switch (_key) {
+    default:
+        break;
+    }
+}
