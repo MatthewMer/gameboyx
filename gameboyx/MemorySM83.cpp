@@ -5,6 +5,15 @@
 using namespace std;
 
 /* ***********************************************************************************************************
+    REGISTER DEFINES
+*********************************************************************************************************** */
+// timer/divider
+#define DIV                         0xFF04
+#define TIMA                        0xFF05
+#define TMA                         0xFF06
+#define TAC                         0xFF07
+
+/* ***********************************************************************************************************
     (CGB) REGISTER DEFINES
 *********************************************************************************************************** */
 // SPEED SWITCH
@@ -19,6 +28,9 @@ using namespace std;
 #define CGB_HDMA3                   0xFF53
 #define CGB_HDMA4                   0xFF54
 #define CGB_HDMA5                   0xFF55
+#define DMA_MODE_BIT                0x80
+#define DMA_MODE_GENERAL            0x00
+#define DMA_MODE_HBLANK             0x80
 
 // OBJECT PRIORITY MODE
 #define CGB_OBJ_PRIO_MODE           0xFF6C
@@ -127,20 +139,7 @@ void MemorySM83::AllocateMemory() {
 
     OAM = new u8[OAM_SIZE];
 
-    IO = new u8[IO_REGISTERS_SIZE];
-
     HRAM = new u8[HRAM_SIZE];
-
-    // map io registers
-    SPEEDSWITCH = &IO[CGB_SPEED_SWITCH - IO_REGISTERS_OFFSET];
-    VRAM_BANK = &IO[CGB_VRAM_SELECT - IO_REGISTERS_OFFSET];
-    HDMA1 = &IO[CGB_HDMA1 - IO_REGISTERS_OFFSET];
-    HDMA2 = &IO[CGB_HDMA2 - IO_REGISTERS_OFFSET];
-    HDMA3 = &IO[CGB_HDMA3 - IO_REGISTERS_OFFSET];
-    HDMA4 = &IO[CGB_HDMA4 - IO_REGISTERS_OFFSET];
-    HDMA5 = &IO[CGB_HDMA5 - IO_REGISTERS_OFFSET];
-    OBJ_PRIO = &IO[CGB_OBJ_PRIO_MODE - IO_REGISTERS_OFFSET];
-    WRAM_BANK = &IO[CGB_WRAM_SELECT - IO_REGISTERS_OFFSET];
 }
 
 void MemorySM83::CleanupMemory() {
@@ -167,8 +166,6 @@ void MemorySM83::CleanupMemory() {
     delete[] WRAM_N;
 
     delete[] OAM;
-
-    delete[] IO;
 
     delete[] HRAM;
 }
@@ -254,7 +251,7 @@ u8 MemorySM83::ReadOAM(const u16& _addr) {
 }
 
 u8 MemorySM83::ReadIO(const u16& _addr) {
-    return IO[_addr - IO_REGISTERS_OFFSET];
+    return GetIOValue(_addr);
 }
 
 u8 MemorySM83::ReadHRAM(const u16& _addr) {
@@ -287,7 +284,7 @@ void MemorySM83::WriteOAM(const u8& _data, const u16& _addr) {
 }
 
 void MemorySM83::WriteIO(const u8& _data, const u16& _addr) {
-    IO[_addr - IO_REGISTERS_OFFSET] = _data;
+    SetIOValue(_data, _addr);
 }
 
 void MemorySM83::WriteHRAM(const u8& _data, const u16& _addr) {
@@ -299,25 +296,111 @@ void MemorySM83::WriteIE(const u8& _data) {
 }
 
 /* ***********************************************************************************************************
-    (CGB) MEMORY DIRECT ACCESS - IO REGISTERS
+    IO PROCESSING
+*********************************************************************************************************** */
+u8 MemorySM83::GetIOValue(const u16& _addr) {
+    switch (_addr) {
+    case CGB_VRAM_SELECT:
+        return VRAM_BANK;
+        break;
+    case CGB_WRAM_SELECT:
+        return WRAM_BANK;
+        break;
+    case CGB_HDMA1:
+        return HDMA1;
+        break;
+    case CGB_HDMA2:
+        return HDMA2;
+        break;
+    case CGB_HDMA3:
+        return HDMA3;
+        break;
+    case CGB_HDMA4:
+        return HDMA4;
+        break;
+    case CGB_HDMA5:
+        return HDMA5;
+        break;
+    }
+}
+
+void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
+    switch (_addr) {
+    case CGB_VRAM_SELECT:
+        VRAM_BANK = _data & 0x01;
+        break;
+    case CGB_WRAM_SELECT:
+        WRAM_BANK = _data & 0x07;
+        if (WRAM_BANK == 0) WRAM_BANK = 1;
+        break;
+    // source high
+    case CGB_HDMA1:
+        HDMA1 = _data;
+        break;
+    // source low
+    case CGB_HDMA2:
+        HDMA2 = _data & 0xF0;
+        break;
+    // dest high
+    case CGB_HDMA3:
+        HDMA3 = _data & 0x1F;
+        break;
+    // dest low
+    case CGB_HDMA4:
+        HDMA4 = _data & 0xF0;
+        break;
+    // mode
+    case CGB_HDMA5:
+        HDMA5 = _data;
+        VRAM_DMA();
+        break;
+    }
+}
+
+/* ***********************************************************************************************************
+    IO REGISTERS FUNCTIONALITY
 *********************************************************************************************************** */
 u8 MemorySM83::ReadVRAMSelect() {
-    return (*VRAM_BANK & 0x01);
+    return VRAM_BANK;
 }
 
 u8 MemorySM83::ReadWRAMSelect() {
-    u8 bank = (*WRAM_BANK & 0x07);
-    return (bank ? bank : 0x01);
+    return WRAM_BANK;
 }
 
-u16 MemorySM83::ReadHDMASource() {
-    return 0;
+void MemorySM83::SetRomBank(const u8& _bank) {
+    romBank = _bank;
 }
 
-u16 MemorySM83::ReadHDMADestination() {
-    return 0;
+void MemorySM83::SetRamBank(const u8& _bank) {
+    ramBank = _bank;
 }
 
-u8 MemorySM83::ReadHDMAMode() {
-    return 0;
+void MemorySM83::VRAM_DMA() {
+    u8 mode = HDMA5 & DMA_MODE_BIT;
+    u16 length = ((HDMA5 & 0x7F) + 1) * 0x10;
+
+    u16 source_addr = ((u16)HDMA1 << 8) | HDMA2;
+    u16 dest_addr = ((u16)HDMA3 << 8) | HDMA4;
+
+    if (source_addr < ROM_BANK_N_OFFSET) {
+        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &ROM_0[source_addr], length);
+    }
+    else if (source_addr < VRAM_N_OFFSET) {
+        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &ROM_N[romBank][source_addr - ROM_BANK_N_OFFSET], length);
+    }
+    else if (source_addr < WRAM_0_OFFSET && source_addr >= RAM_BANK_N_OFFSET) {
+        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &RAM_N[ramBank][source_addr - RAM_BANK_N_OFFSET], length);
+    }
+    else if (source_addr < WRAM_N_OFFSET) {
+        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
+    }
+    else if (source_addr < MIRROR_WRAM_OFFSET && source_addr >= WRAM_N_OFFSET) {
+        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &WRAM_N[WRAM_BANK][source_addr - WRAM_N_OFFSET], length);
+    }
+    else {
+        return;
+    }
+
+    HDMA5 = 0xFF;
 }

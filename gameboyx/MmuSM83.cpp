@@ -45,6 +45,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		else {
 			romBankNumber = _data & ROM_BANK_MASK;
 			if (romBankNumber == 0) romBankNumber = 1;
+			mem_instance->SetRomBank(romBankNumber);
 		}
 	}
 	// ROM Bank 1-n -> RAM Bank select or RTC register select or Latch Clock Data
@@ -52,6 +53,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		// RAM Bank number or RTC register select
 		if (_addr < LATCH_CLOCK_DATA) {
 			ramBankRtcNumber = _data;
+			mem_instance->SetRamBank(ramBankRtcNumber);
 		}
 		else {
 			if (_data == 0x01 && rtcRegistersLastWrite == 0x00) {

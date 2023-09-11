@@ -39,13 +39,15 @@ public:
 	void WriteHRAM(const u8& _data, const u16& _addr);
 	void WriteIE(const u8& _data);
 
-	// io registers direct access
-	u16 ReadHDMASource();
-	u16 ReadHDMADestination();
-	u8 ReadHDMAMode();
-
+	// io registers getter
 	u8 ReadVRAMSelect();
 	u8 ReadWRAMSelect();
+
+	// bank selects
+	int romBank = 1;
+	int ramBank = 0;
+	void SetRomBank(const u8& _bank);
+	void SetRamBank(const u8& _bank);
 
 private:
 	// constructor
@@ -72,25 +74,32 @@ private:
 	u8* WRAM_0;
 	u8** WRAM_N;
 	u8* OAM;
-	u8* IO;
 	u8* HRAM;
 	u8 IE = 0;
 
+	// IO *****************
+	u8 GetIOValue(const u16& _addr);
+	void SetIOValue(const u8& _data, const u16& _addr);
+	void VRAM_DMA();
+
 	// CGB IO registers mapped to IO array for direct access
 	// SPEED SWITCH
-	u8* SPEEDSWITCH;
+	u8 SPEEDSWITCH;
 	// VRAM BANK SELECT
-	u8* VRAM_BANK;
+	u8 VRAM_BANK;
 	// LCD VRAM DMA ADDRESS SOURCE
-	u8* HDMA1;
-	u8* HDMA2;
+	u8 HDMA1;
+	u8 HDMA2;
 	// LCD VRAM DMA ADDRESS DESTINATION
-	u8* HDMA3;
-	u8* HDMA4;
+	u8 HDMA3;
+	u8 HDMA4;
 	// VRAM DMA length/mode/start
-	u8* HDMA5;
+	u8 HDMA5;
 	// OBJECT PRIORITY MODE
-	u8* OBJ_PRIO;
+	u8 OBJ_PRIO;
 	// WRAM BANK SELECT
-	u8* WRAM_BANK;
+	u8 WRAM_BANK;
+
+	// IO registers mapped to IO array for direct access
+
 };
