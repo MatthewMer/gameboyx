@@ -30,8 +30,8 @@ private:
 	void InitMmu(const Cartridge& _cart_obj) override;
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom);
 
-	// hardware type
-	bool isCgb = false;
+	// hardware info
+	machine_state_context* machine_ctx;
 
 	// mbc3 control
 	bool timerRamEnable = false;

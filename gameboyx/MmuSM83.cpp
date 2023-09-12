@@ -26,11 +26,10 @@
 	CONSTRUCTOR
 *********************************************************************************************************** */
 MmuSM83_MBC3::MmuSM83_MBC3(const Cartridge& _cart_obj) {
-	this->isCgb = _cart_obj.GetIsCgb();
-
 	InitMmu(_cart_obj);
 
 	mem_instance = MemorySM83::getInstance(_cart_obj);
+	machine_ctx = mem_instance->GetMemCtx();
 }
 
 /* ***********************************************************************************************************
@@ -47,7 +46,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		else {
 			int romBankNumber = _data & ROM_BANK_MASK;
 			if (romBankNumber == 0) romBankNumber = 1;
-			mem_instance->SetRomBank(romBankNumber);
+			machine_ctx->romBank = romBankNumber;
 		}
 	}
 	// ROM Bank 1-n -> RAM Bank select or RTC register select or Latch Clock Data
@@ -55,7 +54,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		// RAM Bank number or RTC register select
 		if (_addr < LATCH_CLOCK_DATA) {
 			int ramBankRtcNumber = _data;
-			mem_instance->SetRamBank(ramBankRtcNumber);
+			machine_ctx->ramBank = ramBankRtcNumber;
 		}
 		else {
 			if (_data == 0x01 && rtcRegistersLastWrite == 0x00) {
@@ -73,7 +72,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	// RAM 0-n -> RTC Registers 08-0C
 	else if (_addr < WRAM_0_OFFSET) {
 		if (timerRamEnable) {
-			int ramBankNumber = mem_instance->GetRamBank();
+			int ramBankNumber = machine_ctx->ramBank;
 			if (ramBankNumber < 0x04) {
 				mem_instance->WriteRAM_N(_data, _addr);
 			}
@@ -138,7 +137,7 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
 		if (timerRamEnable) {
-			int ramBankNumber = mem_instance->GetRamBank();
+			int ramBankNumber = machine_ctx->ramBank;
 			if (ramBankNumber < 0x04) {
 				return mem_instance->ReadRAM_N(_addr);
 			}

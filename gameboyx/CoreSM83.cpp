@@ -51,6 +51,8 @@ using namespace std;
 CoreSM83::CoreSM83(const Cartridge& _cart_obj) {
     InitCpu(_cart_obj);
 
+    this->isCgb = _cart_obj.GetIsCgb();
+
 	MmuBase::resetInstance();
 	mmu_instance = MmuBase::getInstance(_cart_obj);
 }
@@ -432,8 +434,8 @@ void CoreSM83::LDfromAtoRef() {
         Regs.HL++;
         break;
     case 0x32:
-        mmu_instance->Write8Bit(Regs.A, Regs.HL);
         Regs.HL--;
+        mmu_instance->Write8Bit(Regs.A, Regs.HL);
         break;
     }
 }
@@ -451,8 +453,8 @@ void CoreSM83::LDtoAfromRef() {
         Regs.HL++;
         break;
     case 0x3A:
-        Regs.A = mmu_instance->Read8Bit(Regs.HL);
         Regs.HL--;
+        Regs.A = mmu_instance->Read8Bit(Regs.HL);
         break;
     }
 }

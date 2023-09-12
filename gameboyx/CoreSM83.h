@@ -20,6 +20,8 @@ private:
 	// destructor
 	~CoreSM83() = default;
 
+	bool isCgb = false;
+
 	// instruction data
 	u8 opcode;
 	u16 data;
@@ -28,8 +30,6 @@ private:
 	gbc_registers Regs = gbc_registers();
 	void InitCpu(const Cartridge& _cart_obj) override;
 	void InitRegisterStates() override;
-
-	bool isCgb = false;
 
 	// cpu states
 	bool halt = false;

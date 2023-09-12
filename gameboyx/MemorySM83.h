@@ -5,6 +5,16 @@
 
 #include "defs.h"
 
+struct machine_state_context {
+	u8 IE = 0x00;
+	u8 IF = 0x00;
+	int currentSpeed = 1;
+	int wramBank = 0;
+	int romBank = 0;
+	int ramBank = 0;
+	bool isCgb = false;
+};
+
 class MemorySM83 : private MemoryBase
 {
 public:
@@ -39,19 +49,7 @@ public:
 	void WriteHRAM(const u8& _data, const u16& _addr);
 	void WriteIE(const u8& _data);
 
-	// io registers getter
-	u8 ReadVRAMSelect();
-	u8 ReadWRAMSelect();
-	
-
-	// bank selects
-	int romBank = 0;
-	int ramBank = 0;
-	void SetRomBank(const u8& _bank);
-	void SetRamBank(const u8& _bank);
-	u8 GetRamBank();
-	u8 GetRomBank();
-
+	machine_state_context* GetMemCtx() const;
 
 private:
 	// constructor
@@ -68,8 +66,6 @@ private:
 	void AllocateMemory() override;
 	void CleanupMemory() override;
 
-	bool isCgb = false;
-
 	// actual memory
 	u8* ROM_0;
 	u8** ROM_N;
@@ -79,7 +75,6 @@ private:
 	u8** WRAM_N;
 	u8* OAM;
 	u8* HRAM;
-	u8 IE = 0;
 
 	// IO *****************
 	u8 GetIOValue(const u16& _addr);
@@ -103,8 +98,17 @@ private:
 	// OBJECT PRIORITY MODE
 	u8 OBJ_PRIO;
 	// WRAM BANK SELECT
-	u8 WRAM_BANK = 0;
+	u8 WRAM_BANK = 1;
 
-	// IO registers mapped to IO array for direct access
+	// IO registers
+	//u8 
 
+	// speed switch
+	void SwitchSpeed(const u8& _data);
+
+	// obj prio
+	void SetObjPrio(const u8& _data);
+
+	// memory cpu context
+	machine_state_context* machine_ctx = new machine_state_context();
 };
