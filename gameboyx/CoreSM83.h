@@ -42,7 +42,9 @@ private:
 
 	// current instruction context
 	std::tuple<u8, instruction, int>* instrPtr = nullptr;
+	instruction functionPtr = nullptr;
 	int machineCycles = 0;
+	int GetDelayTime();
 
 	// basic instructions
 	std::vector<std::tuple<u8, instruction, int>> instrMap;

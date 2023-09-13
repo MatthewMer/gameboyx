@@ -10,6 +10,13 @@
 using namespace std;
 
 /* ***********************************************************************************************************
+    MACHINE DEFINES
+*********************************************************************************************************** */
+// Clock = ~4.2MHz -> 4 CLocks per MachineCycle: 1.05MHz / 60 frames per second = 17500 Machine Cycles per frame
+const float baseClockMachineCycles = 1.05f;       // MHz
+const int displayFrequency = 60;                  // Hz
+
+/* ***********************************************************************************************************
     FLAG/BIT DEFINES
 *********************************************************************************************************** */
 #define FLAG_CARRY			0x10
@@ -55,6 +62,66 @@ CoreSM83::CoreSM83(const Cartridge& _cart_obj) {
 
 	MmuBase::resetInstance();
 	mmu_instance = MmuBase::getInstance(_cart_obj);
+
+    setupLookupTable();
+    setupLookupTableCB();
+}
+
+/* ***********************************************************************************************************
+    INIT CPU
+*********************************************************************************************************** */
+// initial cpu state
+void CoreSM83::InitCpu(const Cartridge& _cart_obj) {
+    this->isCgb = _cart_obj.GetIsCgb();
+
+    InitRegisterStates();
+}
+
+// initial register states
+void CoreSM83::InitRegisterStates() {
+    Regs = gbc_registers();
+
+    Regs.A = (CGB_AF & 0xFF00) >> 8;
+    Regs.F = CGB_AF & 0xFF;
+
+    Regs.BC = CGB_BC;
+    Regs.SP = CGB_SP;
+    Regs.PC = CGB_PC;
+
+    if (isCgb) {
+        Regs.DE = CGB_CGB_DE;
+        Regs.HL = CGB_CGB_HL;
+    }
+    else {
+        Regs.DE = CGB_DMG_DE;
+        Regs.HL = CGB_DMG_HL;
+    }
+}
+
+
+/* ***********************************************************************************************************
+    RUN CPU
+*********************************************************************************************************** */
+void CoreSM83::RunCycles() {
+    machineCycles = 0;
+
+    while (machineCycles < machineCyclesPerFrame) {
+        opcode = mmu_instance->Read8Bit(Regs.PC);
+        //printf("%.4x:%.2x\n", Regs.PC, opcode);
+        Regs.PC++;
+
+        instrPtr = &instrMap[opcode];
+        functionPtr = get<1>(*instrPtr);
+        machineCycles += get<2>(*instrPtr);
+
+        (this->*functionPtr)();
+    }
+}
+
+// return delta t per frame in nanoseconds
+int CoreSM83::GetDelayTime() {
+    machineCyclesPerFrame = baseClockMachineCycles * pow(10, 6) / displayFrequency;
+    return 1.f / displayFrequency * pow(10, 9);
 }
 
 /* ***********************************************************************************************************
@@ -3170,40 +3237,3 @@ void CoreSM83::SET7() {
 *
 *********************************************************************************************************** */
 
-/* ***********************************************************************************************************
-    INIT CPU
-*********************************************************************************************************** */
-// initial cpu state
-void CoreSM83::InitCpu(const Cartridge& _cart_obj){
-    this->isCgb = _cart_obj.GetIsCgb();
-
-    InitRegisterStates();
-}
-
-// initial register states
-void CoreSM83::InitRegisterStates() {
-    Regs = gbc_registers();
-
-    Regs.A = (CGB_AF & 0xFF00) >> 8;
-    Regs.F = CGB_AF & 0xFF;
-
-    Regs.BC = CGB_BC;
-    Regs.SP = CGB_SP;
-    Regs.PC = CGB_PC;
-
-    if (isCgb) {
-        Regs.DE = CGB_CGB_DE;
-        Regs.HL = CGB_CGB_HL;
-    }
-    else {
-        Regs.DE = CGB_DMG_DE;
-        Regs.HL = CGB_DMG_HL;
-    }
-}
-
-/* ***********************************************************************************************************
-    RUN CPU
-*********************************************************************************************************** */
-void CoreSM83::RunCycles() {
-
-}

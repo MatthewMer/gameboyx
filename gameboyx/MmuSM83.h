@@ -17,6 +17,11 @@ public:
 	u8 Read8Bit(const u16& _addr) override;
 	u16 Read16Bit(const u16& _addr) override;
 
+	// access machine states
+	int& GetCurrentSpeed() const;
+	u8& GetInterruptEnable() const;
+	u8& GetInterruptRequests() const;
+
 private:
 	// constructor
 	explicit MmuSM83_MBC3(const Cartridge& _cart_obj);

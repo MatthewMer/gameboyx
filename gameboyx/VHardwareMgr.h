@@ -36,5 +36,12 @@ private:
 	CoreBase* core_instance;
 	GraphicsUnitBase* graphics_instance;
 	Cartridge* cart_instance;
+
+	// execution time
+	int timePerFrame = 0;
+	steady_clock::time_point prev;
+	steady_clock::time_point cur;
+	void SimulateDelay();
+	void InitTime();
 };
 

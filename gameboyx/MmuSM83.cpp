@@ -203,6 +203,22 @@ void MmuSM83_MBC3::WriteClock(const u8& _data) {
 }
 
 /* ***********************************************************************************************************
+	MACHINE STATE ACCESS
+*********************************************************************************************************** */
+// access machine states
+int& MmuSM83_MBC3::GetCurrentSpeed() const {
+	return machine_ctx->currentSpeed;
+}
+
+u8& MmuSM83_MBC3::GetInterruptEnable() const {
+	return machine_ctx->IE;
+}
+
+u8& MmuSM83_MBC3::GetInterruptRequests() const {
+	return machine_ctx->IF;
+}
+
+/* ***********************************************************************************************************
 	MMU INITIALIZATION
 *********************************************************************************************************** */
 void MmuSM83_MBC3::InitMmu(const Cartridge& _cart_obj) {

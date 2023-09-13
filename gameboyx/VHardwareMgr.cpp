@@ -28,16 +28,37 @@ void VHardwareMgr::resetInstance() {
 
 VHardwareMgr::VHardwareMgr(const game_info& _game_ctx) {
     cart_instance = Cartridge::getInstance(_game_ctx);
+    if (cart_instance == nullptr) {
+        LOG_ERROR("Couldn't create virtual cartridge");
+        return;
+    }
 
     core_instance = CoreBase::getInstance(*cart_instance);
     graphics_instance = GraphicsUnitBase::getInstance(*cart_instance);
+
+    // sets the machine cycle threshold for core and returns the time per frame in ns
+    timePerFrame = core_instance->GetDelayTime();
 }
 
 /* ***********************************************************************************************************
     FUNCTIONALITY
 *********************************************************************************************************** */
 void VHardwareMgr::ProcessNext() {
+    SimulateDelay();
     core_instance->RunCycles();
+}
+
+void VHardwareMgr::SimulateDelay() {
+    while (duration_cast<nanoseconds>(cur - prev).count() < timePerFrame) {
+        cur = high_resolution_clock::now();
+    }
+    printf("Time:%lli\n", duration_cast<nanoseconds>(cur - prev).count());
+    prev = cur;
+}
+
+void VHardwareMgr::InitTime() {
+    prev = high_resolution_clock::now();
+    cur = high_resolution_clock::now();
 }
 
 /* ***********************************************************************************************************

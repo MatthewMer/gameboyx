@@ -4,6 +4,9 @@
 #include "registers.h"
 #include "MmuBase.h"
 
+#include <chrono>
+using namespace std::chrono;
+
 class CoreBase
 {
 public:
@@ -19,6 +22,7 @@ public:
 
 	// public members
 	virtual void RunCycles() = 0;
+	virtual int GetDelayTime() = 0;
 
 protected:
 	// constructor
@@ -28,6 +32,8 @@ protected:
 	MmuBase* mmu_instance;
 
 	// members
+	int machineCyclesPerFrame = 0;
+	
 	virtual void InitCpu(const Cartridge& _cart_obj) = 0;
 	virtual void InitRegisterStates() = 0;
 	
