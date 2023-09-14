@@ -6,9 +6,8 @@
 MmuBase* MmuBase::instance = nullptr;
 
 MmuBase* MmuBase::getInstance(const Cartridge& _cart_obj) {
-	if (instance == nullptr) {
-		delete instance;
-		instance = nullptr;
+	if (instance != nullptr) {
+		resetInstance();
 		instance = new MmuSM83_MBC3(_cart_obj);
 	}
 

@@ -61,11 +61,9 @@ using namespace std;
 MemorySM83* MemorySM83::instance = nullptr;
 
 MemorySM83* MemorySM83::getInstance(const Cartridge& _cart_obj) {
-    if (instance != nullptr) {
-        resetInstance();
+    if (instance == nullptr) {
+        instance = new MemorySM83(_cart_obj);
     }
-
-    instance = new MemorySM83(_cart_obj);
     return instance;
 }
 
@@ -73,6 +71,7 @@ void MemorySM83::resetInstance() {
     if (instance != nullptr) {
         instance->CleanupMemory();
 
+        delete instance->machine_ctx;
         delete instance;
         instance = nullptr;
     }

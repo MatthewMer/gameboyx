@@ -15,17 +15,22 @@
 using namespace std;
 
 /* ***********************************************************************************************************
+    PROTOTYPES
+*********************************************************************************************************** */
+static void create_fs_hierarchy();
+
+/* ***********************************************************************************************************
     IMGUIGAMEBOYX FUNCTIONS
 *********************************************************************************************************** */
 ImGuiGameboyX* ImGuiGameboyX::instance = nullptr;
 
-ImGuiGameboyX* ImGuiGameboyX::getInstance() {
+ImGuiGameboyX* ImGuiGameboyX::getInstance(const message_fifo& _msg_fifo) {
     if (instance != nullptr) {
         delete instance;
         instance = nullptr;
     }
 
-    instance = new ImGuiGameboyX();
+    instance = new ImGuiGameboyX(_msg_fifo);
     return instance;
 }
 
@@ -37,10 +42,9 @@ void ImGuiGameboyX::resetInstance() {
     instance = nullptr;
 }
 
-ImGuiGameboyX::ImGuiGameboyX() {
+ImGuiGameboyX::ImGuiGameboyX(const message_fifo& _msg_fifo) : msgFifo(_msg_fifo){
     NFD_Init();
-    check_and_create_config_folders();
-    check_and_create_config_files();
+    create_fs_hierarchy();
     if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
         InitGamesGuiCtx();
     }
@@ -94,11 +98,9 @@ void ImGuiGameboyX::ShowMainMenuBar() {
 
                 ImGui::EndMenu();
             }
-            if (gameRunning) {
-                if (ImGui::BeginMenu("Debug")) {
-
-                    ImGui::EndMenu();
-                }
+            if (ImGui::BeginMenu("Debug")) {
+                ImGui::MenuItem("Instruction execution", nullptr, &msgFifo.debug_instructions_enabled);
+                ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Help")) {
                 ImGui::MenuItem("About", nullptr, &showWinAbout);
@@ -232,10 +234,9 @@ void ImGuiGameboyX::ShowGameSelect() {
                     else {
                         for (int j = 0; j < gamesSelected.size(); j++) {
                             gamesSelected[j] = (i == j ? !gamesSelected[j] : (sdlkCtrlDown ? gamesSelected[j] : false));
-                            gamesPrevIndex = i;
                         }
+                        gamesPrevIndex = i;
                         if (!sdlkCtrlDown) {
-                            gamesPrevIndex = i;
                             gamesSelected[i] = true;
                         }
                     }
@@ -443,7 +444,7 @@ void ImGuiGameboyX::KeyUp(const SDL_Keycode& _key) {
 /* ***********************************************************************************************************
     HELPER FUNCTIONS
 *********************************************************************************************************** */
-void create_fs_hierarchy() {
+static void create_fs_hierarchy() {
     check_and_create_config_folders();
     check_and_create_config_files();
     Cartridge::check_and_create_rom_folder();

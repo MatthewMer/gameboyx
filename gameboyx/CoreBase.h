@@ -3,7 +3,7 @@
 #include "Cartridge.h"
 #include "registers.h"
 #include "MmuBase.h"
-
+#include "message_fifo.h"
 #include <chrono>
 using namespace std::chrono;
 
@@ -11,7 +11,7 @@ class CoreBase
 {
 public:
 	// get/reset instance
-	static CoreBase* getInstance(const Cartridge& _cart_obj);
+	static CoreBase* getInstance(const Cartridge& _cart_obj, const message_fifo& _msg_fifo);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -26,7 +26,11 @@ public:
 
 protected:
 	// constructor
-	CoreBase() = default;
+	CoreBase(const Cartridge& _cart_obj, const message_fifo& _msg_fifo) : msgFifo(_msg_fifo) {
+		MmuBase::resetInstance();
+		mmu_instance = MmuBase::getInstance(_cart_obj);
+	};
+
 	~CoreBase() = default;
 
 	MmuBase* mmu_instance;
@@ -36,6 +40,8 @@ protected:
 	
 	virtual void InitCpu(const Cartridge& _cart_obj) = 0;
 	virtual void InitRegisterStates() = 0;
+
+	const message_fifo& msgFifo;
 	
 private:
 	static CoreBase* instance;

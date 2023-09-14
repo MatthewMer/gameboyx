@@ -16,6 +16,7 @@
 #include "guigameboyx_config.h"
 #include "Cartridge.h"
 #include "VHardwareMgr.h"
+#include "message_fifo.h"
 
 /* ***********************************************************************************************************
     DEFINES
@@ -66,7 +67,7 @@ static void sdl_toggle_full_screen(SDL_Window* window);
 int main(int, char**)
 {
     // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0)
     {
         LOG_ERROR(SDL_GetError());
         return -1;
@@ -184,7 +185,8 @@ int main(int, char**)
     auto clear_color = IMGUI_CLR_COLOR;
 
     // Main loop
-    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance();
+    message_fifo msg_fifo = message_fifo();
+    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(msg_fifo);
     VHardwareMgr* vhwmgr_obj = nullptr;
     LOG_INFO("Initialization completed");
 
@@ -250,7 +252,7 @@ int main(int, char**)
         // game start/stop
         if (gbx_gui->CheckPendingGameStart()) {
             game_running = true;
-            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->SetGameStartAndGetContext());
+            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->SetGameStartAndGetContext(), msg_fifo);
         }
         if (game_cancel) {
             VHardwareMgr::resetInstance();

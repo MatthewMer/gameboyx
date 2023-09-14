@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Cartridge.h"
-#include "MmuBase.h"
 
 class GraphicsUnitBase
 {
@@ -19,8 +18,6 @@ public:
 protected:
 	// constructor
 	GraphicsUnitBase() = default;
-
-	MmuBase* mmu_instance;
 
 private:
 	static GraphicsUnitBase* instance;

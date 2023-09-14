@@ -83,13 +83,14 @@ bool Cartridge::read_basic_header_info(game_info& _game_ctx, vector<u8>& _vec_ro
 }
 
 bool Cartridge::read_rom_to_buffer(const game_info& _game_ctx, std::vector<u8>& _vec_rom) {
+	LOG_INFO("Reading ROM");
 	string full_file_path = get_full_file_path(_game_ctx);
 
 	ifstream is(full_file_path, ios::binary | ios::beg);
 	if (!is) { return false; }
 	const vector<u8> read_buffer((istreambuf_iterator<char>(is)), istreambuf_iterator<char>());
 	is.close();
-
+	
 	_vec_rom = read_buffer;
 	return true;
 }
@@ -99,6 +100,7 @@ bool Cartridge::copy_rom_to_rom_folder(game_info& game_ctx, std::vector<u8>& _ve
 	
 	LOG_INFO("Copying file to .", ROM_FOLDER);
 
+	check_and_create_rom_folder();
 	check_and_create_file(ROM_FOLDER + game_ctx.file_name);
 	
 	ofstream os(_new_file_path + game_ctx.file_name, ios::binary | ios::beg);

@@ -16,7 +16,7 @@ public:
 
 private:
 	// constructor
-	explicit CoreSM83(const Cartridge& _cart_obj);
+	CoreSM83(const Cartridge& _cart_obj, const message_fifo& _msg_fifo);
 	// destructor
 	~CoreSM83() = default;
 
@@ -41,17 +41,18 @@ private:
 	typedef void (CoreSM83::* instruction)();
 
 	// current instruction context
-	std::tuple<u8, instruction, int>* instrPtr = nullptr;
+	using instr_tuple = std::tuple < const u8, const instruction, const std::string, const int>;
+	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
 	int machineCycles = 0;
-	int GetDelayTime();
+	int GetDelayTime() override;
 
 	// basic instructions
-	std::vector<std::tuple<u8, instruction, int>> instrMap;
+	std::vector<instr_tuple> instrMap;
 	void setupLookupTable();
 
 	// CB instructions
-	std::vector<std::tuple<u8, instruction, int>> instrMapCB;
+	std::vector<instr_tuple> instrMapCB;
 	void setupLookupTableCB();
 	 
 	// basic instruction set *****

@@ -28,6 +28,7 @@
 MmuSM83_MBC3::MmuSM83_MBC3(const Cartridge& _cart_obj) {
 	InitMmu(_cart_obj);
 
+	MemorySM83::resetInstance();
 	mem_instance = MemorySM83::getInstance(_cart_obj);
 	machine_ctx = mem_instance->GetMemCtx();
 }

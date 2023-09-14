@@ -15,6 +15,32 @@ struct machine_state_context {
 	bool isCgb = false;
 };
 
+struct graphics_context {
+	// LCD Control
+	u8 LCDC = 0;
+
+	// LCD Status
+	u8 LY = 0;
+	u8 LYC = 0;
+	u8 STAT = 0;
+
+	// Scrolling
+	u8 SCY = 0;
+	u8 SCX = 0;
+	u8 WY = 0;
+	u8 WX = 0;
+
+	// Palettes (monochrome)
+	u8 BGP = 0;
+	u8 OBP0 = 0;
+	u8 OBP1 = 0;
+	// Palettes (color)
+	u8 BCPS_BGPI = 0;
+	u8 BCPD_BGPD = 0;
+	u8 OCPS_OBPI = 0;
+	u8 OCPD_OBPD = 0;
+};
+
 class MemorySM83 : private MemoryBase
 {
 public:

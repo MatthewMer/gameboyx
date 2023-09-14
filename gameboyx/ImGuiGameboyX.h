@@ -4,11 +4,12 @@
 #include <imgui.h>
 #include <vector>
 #include "game_info.h"
+#include "message_fifo.h"
 
 class ImGuiGameboyX {
 public:
 	// singleton instance access
-	static ImGuiGameboyX* getInstance();
+	static ImGuiGameboyX* getInstance(const message_fifo& _msg_fifo);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -32,7 +33,7 @@ public:
 
 private:
 	// constructor
-	ImGuiGameboyX();
+	explicit ImGuiGameboyX(const message_fifo& _msg_fifo);
 	static ImGuiGameboyX* instance;
 	~ImGuiGameboyX() = default;
 
@@ -47,7 +48,7 @@ private:
 	std::vector<game_info> games = std::vector<game_info>();
 	std::vector<bool> gamesSelected = std::vector<bool>();
 	int gamesPrevIndex = 0;
-	bool deleteGames;
+	bool deleteGames = false;
 
 	// game run state
 	void ActionStartGame(int _index);
@@ -76,4 +77,7 @@ private:
 	void AddGameGuiCtx(const game_info& _game_ctx);
 	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
 	void InitGamesGuiCtx();
+
+	// virtual hardware messages for debug
+	const message_fifo& msgFifo;
 };
