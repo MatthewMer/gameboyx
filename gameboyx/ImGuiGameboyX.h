@@ -4,12 +4,12 @@
 #include <imgui.h>
 #include <vector>
 #include "game_info.h"
-#include "message_fifo.h"
+#include "information_structs.h"
 
 class ImGuiGameboyX {
 public:
 	// singleton instance access
-	static ImGuiGameboyX* getInstance(const message_fifo& _msg_fifo);
+	static ImGuiGameboyX* getInstance(message_fifo& _msg_fifo, game_status& _game_status);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -24,16 +24,14 @@ public:
 	void KeyDown(const SDL_Keycode& _key);
 	void KeyUp(const SDL_Keycode& _key);
 
-	// main checks game start
-	bool CheckPendingGameStart() const;
 	// main gets game context
-	game_info& SetGameStartAndGetContext();
+	game_info& GetGameStartContext();
 	// main reenables gui
 	void GameStopped();
 
 private:
 	// constructor
-	explicit ImGuiGameboyX(const message_fifo& _msg_fifo);
+	ImGuiGameboyX(message_fifo& _msg_fifo, game_status& _game_status);
 	static ImGuiGameboyX* instance;
 	~ImGuiGameboyX() = default;
 
@@ -53,9 +51,7 @@ private:
 	// game run state
 	void ActionStartGame(int _index);
 	void ActionEndGame();
-	bool gameRunning = false;
-	bool pendingGameStart = false;
-	int gameToStart = 0;
+	
 
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;
@@ -67,6 +63,7 @@ private:
 	void ShowWindowAbout();
 	void ShowNewGameDialog();
 	void ShowGameSelect();
+	void ShowDebugInstructions();
 
 	// actions
 	void ActionDeleteGames();
@@ -77,7 +74,14 @@ private:
 	void AddGameGuiCtx(const game_info& _game_ctx);
 	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
 	void InitGamesGuiCtx();
+	void CopyDebugInstructionFifo();
+	void ClearOutput();
 
 	// virtual hardware messages for debug
-	const message_fifo& msgFifo;
+	message_fifo& msgFifo;
+	std::vector<std::string> debugInstructionOutput = std::vector<std::string>();
+	const int allowedOutputSize = 20;
+
+	// game status variables
+	game_status& gameStatus;
 };

@@ -7,10 +7,8 @@
 *********************************************************************************************************** */
 VHardwareMgr* VHardwareMgr::instance = nullptr;
 
-VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, const message_fifo& _msg_fifo) {
-    if (instance != nullptr) {
-        VHardwareMgr::resetInstance();
-    }
+VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, message_fifo& _msg_fifo) {
+    VHardwareMgr::resetInstance();
 
     instance = new VHardwareMgr(_game_ctx, _msg_fifo);
     return instance;
@@ -23,10 +21,11 @@ void VHardwareMgr::resetInstance() {
         Cartridge::resetInstance();
         delete instance;
         instance = nullptr;
+        LOG_INFO("---=== game stopped ===---");
     }
 }
 
-VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, const message_fifo& _msg_fifo) : msgFifo(_msg_fifo){
+VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_fifo& _msg_fifo) : msgFifo(_msg_fifo){
     cart_instance = Cartridge::getInstance(_game_ctx);
     if (cart_instance == nullptr) {
         LOG_ERROR("Couldn't create virtual cartridge");
@@ -38,21 +37,28 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, const message_fifo& _msg_
 
     // sets the machine cycle threshold for core and returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
+
+    LOG_INFO("---=== ", _game_ctx.title, " started ===---");
 }
 
 /* ***********************************************************************************************************
     FUNCTIONALITY
 *********************************************************************************************************** */
 void VHardwareMgr::ProcessNext() {
-    SimulateDelay();
+    if (!msgFifo.debug_instructions_enabled) { SimulateDelay(); }
+
     core_instance->RunCycles();
+    if (core_instance->CheckMachineCycles()) {
+        // run gpu
+        core_instance->ResetMachineCycleCounter();
+        // TODO: gpu
+    }
 }
 
 void VHardwareMgr::SimulateDelay() {
     while (duration_cast<nanoseconds>(cur - prev).count() < timePerFrame) {
         cur = high_resolution_clock::now();
     }
-    //printf("Time:%lli\n", duration_cast<nanoseconds>(cur - prev).count());
     prev = cur;
 }
 

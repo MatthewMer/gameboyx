@@ -16,7 +16,7 @@
 #include "guigameboyx_config.h"
 #include "Cartridge.h"
 #include "VHardwareMgr.h"
-#include "message_fifo.h"
+#include "information_structs.h"
 
 /* ***********************************************************************************************************
     DEFINES
@@ -185,14 +185,13 @@ int main(int, char**)
     auto clear_color = IMGUI_CLR_COLOR;
 
     // Main loop
-    message_fifo msg_fifo = message_fifo();
-    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(msg_fifo);
+    auto* msg_fifo = new message_fifo();
+    auto* game_state = new game_status();
+    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(*msg_fifo, *game_state);
     VHardwareMgr* vhwmgr_obj = nullptr;
     LOG_INFO("Initialization completed");
 
     bool done = false;
-    bool game_running = false;
-    bool game_cancel = false;
     while (!done)
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -219,10 +218,10 @@ int main(int, char**)
                     sdl_toggle_full_screen(window);
                     break;
                 case SDLK_ESCAPE:
-                    game_cancel = true;
+                    game_state->pending_game_stop = true;
                     break;
                 default:
-                    if (game_running) {
+                    if (game_state->game_running) {
                         vhwmgr_obj->KeyDown(key);
                     }
                     else {
@@ -235,7 +234,7 @@ int main(int, char**)
                 key = event.key.keysym.sym;
                 switch (key) {
                 default:
-                    if (game_running) {
+                    if (game_state->game_running) {
                         vhwmgr_obj->KeyUp(key);
                     }
                     else {
@@ -250,19 +249,20 @@ int main(int, char**)
         }
 
         // game start/stop
-        if (gbx_gui->CheckPendingGameStart()) {
-            game_running = true;
-            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->SetGameStartAndGetContext(), msg_fifo);
+        if (game_state->pending_game_start) {
+            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), *msg_fifo);
+            game_state->game_running = true;
+            game_state->pending_game_start = false;
         }
-        if (game_cancel) {
+        if (game_state->pending_game_stop) {
             VHardwareMgr::resetInstance();
             gbx_gui->GameStopped();
-            game_running = false;
-            game_cancel = false;
+            game_state->game_running = false;
+            game_state->pending_game_stop = false;
         }
 
         // run virtual hardware
-        if (game_running) {
+        if (game_state->game_running) {
             vhwmgr_obj->ProcessNext();
         }
 

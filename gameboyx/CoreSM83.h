@@ -13,10 +13,12 @@ public:
 	friend class CoreBase;
 
 	void RunCycles() override;
+	void ResetMachineCycleCounter() override;
+	bool CheckMachineCycles() const override;
 
 private:
 	// constructor
-	CoreSM83(const Cartridge& _cart_obj, const message_fifo& _msg_fifo);
+	CoreSM83(const Cartridge& _cart_obj, message_fifo& _msg_fifo);
 	// destructor
 	~CoreSM83() = default;
 
@@ -25,6 +27,8 @@ private:
 	// instruction data
 	u8 opcode;
 	u16 data;
+
+	void ExecuteInstruction();
 
 	// internals
 	gbc_registers Regs = gbc_registers();
@@ -41,7 +45,7 @@ private:
 	typedef void (CoreSM83::* instruction)();
 
 	// current instruction context
-	using instr_tuple = std::tuple < const u8, const instruction, const std::string, const int>;
+	using instr_tuple = std::tuple < const u8, const instruction, const int>;
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
 	int machineCycles = 0;
@@ -89,8 +93,6 @@ private:
 	void LDtoL();
 	void LDtoHLref();
 	void LDtoA();
-
-	void LDregs();
 
 	void LDHLSPr8();
 

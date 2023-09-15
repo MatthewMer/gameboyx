@@ -3,14 +3,14 @@
 #include "Cartridge.h"
 #include "CoreBase.h"
 #include "GraphicsUnitBase.h"
-#include "message_fifo.h"
+#include "information_structs.h"
 #include "SDL.h"
 
 
 class VHardwareMgr
 {
 public:
-	static VHardwareMgr* getInstance(const game_info& _game_ctx, const message_fifo& _msg_fifo);
+	static VHardwareMgr* getInstance(const game_info& _game_ctx, message_fifo& _msg_fifo);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -28,7 +28,7 @@ public:
 
 private:
 	// constructor
-	explicit VHardwareMgr(const game_info& _game_ctx, const message_fifo& _msg_fifo);
+	explicit VHardwareMgr(const game_info& _game_ctx, message_fifo& _msg_fifo);
 	static VHardwareMgr* instance;
 	~VHardwareMgr() = default;
 
@@ -44,7 +44,7 @@ private:
 	void SimulateDelay();
 	void InitTime();
 
-	// virtual hardware messages for debug
-	const message_fifo& msgFifo;
+	// message fifo
+	message_fifo& msgFifo;
 };
 

@@ -125,7 +125,7 @@
     <ClInclude Include="VHardwareMgr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="message_fifo.h">
+    <ClInclude Include="information_structs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

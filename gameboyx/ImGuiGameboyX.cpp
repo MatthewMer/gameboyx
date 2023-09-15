@@ -24,13 +24,13 @@ static void create_fs_hierarchy();
 *********************************************************************************************************** */
 ImGuiGameboyX* ImGuiGameboyX::instance = nullptr;
 
-ImGuiGameboyX* ImGuiGameboyX::getInstance(const message_fifo& _msg_fifo) {
+ImGuiGameboyX* ImGuiGameboyX::getInstance(message_fifo& _msg_fifo, game_status& _game_status) {
     if (instance != nullptr) {
         delete instance;
         instance = nullptr;
     }
 
-    instance = new ImGuiGameboyX(_msg_fifo);
+    instance = new ImGuiGameboyX(_msg_fifo, _game_status);
     return instance;
 }
 
@@ -42,7 +42,7 @@ void ImGuiGameboyX::resetInstance() {
     instance = nullptr;
 }
 
-ImGuiGameboyX::ImGuiGameboyX(const message_fifo& _msg_fifo) : msgFifo(_msg_fifo){
+ImGuiGameboyX::ImGuiGameboyX(message_fifo& _msg_fifo, game_status& _game_status) : msgFifo(_msg_fifo), gameStatus(_game_status){
     NFD_Init();
     create_fs_hierarchy();
     if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
@@ -57,15 +57,20 @@ void ImGuiGameboyX::ProcessGUI() {
     IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
 
     if (showMainMenuBar) ShowMainMenuBar();
-    if (!gameRunning) {
+    if (msgFifo.debug_instructions_enabled) ShowDebugInstructions();
+    if (showWinAbout) ShowWindowAbout();
+
+    if (!gameStatus.game_running) {
         // gui elements
         if (showGameSelect) ShowGameSelect();
-        if (showWinAbout) ShowWindowAbout();
         if (showNewGameDialog) ShowNewGameDialog();
-
+        
         // actions
         if (deleteGames) ActionDeleteGames();
-        if (pendingGameStart) ActionStartGame(gamesPrevIndex);
+        if (gameStatus.pending_game_start) {
+            ClearOutput();
+            ActionStartGame(gamesPrevIndex);
+        }
 
         // special funktions
         ActionProcessSpecialKeys();
@@ -76,57 +81,94 @@ void ImGuiGameboyX::ProcessGUI() {
     GUI BUILDER
 *********************************************************************************************************** */
 void ImGuiGameboyX::ShowMainMenuBar() {
-    if (showMainMenuBar){
-        if (ImGui::BeginMainMenuBar()) {
-            if (!gameRunning) {
-                if (ImGui::BeginMenu("File")) {
-                    ImGui::MenuItem("Add new game", nullptr, &showNewGameDialog);
-                    ImGui::MenuItem("Remove game(s)", nullptr, &deleteGames);
-                    ImGui::MenuItem("Start game", nullptr, &pendingGameStart);
-                    ImGui::EndMenu();
-                }
+    if (ImGui::BeginMainMenuBar()) {
+        
+        if (ImGui::BeginMenu("Games")) {
+            if (gameStatus.game_running) {
+                ImGui::MenuItem("Stop game", nullptr, &gameStatus.pending_game_stop);
             }
-            if (ImGui::BeginMenu("Settings")) {
-                ImGui::MenuItem("Show menu bar", nullptr, &showMainMenuBar);
-                ImGui::EndMenu();
+            else {
+                ImGui::MenuItem("Add new game", nullptr, &showNewGameDialog);
+                ImGui::MenuItem("Remove game(s)", nullptr, &deleteGames);
+                ImGui::MenuItem("Start game", nullptr, &gameStatus.pending_game_start);
             }
-            if (ImGui::BeginMenu("Control")) {
-
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Graphics")) {
-
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Debug")) {
-                ImGui::MenuItem("Instruction execution", nullptr, &msgFifo.debug_instructions_enabled);
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Help")) {
-                ImGui::MenuItem("About", nullptr, &showWinAbout);
-                ImGui::EndMenu();
-            }
-
-            ImGui::EndMainMenuBar();
+            ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Settings")) {
+            ImGui::MenuItem("Show menu bar", nullptr, &showMainMenuBar);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Control")) {
+
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Graphics")) {
+
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Debug")) {
+            ImGui::MenuItem("Instruction execution", nullptr, &msgFifo.debug_instructions_enabled);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Help")) {
+            ImGui::MenuItem("About", nullptr, &showWinAbout);
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMainMenuBar();
     }
 }
 
 void ImGuiGameboyX::ShowWindowAbout() {
-    if (showWinAbout) {
-        const ImGuiWindowFlags win_flags =
-            ImGuiWindowFlags_NoScrollbar | 
-            ImGuiWindowFlags_NoResize | 
-            ImGuiWindowFlags_NoCollapse;
+    const ImGuiWindowFlags win_flags =
+        ImGuiWindowFlags_NoScrollbar | 
+        ImGuiWindowFlags_NoResize | 
+        ImGuiWindowFlags_NoCollapse;
 
-        if (; ImGui::Begin("About", &showWinAbout, win_flags)) {
-            ImGui::Text("GameboyX Emulator");
-            ImGui::Text("Version: %s %d.%d", GBX_RELEASE, GBX_VERSION_MAJOR, GBX_VERSION_MINOR, GBX_VERSION_PATCH);
-            ImGui::Text("Author: %s", GBX_AUTHOR);
-            ImGui::Spacing();
-        }
-        ImGui::End();
+    if (ImGui::Begin("About", &showWinAbout, win_flags)) {
+        ImGui::Text("GameboyX Emulator");
+        ImGui::Text("Version: %s %d.%d", GBX_RELEASE, GBX_VERSION_MAJOR, GBX_VERSION_MINOR, GBX_VERSION_PATCH);
+        ImGui::Text("Author: %s", GBX_AUTHOR);
+        ImGui::Spacing();
     }
+    ImGui::End();
+}
+
+void ImGuiGameboyX::ShowDebugInstructions() {
+    CopyDebugInstructionFifo();
+
+    const ImGuiWindowFlags win_flags =
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoCollapse;
+
+    ImGui::SetNextWindowSize({ 500, 398 });
+    if (ImGui::Begin("Instructions", &msgFifo.debug_instructions_enabled, win_flags)) {
+        int size = debugInstructionOutput.size();
+
+        for (int i = 0; i < allowedOutputSize; i++) {
+            if (i < size) {
+                ImGui::TextUnformatted(debugInstructionOutput[i].c_str());
+            }
+            else {
+                ImGui::TextUnformatted("");
+            }
+        }
+
+        if (gameStatus.game_running && !msgFifo.auto_run) {
+            if (ImGui::Button("Next Instruction")) {
+                msgFifo.pause_execution = false;
+            }
+        }
+        else {
+            ImGui::BeginDisabled();
+            ImGui::Button("Next Instruction");
+            ImGui::EndDisabled();
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox("Auto run", &msgFifo.auto_run);
+    }
+    ImGui::End();
 }
 
 void ImGuiGameboyX::ShowNewGameDialog() {
@@ -327,18 +369,19 @@ void ImGuiGameboyX::ActionProcessSpecialKeys() {
 }
 
 void ImGuiGameboyX::ActionStartGame(int _index) {
-    pendingGameStart = true;
-    gameToStart = _index;
+    gameStatus.pending_game_start = true;
+    gameStatus.game_to_start = _index;
 }
 
 void ImGuiGameboyX::ActionEndGame() {
-    if (gameRunning) {
+    if (gameStatus.game_running) {
         for (int i = 0; i < gamesSelected.size(); i++) {
             gamesSelected[i] = false;
         }
-        gamesSelected[gameToStart] = true;
+        gamesSelected[gameStatus.game_to_start] = true;
     }
-    gameRunning = false;
+    gameStatus.pending_game_stop = false;
+
 }
 
 /* ***********************************************************************************************************
@@ -377,17 +420,28 @@ void ImGuiGameboyX::InitGamesGuiCtx() {
     }
 }
 
+void ImGuiGameboyX::CopyDebugInstructionFifo() {
+    while (!msgFifo.debug_instructions.empty()) {
+        debugInstructionOutput.push_back(msgFifo.debug_instructions.front());
+        msgFifo.debug_instructions.pop();
+    }
+    while (debugInstructionOutput.size() > allowedOutputSize) {
+        debugInstructionOutput.erase(debugInstructionOutput.begin());
+    }
+}
+
+void ImGuiGameboyX::ClearOutput() {
+    vector<string> empty;
+    swap(debugInstructionOutput, empty);
+}
+
 /* ***********************************************************************************************************
     COMMUNICATION WITH MAIN
 *********************************************************************************************************** */
-game_info& ImGuiGameboyX::SetGameStartAndGetContext() {
-    gameRunning = true;
-    pendingGameStart = false;
-    return games[gameToStart];
-}
-
-bool ImGuiGameboyX::CheckPendingGameStart() const {
-    return pendingGameStart;
+game_info& ImGuiGameboyX::GetGameStartContext() {
+    //game_running = true;
+    //pending_game_start = false;
+    return games[gameStatus.game_to_start];
 }
 
 void ImGuiGameboyX::GameStopped() {

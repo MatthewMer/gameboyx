@@ -55,7 +55,7 @@ const int displayFrequency = 60;                  // Hz
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
-CoreSM83::CoreSM83(const Cartridge& _cart_obj, const message_fifo& _msg_fifo) : CoreBase(_cart_obj, _msg_fifo){
+CoreSM83::CoreSM83(const Cartridge& _cart_obj, message_fifo& _msg_fifo) : CoreBase(_cart_obj, _msg_fifo){
     InitCpu(_cart_obj);
 
     this->isCgb = _cart_obj.GetIsCgb();
@@ -100,19 +100,39 @@ void CoreSM83::InitRegisterStates() {
     RUN CPU
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
-    machineCycles = 0;
-
-    while (machineCycles < machineCyclesPerFrame + 1) {
-        opcode = mmu_instance->Read8Bit(Regs.PC);
-        Regs.PC++;
-
-        instrPtr = &instrMap[opcode];
-        functionPtr = get<1>(*instrPtr);
-        machineCycles += get<3>(*instrPtr);
-
-        printf("PC($%.4x)->%s($%.2x)\n", Regs.PC - 1, get<2>(*instrPtr), opcode);
-        (this->*functionPtr)();
+    
+    if (msgFifo.debug_instructions_enabled) {
+        if (msgFifo.pause_execution && !msgFifo.auto_run) {
+            return;
+        }
+        else {
+            ExecuteInstruction();
+            msgFifo.pause_execution = true;
+        }
     }
+    else {
+        while (machineCycles < machineCyclesPerFrame + 1) {
+            ExecuteInstruction();
+        }
+    }
+}
+
+void CoreSM83::ExecuteInstruction() {
+    opcode = mmu_instance->Read8Bit(Regs.PC);
+    Regs.PC++;
+
+    instrPtr = &instrMap[opcode];
+    functionPtr = get<1>(*instrPtr);
+    machineCycles += get<2>(*instrPtr);
+    (this->*functionPtr)();
+}
+
+void CoreSM83::ResetMachineCycleCounter() {
+    machineCycles = 0;
+}
+
+bool CoreSM83::CheckMachineCycles() const {
+    return machineCycles >= machineCyclesPerFrame;
 }
 
 // return delta t per frame in nanoseconds
@@ -132,292 +152,292 @@ void CoreSM83::setupLookupTable() {
     // Elements: opcode, instruction function, machine cycles
 
     // 0x00
-    instrMap.emplace_back(0x00, &CoreSM83::NOP, "", 1);
-    instrMap.emplace_back(0x01, &CoreSM83::LDd16, "", 3);
-    instrMap.emplace_back(0x02, &CoreSM83::LDfromAtoRef, "", 2);
-    instrMap.emplace_back(0x03, &CoreSM83::INC16, "", 2);
-    instrMap.emplace_back(0x04, &CoreSM83::INC8, "", 1);
-    instrMap.emplace_back(0x05, &CoreSM83::DEC8, "", 1);
-    instrMap.emplace_back(0x06, &CoreSM83::LDd8, "", 2);
-    instrMap.emplace_back(0x07, &CoreSM83::RLCA, "", 1);
-    instrMap.emplace_back(0x08, &CoreSM83::LDSPa16, "", 5);
-    instrMap.emplace_back(0x09, &CoreSM83::ADDHL, "", 2);
-    instrMap.emplace_back(0x0a, &CoreSM83::LDtoAfromRef, "", 2);
-    instrMap.emplace_back(0x0b, &CoreSM83::DEC16, "", 2);
-    instrMap.emplace_back(0x0c, &CoreSM83::INC8, "", 1);
-    instrMap.emplace_back(0x0d, &CoreSM83::DEC8, "", 1);
-    instrMap.emplace_back(0x0e, &CoreSM83::LDd8, "", 2);
-    instrMap.emplace_back(0x0f, &CoreSM83::RRCA, "", 1);
+    instrMap.emplace_back(0x00, &CoreSM83::NOP, 1);
+    instrMap.emplace_back(0x01, &CoreSM83::LDd16, 3);
+    instrMap.emplace_back(0x02, &CoreSM83::LDfromAtoRef, 2);
+    instrMap.emplace_back(0x03, &CoreSM83::INC16, 2);
+    instrMap.emplace_back(0x04, &CoreSM83::INC8, 1);
+    instrMap.emplace_back(0x05, &CoreSM83::DEC8, 1);
+    instrMap.emplace_back(0x06, &CoreSM83::LDd8, 2);
+    instrMap.emplace_back(0x07, &CoreSM83::RLCA, 1);
+    instrMap.emplace_back(0x08, &CoreSM83::LDSPa16, 5);
+    instrMap.emplace_back(0x09, &CoreSM83::ADDHL, 2);
+    instrMap.emplace_back(0x0a, &CoreSM83::LDtoAfromRef, 2);
+    instrMap.emplace_back(0x0b, &CoreSM83::DEC16, 2);
+    instrMap.emplace_back(0x0c, &CoreSM83::INC8, 1);
+    instrMap.emplace_back(0x0d, &CoreSM83::DEC8, 1);
+    instrMap.emplace_back(0x0e, &CoreSM83::LDd8, 2);
+    instrMap.emplace_back(0x0f, &CoreSM83::RRCA, 1);
 
     // 0x10
-    instrMap.emplace_back(0x10, &CoreSM83::STOP, "", 1);
-    instrMap.emplace_back(0x11, &CoreSM83::LDd16, "", 3);
-    instrMap.emplace_back(0x12, &CoreSM83::LDfromAtoRef, "", 2);
-    instrMap.emplace_back(0x13, &CoreSM83::INC16, "", 2);
-    instrMap.emplace_back(0x14, &CoreSM83::INC8, "", 1);
-    instrMap.emplace_back(0x15, &CoreSM83::DEC8, "", 1);
-    instrMap.emplace_back(0x16, &CoreSM83::LDd8, "", 2);
-    instrMap.emplace_back(0x17, &CoreSM83::RLA, "", 1);
-    instrMap.emplace_back(0x18, &CoreSM83::JR, "", 3);
-    instrMap.emplace_back(0x19, &CoreSM83::ADDHL, "", 2);
-    instrMap.emplace_back(0x1a, &CoreSM83::LDtoAfromRef, "", 2);
-    instrMap.emplace_back(0x1b, &CoreSM83::DEC16, "", 2);
-    instrMap.emplace_back(0x1c, &CoreSM83::INC8, "", 1);
-    instrMap.emplace_back(0x1d, &CoreSM83::DEC8, "", 1);
-    instrMap.emplace_back(0x1e, &CoreSM83::LDd8, "", 2);
-    instrMap.emplace_back(0x1f, &CoreSM83::RRA, "", 1);
+    instrMap.emplace_back(0x10, &CoreSM83::STOP, 1);
+    instrMap.emplace_back(0x11, &CoreSM83::LDd16, 3);
+    instrMap.emplace_back(0x12, &CoreSM83::LDfromAtoRef, 2);
+    instrMap.emplace_back(0x13, &CoreSM83::INC16, 2);
+    instrMap.emplace_back(0x14, &CoreSM83::INC8, 1);
+    instrMap.emplace_back(0x15, &CoreSM83::DEC8, 1);
+    instrMap.emplace_back(0x16, &CoreSM83::LDd8, 2);
+    instrMap.emplace_back(0x17, &CoreSM83::RLA, 1);
+    instrMap.emplace_back(0x18, &CoreSM83::JR, 3);
+    instrMap.emplace_back(0x19, &CoreSM83::ADDHL, 2);
+    instrMap.emplace_back(0x1a, &CoreSM83::LDtoAfromRef, 2);
+    instrMap.emplace_back(0x1b, &CoreSM83::DEC16, 2);
+    instrMap.emplace_back(0x1c, &CoreSM83::INC8, 1);
+    instrMap.emplace_back(0x1d, &CoreSM83::DEC8, 1);
+    instrMap.emplace_back(0x1e, &CoreSM83::LDd8, 2);
+    instrMap.emplace_back(0x1f, &CoreSM83::RRA, 1);
 
     // 0x20
-    instrMap.emplace_back(0x20, &CoreSM83::JR, "", 0);
-    instrMap.emplace_back(0x21, &CoreSM83::LDd16, "", 3);
-    instrMap.emplace_back(0x22, &CoreSM83::LDfromAtoRef, "", 2);
-    instrMap.emplace_back(0x23, &CoreSM83::INC16, "", 2);
-    instrMap.emplace_back(0x24, &CoreSM83::INC8, "", 1);
-    instrMap.emplace_back(0x25, &CoreSM83::DEC8, "", 1);
-    instrMap.emplace_back(0x26, &CoreSM83::LDd8, "", 2);
-    instrMap.emplace_back(0x27, &CoreSM83::DAA, "", 1);
-    instrMap.emplace_back(0x28, &CoreSM83::JR, "", 0);
-    instrMap.emplace_back(0x29, &CoreSM83::ADDHL, "", 2);
-    instrMap.emplace_back(0x2a, &CoreSM83::LDtoAfromRef, "", 2);
-    instrMap.emplace_back(0x2b, &CoreSM83::DEC16, "", 2);
-    instrMap.emplace_back(0x2c, &CoreSM83::INC8, "", 1);
-    instrMap.emplace_back(0x2d, &CoreSM83::DEC8, "", 1);
-    instrMap.emplace_back(0x2e, &CoreSM83::LDd8, "", 2);
-    instrMap.emplace_back(0x2f, &CoreSM83::CPL, "", 1);
+    instrMap.emplace_back(0x20, &CoreSM83::JR, 0);
+    instrMap.emplace_back(0x21, &CoreSM83::LDd16, 3);
+    instrMap.emplace_back(0x22, &CoreSM83::LDfromAtoRef, 2);
+    instrMap.emplace_back(0x23, &CoreSM83::INC16, 2);
+    instrMap.emplace_back(0x24, &CoreSM83::INC8, 1);
+    instrMap.emplace_back(0x25, &CoreSM83::DEC8, 1);
+    instrMap.emplace_back(0x26, &CoreSM83::LDd8, 2);
+    instrMap.emplace_back(0x27, &CoreSM83::DAA, 1);
+    instrMap.emplace_back(0x28, &CoreSM83::JR, 0);
+    instrMap.emplace_back(0x29, &CoreSM83::ADDHL, 2);
+    instrMap.emplace_back(0x2a, &CoreSM83::LDtoAfromRef, 2);
+    instrMap.emplace_back(0x2b, &CoreSM83::DEC16, 2);
+    instrMap.emplace_back(0x2c, &CoreSM83::INC8, 1);
+    instrMap.emplace_back(0x2d, &CoreSM83::DEC8, 1);
+    instrMap.emplace_back(0x2e, &CoreSM83::LDd8, 2);
+    instrMap.emplace_back(0x2f, &CoreSM83::CPL, 1);
 
     // 0x30
-    instrMap.emplace_back(0x30, &CoreSM83::JR, "", 0);
-    instrMap.emplace_back(0x31, &CoreSM83::LDd16, "", 3);
-    instrMap.emplace_back(0x32, &CoreSM83::LDfromAtoRef, "", 2);
-    instrMap.emplace_back(0x33, &CoreSM83::INC16, "", 2);
-    instrMap.emplace_back(0x34, &CoreSM83::INC8, "", 1);
-    instrMap.emplace_back(0x35, &CoreSM83::DEC8, "", 1);
-    instrMap.emplace_back(0x36, &CoreSM83::LDd8, "", 2);
-    instrMap.emplace_back(0x37, &CoreSM83::SCF, "", 1);
-    instrMap.emplace_back(0x38, &CoreSM83::JR, "", 0);
-    instrMap.emplace_back(0x39, &CoreSM83::ADDHL, "", 2);
-    instrMap.emplace_back(0x3a, &CoreSM83::LDtoAfromRef, "", 2);
-    instrMap.emplace_back(0x3b, &CoreSM83::DEC16, "", 2);
-    instrMap.emplace_back(0x3c, &CoreSM83::INC8, "", 1);
-    instrMap.emplace_back(0x3d, &CoreSM83::DEC8, "", 1);
-    instrMap.emplace_back(0x3e, &CoreSM83::LDd8, "", 2);
-    instrMap.emplace_back(0x3f, &CoreSM83::CCF, "", 1);
+    instrMap.emplace_back(0x30, &CoreSM83::JR, 0);
+    instrMap.emplace_back(0x31, &CoreSM83::LDd16, 3);
+    instrMap.emplace_back(0x32, &CoreSM83::LDfromAtoRef, 2);
+    instrMap.emplace_back(0x33, &CoreSM83::INC16, 2);
+    instrMap.emplace_back(0x34, &CoreSM83::INC8, 1);
+    instrMap.emplace_back(0x35, &CoreSM83::DEC8, 1);
+    instrMap.emplace_back(0x36, &CoreSM83::LDd8, 2);
+    instrMap.emplace_back(0x37, &CoreSM83::SCF, 1);
+    instrMap.emplace_back(0x38, &CoreSM83::JR, 0);
+    instrMap.emplace_back(0x39, &CoreSM83::ADDHL, 2);
+    instrMap.emplace_back(0x3a, &CoreSM83::LDtoAfromRef, 2);
+    instrMap.emplace_back(0x3b, &CoreSM83::DEC16, 2);
+    instrMap.emplace_back(0x3c, &CoreSM83::INC8, 1);
+    instrMap.emplace_back(0x3d, &CoreSM83::DEC8, 1);
+    instrMap.emplace_back(0x3e, &CoreSM83::LDd8, 2);
+    instrMap.emplace_back(0x3f, &CoreSM83::CCF, 1);
 
     // 0x40
-    instrMap.emplace_back(0x40, &CoreSM83::LDtoB, "", 1);
-    instrMap.emplace_back(0x41, &CoreSM83::LDtoB, "", 1);
-    instrMap.emplace_back(0x42, &CoreSM83::LDtoB, "", 1);
-    instrMap.emplace_back(0x43, &CoreSM83::LDtoB, "", 1);
-    instrMap.emplace_back(0x44, &CoreSM83::LDtoB, "", 1);
-    instrMap.emplace_back(0x45, &CoreSM83::LDtoB, "", 1);
-    instrMap.emplace_back(0x46, &CoreSM83::LDtoB, "", 2);
-    instrMap.emplace_back(0x47, &CoreSM83::LDtoB, "", 1);
-    instrMap.emplace_back(0x48, &CoreSM83::LDtoC, "", 1);
-    instrMap.emplace_back(0x49, &CoreSM83::LDtoC, "", 1);
-    instrMap.emplace_back(0x4a, &CoreSM83::LDtoC, "", 1);
-    instrMap.emplace_back(0x4b, &CoreSM83::LDtoC, "", 1);
-    instrMap.emplace_back(0x4c, &CoreSM83::LDtoC, "", 1);
-    instrMap.emplace_back(0x4d, &CoreSM83::LDtoC, "", 1);
-    instrMap.emplace_back(0x4e, &CoreSM83::LDtoC, "", 2);
-    instrMap.emplace_back(0x4f, &CoreSM83::LDtoC, "", 1);
+    instrMap.emplace_back(0x40, &CoreSM83::LDtoB, 1);
+    instrMap.emplace_back(0x41, &CoreSM83::LDtoB, 1);
+    instrMap.emplace_back(0x42, &CoreSM83::LDtoB, 1);
+    instrMap.emplace_back(0x43, &CoreSM83::LDtoB, 1);
+    instrMap.emplace_back(0x44, &CoreSM83::LDtoB, 1);
+    instrMap.emplace_back(0x45, &CoreSM83::LDtoB, 1);
+    instrMap.emplace_back(0x46, &CoreSM83::LDtoB, 2);
+    instrMap.emplace_back(0x47, &CoreSM83::LDtoB, 1);
+    instrMap.emplace_back(0x48, &CoreSM83::LDtoC, 1);
+    instrMap.emplace_back(0x49, &CoreSM83::LDtoC, 1);
+    instrMap.emplace_back(0x4a, &CoreSM83::LDtoC, 1);
+    instrMap.emplace_back(0x4b, &CoreSM83::LDtoC, 1);
+    instrMap.emplace_back(0x4c, &CoreSM83::LDtoC, 1);
+    instrMap.emplace_back(0x4d, &CoreSM83::LDtoC, 1);
+    instrMap.emplace_back(0x4e, &CoreSM83::LDtoC, 2);
+    instrMap.emplace_back(0x4f, &CoreSM83::LDtoC, 1);
 
     // 0x50
-    instrMap.emplace_back(0x50, &CoreSM83::LDtoD, "", 1);
-    instrMap.emplace_back(0x51, &CoreSM83::LDtoD, "", 1);
-    instrMap.emplace_back(0x52, &CoreSM83::LDtoD, "", 1);
-    instrMap.emplace_back(0x53, &CoreSM83::LDtoD, "", 1);
-    instrMap.emplace_back(0x54, &CoreSM83::LDtoD, "", 1);
-    instrMap.emplace_back(0x55, &CoreSM83::LDtoD, "", 1);
-    instrMap.emplace_back(0x56, &CoreSM83::LDtoD, "", 2);
-    instrMap.emplace_back(0x57, &CoreSM83::LDtoD, "", 1);
-    instrMap.emplace_back(0x58, &CoreSM83::LDtoE, "", 1);
-    instrMap.emplace_back(0x59, &CoreSM83::LDtoE, "", 1);
-    instrMap.emplace_back(0x5a, &CoreSM83::LDtoE, "", 1);
-    instrMap.emplace_back(0x5b, &CoreSM83::LDtoE, "", 1);
-    instrMap.emplace_back(0x5c, &CoreSM83::LDtoE, "", 1);
-    instrMap.emplace_back(0x5d, &CoreSM83::LDtoE, "", 1);
-    instrMap.emplace_back(0x5e, &CoreSM83::LDtoE, "", 2);
-    instrMap.emplace_back(0x5f, &CoreSM83::LDtoE, "", 1);
+    instrMap.emplace_back(0x50, &CoreSM83::LDtoD, 1);
+    instrMap.emplace_back(0x51, &CoreSM83::LDtoD, 1);
+    instrMap.emplace_back(0x52, &CoreSM83::LDtoD, 1);
+    instrMap.emplace_back(0x53, &CoreSM83::LDtoD, 1);
+    instrMap.emplace_back(0x54, &CoreSM83::LDtoD, 1);
+    instrMap.emplace_back(0x55, &CoreSM83::LDtoD, 1);
+    instrMap.emplace_back(0x56, &CoreSM83::LDtoD, 2);
+    instrMap.emplace_back(0x57, &CoreSM83::LDtoD, 1);
+    instrMap.emplace_back(0x58, &CoreSM83::LDtoE, 1);
+    instrMap.emplace_back(0x59, &CoreSM83::LDtoE, 1);
+    instrMap.emplace_back(0x5a, &CoreSM83::LDtoE, 1);
+    instrMap.emplace_back(0x5b, &CoreSM83::LDtoE, 1);
+    instrMap.emplace_back(0x5c, &CoreSM83::LDtoE, 1);
+    instrMap.emplace_back(0x5d, &CoreSM83::LDtoE, 1);
+    instrMap.emplace_back(0x5e, &CoreSM83::LDtoE, 2);
+    instrMap.emplace_back(0x5f, &CoreSM83::LDtoE, 1);
 
     // 0x60
-    instrMap.emplace_back(0x60, &CoreSM83::LDtoH, "", 1);
-    instrMap.emplace_back(0x61, &CoreSM83::LDtoH, "", 1);
-    instrMap.emplace_back(0x62, &CoreSM83::LDtoH, "", 1);
-    instrMap.emplace_back(0x63, &CoreSM83::LDtoH, "", 1);
-    instrMap.emplace_back(0x64, &CoreSM83::LDtoH, "", 1);
-    instrMap.emplace_back(0x65, &CoreSM83::LDtoH, "", 1);
-    instrMap.emplace_back(0x66, &CoreSM83::LDtoH, "", 2);
-    instrMap.emplace_back(0x67, &CoreSM83::LDtoH, "", 1);
-    instrMap.emplace_back(0x68, &CoreSM83::LDtoL, "", 1);
-    instrMap.emplace_back(0x69, &CoreSM83::LDtoL, "", 1);
-    instrMap.emplace_back(0x6a, &CoreSM83::LDtoL, "", 1);
-    instrMap.emplace_back(0x6b, &CoreSM83::LDtoL, "", 1);
-    instrMap.emplace_back(0x6c, &CoreSM83::LDtoL, "", 1);
-    instrMap.emplace_back(0x6d, &CoreSM83::LDtoL, "", 1);
-    instrMap.emplace_back(0x6e, &CoreSM83::LDtoL, "", 2);
-    instrMap.emplace_back(0x6f, &CoreSM83::LDtoL, "", 1);
+    instrMap.emplace_back(0x60, &CoreSM83::LDtoH, 1);
+    instrMap.emplace_back(0x61, &CoreSM83::LDtoH, 1);
+    instrMap.emplace_back(0x62, &CoreSM83::LDtoH, 1);
+    instrMap.emplace_back(0x63, &CoreSM83::LDtoH, 1);
+    instrMap.emplace_back(0x64, &CoreSM83::LDtoH, 1);
+    instrMap.emplace_back(0x65, &CoreSM83::LDtoH, 1);
+    instrMap.emplace_back(0x66, &CoreSM83::LDtoH, 2);
+    instrMap.emplace_back(0x67, &CoreSM83::LDtoH, 1);
+    instrMap.emplace_back(0x68, &CoreSM83::LDtoL, 1);
+    instrMap.emplace_back(0x69, &CoreSM83::LDtoL, 1);
+    instrMap.emplace_back(0x6a, &CoreSM83::LDtoL, 1);
+    instrMap.emplace_back(0x6b, &CoreSM83::LDtoL, 1);
+    instrMap.emplace_back(0x6c, &CoreSM83::LDtoL, 1);
+    instrMap.emplace_back(0x6d, &CoreSM83::LDtoL, 1);
+    instrMap.emplace_back(0x6e, &CoreSM83::LDtoL, 2);
+    instrMap.emplace_back(0x6f, &CoreSM83::LDtoL, 1);
 
     // 0x70
-    instrMap.emplace_back(0x70, &CoreSM83::LDtoHLref, "", 2);
-    instrMap.emplace_back(0x71, &CoreSM83::LDtoHLref, "", 2);
-    instrMap.emplace_back(0x72, &CoreSM83::LDtoHLref, "", 2);
-    instrMap.emplace_back(0x73, &CoreSM83::LDtoHLref, "", 2);
-    instrMap.emplace_back(0x74, &CoreSM83::LDtoHLref, "", 2);
-    instrMap.emplace_back(0x75, &CoreSM83::LDtoHLref, "", 2);
-    instrMap.emplace_back(0x76, &CoreSM83::HALT, "", 1);
-    instrMap.emplace_back(0x77, &CoreSM83::LDtoHLref, "", 2);
-    instrMap.emplace_back(0x78, &CoreSM83::LDtoA, "", 1);
-    instrMap.emplace_back(0x79, &CoreSM83::LDtoA, "", 1);
-    instrMap.emplace_back(0x7a, &CoreSM83::LDtoA, "", 1);
-    instrMap.emplace_back(0x7b, &CoreSM83::LDtoA, "", 1);
-    instrMap.emplace_back(0x7c, &CoreSM83::LDtoA, "", 1);
-    instrMap.emplace_back(0x7d, &CoreSM83::LDtoA, "", 1);
-    instrMap.emplace_back(0x7e, &CoreSM83::LDtoA, "", 2);
-    instrMap.emplace_back(0x7f, &CoreSM83::LDtoA, "", 1);
+    instrMap.emplace_back(0x70, &CoreSM83::LDtoHLref, 2);
+    instrMap.emplace_back(0x71, &CoreSM83::LDtoHLref, 2);
+    instrMap.emplace_back(0x72, &CoreSM83::LDtoHLref, 2);
+    instrMap.emplace_back(0x73, &CoreSM83::LDtoHLref, 2);
+    instrMap.emplace_back(0x74, &CoreSM83::LDtoHLref, 2);
+    instrMap.emplace_back(0x75, &CoreSM83::LDtoHLref, 2);
+    instrMap.emplace_back(0x76, &CoreSM83::HALT, 1);
+    instrMap.emplace_back(0x77, &CoreSM83::LDtoHLref, 2);
+    instrMap.emplace_back(0x78, &CoreSM83::LDtoA, 1);
+    instrMap.emplace_back(0x79, &CoreSM83::LDtoA, 1);
+    instrMap.emplace_back(0x7a, &CoreSM83::LDtoA, 1);
+    instrMap.emplace_back(0x7b, &CoreSM83::LDtoA, 1);
+    instrMap.emplace_back(0x7c, &CoreSM83::LDtoA, 1);
+    instrMap.emplace_back(0x7d, &CoreSM83::LDtoA, 1);
+    instrMap.emplace_back(0x7e, &CoreSM83::LDtoA, 2);
+    instrMap.emplace_back(0x7f, &CoreSM83::LDtoA, 1);
 
     // 0x80
-    instrMap.emplace_back(0x80, &CoreSM83::ADD8, "", 1);
-    instrMap.emplace_back(0x81, &CoreSM83::ADD8, "", 1);
-    instrMap.emplace_back(0x82, &CoreSM83::ADD8, "", 1);
-    instrMap.emplace_back(0x83, &CoreSM83::ADD8, "", 1);
-    instrMap.emplace_back(0x84, &CoreSM83::ADD8, "", 1);
-    instrMap.emplace_back(0x85, &CoreSM83::ADD8, "", 1);
-    instrMap.emplace_back(0x86, &CoreSM83::ADD8, "", 2);
-    instrMap.emplace_back(0x87, &CoreSM83::ADD8, "", 1);
-    instrMap.emplace_back(0x88, &CoreSM83::ADC, "", 1);
-    instrMap.emplace_back(0x89, &CoreSM83::ADC, "", 1);
-    instrMap.emplace_back(0x8a, &CoreSM83::ADC, "", 1);
-    instrMap.emplace_back(0x8b, &CoreSM83::ADC, "", 1);
-    instrMap.emplace_back(0x8c, &CoreSM83::ADC, "", 1);
-    instrMap.emplace_back(0x8d, &CoreSM83::ADC, "", 1);
-    instrMap.emplace_back(0x8e, &CoreSM83::ADC, "", 2);
-    instrMap.emplace_back(0x8f, &CoreSM83::ADC, "", 1);
+    instrMap.emplace_back(0x80, &CoreSM83::ADD8, 1);
+    instrMap.emplace_back(0x81, &CoreSM83::ADD8, 1);
+    instrMap.emplace_back(0x82, &CoreSM83::ADD8, 1);
+    instrMap.emplace_back(0x83, &CoreSM83::ADD8, 1);
+    instrMap.emplace_back(0x84, &CoreSM83::ADD8, 1);
+    instrMap.emplace_back(0x85, &CoreSM83::ADD8, 1);
+    instrMap.emplace_back(0x86, &CoreSM83::ADD8, 2);
+    instrMap.emplace_back(0x87, &CoreSM83::ADD8, 1);
+    instrMap.emplace_back(0x88, &CoreSM83::ADC, 1);
+    instrMap.emplace_back(0x89, &CoreSM83::ADC, 1);
+    instrMap.emplace_back(0x8a, &CoreSM83::ADC, 1);
+    instrMap.emplace_back(0x8b, &CoreSM83::ADC, 1);
+    instrMap.emplace_back(0x8c, &CoreSM83::ADC, 1);
+    instrMap.emplace_back(0x8d, &CoreSM83::ADC, 1);
+    instrMap.emplace_back(0x8e, &CoreSM83::ADC, 2);
+    instrMap.emplace_back(0x8f, &CoreSM83::ADC, 1);
 
     // 0x90
-    instrMap.emplace_back(0x90, &CoreSM83::SUB, "", 1);
-    instrMap.emplace_back(0x91, &CoreSM83::SUB, "", 1);
-    instrMap.emplace_back(0x92, &CoreSM83::SUB, "", 1);
-    instrMap.emplace_back(0x93, &CoreSM83::SUB, "", 1);
-    instrMap.emplace_back(0x94, &CoreSM83::SUB, "", 1);
-    instrMap.emplace_back(0x95, &CoreSM83::SUB, "", 1);
-    instrMap.emplace_back(0x96, &CoreSM83::SUB, "", 1);
-    instrMap.emplace_back(0x97, &CoreSM83::SUB, "", 2);
-    instrMap.emplace_back(0x98, &CoreSM83::SBC, "", 1);
-    instrMap.emplace_back(0x99, &CoreSM83::SBC, "", 1);
-    instrMap.emplace_back(0x9a, &CoreSM83::SBC, "", 1);
-    instrMap.emplace_back(0x9b, &CoreSM83::SBC, "", 1);
-    instrMap.emplace_back(0x9c, &CoreSM83::SBC, "", 1);
-    instrMap.emplace_back(0x9d, &CoreSM83::SBC, "", 1);
-    instrMap.emplace_back(0x9e, &CoreSM83::SBC, "", 2);
-    instrMap.emplace_back(0x9f, &CoreSM83::SBC, "", 1);
+    instrMap.emplace_back(0x90, &CoreSM83::SUB, 1);
+    instrMap.emplace_back(0x91, &CoreSM83::SUB, 1);
+    instrMap.emplace_back(0x92, &CoreSM83::SUB, 1);
+    instrMap.emplace_back(0x93, &CoreSM83::SUB, 1);
+    instrMap.emplace_back(0x94, &CoreSM83::SUB, 1);
+    instrMap.emplace_back(0x95, &CoreSM83::SUB, 1);
+    instrMap.emplace_back(0x96, &CoreSM83::SUB, 1);
+    instrMap.emplace_back(0x97, &CoreSM83::SUB, 2);
+    instrMap.emplace_back(0x98, &CoreSM83::SBC, 1);
+    instrMap.emplace_back(0x99, &CoreSM83::SBC, 1);
+    instrMap.emplace_back(0x9a, &CoreSM83::SBC, 1);
+    instrMap.emplace_back(0x9b, &CoreSM83::SBC, 1);
+    instrMap.emplace_back(0x9c, &CoreSM83::SBC, 1);
+    instrMap.emplace_back(0x9d, &CoreSM83::SBC, 1);
+    instrMap.emplace_back(0x9e, &CoreSM83::SBC, 2);
+    instrMap.emplace_back(0x9f, &CoreSM83::SBC, 1);
 
     // 0xa0
-    instrMap.emplace_back(0xa0, &CoreSM83::AND, "", 1);
-    instrMap.emplace_back(0xa1, &CoreSM83::AND, "", 1);
-    instrMap.emplace_back(0xa2, &CoreSM83::AND, "", 1);
-    instrMap.emplace_back(0xa3, &CoreSM83::AND, "", 1);
-    instrMap.emplace_back(0xa4, &CoreSM83::AND, "", 1);
-    instrMap.emplace_back(0xa5, &CoreSM83::AND, "", 1);
-    instrMap.emplace_back(0xa6, &CoreSM83::AND, "", 2);
-    instrMap.emplace_back(0xa7, &CoreSM83::AND, "", 1);
-    instrMap.emplace_back(0xa8, &CoreSM83::XOR, "", 1);
-    instrMap.emplace_back(0xa9, &CoreSM83::XOR, "", 1);
-    instrMap.emplace_back(0xaa, &CoreSM83::XOR, "", 1);
-    instrMap.emplace_back(0xab, &CoreSM83::XOR, "", 1);
-    instrMap.emplace_back(0xac, &CoreSM83::XOR, "", 1);
-    instrMap.emplace_back(0xad, &CoreSM83::XOR, "", 1);
-    instrMap.emplace_back(0xae, &CoreSM83::XOR, "", 2);
-    instrMap.emplace_back(0xaf, &CoreSM83::XOR, "", 1);
+    instrMap.emplace_back(0xa0, &CoreSM83::AND, 1);
+    instrMap.emplace_back(0xa1, &CoreSM83::AND, 1);
+    instrMap.emplace_back(0xa2, &CoreSM83::AND, 1);
+    instrMap.emplace_back(0xa3, &CoreSM83::AND, 1);
+    instrMap.emplace_back(0xa4, &CoreSM83::AND, 1);
+    instrMap.emplace_back(0xa5, &CoreSM83::AND, 1);
+    instrMap.emplace_back(0xa6, &CoreSM83::AND, 2);
+    instrMap.emplace_back(0xa7, &CoreSM83::AND, 1);
+    instrMap.emplace_back(0xa8, &CoreSM83::XOR, 1);
+    instrMap.emplace_back(0xa9, &CoreSM83::XOR, 1);
+    instrMap.emplace_back(0xaa, &CoreSM83::XOR, 1);
+    instrMap.emplace_back(0xab, &CoreSM83::XOR, 1);
+    instrMap.emplace_back(0xac, &CoreSM83::XOR, 1);
+    instrMap.emplace_back(0xad, &CoreSM83::XOR, 1);
+    instrMap.emplace_back(0xae, &CoreSM83::XOR, 2);
+    instrMap.emplace_back(0xaf, &CoreSM83::XOR, 1);
 
     // 0xb0
-    instrMap.emplace_back(0xb0, &CoreSM83::OR, "", 1);
-    instrMap.emplace_back(0xb1, &CoreSM83::OR, "", 1);
-    instrMap.emplace_back(0xb2, &CoreSM83::OR, "", 1);
-    instrMap.emplace_back(0xb3, &CoreSM83::OR, "", 1);
-    instrMap.emplace_back(0xb4, &CoreSM83::OR, "", 1);
-    instrMap.emplace_back(0xb5, &CoreSM83::OR, "", 1);
-    instrMap.emplace_back(0xb6, &CoreSM83::OR, "", 2);
-    instrMap.emplace_back(0xb7, &CoreSM83::OR, "", 1);
-    instrMap.emplace_back(0xb8, &CoreSM83::CP, "", 1);
-    instrMap.emplace_back(0xb9, &CoreSM83::CP, "", 1);
-    instrMap.emplace_back(0xba, &CoreSM83::CP, "", 1);
-    instrMap.emplace_back(0xbb, &CoreSM83::CP, "", 1);
-    instrMap.emplace_back(0xbc, &CoreSM83::CP, "", 1);
-    instrMap.emplace_back(0xbd, &CoreSM83::CP, "", 1);
-    instrMap.emplace_back(0xbe, &CoreSM83::CP, "", 2);
-    instrMap.emplace_back(0xbf, &CoreSM83::CP, "", 1);
+    instrMap.emplace_back(0xb0, &CoreSM83::OR, 1);
+    instrMap.emplace_back(0xb1, &CoreSM83::OR, 1);
+    instrMap.emplace_back(0xb2, &CoreSM83::OR, 1);
+    instrMap.emplace_back(0xb3, &CoreSM83::OR, 1);
+    instrMap.emplace_back(0xb4, &CoreSM83::OR, 1);
+    instrMap.emplace_back(0xb5, &CoreSM83::OR, 1);
+    instrMap.emplace_back(0xb6, &CoreSM83::OR, 2);
+    instrMap.emplace_back(0xb7, &CoreSM83::OR, 1);
+    instrMap.emplace_back(0xb8, &CoreSM83::CP, 1);
+    instrMap.emplace_back(0xb9, &CoreSM83::CP, 1);
+    instrMap.emplace_back(0xba, &CoreSM83::CP, 1);
+    instrMap.emplace_back(0xbb, &CoreSM83::CP, 1);
+    instrMap.emplace_back(0xbc, &CoreSM83::CP, 1);
+    instrMap.emplace_back(0xbd, &CoreSM83::CP, 1);
+    instrMap.emplace_back(0xbe, &CoreSM83::CP, 2);
+    instrMap.emplace_back(0xbf, &CoreSM83::CP, 1);
 
     // 0xc0
-    instrMap.emplace_back(0xc0, &CoreSM83::RET, "", 0);
-    instrMap.emplace_back(0xc1, &CoreSM83::POP, "", 3);
-    instrMap.emplace_back(0xc2, &CoreSM83::JP, "", 0);
-    instrMap.emplace_back(0xc3, &CoreSM83::JP, "", 4);
-    instrMap.emplace_back(0xc4, &CoreSM83::CALL, "", 0);
-    instrMap.emplace_back(0xc5, &CoreSM83::PUSH, "", 4);
-    instrMap.emplace_back(0xc6, &CoreSM83::ADD8, "", 2);
-    instrMap.emplace_back(0xc7, &CoreSM83::RST, "", 4);
-    instrMap.emplace_back(0xc8, &CoreSM83::RET, "", 0);
-    instrMap.emplace_back(0xc9, &CoreSM83::RET, "", 4);
-    instrMap.emplace_back(0xca, &CoreSM83::JP, "", 0);
-    instrMap.emplace_back(0xcb, &CoreSM83::CB, "", 1);
-    instrMap.emplace_back(0xcc, &CoreSM83::CALL, "", 0);
-    instrMap.emplace_back(0xcd, &CoreSM83::CALL, "", 6);
-    instrMap.emplace_back(0xce, &CoreSM83::ADC, "", 2);
-    instrMap.emplace_back(0xcf, &CoreSM83::RST, "", 4);
+    instrMap.emplace_back(0xc0, &CoreSM83::RET, 0);
+    instrMap.emplace_back(0xc1, &CoreSM83::POP, 3);
+    instrMap.emplace_back(0xc2, &CoreSM83::JP, 0);
+    instrMap.emplace_back(0xc3, &CoreSM83::JP, 4);
+    instrMap.emplace_back(0xc4, &CoreSM83::CALL, 0);
+    instrMap.emplace_back(0xc5, &CoreSM83::PUSH, 4);
+    instrMap.emplace_back(0xc6, &CoreSM83::ADD8, 2);
+    instrMap.emplace_back(0xc7, &CoreSM83::RST, 4);
+    instrMap.emplace_back(0xc8, &CoreSM83::RET, 0);
+    instrMap.emplace_back(0xc9, &CoreSM83::RET, 4);
+    instrMap.emplace_back(0xca, &CoreSM83::JP, 0);
+    instrMap.emplace_back(0xcb, &CoreSM83::CB, 1);
+    instrMap.emplace_back(0xcc, &CoreSM83::CALL, 0);
+    instrMap.emplace_back(0xcd, &CoreSM83::CALL, 6);
+    instrMap.emplace_back(0xce, &CoreSM83::ADC, 2);
+    instrMap.emplace_back(0xcf, &CoreSM83::RST, 4);
 
     // 0xd0
-    instrMap.emplace_back(0xd0, &CoreSM83::RET, "", 0);
-    instrMap.emplace_back(0xd1, &CoreSM83::POP, "", 3);
-    instrMap.emplace_back(0xd2, &CoreSM83::JP, "", 0);
-    instrMap.emplace_back(0xd3, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xd4, &CoreSM83::CALL, "", 0);
-    instrMap.emplace_back(0xd5, &CoreSM83::PUSH, "", 4);
-    instrMap.emplace_back(0xd6, &CoreSM83::SUB, "", 2);
-    instrMap.emplace_back(0xd7, &CoreSM83::RST, "", 4);
-    instrMap.emplace_back(0xd8, &CoreSM83::RET, "", 0);
-    instrMap.emplace_back(0xd9, &CoreSM83::RETI, "", 4);
-    instrMap.emplace_back(0xda, &CoreSM83::JP, "", 0);
-    instrMap.emplace_back(0xdb, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xdc, &CoreSM83::CALL, "", 0);
-    instrMap.emplace_back(0xdd, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xde, &CoreSM83::SBC, "", 2);
-    instrMap.emplace_back(0xdf, &CoreSM83::RST, "", 4);
+    instrMap.emplace_back(0xd0, &CoreSM83::RET, 0);
+    instrMap.emplace_back(0xd1, &CoreSM83::POP, 3);
+    instrMap.emplace_back(0xd2, &CoreSM83::JP, 0);
+    instrMap.emplace_back(0xd3, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xd4, &CoreSM83::CALL, 0);
+    instrMap.emplace_back(0xd5, &CoreSM83::PUSH, 4);
+    instrMap.emplace_back(0xd6, &CoreSM83::SUB, 2);
+    instrMap.emplace_back(0xd7, &CoreSM83::RST, 4);
+    instrMap.emplace_back(0xd8, &CoreSM83::RET, 0);
+    instrMap.emplace_back(0xd9, &CoreSM83::RETI, 4);
+    instrMap.emplace_back(0xda, &CoreSM83::JP, 0);
+    instrMap.emplace_back(0xdb, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xdc, &CoreSM83::CALL, 0);
+    instrMap.emplace_back(0xdd, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xde, &CoreSM83::SBC, 2);
+    instrMap.emplace_back(0xdf, &CoreSM83::RST, 4);
 
     // 0xe0
-    instrMap.emplace_back(0xe0, &CoreSM83::LDH, "", 3);
-    instrMap.emplace_back(0xe1, &CoreSM83::POP, "", 3);
-    instrMap.emplace_back(0xe2, &CoreSM83::LDCref, "", 2);
-    instrMap.emplace_back(0xe3, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xe4, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xe5, &CoreSM83::PUSH, "", 4);
-    instrMap.emplace_back(0xe6, &CoreSM83::AND, "", 2);
-    instrMap.emplace_back(0xe7, &CoreSM83::RST, "", 4);
-    instrMap.emplace_back(0xe8, &CoreSM83::ADDSPr8, "", 4);
-    instrMap.emplace_back(0xe9, &CoreSM83::JP, "", 1);
-    instrMap.emplace_back(0xea, &CoreSM83::LDHa16, "", 4);
-    instrMap.emplace_back(0xeb, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xec, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xed, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xee, &CoreSM83::CP, "", 2);
-    instrMap.emplace_back(0xef, &CoreSM83::RST, "", 4);
+    instrMap.emplace_back(0xe0, &CoreSM83::LDH, 3);
+    instrMap.emplace_back(0xe1, &CoreSM83::POP, 3);
+    instrMap.emplace_back(0xe2, &CoreSM83::LDCref, 2);
+    instrMap.emplace_back(0xe3, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xe4, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xe5, &CoreSM83::PUSH, 4);
+    instrMap.emplace_back(0xe6, &CoreSM83::AND, 2);
+    instrMap.emplace_back(0xe7, &CoreSM83::RST, 4);
+    instrMap.emplace_back(0xe8, &CoreSM83::ADDSPr8, 4);
+    instrMap.emplace_back(0xe9, &CoreSM83::JP, 1);
+    instrMap.emplace_back(0xea, &CoreSM83::LDHa16, 4);
+    instrMap.emplace_back(0xeb, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xec, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xed, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xee, &CoreSM83::CP, 2);
+    instrMap.emplace_back(0xef, &CoreSM83::RST, 4);
 
     // 0xf0
-    instrMap.emplace_back(0xf0, &CoreSM83::LDH, "", 3);
-    instrMap.emplace_back(0xf1, &CoreSM83::POP, "", 3);
-    instrMap.emplace_back(0xf2, &CoreSM83::LDCref, "", 2);
-    instrMap.emplace_back(0xf3, &CoreSM83::DI, "", 1);
-    instrMap.emplace_back(0xf4, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xf5, &CoreSM83::PUSH, "", 4);
-    instrMap.emplace_back(0xf6, &CoreSM83::OR, "", 2);
-    instrMap.emplace_back(0xf7, &CoreSM83::RST, "", 4);
-    instrMap.emplace_back(0xf8, &CoreSM83::LDHLSPr8, "", 3);
-    instrMap.emplace_back(0xf9, &CoreSM83::LDSPHL, "", 2);
-    instrMap.emplace_back(0xfa, &CoreSM83::LDHa16, "", 4);
-    instrMap.emplace_back(0xfb, &CoreSM83::EI, "", 1);
-    instrMap.emplace_back(0xfc, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xfd, &CoreSM83::NoInstruction, "", 0);
-    instrMap.emplace_back(0xfe, &CoreSM83::XOR, "", 2);
-    instrMap.emplace_back(0xff, &CoreSM83::RST, "", 4);
+    instrMap.emplace_back(0xf0, &CoreSM83::LDH, 3);
+    instrMap.emplace_back(0xf1, &CoreSM83::POP, 3);
+    instrMap.emplace_back(0xf2, &CoreSM83::LDCref, 2);
+    instrMap.emplace_back(0xf3, &CoreSM83::DI, 1);
+    instrMap.emplace_back(0xf4, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xf5, &CoreSM83::PUSH, 4);
+    instrMap.emplace_back(0xf6, &CoreSM83::OR, 2);
+    instrMap.emplace_back(0xf7, &CoreSM83::RST, 4);
+    instrMap.emplace_back(0xf8, &CoreSM83::LDHLSPr8, 3);
+    instrMap.emplace_back(0xf9, &CoreSM83::LDSPHL, 2);
+    instrMap.emplace_back(0xfa, &CoreSM83::LDHa16, 4);
+    instrMap.emplace_back(0xfb, &CoreSM83::EI, 1);
+    instrMap.emplace_back(0xfc, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xfd, &CoreSM83::NoInstruction, 0);
+    instrMap.emplace_back(0xfe, &CoreSM83::XOR, 2);
+    instrMap.emplace_back(0xff, &CoreSM83::RST, 4);
 }
 
 /* ***********************************************************************************************************
@@ -436,7 +456,9 @@ void CoreSM83::NoInstruction(){
 
 // no operation
 void CoreSM83::NOP() {
-    return;
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("NOP");
+    }
 }
 
 // stop sm83_instruction
@@ -444,41 +466,61 @@ void CoreSM83::STOP() {
     data = mmu_instance->Read8Bit(Regs.PC);
     Regs.PC++;
 
-    if (data) { LOG_ERROR("Wrong STOP opcode"); }
+    if (data) { LOG_ERROR("Wrong usage of STOP instruction"); }
 
-    // TODO
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("STOP");
+    }
 }
 
 // set halt state
 void CoreSM83::HALT() {
     halt = true;
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("HALT");
+    }
 }
 
 // flip c
 void CoreSM83::CCF() {
     RESET_FLAGS(FLAG_HCARRY | FLAG_SUB, Regs.F);
     Regs.F ^= FLAG_CARRY;
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("CCF");
+    }
 }
 
 // set c
 void CoreSM83::SCF() {
     RESET_FLAGS(FLAG_HCARRY | FLAG_SUB, Regs.F);
     Regs.F |= FLAG_CARRY;
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("SCF");
+    }
 }
 
 // disable interrupts
 void CoreSM83::DI() {
     ime = false;
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("DI");
+    }
 }
 
 // eneable interrupts
 void CoreSM83::EI() {
     ime = true;
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("EI");
+    }
 }
 
 // enable CB sm83_instructions for next opcode
 void CoreSM83::CB() {
     opcode_cb = true;
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("CB");
+    }
 }
 
 /* ***********************************************************************************************************
@@ -502,6 +544,9 @@ void CoreSM83::LDfromAtoRef() {
         mmu_instance->Write8Bit(Regs.A, Regs.HL);
         break;
     }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 void CoreSM83::LDtoAfromRef() {
@@ -520,6 +565,9 @@ void CoreSM83::LDtoAfromRef() {
         Regs.HL--;
         Regs.A = mmu_instance->Read8Bit(Regs.HL);
         break;
+    }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -553,6 +601,9 @@ void CoreSM83::LDd8() {
         Regs.A = data;
         break;
     }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 void CoreSM83::LDd16() {
@@ -573,6 +624,9 @@ void CoreSM83::LDd16() {
         Regs.SP = data;
         break;
     }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 void CoreSM83::LDCref() {
@@ -583,6 +637,9 @@ void CoreSM83::LDCref() {
     case 0xF2:
         Regs.A = mmu_instance->Read8Bit(Regs.BC_.C | 0xFF00);
         break;
+    }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -598,6 +655,9 @@ void CoreSM83::LDH() {
         Regs.A = mmu_instance->Read8Bit((data & 0xFF) | 0xFF00);
         break;
     }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LDH");
+    }
 }
 
 void CoreSM83::LDHa16() {
@@ -612,6 +672,9 @@ void CoreSM83::LDHa16() {
         Regs.A = mmu_instance->Read8Bit(data);
         break;
     }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LDH");
+    }
 }
 
 void CoreSM83::LDSPa16() {
@@ -619,6 +682,9 @@ void CoreSM83::LDSPa16() {
     Regs.PC += 2;
 
     mmu_instance->Write16Bit(Regs.SP, data);
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 void CoreSM83::LDtoB() {
@@ -647,6 +713,9 @@ void CoreSM83::LDtoB() {
     case 0x07:
         Regs.BC_.B = Regs.A;
         break;
+    }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -677,6 +746,9 @@ void CoreSM83::LDtoC() {
         Regs.BC_.C = Regs.A;
         break;
     }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 void CoreSM83::LDtoD() {
@@ -705,6 +777,9 @@ void CoreSM83::LDtoD() {
     case 0x07:
         Regs.DE_.D = Regs.A;
         break;
+    }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -735,6 +810,9 @@ void CoreSM83::LDtoE() {
         Regs.DE_.E = Regs.A;
         break;
     }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 void CoreSM83::LDtoH() {
@@ -763,6 +841,9 @@ void CoreSM83::LDtoH() {
     case 0x07:
         Regs.HL_.H = Regs.A;
         break;
+    }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -793,6 +874,9 @@ void CoreSM83::LDtoL() {
         Regs.HL_.L = Regs.A;
         break;
     }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 void CoreSM83::LDtoHLref() {
@@ -818,6 +902,9 @@ void CoreSM83::LDtoHLref() {
     case 0x07:
         mmu_instance->Write8Bit(Regs.A, Regs.HL);
         break;
+    }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -848,6 +935,9 @@ void CoreSM83::LDtoA() {
         Regs.A = Regs.A;
         break;
     }
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 // ld SP to HL and add signed 8 bit immediate data
@@ -859,10 +949,17 @@ void CoreSM83::LDHLSPr8() {
     RESET_ALL_FLAGS(Regs.F);
     ADD_8_FLAGS(Regs.HL, data, Regs.F);
     Regs.HL += *(i8*)&data;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 void CoreSM83::LDSPHL() {
     Regs.SP = Regs.HL;
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("LD");
+    }
 }
 
 // push PC to Stack
@@ -883,6 +980,10 @@ void CoreSM83::PUSH() {
         data = ((u16)Regs.A << 8) | Regs.F;
         mmu_instance->Write16Bit(data, Regs.SP);
         break;
+    }
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("PUSH");
     }
 }
 
@@ -906,6 +1007,10 @@ void CoreSM83::POP() {
     }
 
     Regs.SP += 2;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("POP");
+    }
 }
 
 /* ***********************************************************************************************************
@@ -959,6 +1064,10 @@ void CoreSM83::INC8() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("INC");
+    }
 }
 
 void CoreSM83::INC16() {
@@ -975,6 +1084,10 @@ void CoreSM83::INC16() {
     case 0x33:
         Regs.SP += 1;
         break;
+    }
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("INC");
     }
 }
 
@@ -1027,6 +1140,10 @@ void CoreSM83::DEC8() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("DEC");
+    }
 }
 
 void CoreSM83::DEC16() {
@@ -1043,6 +1160,10 @@ void CoreSM83::DEC16() {
     case 0x33:
         Regs.SP -= 1;
         break;
+    }
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("DEC");
     }
 }
 
@@ -1084,6 +1205,10 @@ void CoreSM83::ADD8() {
     ADD_8_FLAGS(Regs.A, data, Regs.F);
     Regs.A += data;
     ZERO_FLAG(Regs.A, Regs.F);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("ADD");
+    }
 }
 
 void CoreSM83::ADDHL() {
@@ -1106,6 +1231,10 @@ void CoreSM83::ADDHL() {
 
     ADD_16_FLAGS(Regs.HL, data, Regs.F);
     Regs.HL += data;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("ADD");
+    }
 }
 
 // add for SP + signed immediate data r8
@@ -1116,6 +1245,10 @@ void CoreSM83::ADDSPr8() {
     RESET_ALL_FLAGS(Regs.F);
     ADD_8_FLAGS(Regs.SP, data, Regs.F);
     Regs.SP += *(i8*)&data;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("ADD");
+    }
 }
 
 // adc for A + (register or immediate unsigned data d8) + carry
@@ -1158,6 +1291,10 @@ void CoreSM83::ADC() {
     ADC_8_C(Regs.A, data, carry, Regs.F);
     Regs.A += data + carry;
     ZERO_FLAG(Regs.A, Regs.F);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("ADC");
+    }
 }
 
 // sub with carry + halfcarry
@@ -1198,6 +1335,10 @@ void CoreSM83::SUB() {
     SUB_8_FLAGS(Regs.A, data, Regs.F);
     Regs.A -= data;
     ZERO_FLAG(Regs.A, Regs.F);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("SUB");
+    }
 }
 
 // adc for A + (register or immediate unsigned data d8) + carry
@@ -1240,6 +1381,10 @@ void CoreSM83::SBC() {
     SBC_8_C(Regs.A, data, carry, Regs.F);
     Regs.A -= (data + carry);
     ZERO_FLAG(Regs.A, Regs.F);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("SBC");
+    }
 }
 
 // bcd code addition and subtraction
@@ -1259,6 +1404,10 @@ void CoreSM83::DAA() {
     }
     ZERO_FLAG(Regs.A, Regs.F);
     Regs.F &= ~FLAG_HCARRY;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("DAA");
+    }
 }
 
 // and with hc=1 and z
@@ -1298,6 +1447,10 @@ void CoreSM83::AND() {
 
     Regs.A &= data;
     ZERO_FLAG(Regs.A, Regs.F);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("AND");
+    }
 }
 
 // or with z
@@ -1337,6 +1490,10 @@ void CoreSM83::OR() {
 
     Regs.A |= data;
     ZERO_FLAG(Regs.A, Regs.F);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("OR");
+    }
 }
 
 // xor with z
@@ -1376,6 +1533,10 @@ void CoreSM83::XOR() {
 
     Regs.A ^= data;
     ZERO_FLAG(Regs.A, Regs.F);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("XOR");
+    }
 }
 
 // compare (subtraction)
@@ -1416,12 +1577,20 @@ void CoreSM83::CP() {
     SUB_8_FLAGS(Regs.A, data, Regs.F);
     Regs.A -= data;
     ZERO_FLAG(Regs.A, Regs.F);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("CP");
+    }
 }
 
 // 1's complement of A
 void CoreSM83::CPL() {
     SET_FLAGS(FLAG_SUB | FLAG_HCARRY, Regs.F);
     Regs.A = ~(Regs.A);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("CPL");
+    }
 }
 
 /* ***********************************************************************************************************
@@ -1433,6 +1602,10 @@ void CoreSM83::RLCA() {
     Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
     Regs.A <<= 1;
     Regs.A |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("RLCA");
+    }
 }
 
 // rotate A right with carry
@@ -1441,6 +1614,10 @@ void CoreSM83::RRCA() {
     Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
     Regs.A >>= 1;
     Regs.A |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("RRCA");
+    }
 }
 
 // rotate A left through carry
@@ -1450,6 +1627,10 @@ void CoreSM83::RLA() {
     Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
     Regs.A <<= 1;
     Regs.A |= (carry ? LSB : 0x00);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("RLA");
+    }
 }
 
 // rotate A right through carry
@@ -1459,6 +1640,10 @@ void CoreSM83::RRA() {
     Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
     Regs.A >>= 1;
     Regs.A |= (carry ? MSB : 0x00);
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("RRA");
+    }
 }
 
 /* ***********************************************************************************************************
@@ -1518,6 +1703,10 @@ void CoreSM83::JP() {
         break;
     }
     machineCycles += 3;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("JP");
+    }
 }
 
 // jump relative to memory lecation
@@ -1566,6 +1755,10 @@ void CoreSM83::JR() {
         break;
     }
     machineCycles += 2;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("JR");
+    }
 }
 
 void CoreSM83::jump_jp() {
@@ -1625,6 +1818,10 @@ void CoreSM83::CALL() {
     }
     machineCycles += 3;
     return;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("CALL");
+    }
 }
 
 // call to interrupt vectors
@@ -1656,6 +1853,10 @@ void CoreSM83::RST() {
         break;
     }
     call();
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("RST");
+    }
 }
 
 void CoreSM83::call() {
@@ -1709,12 +1910,20 @@ void CoreSM83::RET() {
         break;
     }
     machineCycles += 2;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("RET");
+    }
 }
 
 // return and enable interrupts
 void CoreSM83::RETI() {
     ret();
     ime = true;
+
+    if (msgFifo.debug_instructions_enabled) {
+        msgFifo.debug_instructions.emplace("RETI");
+    }
 }
 
 void CoreSM83::ret() {
@@ -1731,277 +1940,277 @@ void CoreSM83::setupLookupTableCB() {
     instrMapCB.clear();
 
     // Elements: opcode, instruction function, machine cycles
-    instrMapCB.emplace_back(0x00, &CoreSM83::RLC, "", 2);
-    instrMapCB.emplace_back(0x01, &CoreSM83::RLC, "", 2);
-    instrMapCB.emplace_back(0x02, &CoreSM83::RLC, "", 2);
-    instrMapCB.emplace_back(0x03, &CoreSM83::RLC, "", 2);
-    instrMapCB.emplace_back(0x04, &CoreSM83::RLC, "", 2);
-    instrMapCB.emplace_back(0x05, &CoreSM83::RLC, "", 2);
-    instrMapCB.emplace_back(0x06, &CoreSM83::RLC, "", 4);
-    instrMapCB.emplace_back(0x07, &CoreSM83::RLC, "", 2);
-    instrMapCB.emplace_back(0x08, &CoreSM83::RRC, "", 2);
-    instrMapCB.emplace_back(0x09, &CoreSM83::RRC, "", 2);
-    instrMapCB.emplace_back(0x0a, &CoreSM83::RRC, "", 2);
-    instrMapCB.emplace_back(0x0b, &CoreSM83::RRC, "", 2);
-    instrMapCB.emplace_back(0x0c, &CoreSM83::RRC, "", 2);
-    instrMapCB.emplace_back(0x0d, &CoreSM83::RRC, "", 2);
-    instrMapCB.emplace_back(0x0e, &CoreSM83::RRC, "", 4);
-    instrMapCB.emplace_back(0x0f, &CoreSM83::RRC, "", 2);
+    instrMapCB.emplace_back(0x00, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x01, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x02, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x03, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x04, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x05, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x06, &CoreSM83::RLC, 4);
+    instrMapCB.emplace_back(0x07, &CoreSM83::RLC, 2);
+    instrMapCB.emplace_back(0x08, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x09, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0a, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0b, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0c, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0d, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x0e, &CoreSM83::RRC, 4);
+    instrMapCB.emplace_back(0x0f, &CoreSM83::RRC, 2);
 
-    instrMapCB.emplace_back(0x10, &CoreSM83::RL, "", 2);
-    instrMapCB.emplace_back(0x11, &CoreSM83::RL, "", 2);
-    instrMapCB.emplace_back(0x12, &CoreSM83::RL, "", 2);
-    instrMapCB.emplace_back(0x13, &CoreSM83::RL, "", 2);
-    instrMapCB.emplace_back(0x14, &CoreSM83::RL, "", 2);
-    instrMapCB.emplace_back(0x15, &CoreSM83::RL, "", 2);
-    instrMapCB.emplace_back(0x16, &CoreSM83::RL, "", 4);
-    instrMapCB.emplace_back(0x17, &CoreSM83::RL, "", 2);
-    instrMapCB.emplace_back(0x18, &CoreSM83::RR, "", 2);
-    instrMapCB.emplace_back(0x19, &CoreSM83::RR, "", 2);
-    instrMapCB.emplace_back(0x1a, &CoreSM83::RR, "", 2);
-    instrMapCB.emplace_back(0x1b, &CoreSM83::RR, "", 2);
-    instrMapCB.emplace_back(0x1c, &CoreSM83::RR, "", 2);
-    instrMapCB.emplace_back(0x1d, &CoreSM83::RR, "", 2);
-    instrMapCB.emplace_back(0x1e, &CoreSM83::RR, "", 4);
-    instrMapCB.emplace_back(0x1f, &CoreSM83::RR, "", 2);
+    instrMapCB.emplace_back(0x10, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x11, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x12, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x13, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x14, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x15, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x16, &CoreSM83::RL, 4);
+    instrMapCB.emplace_back(0x17, &CoreSM83::RL, 2);
+    instrMapCB.emplace_back(0x18, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x19, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1a, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1b, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1c, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1d, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x1e, &CoreSM83::RR, 4);
+    instrMapCB.emplace_back(0x1f, &CoreSM83::RR, 2);
 
-    instrMapCB.emplace_back(0x20, &CoreSM83::SLA, "", 2);
-    instrMapCB.emplace_back(0x21, &CoreSM83::SLA, "", 2);
-    instrMapCB.emplace_back(0x22, &CoreSM83::SLA, "", 2);
-    instrMapCB.emplace_back(0x23, &CoreSM83::SLA, "", 2);
-    instrMapCB.emplace_back(0x24, &CoreSM83::SLA, "", 2);
-    instrMapCB.emplace_back(0x25, &CoreSM83::SLA, "", 2);
-    instrMapCB.emplace_back(0x26, &CoreSM83::SLA, "", 4);
-    instrMapCB.emplace_back(0x27, &CoreSM83::SLA, "", 2);
-    instrMapCB.emplace_back(0x28, &CoreSM83::SRA, "", 2);
-    instrMapCB.emplace_back(0x29, &CoreSM83::SRA, "", 2);
-    instrMapCB.emplace_back(0x2a, &CoreSM83::SRA, "", 2);
-    instrMapCB.emplace_back(0x2b, &CoreSM83::SRA, "", 2);
-    instrMapCB.emplace_back(0x2c, &CoreSM83::SRA, "", 2);
-    instrMapCB.emplace_back(0x2d, &CoreSM83::SRA, "", 2);
-    instrMapCB.emplace_back(0x2e, &CoreSM83::SRA, "", 4);
-    instrMapCB.emplace_back(0x2f, &CoreSM83::SRA, "", 2);
+    instrMapCB.emplace_back(0x20, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x21, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x22, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x23, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x24, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x25, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x26, &CoreSM83::SLA, 4);
+    instrMapCB.emplace_back(0x27, &CoreSM83::SLA, 2);
+    instrMapCB.emplace_back(0x28, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x29, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2a, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2b, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2c, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2d, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x2e, &CoreSM83::SRA, 4);
+    instrMapCB.emplace_back(0x2f, &CoreSM83::SRA, 2);
 
-    instrMapCB.emplace_back(0x30, &CoreSM83::SWAP, "", 2);
-    instrMapCB.emplace_back(0x31, &CoreSM83::SWAP, "", 2);
-    instrMapCB.emplace_back(0x32, &CoreSM83::SWAP, "", 2);
-    instrMapCB.emplace_back(0x33, &CoreSM83::SWAP, "", 2);
-    instrMapCB.emplace_back(0x34, &CoreSM83::SWAP, "", 2);
-    instrMapCB.emplace_back(0x35, &CoreSM83::SWAP, "", 2);
-    instrMapCB.emplace_back(0x36, &CoreSM83::SWAP, "", 4);
-    instrMapCB.emplace_back(0x37, &CoreSM83::SWAP, "", 2);
-    instrMapCB.emplace_back(0x38, &CoreSM83::SRL, "", 2);
-    instrMapCB.emplace_back(0x39, &CoreSM83::SRL, "", 2);
-    instrMapCB.emplace_back(0x3a, &CoreSM83::SRL, "", 2);
-    instrMapCB.emplace_back(0x3b, &CoreSM83::SRL, "", 2);
-    instrMapCB.emplace_back(0x3c, &CoreSM83::SRL, "", 2);
-    instrMapCB.emplace_back(0x3d, &CoreSM83::SRL, "", 2);
-    instrMapCB.emplace_back(0x3e, &CoreSM83::SRL, "", 4);
-    instrMapCB.emplace_back(0x3f, &CoreSM83::SRL, "", 2);
+    instrMapCB.emplace_back(0x30, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x31, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x32, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x33, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x34, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x35, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x36, &CoreSM83::SWAP, 4);
+    instrMapCB.emplace_back(0x37, &CoreSM83::SWAP, 2);
+    instrMapCB.emplace_back(0x38, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x39, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3a, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3b, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3c, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3d, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x3e, &CoreSM83::SRL, 4);
+    instrMapCB.emplace_back(0x3f, &CoreSM83::SRL, 2);
 
-    instrMapCB.emplace_back(0x40, &CoreSM83::BIT0, "", 2);
-    instrMapCB.emplace_back(0x41, &CoreSM83::BIT0, "", 2);
-    instrMapCB.emplace_back(0x42, &CoreSM83::BIT0, "", 2);
-    instrMapCB.emplace_back(0x43, &CoreSM83::BIT0, "", 2);
-    instrMapCB.emplace_back(0x44, &CoreSM83::BIT0, "", 2);
-    instrMapCB.emplace_back(0x45, &CoreSM83::BIT0, "", 2);
-    instrMapCB.emplace_back(0x46, &CoreSM83::BIT0, "", 4);
-    instrMapCB.emplace_back(0x47, &CoreSM83::BIT0, "", 2);
-    instrMapCB.emplace_back(0x48, &CoreSM83::BIT1, "", 2);
-    instrMapCB.emplace_back(0x49, &CoreSM83::BIT1, "", 2);
-    instrMapCB.emplace_back(0x4a, &CoreSM83::BIT1, "", 2);
-    instrMapCB.emplace_back(0x4b, &CoreSM83::BIT1, "", 2);
-    instrMapCB.emplace_back(0x4c, &CoreSM83::BIT1, "", 2);
-    instrMapCB.emplace_back(0x4d, &CoreSM83::BIT1, "", 2);
-    instrMapCB.emplace_back(0x4e, &CoreSM83::BIT1, "", 4);
-    instrMapCB.emplace_back(0x4f, &CoreSM83::BIT1, "", 2);
+    instrMapCB.emplace_back(0x40, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x41, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x42, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x43, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x44, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x45, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x46, &CoreSM83::BIT0, 4);
+    instrMapCB.emplace_back(0x47, &CoreSM83::BIT0, 2);
+    instrMapCB.emplace_back(0x48, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x49, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4a, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4b, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4c, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4d, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x4e, &CoreSM83::BIT1, 4);
+    instrMapCB.emplace_back(0x4f, &CoreSM83::BIT1, 2);
 
-    instrMapCB.emplace_back(0x50, &CoreSM83::BIT2, "", 2);
-    instrMapCB.emplace_back(0x51, &CoreSM83::BIT2, "", 2);
-    instrMapCB.emplace_back(0x52, &CoreSM83::BIT2, "", 2);
-    instrMapCB.emplace_back(0x53, &CoreSM83::BIT2, "", 2);
-    instrMapCB.emplace_back(0x54, &CoreSM83::BIT2, "", 2);
-    instrMapCB.emplace_back(0x55, &CoreSM83::BIT2, "", 2);
-    instrMapCB.emplace_back(0x56, &CoreSM83::BIT2, "", 4);
-    instrMapCB.emplace_back(0x57, &CoreSM83::BIT2, "", 2);
-    instrMapCB.emplace_back(0x58, &CoreSM83::BIT3, "", 2);
-    instrMapCB.emplace_back(0x59, &CoreSM83::BIT3, "", 2);
-    instrMapCB.emplace_back(0x5a, &CoreSM83::BIT3, "", 2);
-    instrMapCB.emplace_back(0x5b, &CoreSM83::BIT3, "", 2);
-    instrMapCB.emplace_back(0x5c, &CoreSM83::BIT3, "", 2);
-    instrMapCB.emplace_back(0x5d, &CoreSM83::BIT3, "", 2);
-    instrMapCB.emplace_back(0x5e, &CoreSM83::BIT3, "", 4);
-    instrMapCB.emplace_back(0x5f, &CoreSM83::BIT3, "", 2);
+    instrMapCB.emplace_back(0x50, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x51, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x52, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x53, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x54, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x55, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x56, &CoreSM83::BIT2, 4);
+    instrMapCB.emplace_back(0x57, &CoreSM83::BIT2, 2);
+    instrMapCB.emplace_back(0x58, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x59, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5a, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5b, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5c, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5d, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x5e, &CoreSM83::BIT3, 4);
+    instrMapCB.emplace_back(0x5f, &CoreSM83::BIT3, 2);
 
-    instrMapCB.emplace_back(0x60, &CoreSM83::BIT4, "", 2);
-    instrMapCB.emplace_back(0x61, &CoreSM83::BIT4, "", 2);
-    instrMapCB.emplace_back(0x62, &CoreSM83::BIT4, "", 2);
-    instrMapCB.emplace_back(0x63, &CoreSM83::BIT4, "", 2);
-    instrMapCB.emplace_back(0x64, &CoreSM83::BIT4, "", 2);
-    instrMapCB.emplace_back(0x65, &CoreSM83::BIT4, "", 2);
-    instrMapCB.emplace_back(0x66, &CoreSM83::BIT4, "", 4);
-    instrMapCB.emplace_back(0x67, &CoreSM83::BIT4, "", 2);
-    instrMapCB.emplace_back(0x68, &CoreSM83::BIT5, "", 2);
-    instrMapCB.emplace_back(0x69, &CoreSM83::BIT5, "", 2);
-    instrMapCB.emplace_back(0x6a, &CoreSM83::BIT5, "", 2);
-    instrMapCB.emplace_back(0x6b, &CoreSM83::BIT5, "", 2);
-    instrMapCB.emplace_back(0x6c, &CoreSM83::BIT5, "", 2);
-    instrMapCB.emplace_back(0x6d, &CoreSM83::BIT5, "", 2);
-    instrMapCB.emplace_back(0x6e, &CoreSM83::BIT5, "", 4);
-    instrMapCB.emplace_back(0x6f, &CoreSM83::BIT5, "", 2);
+    instrMapCB.emplace_back(0x60, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x61, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x62, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x63, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x64, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x65, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x66, &CoreSM83::BIT4, 4);
+    instrMapCB.emplace_back(0x67, &CoreSM83::BIT4, 2);
+    instrMapCB.emplace_back(0x68, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x69, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6a, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6b, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6c, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6d, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x6e, &CoreSM83::BIT5, 4);
+    instrMapCB.emplace_back(0x6f, &CoreSM83::BIT5, 2);
 
-    instrMapCB.emplace_back(0x70, &CoreSM83::BIT6, "", 2);
-    instrMapCB.emplace_back(0x71, &CoreSM83::BIT6, "", 2);
-    instrMapCB.emplace_back(0x72, &CoreSM83::BIT6, "", 2);
-    instrMapCB.emplace_back(0x73, &CoreSM83::BIT6, "", 2);
-    instrMapCB.emplace_back(0x74, &CoreSM83::BIT6, "", 2);
-    instrMapCB.emplace_back(0x75, &CoreSM83::BIT6, "", 2);
-    instrMapCB.emplace_back(0x76, &CoreSM83::BIT6, "", 4);
-    instrMapCB.emplace_back(0x77, &CoreSM83::BIT6, "", 2);
-    instrMapCB.emplace_back(0x78, &CoreSM83::BIT7, "", 2);
-    instrMapCB.emplace_back(0x79, &CoreSM83::BIT7, "", 2);
-    instrMapCB.emplace_back(0x7a, &CoreSM83::BIT7, "", 2);
-    instrMapCB.emplace_back(0x7b, &CoreSM83::BIT7, "", 2);
-    instrMapCB.emplace_back(0x7c, &CoreSM83::BIT7, "", 2);
-    instrMapCB.emplace_back(0x7d, &CoreSM83::BIT7, "", 2);
-    instrMapCB.emplace_back(0x7e, &CoreSM83::BIT7, "", 4);
-    instrMapCB.emplace_back(0x7f, &CoreSM83::BIT7, "", 2);
+    instrMapCB.emplace_back(0x70, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x71, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x72, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x73, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x74, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x75, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x76, &CoreSM83::BIT6, 4);
+    instrMapCB.emplace_back(0x77, &CoreSM83::BIT6, 2);
+    instrMapCB.emplace_back(0x78, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x79, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7a, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7b, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7c, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7d, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x7e, &CoreSM83::BIT7, 4);
+    instrMapCB.emplace_back(0x7f, &CoreSM83::BIT7, 2);
 
-    instrMapCB.emplace_back(0x80, &CoreSM83::RES0, "", 2);
-    instrMapCB.emplace_back(0x81, &CoreSM83::RES0, "", 2);
-    instrMapCB.emplace_back(0x82, &CoreSM83::RES0, "", 2);
-    instrMapCB.emplace_back(0x83, &CoreSM83::RES0, "", 2);
-    instrMapCB.emplace_back(0x84, &CoreSM83::RES0, "", 2);
-    instrMapCB.emplace_back(0x85, &CoreSM83::RES0, "", 2);
-    instrMapCB.emplace_back(0x86, &CoreSM83::RES0, "", 4);
-    instrMapCB.emplace_back(0x87, &CoreSM83::RES0, "", 2);
-    instrMapCB.emplace_back(0x88, &CoreSM83::RES1, "", 2);
-    instrMapCB.emplace_back(0x89, &CoreSM83::RES1, "", 2);
-    instrMapCB.emplace_back(0x8a, &CoreSM83::RES1, "", 2);
-    instrMapCB.emplace_back(0x8b, &CoreSM83::RES1, "", 2);
-    instrMapCB.emplace_back(0x8c, &CoreSM83::RES1, "", 2);
-    instrMapCB.emplace_back(0x8d, &CoreSM83::RES1, "", 2);
-    instrMapCB.emplace_back(0x8e, &CoreSM83::RES1, "", 4);
-    instrMapCB.emplace_back(0x8f, &CoreSM83::RES1, "", 2);
+    instrMapCB.emplace_back(0x80, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x81, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x82, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x83, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x84, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x85, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x86, &CoreSM83::RES0, 4);
+    instrMapCB.emplace_back(0x87, &CoreSM83::RES0, 2);
+    instrMapCB.emplace_back(0x88, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x89, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8a, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8b, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8c, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8d, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x8e, &CoreSM83::RES1, 4);
+    instrMapCB.emplace_back(0x8f, &CoreSM83::RES1, 2);
 
-    instrMapCB.emplace_back(0x90, &CoreSM83::RES2, "", 2);
-    instrMapCB.emplace_back(0x91, &CoreSM83::RES2, "", 2);
-    instrMapCB.emplace_back(0x92, &CoreSM83::RES2, "", 2);
-    instrMapCB.emplace_back(0x93, &CoreSM83::RES2, "", 2);
-    instrMapCB.emplace_back(0x94, &CoreSM83::RES2, "", 2);
-    instrMapCB.emplace_back(0x95, &CoreSM83::RES2, "", 2);
-    instrMapCB.emplace_back(0x96, &CoreSM83::RES2, "", 4);
-    instrMapCB.emplace_back(0x97, &CoreSM83::RES2, "", 2);
-    instrMapCB.emplace_back(0x98, &CoreSM83::RES3, "", 2);
-    instrMapCB.emplace_back(0x99, &CoreSM83::RES3, "", 2);
-    instrMapCB.emplace_back(0x9a, &CoreSM83::RES3, "", 2);
-    instrMapCB.emplace_back(0x9b, &CoreSM83::RES3, "", 2);
-    instrMapCB.emplace_back(0x9c, &CoreSM83::RES3, "", 2);
-    instrMapCB.emplace_back(0x9d, &CoreSM83::RES3, "", 2);
-    instrMapCB.emplace_back(0x9e, &CoreSM83::RES3, "", 4);
-    instrMapCB.emplace_back(0x9f, &CoreSM83::RES3, "", 2);
+    instrMapCB.emplace_back(0x90, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x91, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x92, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x93, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x94, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x95, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x96, &CoreSM83::RES2, 4);
+    instrMapCB.emplace_back(0x97, &CoreSM83::RES2, 2);
+    instrMapCB.emplace_back(0x98, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x99, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9a, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9b, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9c, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9d, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x9e, &CoreSM83::RES3, 4);
+    instrMapCB.emplace_back(0x9f, &CoreSM83::RES3, 2);
 
-    instrMapCB.emplace_back(0xa0, &CoreSM83::RES4, "", 2);
-    instrMapCB.emplace_back(0xa1, &CoreSM83::RES4, "", 2);
-    instrMapCB.emplace_back(0xa2, &CoreSM83::RES4, "", 2);
-    instrMapCB.emplace_back(0xa3, &CoreSM83::RES4, "", 2);
-    instrMapCB.emplace_back(0xa4, &CoreSM83::RES4, "", 2);
-    instrMapCB.emplace_back(0xa5, &CoreSM83::RES4, "", 2);
-    instrMapCB.emplace_back(0xa6, &CoreSM83::RES4, "", 4);
-    instrMapCB.emplace_back(0xa7, &CoreSM83::RES4, "", 2);
-    instrMapCB.emplace_back(0xa8, &CoreSM83::RES5, "", 2);
-    instrMapCB.emplace_back(0xa9, &CoreSM83::RES5, "", 2);
-    instrMapCB.emplace_back(0xaa, &CoreSM83::RES5, "", 2);
-    instrMapCB.emplace_back(0xab, &CoreSM83::RES5, "", 2);
-    instrMapCB.emplace_back(0xac, &CoreSM83::RES5, "", 2);
-    instrMapCB.emplace_back(0xad, &CoreSM83::RES5, "", 2);
-    instrMapCB.emplace_back(0xae, &CoreSM83::RES5, "", 4);
-    instrMapCB.emplace_back(0xaf, &CoreSM83::RES5, "", 2);
+    instrMapCB.emplace_back(0xa0, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa1, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa2, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa3, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa4, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa5, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa6, &CoreSM83::RES4, 4);
+    instrMapCB.emplace_back(0xa7, &CoreSM83::RES4, 2);
+    instrMapCB.emplace_back(0xa8, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xa9, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xaa, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xab, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xac, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xad, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xae, &CoreSM83::RES5, 4);
+    instrMapCB.emplace_back(0xaf, &CoreSM83::RES5, 2);
 
-    instrMapCB.emplace_back(0xb0, &CoreSM83::RES6, "", 2);
-    instrMapCB.emplace_back(0xb1, &CoreSM83::RES6, "", 2);
-    instrMapCB.emplace_back(0xb2, &CoreSM83::RES6, "", 2);
-    instrMapCB.emplace_back(0xb3, &CoreSM83::RES6, "", 2);
-    instrMapCB.emplace_back(0xb4, &CoreSM83::RES6, "", 2);
-    instrMapCB.emplace_back(0xb5, &CoreSM83::RES6, "", 2);
-    instrMapCB.emplace_back(0xb6, &CoreSM83::RES6, "", 4);
-    instrMapCB.emplace_back(0xb7, &CoreSM83::RES6, "", 2);
-    instrMapCB.emplace_back(0xb8, &CoreSM83::RES7, "", 2);
-    instrMapCB.emplace_back(0xb9, &CoreSM83::RES7, "", 2);
-    instrMapCB.emplace_back(0xba, &CoreSM83::RES7, "", 2);
-    instrMapCB.emplace_back(0xbb, &CoreSM83::RES7, "", 2);
-    instrMapCB.emplace_back(0xbc, &CoreSM83::RES7, "", 2);
-    instrMapCB.emplace_back(0xbd, &CoreSM83::RES7, "", 2);
-    instrMapCB.emplace_back(0xbe, &CoreSM83::RES7, "", 4);
-    instrMapCB.emplace_back(0xbf, &CoreSM83::RES7, "", 2);
+    instrMapCB.emplace_back(0xb0, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb1, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb2, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb3, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb4, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb5, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb6, &CoreSM83::RES6, 4);
+    instrMapCB.emplace_back(0xb7, &CoreSM83::RES6, 2);
+    instrMapCB.emplace_back(0xb8, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xb9, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xba, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xbb, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xbc, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xbd, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xbe, &CoreSM83::RES7, 4);
+    instrMapCB.emplace_back(0xbf, &CoreSM83::RES7, 2);
 
-    instrMapCB.emplace_back(0xc0, &CoreSM83::SET0, "", 2);
-    instrMapCB.emplace_back(0xc1, &CoreSM83::SET0, "", 2);
-    instrMapCB.emplace_back(0xc2, &CoreSM83::SET0, "", 2);
-    instrMapCB.emplace_back(0xc3, &CoreSM83::SET0, "", 2);
-    instrMapCB.emplace_back(0xc4, &CoreSM83::SET0, "", 2);
-    instrMapCB.emplace_back(0xc5, &CoreSM83::SET0, "", 2);
-    instrMapCB.emplace_back(0xc6, &CoreSM83::SET0, "", 4);
-    instrMapCB.emplace_back(0xc7, &CoreSM83::SET0, "", 2);
-    instrMapCB.emplace_back(0xc8, &CoreSM83::SET1, "", 2);
-    instrMapCB.emplace_back(0xc9, &CoreSM83::SET1, "", 2);
-    instrMapCB.emplace_back(0xca, &CoreSM83::SET1, "", 2);
-    instrMapCB.emplace_back(0xcb, &CoreSM83::SET1, "", 2);
-    instrMapCB.emplace_back(0xcc, &CoreSM83::SET1, "", 2);
-    instrMapCB.emplace_back(0xcd, &CoreSM83::SET1, "", 2);
-    instrMapCB.emplace_back(0xce, &CoreSM83::SET1, "", 4);
-    instrMapCB.emplace_back(0xcf, &CoreSM83::SET1, "", 2);
+    instrMapCB.emplace_back(0xc0, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc1, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc2, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc3, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc4, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc5, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc6, &CoreSM83::SET0, 4);
+    instrMapCB.emplace_back(0xc7, &CoreSM83::SET0, 2);
+    instrMapCB.emplace_back(0xc8, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xc9, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xca, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xcb, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xcc, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xcd, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xce, &CoreSM83::SET1, 4);
+    instrMapCB.emplace_back(0xcf, &CoreSM83::SET1, 2);
 
-    instrMapCB.emplace_back(0xd0, &CoreSM83::SET2, "", 2);
-    instrMapCB.emplace_back(0xd1, &CoreSM83::SET2, "", 2);
-    instrMapCB.emplace_back(0xd2, &CoreSM83::SET2, "", 2);
-    instrMapCB.emplace_back(0xd3, &CoreSM83::SET2, "", 2);
-    instrMapCB.emplace_back(0xd4, &CoreSM83::SET2, "", 2);
-    instrMapCB.emplace_back(0xd5, &CoreSM83::SET2, "", 2);
-    instrMapCB.emplace_back(0xd6, &CoreSM83::SET2, "", 4);
-    instrMapCB.emplace_back(0xd7, &CoreSM83::SET2, "", 2);
-    instrMapCB.emplace_back(0xd8, &CoreSM83::SET3, "", 2);
-    instrMapCB.emplace_back(0xd9, &CoreSM83::SET3, "", 2);
-    instrMapCB.emplace_back(0xda, &CoreSM83::SET3, "", 2);
-    instrMapCB.emplace_back(0xdb, &CoreSM83::SET3, "", 2);
-    instrMapCB.emplace_back(0xdc, &CoreSM83::SET3, "", 2);
-    instrMapCB.emplace_back(0xdd, &CoreSM83::SET3, "", 2);
-    instrMapCB.emplace_back(0xde, &CoreSM83::SET3, "", 4);
-    instrMapCB.emplace_back(0xdf, &CoreSM83::SET3, "", 2);
+    instrMapCB.emplace_back(0xd0, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd1, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd2, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd3, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd4, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd5, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd6, &CoreSM83::SET2, 4);
+    instrMapCB.emplace_back(0xd7, &CoreSM83::SET2, 2);
+    instrMapCB.emplace_back(0xd8, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xd9, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xda, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xdb, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xdc, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xdd, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xde, &CoreSM83::SET3, 4);
+    instrMapCB.emplace_back(0xdf, &CoreSM83::SET3, 2);
 
-    instrMapCB.emplace_back(0xe0, &CoreSM83::SET4, "", 2);
-    instrMapCB.emplace_back(0xe1, &CoreSM83::SET4, "", 2);
-    instrMapCB.emplace_back(0xe2, &CoreSM83::SET4, "", 2);
-    instrMapCB.emplace_back(0xe3, &CoreSM83::SET4, "", 2);
-    instrMapCB.emplace_back(0xe4, &CoreSM83::SET4, "", 2);
-    instrMapCB.emplace_back(0xe5, &CoreSM83::SET4, "", 2);
-    instrMapCB.emplace_back(0xe6, &CoreSM83::SET4, "", 4);
-    instrMapCB.emplace_back(0xe7, &CoreSM83::SET4, "", 2);
-    instrMapCB.emplace_back(0xe8, &CoreSM83::SET5, "", 2);
-    instrMapCB.emplace_back(0xe9, &CoreSM83::SET5, "", 2);
-    instrMapCB.emplace_back(0xea, &CoreSM83::SET5, "", 2);
-    instrMapCB.emplace_back(0xeb, &CoreSM83::SET5, "", 2);
-    instrMapCB.emplace_back(0xec, &CoreSM83::SET5, "", 2);
-    instrMapCB.emplace_back(0xed, &CoreSM83::SET5, "", 2);
-    instrMapCB.emplace_back(0xee, &CoreSM83::SET5, "", 4);
-    instrMapCB.emplace_back(0xef, &CoreSM83::SET5, "", 2);
+    instrMapCB.emplace_back(0xe0, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe1, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe2, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe3, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe4, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe5, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe6, &CoreSM83::SET4, 4);
+    instrMapCB.emplace_back(0xe7, &CoreSM83::SET4, 2);
+    instrMapCB.emplace_back(0xe8, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xe9, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xea, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xeb, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xec, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xed, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xee, &CoreSM83::SET5, 4);
+    instrMapCB.emplace_back(0xef, &CoreSM83::SET5, 2);
 
-    instrMapCB.emplace_back(0xf0, &CoreSM83::SET6, "", 2);
-    instrMapCB.emplace_back(0xf1, &CoreSM83::SET6, "", 2);
-    instrMapCB.emplace_back(0xf2, &CoreSM83::SET6, "", 2);
-    instrMapCB.emplace_back(0xf3, &CoreSM83::SET6, "", 2);
-    instrMapCB.emplace_back(0xf4, &CoreSM83::SET6, "", 2);
-    instrMapCB.emplace_back(0xf5, &CoreSM83::SET6, "", 2);
-    instrMapCB.emplace_back(0xf6, &CoreSM83::SET6, "", 4);
-    instrMapCB.emplace_back(0xf7, &CoreSM83::SET6, "", 2);
-    instrMapCB.emplace_back(0xf8, &CoreSM83::SET7, "", 2);
-    instrMapCB.emplace_back(0xf9, &CoreSM83::SET7, "", 2);
-    instrMapCB.emplace_back(0xfa, &CoreSM83::SET7, "", 2);
-    instrMapCB.emplace_back(0xfb, &CoreSM83::SET7, "", 2);
-    instrMapCB.emplace_back(0xfc, &CoreSM83::SET7, "", 2);
-    instrMapCB.emplace_back(0xfd, &CoreSM83::SET7, "", 2);
-    instrMapCB.emplace_back(0xfe, &CoreSM83::SET7, "", 4);
-    instrMapCB.emplace_back(0xff, &CoreSM83::SET7, "", 2);
+    instrMapCB.emplace_back(0xf0, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf1, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf2, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf3, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf4, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf5, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf6, &CoreSM83::SET6, 4);
+    instrMapCB.emplace_back(0xf7, &CoreSM83::SET6, 2);
+    instrMapCB.emplace_back(0xf8, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xf9, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfa, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfb, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfc, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfd, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xfe, &CoreSM83::SET7, 4);
+    instrMapCB.emplace_back(0xff, &CoreSM83::SET7, 2);
 }
 
 /* ***********************************************************************************************************

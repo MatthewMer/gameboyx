@@ -28,7 +28,7 @@ private:
 	// destructor
 	~MmuSM83_MBC3() = default;
 
-	void ResetChildMemoryInstances() { mem_instance->resetInstance(); }
+	void ResetChildMemoryInstances() override { mem_instance->resetInstance(); }
 	MemorySM83* mem_instance;
 
 	// members

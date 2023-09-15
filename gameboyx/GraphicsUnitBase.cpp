@@ -6,10 +6,7 @@
 GraphicsUnitBase* GraphicsUnitBase::instance = nullptr;
 
 GraphicsUnitBase* GraphicsUnitBase::getInstance(const Cartridge& _cart_obj) {
-	if (instance != nullptr) {
-		delete instance;
-		instance = nullptr;
-	}
+	resetInstance();
 
 	instance = new GraphicsUnitSM83(_cart_obj);
 	return instance;

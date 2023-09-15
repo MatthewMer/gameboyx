@@ -203,7 +203,7 @@
     <ClInclude Include="include\logger.h" />
     <ClInclude Include="MemoryBase.h" />
     <ClInclude Include="MemorySM83.h" />
-    <ClInclude Include="message_fifo.h" />
+    <ClInclude Include="information_structs.h" />
     <ClInclude Include="MmuBase.h" />
     <ClInclude Include="MmuSM83.h" />
     <ClInclude Include="registers.h" />
