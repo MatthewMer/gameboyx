@@ -5,11 +5,10 @@
 
 CoreBase* CoreBase::instance = nullptr;
 
-CoreBase* CoreBase::getInstance(const Cartridge& _cart_obj, message_fifo& _msg_fifo) {
+CoreBase* CoreBase::getInstance(const Cartridge& _cart_obj, message_buffer& _msg_fifo) {
 	resetInstance();
 
 	instance = new CoreSM83(_cart_obj, _msg_fifo);
-	LOG_INFO("CPU initialized");
 	return instance;
 }
 

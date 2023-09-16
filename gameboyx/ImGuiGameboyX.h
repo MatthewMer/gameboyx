@@ -9,7 +9,7 @@
 class ImGuiGameboyX {
 public:
 	// singleton instance access
-	static ImGuiGameboyX* getInstance(message_fifo& _msg_fifo, game_status& _game_status);
+	static ImGuiGameboyX* getInstance(message_buffer& _msg_fifo, game_status& _game_status);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -31,7 +31,7 @@ public:
 
 private:
 	// constructor
-	ImGuiGameboyX(message_fifo& _msg_fifo, game_status& _game_status);
+	ImGuiGameboyX(message_buffer& _msg_fifo, game_status& _game_status);
 	static ImGuiGameboyX* instance;
 	~ImGuiGameboyX() = default;
 
@@ -74,13 +74,15 @@ private:
 	void AddGameGuiCtx(const game_info& _game_ctx);
 	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
 	void InitGamesGuiCtx();
-	void CopyDebugInstructionFifo();
+	void CopyDebugInstructionOutput();
 	void ClearOutput();
+	void InitDebugOutputVectors();
 
 	// virtual hardware messages for debug
-	message_fifo& msgFifo;
+	message_buffer& msgBuffer;
 	std::vector<std::string> debugInstructionOutput = std::vector<std::string>();
 	const int allowedOutputSize = 20;
+	bool firstInstruction = true;
 
 	// game status variables
 	game_status& gameStatus;

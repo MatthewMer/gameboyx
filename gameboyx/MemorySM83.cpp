@@ -63,7 +63,6 @@ MemorySM83* MemorySM83::instance = nullptr;
 MemorySM83* MemorySM83::getInstance(const Cartridge& _cart_obj) {
     if (instance == nullptr) {
         instance = new MemorySM83(_cart_obj);
-        LOG_INFO("Memory SM83 initialized");
     }
     return instance;
 }
@@ -81,7 +80,7 @@ MemorySM83::MemorySM83(const Cartridge& _cart_obj) {
     InitMemory(_cart_obj);
 }
 
-machine_state_context* MemorySM83::GetMemCtx() const {
+machine_state_context* MemorySM83::GetMachineContext() const {
     return machine_ctx;
 }
 
@@ -157,8 +156,6 @@ void MemorySM83::AllocateMemory() {
     OAM = new u8[OAM_SIZE];
 
     HRAM = new u8[HRAM_SIZE];
-
-    LOG_INFO("Memory allocated");
 }
 
 void MemorySM83::CleanupMemory() {
@@ -189,7 +186,6 @@ void MemorySM83::CleanupMemory() {
     delete[] HRAM;
 
     delete machine_ctx;
-    LOG_INFO("Memory deallocated");
 }
 
 /* ***********************************************************************************************************

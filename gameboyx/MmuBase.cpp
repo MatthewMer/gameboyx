@@ -7,9 +7,8 @@ MmuBase* MmuBase::instance = nullptr;
 
 MmuBase* MmuBase::getInstance(const Cartridge& _cart_obj) {
 	resetInstance();
-	instance = new MmuSM83_MBC3(_cart_obj);
 
-	LOG_INFO("MMU initialized");
+	instance = new MmuSM83_MBC3(_cart_obj);
 	return instance;
 }
 

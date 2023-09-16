@@ -1,4 +1,4 @@
-#include "config_io.h"
+#include "data_io.h"
 
 #include "game_info.h"
 #include "logger.h"
@@ -13,8 +13,8 @@ using namespace std;
 
 
 
-bool read_config(vector<string>& _config_input, const string& _config_path_rel);
-bool write_config(const vector<string>& _games, const string& _config_path_rel, bool _rewrite);
+bool read_data(vector<string>& _config_input, const string& _config_path_rel);
+bool write_data(const vector<string>& _games, const string& _config_path_rel, bool _rewrite);
 
 void games_from_string(vector<game_info>& _games, const vector<string>& _config_games);
 void games_to_string(const vector<game_info>& _games, vector<string>& _config_games);
@@ -26,7 +26,7 @@ bool filter_parameter_game_info_enum(game_info& _game_ctx, const vector<string>&
 
 
 bool read_games_from_config(vector<game_info>& _games, const string& _config_path_rel) {
-    if (auto config_games = vector<string>(); read_config(config_games, _config_path_rel)) {
+    if (auto config_games = vector<string>(); read_data(config_games, _config_path_rel)) {
         games_from_string(_games, config_games);
         return true;
     }
@@ -39,7 +39,7 @@ bool write_games_to_config(const vector<game_info>& _games, const string& _confi
     auto config_games = vector<string>();
     games_to_string(_games, config_games);
 
-    if (write_config(config_games, _config_path_rel, _rewrite)) {
+    if (write_data(config_games, _config_path_rel, _rewrite)) {
         if(!_rewrite) LOG_INFO(_games.size(), " game(s) added to ." + _config_path_rel);
         return true; 
     }
@@ -74,8 +74,14 @@ bool delete_games_from_config(vector<game_info>& _games, const std::string& _con
 }
 
 
+bool write_to_debug_log(const string& _output, const string& _file_path_rel, const bool& _rewrite) {
+    check_and_create_log_folders();
 
-bool read_config(vector<string>& _config_input, const string& _config_path_rel) {
+    write_data({ _output }, _file_path_rel, _rewrite);
+}
+
+
+bool read_data(vector<string>& _config_input, const string& _config_path_rel) {
     string full_config_path = check_and_create_file(_config_path_rel);
 
     ifstream is(full_config_path, ios::beg);
@@ -93,16 +99,16 @@ bool read_config(vector<string>& _config_input, const string& _config_path_rel) 
     return true;
 }
 
-bool write_config(const vector<string>& _config_output, const string& _config_path_rel, bool _rewrite) {
-    string full_config_path = check_and_create_file(_config_path_rel);
+bool write_data(const vector<string>& _output, const string& _file_path_rel, bool _rewrite) {
+    string full_config_path = check_and_create_file(_file_path_rel);
     
     ofstream os(full_config_path, (_rewrite ? ios::trunc : ios::app));
     if (!os.is_open()) {
-        LOG_WARN("Couldn't write .", _config_path_rel);
+        LOG_WARN("Couldn't write .", _file_path_rel);
         return false;
     }
 
-    for (const auto& n : _config_output) {
+    for (const auto& n : _output) {
         os << n << endl;
     }
 
@@ -232,4 +238,8 @@ void check_and_create_config_folders() {
 
 void check_and_create_config_files() {
     check_and_create_file(CONFIG_FOLDER + GAMES_CONFIG_FILE);
+}
+
+void check_and_create_log_folders() {
+    check_and_create_path(LOG_FOLDER);
 }

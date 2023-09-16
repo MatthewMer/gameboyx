@@ -5,7 +5,7 @@
 *********************************************************************************************************** */
 #include "Cartridge.h"
 #include "imgui.h"
-#include "config_io.h"
+#include "data_io.h"
 #include "nfd.h"
 #include "logger.h"
 #include "helper_functions.h"
@@ -24,7 +24,7 @@ static void create_fs_hierarchy();
 *********************************************************************************************************** */
 ImGuiGameboyX* ImGuiGameboyX::instance = nullptr;
 
-ImGuiGameboyX* ImGuiGameboyX::getInstance(message_fifo& _msg_fifo, game_status& _game_status) {
+ImGuiGameboyX* ImGuiGameboyX::getInstance(message_buffer& _msg_fifo, game_status& _game_status) {
     if (instance != nullptr) {
         delete instance;
         instance = nullptr;
@@ -42,12 +42,14 @@ void ImGuiGameboyX::resetInstance() {
     instance = nullptr;
 }
 
-ImGuiGameboyX::ImGuiGameboyX(message_fifo& _msg_fifo, game_status& _game_status) : msgFifo(_msg_fifo), gameStatus(_game_status){
+ImGuiGameboyX::ImGuiGameboyX(message_buffer& _msg_fifo, game_status& _game_status) : msgBuffer(_msg_fifo), gameStatus(_game_status){
     NFD_Init();
     create_fs_hierarchy();
     if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
         InitGamesGuiCtx();
     }
+
+    InitDebugOutputVectors();
 }
 
 /* ***********************************************************************************************************
@@ -57,7 +59,7 @@ void ImGuiGameboyX::ProcessGUI() {
     IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
 
     if (showMainMenuBar) ShowMainMenuBar();
-    if (msgFifo.debug_instructions_enabled) ShowDebugInstructions();
+    if (msgBuffer.debug_instruction_enabled) ShowDebugInstructions();
     if (showWinAbout) ShowWindowAbout();
 
     if (!gameStatus.game_running) {
@@ -107,7 +109,7 @@ void ImGuiGameboyX::ShowMainMenuBar() {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
-            ImGui::MenuItem("Instruction execution", nullptr, &msgFifo.debug_instructions_enabled);
+            ImGui::MenuItem("Instruction execution", nullptr, &msgBuffer.debug_instruction_enabled);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
@@ -135,29 +137,22 @@ void ImGuiGameboyX::ShowWindowAbout() {
 }
 
 void ImGuiGameboyX::ShowDebugInstructions() {
-    CopyDebugInstructionFifo();
+    CopyDebugInstructionOutput();
 
     const ImGuiWindowFlags win_flags =
         ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoCollapse;
 
-    ImGui::SetNextWindowSize({ 500, 398 });
-    if (ImGui::Begin("Instructions", &msgFifo.debug_instructions_enabled, win_flags)) {
-        int size = debugInstructionOutput.size();
-
+    ImGui::SetNextWindowSize({ 700, 398 });
+    if (ImGui::Begin("Instructions", &msgBuffer.debug_instruction_enabled, win_flags)) {
         for (int i = 0; i < allowedOutputSize; i++) {
-            if (i < size) {
-                ImGui::TextUnformatted(debugInstructionOutput[i].c_str());
-            }
-            else {
-                ImGui::TextUnformatted("");
-            }
+            ImGui::TextUnformatted(debugInstructionOutput[i].c_str());
         }
 
-        if (gameStatus.game_running && !msgFifo.auto_run) {
+        if (gameStatus.game_running && !msgBuffer.auto_run) {
             if (ImGui::Button("Next Instruction")) {
-                msgFifo.pause_execution = false;
+                msgBuffer.pause_execution = false;
             }
         }
         else {
@@ -166,7 +161,9 @@ void ImGuiGameboyX::ShowDebugInstructions() {
             ImGui::EndDisabled();
         }
         ImGui::SameLine();
-        ImGui::Checkbox("Auto run", &msgFifo.auto_run);
+        ImGui::Checkbox("Auto run", &msgBuffer.auto_run);
+        ImGui::SameLine();
+        ImGui::Checkbox("Send to debug_instruction.log", &msgBuffer.debug_instruction_log);
     }
     ImGui::End();
 }
@@ -371,6 +368,7 @@ void ImGuiGameboyX::ActionProcessSpecialKeys() {
 void ImGuiGameboyX::ActionStartGame(int _index) {
     gameStatus.pending_game_start = true;
     gameStatus.game_to_start = _index;
+    firstInstruction = true;
 }
 
 void ImGuiGameboyX::ActionEndGame() {
@@ -381,7 +379,6 @@ void ImGuiGameboyX::ActionEndGame() {
         gamesSelected[gameStatus.game_to_start] = true;
     }
     gameStatus.pending_game_stop = false;
-
 }
 
 /* ***********************************************************************************************************
@@ -420,19 +417,31 @@ void ImGuiGameboyX::InitGamesGuiCtx() {
     }
 }
 
-void ImGuiGameboyX::CopyDebugInstructionFifo() {
-    while (!msgFifo.debug_instructions.empty()) {
-        debugInstructionOutput.push_back(msgFifo.debug_instructions.front());
-        msgFifo.debug_instructions.pop();
+void ImGuiGameboyX::CopyDebugInstructionOutput() {
+    if (msgBuffer.debug_instruction.compare("") != 0) {
+        debugInstructionOutput.push_back(msgBuffer.debug_instruction);
+        if (msgBuffer.debug_instruction_log) {
+            write_to_debug_log(msgBuffer.debug_instruction, LOG_FOLDER + games[gamesPrevIndex].title + "_" + DEBUG_INSTR_LOG, firstInstruction);
+            firstInstruction = false;
+        }
+        msgBuffer.debug_instruction = "";
     }
+
     while (debugInstructionOutput.size() > allowedOutputSize) {
         debugInstructionOutput.erase(debugInstructionOutput.begin());
     }
 }
 
 void ImGuiGameboyX::ClearOutput() {
-    vector<string> empty;
-    swap(debugInstructionOutput, empty);
+    for (auto& n : debugInstructionOutput) {
+        n = "";
+    }
+}
+
+void ImGuiGameboyX::InitDebugOutputVectors() {
+    for (int i = 0; i < allowedOutputSize; i++) {
+        debugInstructionOutput.emplace_back("");
+    }
 }
 
 /* ***********************************************************************************************************
@@ -501,5 +510,6 @@ void ImGuiGameboyX::KeyUp(const SDL_Keycode& _key) {
 static void create_fs_hierarchy() {
     check_and_create_config_folders();
     check_and_create_config_files();
+    check_and_create_log_folders();
     Cartridge::check_and_create_rom_folder();
 }

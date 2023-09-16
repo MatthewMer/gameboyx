@@ -24,7 +24,7 @@
     <ClCompile Include="ImGuiGameboyX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config_io.cpp">
+    <ClCompile Include="data_io.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="game_info.cpp">
@@ -80,7 +80,7 @@
     <ClInclude Include="ImGuiGameboyX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config_io.h">
+    <ClInclude Include="data_io.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_info.h">

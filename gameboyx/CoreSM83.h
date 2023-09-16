@@ -7,6 +7,39 @@
 
 #include <vector>
 
+/* ***********************************************************************************************************
+	CLASSES FOR INSTRUCTION IN/OUTPUT POINTERS
+*********************************************************************************************************** */
+class Ptr {
+public:
+	virtual std::string GetValue() const = 0;
+
+protected:
+	Ptr() = default;
+	~Ptr() = default;
+};
+
+enum reg_types {
+	DATA,
+	BC,
+	DE,
+	HL,
+	SP,
+	PC,
+	AF,
+	A,
+	F,
+	B,
+	C,
+	D,
+	E,
+	H,
+	L
+};
+
+/* ***********************************************************************************************************
+	CoreSM83 CLASS DECLARATION
+*********************************************************************************************************** */
 class CoreSM83 : public CoreBase
 {
 public:
@@ -18,7 +51,7 @@ public:
 
 private:
 	// constructor
-	CoreSM83(const Cartridge& _cart_obj, message_fifo& _msg_fifo);
+	CoreSM83(const Cartridge& _cart_obj, message_buffer& _msg_fifo);
 	// destructor
 	~CoreSM83() = default;
 
@@ -28,7 +61,11 @@ private:
 	u8 opcode;
 	u16 data;
 
-	void ExecuteInstruction();
+	void ExecuteInstruction() override;
+
+	std::string GetRegisterContents() const;
+	std::string GetDebugInstruction() const;
+	u16 curPC;
 
 	// internals
 	gbc_registers Regs = gbc_registers();
@@ -45,11 +82,16 @@ private:
 	typedef void (CoreSM83::* instruction)();
 
 	// current instruction context
-	using instr_tuple = std::tuple < const u8, const instruction, const int>;
+	using instr_tuple = std::tuple < const u8, const instruction, const int, const std::string, const std::string, const Ptr*, const std::string, const Ptr*>;
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
 	int machineCycles = 0;
 	int GetDelayTime() override;
+
+	// pointer instances
+	void CreatePointerInstances();
+	std::vector<std::pair<const reg_types, const Ptr*>> ptrInstances = std::vector<std::pair<const reg_types, const Ptr*>>();
+	const Ptr* GetPtr(const reg_types& _reg_type);
 
 	// basic instructions
 	std::vector<instr_tuple> instrMap;

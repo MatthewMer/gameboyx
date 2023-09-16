@@ -171,7 +171,7 @@
   <ItemGroup>
     <ClCompile Include="..\submodules\imgui\imgui_demo.cpp" />
     <ClCompile Include="Cartridge.cpp" />
-    <ClCompile Include="config_io.cpp" />
+    <ClCompile Include="data_io.cpp" />
     <ClCompile Include="CoreBase.cpp" />
     <ClCompile Include="CoreSM83.cpp" />
     <ClCompile Include="GraphicsUnitBase.cpp" />
@@ -192,7 +192,7 @@
     <ClInclude Include="CoreBase.h" />
     <ClInclude Include="CoreSM83.h" />
     <ClInclude Include="gameboy_config.h" />
-    <ClInclude Include="config_io.h" />
+    <ClInclude Include="data_io.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="game_info.h" />
     <ClInclude Include="GraphicsUnitBase.h" />

@@ -11,7 +11,7 @@ class CoreBase
 {
 public:
 	// get/reset instance
-	static CoreBase* getInstance(const Cartridge& _cart_obj, message_fifo& _msg_fifo);
+	static CoreBase* getInstance(const Cartridge& _cart_obj, message_buffer& _msg_fifo);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -29,7 +29,7 @@ public:
 
 protected:
 	// constructor
-	CoreBase(const Cartridge& _cart_obj, message_fifo& _msg_fifo) : msgFifo(_msg_fifo) {
+	CoreBase(const Cartridge& _cart_obj, message_buffer& _msg_fifo) : msgBuffer(_msg_fifo) {
 		mmu_instance = MmuBase::getInstance(_cart_obj);
 	};
 
@@ -43,7 +43,7 @@ protected:
 	virtual void InitCpu(const Cartridge& _cart_obj) = 0;
 	virtual void InitRegisterStates() = 0;
 
-	message_fifo& msgFifo;
+	message_buffer& msgBuffer;
 	
 private:
 	static CoreBase* instance;

@@ -185,7 +185,7 @@ int main(int, char**)
     auto clear_color = IMGUI_CLR_COLOR;
 
     // Main loop
-    auto* msg_fifo = new message_fifo();
+    auto* msg_fifo = new message_buffer();
     auto* game_state = new game_status();
     ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(*msg_fifo, *game_state);
     VHardwareMgr* vhwmgr_obj = nullptr;

@@ -7,7 +7,7 @@
 *********************************************************************************************************** */
 VHardwareMgr* VHardwareMgr::instance = nullptr;
 
-VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, message_fifo& _msg_fifo) {
+VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, message_buffer& _msg_fifo) {
     VHardwareMgr::resetInstance();
 
     instance = new VHardwareMgr(_game_ctx, _msg_fifo);
@@ -21,11 +21,10 @@ void VHardwareMgr::resetInstance() {
         Cartridge::resetInstance();
         delete instance;
         instance = nullptr;
-        LOG_INFO("---=== game stopped ===---");
     }
 }
 
-VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_fifo& _msg_fifo) : msgFifo(_msg_fifo){
+VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_fifo) : msgBuffer(_msg_fifo){
     cart_instance = Cartridge::getInstance(_game_ctx);
     if (cart_instance == nullptr) {
         LOG_ERROR("Couldn't create virtual cartridge");
@@ -38,14 +37,14 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_fifo& _msg_fifo) 
     // sets the machine cycle threshold for core and returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
 
-    LOG_INFO("---=== ", _game_ctx.title, " started ===---");
+    LOG_INFO(_game_ctx.title, " started");
 }
 
 /* ***********************************************************************************************************
     FUNCTIONALITY
 *********************************************************************************************************** */
 void VHardwareMgr::ProcessNext() {
-    if (!msgFifo.debug_instructions_enabled) { SimulateDelay(); }
+    if (!msgBuffer.debug_instruction_enabled) { SimulateDelay(); }
 
     core_instance->RunCycles();
     if (core_instance->CheckMachineCycles()) {

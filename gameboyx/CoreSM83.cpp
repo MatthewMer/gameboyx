@@ -4,7 +4,7 @@
     INCLUDES
 *********************************************************************************************************** */
 #include "gameboy_config.h"
-
+#include <format>
 #include "logger.h"
 
 using namespace std;
@@ -55,11 +55,12 @@ const int displayFrequency = 60;                  // Hz
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
-CoreSM83::CoreSM83(const Cartridge& _cart_obj, message_fifo& _msg_fifo) : CoreBase(_cart_obj, _msg_fifo){
+CoreSM83::CoreSM83(const Cartridge& _cart_obj, message_buffer& _msg_fifo) : CoreBase(_cart_obj, _msg_fifo){
     InitCpu(_cart_obj);
 
     this->isCgb = _cart_obj.GetIsCgb();
 
+    CreatePointerInstances();
     setupLookupTable();
     setupLookupTableCB();
 }
@@ -101,13 +102,15 @@ void CoreSM83::InitRegisterStates() {
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
     
-    if (msgFifo.debug_instructions_enabled) {
-        if (msgFifo.pause_execution && !msgFifo.auto_run) {
+    if (msgBuffer.debug_instruction_enabled) {
+        if (msgBuffer.pause_execution && !msgBuffer.auto_run) {
             return;
         }
         else {
+            msgBuffer.debug_instruction = GetRegisterContents();
             ExecuteInstruction();
-            msgFifo.pause_execution = true;
+            msgBuffer.debug_instruction += GetDebugInstruction();
+            msgBuffer.pause_execution = true;
         }
     }
     else {
@@ -119,6 +122,7 @@ void CoreSM83::RunCycles() {
 
 void CoreSM83::ExecuteInstruction() {
     opcode = mmu_instance->Read8Bit(Regs.PC);
+    curPC = Regs.PC;
     Regs.PC++;
 
     instrPtr = &instrMap[opcode];
@@ -141,6 +145,89 @@ int CoreSM83::GetDelayTime() {
     return 1.f / displayFrequency * pow(10, 9);
 }
 
+std::string CoreSM83::GetRegisterContents() const {
+    return "A($" + format("{:x}", Regs.A) +
+        "), F($" + format("{:x}", Regs.F) +
+        "), BC($" + format("{:x}", Regs.BC) +
+        "), DE($" + format("{:x}", Regs.DE) +
+        "), HL($" + format("{:x}", Regs.HL) +
+        "), SP($" + format("{:x}", Regs.SP) + ")";
+}
+
+std::string CoreSM83::GetDebugInstruction() const {
+    string result = " -> PC($" + format("{:x}", curPC) + "): " + get<3>(*instrPtr) + "($" + format("{:x}", opcode) + ")";
+
+    if (get<5>(*instrPtr) != nullptr) {
+        result += " " + get<4>(*instrPtr) + "($" + get<5>(*instrPtr)->GetValue() + ")";
+
+        if (get<7>(*instrPtr) != nullptr) {
+            result += ", " + get<6>(*instrPtr) + "($" + get<7>(*instrPtr)->GetValue() + ")";
+        }
+    }
+
+    return result;
+}
+
+/* ***********************************************************************************************************
+    REGISTER POINTERS
+*********************************************************************************************************** */
+class Ptr16 : public Ptr {
+public:
+    explicit constexpr Ptr16(const u16* _ptr) : ptr16(_ptr) {};
+    string GetValue() const override {
+        return format("{:x}", *ptr16);
+    };
+private:
+    const u16* ptr16;
+};
+
+class Ptr8 : public Ptr {
+public:
+    explicit constexpr Ptr8(const u8* _ptr) : ptr8(_ptr) {};
+    string GetValue() const override {
+        return format("{:x}", *ptr8);
+    };
+private:
+    const u8* ptr8;
+};
+
+class PtrAF : public Ptr {
+public:
+    explicit constexpr PtrAF(const u8* _ptrA, const u8* _ptrF) : ptrA(_ptrA), ptrF(_ptrF) {};
+    string GetValue() const override {
+        return format("{:x}", (((u16)*ptrA) << 8) | *ptrF);
+    };
+private:
+    const u8* ptrA;
+    const u8* ptrF;
+};
+
+void CoreSM83::CreatePointerInstances() {
+    ptrInstances.clear();
+
+    ptrInstances.emplace_back(DATA, new Ptr16(&data));
+    ptrInstances.emplace_back(BC, new Ptr16(&Regs.BC));
+    ptrInstances.emplace_back(DE, new Ptr16(&Regs.DE));
+    ptrInstances.emplace_back(HL, new Ptr16(&Regs.HL));
+    ptrInstances.emplace_back(SP, new Ptr16(&Regs.SP));
+    ptrInstances.emplace_back(PC, new Ptr16(&Regs.PC));
+    ptrInstances.emplace_back(A, new Ptr8(&Regs.A));
+    ptrInstances.emplace_back(F, new Ptr8(&Regs.F));
+    ptrInstances.emplace_back(AF, new PtrAF(&Regs.A, &Regs.F));
+    ptrInstances.emplace_back(B, new Ptr8(&Regs.BC_.B));
+    ptrInstances.emplace_back(C, new Ptr8(&Regs.BC_.C));
+    ptrInstances.emplace_back(D, new Ptr8(&Regs.DE_.D));
+    ptrInstances.emplace_back(E, new Ptr8(&Regs.DE_.E));
+    ptrInstances.emplace_back(H, new Ptr8(&Regs.HL_.H));
+    ptrInstances.emplace_back(L, new Ptr8(&Regs.HL_.L));
+}
+
+const Ptr* CoreSM83::GetPtr(const reg_types& _reg_type) {
+    for (const auto& [key, value] : ptrInstances) {
+        if (key == _reg_type) { return value; }
+    }
+}
+
 /* ***********************************************************************************************************
 *
 *   GAMEBOY (COLOR) CORESM83 INSTRUCTION LOOKUP TABLE
@@ -149,295 +236,298 @@ int CoreSM83::GetDelayTime() {
 void CoreSM83::setupLookupTable() {
     instrMap.clear();
 
+    // create pointer instances
+     
+
     // Elements: opcode, instruction function, machine cycles
 
     // 0x00
-    instrMap.emplace_back(0x00, &CoreSM83::NOP, 1);
-    instrMap.emplace_back(0x01, &CoreSM83::LDd16, 3);
-    instrMap.emplace_back(0x02, &CoreSM83::LDfromAtoRef, 2);
-    instrMap.emplace_back(0x03, &CoreSM83::INC16, 2);
-    instrMap.emplace_back(0x04, &CoreSM83::INC8, 1);
-    instrMap.emplace_back(0x05, &CoreSM83::DEC8, 1);
-    instrMap.emplace_back(0x06, &CoreSM83::LDd8, 2);
-    instrMap.emplace_back(0x07, &CoreSM83::RLCA, 1);
-    instrMap.emplace_back(0x08, &CoreSM83::LDSPa16, 5);
-    instrMap.emplace_back(0x09, &CoreSM83::ADDHL, 2);
-    instrMap.emplace_back(0x0a, &CoreSM83::LDtoAfromRef, 2);
-    instrMap.emplace_back(0x0b, &CoreSM83::DEC16, 2);
-    instrMap.emplace_back(0x0c, &CoreSM83::INC8, 1);
-    instrMap.emplace_back(0x0d, &CoreSM83::DEC8, 1);
-    instrMap.emplace_back(0x0e, &CoreSM83::LDd8, 2);
-    instrMap.emplace_back(0x0f, &CoreSM83::RRCA, 1);
+    instrMap.emplace_back(0x00, &CoreSM83::NOP, 1, "NOP", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0x01, &CoreSM83::LDd16, 3, "LD", "BC", GetPtr(BC), "d16", GetPtr(DATA));
+    instrMap.emplace_back(0x02, &CoreSM83::LDfromAtoRef, 2, "LD", "(BC)", GetPtr(BC), "A", GetPtr(A));
+    instrMap.emplace_back(0x03, &CoreSM83::INC16, 2, "INC", "BC", GetPtr(BC), "", nullptr);
+    instrMap.emplace_back(0x04, &CoreSM83::INC8, 1, "INC", "B", GetPtr(B), "", nullptr);
+    instrMap.emplace_back(0x05, &CoreSM83::DEC8, 1, "DEC", "B", GetPtr(B), "", nullptr);
+    instrMap.emplace_back(0x06, &CoreSM83::LDd8, 2, "LD", "B", GetPtr(B), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0x07, &CoreSM83::RLCA, 1, "RLCA", "A", GetPtr(A), "", nullptr);
+    instrMap.emplace_back(0x08, &CoreSM83::LDSPa16, 5, "LD", "(data)", GetPtr(DATA), "SP", GetPtr(SP));
+    instrMap.emplace_back(0x09, &CoreSM83::ADDHL, 2, "ADD", "HL", GetPtr(HL), "BC", GetPtr(BC));
+    instrMap.emplace_back(0x0a, &CoreSM83::LDtoAfromRef, 2, "LD", "A", GetPtr(A), "(BC)", GetPtr(BC));
+    instrMap.emplace_back(0x0b, &CoreSM83::DEC16, 2, "DEC", "BC", GetPtr(BC), "", nullptr);
+    instrMap.emplace_back(0x0c, &CoreSM83::INC8, 1, "INC", "C", GetPtr(C), "", nullptr);
+    instrMap.emplace_back(0x0d, &CoreSM83::DEC8, 1, "DEC", "C", GetPtr(C), "", nullptr);
+    instrMap.emplace_back(0x0e, &CoreSM83::LDd8, 2, "LD", "C", GetPtr(C), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0x0f, &CoreSM83::RRCA, 1, "RRCA", "A", GetPtr(A), "", nullptr);
 
     // 0x10
-    instrMap.emplace_back(0x10, &CoreSM83::STOP, 1);
-    instrMap.emplace_back(0x11, &CoreSM83::LDd16, 3);
-    instrMap.emplace_back(0x12, &CoreSM83::LDfromAtoRef, 2);
-    instrMap.emplace_back(0x13, &CoreSM83::INC16, 2);
-    instrMap.emplace_back(0x14, &CoreSM83::INC8, 1);
-    instrMap.emplace_back(0x15, &CoreSM83::DEC8, 1);
-    instrMap.emplace_back(0x16, &CoreSM83::LDd8, 2);
-    instrMap.emplace_back(0x17, &CoreSM83::RLA, 1);
-    instrMap.emplace_back(0x18, &CoreSM83::JR, 3);
-    instrMap.emplace_back(0x19, &CoreSM83::ADDHL, 2);
-    instrMap.emplace_back(0x1a, &CoreSM83::LDtoAfromRef, 2);
-    instrMap.emplace_back(0x1b, &CoreSM83::DEC16, 2);
-    instrMap.emplace_back(0x1c, &CoreSM83::INC8, 1);
-    instrMap.emplace_back(0x1d, &CoreSM83::DEC8, 1);
-    instrMap.emplace_back(0x1e, &CoreSM83::LDd8, 2);
-    instrMap.emplace_back(0x1f, &CoreSM83::RRA, 1);
+    instrMap.emplace_back(0x10, &CoreSM83::STOP, 1, "STOP", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0x11, &CoreSM83::LDd16, 3, "LD", "DE", GetPtr(DE), "d16", GetPtr(DATA));
+    instrMap.emplace_back(0x12, &CoreSM83::LDfromAtoRef, 2, "LD", "(DE)", GetPtr(DE), "A", GetPtr(A));
+    instrMap.emplace_back(0x13, &CoreSM83::INC16, 2, "INC", "DE", GetPtr(DE), "", nullptr);
+    instrMap.emplace_back(0x14, &CoreSM83::INC8, 1, "INC", "D", GetPtr(D), "", nullptr);
+    instrMap.emplace_back(0x15, &CoreSM83::DEC8, 1, "DEC", "D", GetPtr(D), "", nullptr);
+    instrMap.emplace_back(0x16, &CoreSM83::LDd8, 2, "LD", "D", GetPtr(D), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0x17, &CoreSM83::RLA, 1, "RLA", "A", GetPtr(A), "", nullptr);
+    instrMap.emplace_back(0x18, &CoreSM83::JR, 3, "JR", "r8", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0x19, &CoreSM83::ADDHL, 2, "ADD", "HL", GetPtr(HL), "DE", GetPtr(DE));
+    instrMap.emplace_back(0x1a, &CoreSM83::LDtoAfromRef, 2, "LD", "A", GetPtr(A), "(DE)", GetPtr(DE));
+    instrMap.emplace_back(0x1b, &CoreSM83::DEC16, 2, "DEC", "DE", GetPtr(DE), "", nullptr);
+    instrMap.emplace_back(0x1c, &CoreSM83::INC8, 1, "INC", "E", GetPtr(E), "", nullptr);
+    instrMap.emplace_back(0x1d, &CoreSM83::DEC8, 1, "DEC", "E", GetPtr(E), "", nullptr);
+    instrMap.emplace_back(0x1e, &CoreSM83::LDd8, 2, "LD", "E", GetPtr(E), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0x1f, &CoreSM83::RRA, 1, "RRA", "A", GetPtr(A), "", nullptr);
 
     // 0x20
-    instrMap.emplace_back(0x20, &CoreSM83::JR, 0);
-    instrMap.emplace_back(0x21, &CoreSM83::LDd16, 3);
-    instrMap.emplace_back(0x22, &CoreSM83::LDfromAtoRef, 2);
-    instrMap.emplace_back(0x23, &CoreSM83::INC16, 2);
-    instrMap.emplace_back(0x24, &CoreSM83::INC8, 1);
-    instrMap.emplace_back(0x25, &CoreSM83::DEC8, 1);
-    instrMap.emplace_back(0x26, &CoreSM83::LDd8, 2);
-    instrMap.emplace_back(0x27, &CoreSM83::DAA, 1);
-    instrMap.emplace_back(0x28, &CoreSM83::JR, 0);
-    instrMap.emplace_back(0x29, &CoreSM83::ADDHL, 2);
-    instrMap.emplace_back(0x2a, &CoreSM83::LDtoAfromRef, 2);
-    instrMap.emplace_back(0x2b, &CoreSM83::DEC16, 2);
-    instrMap.emplace_back(0x2c, &CoreSM83::INC8, 1);
-    instrMap.emplace_back(0x2d, &CoreSM83::DEC8, 1);
-    instrMap.emplace_back(0x2e, &CoreSM83::LDd8, 2);
-    instrMap.emplace_back(0x2f, &CoreSM83::CPL, 1);
+    instrMap.emplace_back(0x20, &CoreSM83::JR, 0, "JR NZ", "r8", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0x21, &CoreSM83::LDd16, 3, "LD", "HL", GetPtr(HL), "d16", GetPtr(DATA));
+    instrMap.emplace_back(0x22, &CoreSM83::LDfromAtoRef, 2, "LD", "(HL+)", GetPtr(HL), "A", GetPtr(A));
+    instrMap.emplace_back(0x23, &CoreSM83::INC16, 2, "INC", "HL", GetPtr(HL), "", nullptr);
+    instrMap.emplace_back(0x24, &CoreSM83::INC8, 1, "INC", "H", GetPtr(H), "", nullptr);
+    instrMap.emplace_back(0x25, &CoreSM83::DEC8, 1, "DEC", "H", GetPtr(H), "", nullptr);
+    instrMap.emplace_back(0x26, &CoreSM83::LDd8, 2, "LD", "H", GetPtr(H), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0x27, &CoreSM83::DAA, 1, "DAA", "A", GetPtr(A), "", nullptr);
+    instrMap.emplace_back(0x28, &CoreSM83::JR, 0, "JR Z", "r8", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0x29, &CoreSM83::ADDHL, 2, "ADD", "HL", GetPtr(HL), "HL", GetPtr(HL));
+    instrMap.emplace_back(0x2a, &CoreSM83::LDtoAfromRef, 2, "LD", "A", GetPtr(A), "(HL+)", GetPtr(HL));
+    instrMap.emplace_back(0x2b, &CoreSM83::DEC16, 2, "DEC", "HL", GetPtr(HL), "", nullptr);
+    instrMap.emplace_back(0x2c, &CoreSM83::INC8, 1, "INC", "L", GetPtr(L), "", nullptr);
+    instrMap.emplace_back(0x2d, &CoreSM83::DEC8, 1, "DEC", "L", GetPtr(L), "", nullptr);
+    instrMap.emplace_back(0x2e, &CoreSM83::LDd8, 2, "LD", "L", GetPtr(L), "", nullptr);
+    instrMap.emplace_back(0x2f, &CoreSM83::CPL, 1, "CPL", "A", GetPtr(A), "", nullptr);
 
     // 0x30
-    instrMap.emplace_back(0x30, &CoreSM83::JR, 0);
-    instrMap.emplace_back(0x31, &CoreSM83::LDd16, 3);
-    instrMap.emplace_back(0x32, &CoreSM83::LDfromAtoRef, 2);
-    instrMap.emplace_back(0x33, &CoreSM83::INC16, 2);
-    instrMap.emplace_back(0x34, &CoreSM83::INC8, 1);
-    instrMap.emplace_back(0x35, &CoreSM83::DEC8, 1);
-    instrMap.emplace_back(0x36, &CoreSM83::LDd8, 2);
-    instrMap.emplace_back(0x37, &CoreSM83::SCF, 1);
-    instrMap.emplace_back(0x38, &CoreSM83::JR, 0);
-    instrMap.emplace_back(0x39, &CoreSM83::ADDHL, 2);
-    instrMap.emplace_back(0x3a, &CoreSM83::LDtoAfromRef, 2);
-    instrMap.emplace_back(0x3b, &CoreSM83::DEC16, 2);
-    instrMap.emplace_back(0x3c, &CoreSM83::INC8, 1);
-    instrMap.emplace_back(0x3d, &CoreSM83::DEC8, 1);
-    instrMap.emplace_back(0x3e, &CoreSM83::LDd8, 2);
-    instrMap.emplace_back(0x3f, &CoreSM83::CCF, 1);
+    instrMap.emplace_back(0x30, &CoreSM83::JR, 0, "JR NC", "r8", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0x31, &CoreSM83::LDd16, 3, "LD", "SP", GetPtr(SP), "d16", GetPtr(DATA));
+    instrMap.emplace_back(0x32, &CoreSM83::LDfromAtoRef, 2, "LD", "(HL-)", GetPtr(HL), "A", GetPtr(A));
+    instrMap.emplace_back(0x33, &CoreSM83::INC16, 2, "INC", "SP", GetPtr(SP), "", nullptr);
+    instrMap.emplace_back(0x34, &CoreSM83::INC8, 1, "INC", "(HL)", GetPtr(HL), "", nullptr);
+    instrMap.emplace_back(0x35, &CoreSM83::DEC8, 1, "DEC", "(HL)", GetPtr(HL), "", nullptr);
+    instrMap.emplace_back(0x36, &CoreSM83::LDd8, 2, "LD", "(HL)", GetPtr(HL), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0x37, &CoreSM83::SCF, 1, "SCF", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0x38, &CoreSM83::JR, 0, "JR C", "r8", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0x39, &CoreSM83::ADDHL, 2, "ADD", "HL", GetPtr(HL), "SP", GetPtr(SP));
+    instrMap.emplace_back(0x3a, &CoreSM83::LDtoAfromRef, 2, "LD", "A", GetPtr(A), "(HL-)", GetPtr(HL));
+    instrMap.emplace_back(0x3b, &CoreSM83::DEC16, 2, "DEC", "SP", GetPtr(SP), "", nullptr);
+    instrMap.emplace_back(0x3c, &CoreSM83::INC8, 1, "INC", "A", GetPtr(A), "", nullptr);
+    instrMap.emplace_back(0x3d, &CoreSM83::DEC8, 1, "DEC", "A", GetPtr(A), "", nullptr);
+    instrMap.emplace_back(0x3e, &CoreSM83::LDd8, 2, "LD", "A", GetPtr(A), "", nullptr);
+    instrMap.emplace_back(0x3f, &CoreSM83::CCF, 1, "CCF", "", nullptr, "", nullptr);
 
     // 0x40
-    instrMap.emplace_back(0x40, &CoreSM83::LDtoB, 1);
-    instrMap.emplace_back(0x41, &CoreSM83::LDtoB, 1);
-    instrMap.emplace_back(0x42, &CoreSM83::LDtoB, 1);
-    instrMap.emplace_back(0x43, &CoreSM83::LDtoB, 1);
-    instrMap.emplace_back(0x44, &CoreSM83::LDtoB, 1);
-    instrMap.emplace_back(0x45, &CoreSM83::LDtoB, 1);
-    instrMap.emplace_back(0x46, &CoreSM83::LDtoB, 2);
-    instrMap.emplace_back(0x47, &CoreSM83::LDtoB, 1);
-    instrMap.emplace_back(0x48, &CoreSM83::LDtoC, 1);
-    instrMap.emplace_back(0x49, &CoreSM83::LDtoC, 1);
-    instrMap.emplace_back(0x4a, &CoreSM83::LDtoC, 1);
-    instrMap.emplace_back(0x4b, &CoreSM83::LDtoC, 1);
-    instrMap.emplace_back(0x4c, &CoreSM83::LDtoC, 1);
-    instrMap.emplace_back(0x4d, &CoreSM83::LDtoC, 1);
-    instrMap.emplace_back(0x4e, &CoreSM83::LDtoC, 2);
-    instrMap.emplace_back(0x4f, &CoreSM83::LDtoC, 1);
+    instrMap.emplace_back(0x40, &CoreSM83::LDtoB, 1, "LD", "B", GetPtr(B), "B", GetPtr(B));
+    instrMap.emplace_back(0x41, &CoreSM83::LDtoB, 1, "LD", "B", GetPtr(B), "C", GetPtr(C));
+    instrMap.emplace_back(0x42, &CoreSM83::LDtoB, 1, "LD", "B", GetPtr(B), "D", GetPtr(D));
+    instrMap.emplace_back(0x43, &CoreSM83::LDtoB, 1, "LD", "B", GetPtr(B), "E", GetPtr(E));
+    instrMap.emplace_back(0x44, &CoreSM83::LDtoB, 1, "LD", "B", GetPtr(B), "H", GetPtr(H));
+    instrMap.emplace_back(0x45, &CoreSM83::LDtoB, 1, "LD", "B", GetPtr(B), "L", GetPtr(L));
+    instrMap.emplace_back(0x46, &CoreSM83::LDtoB, 2, "LD", "B", GetPtr(B), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x47, &CoreSM83::LDtoB, 1, "LD", "B", GetPtr(B), "A", GetPtr(A));
+    instrMap.emplace_back(0x48, &CoreSM83::LDtoC, 1, "LD", "C", GetPtr(C), "B", GetPtr(B));
+    instrMap.emplace_back(0x49, &CoreSM83::LDtoC, 1, "LD", "C", GetPtr(C), "C", GetPtr(C));
+    instrMap.emplace_back(0x4a, &CoreSM83::LDtoC, 1, "LD", "C", GetPtr(C), "D", GetPtr(D));
+    instrMap.emplace_back(0x4b, &CoreSM83::LDtoC, 1, "LD", "C", GetPtr(C), "E", GetPtr(E));
+    instrMap.emplace_back(0x4c, &CoreSM83::LDtoC, 1, "LD", "C", GetPtr(C), "H", GetPtr(H));
+    instrMap.emplace_back(0x4d, &CoreSM83::LDtoC, 1, "LD", "C", GetPtr(C), "L", GetPtr(L));
+    instrMap.emplace_back(0x4e, &CoreSM83::LDtoC, 2, "LD", "C", GetPtr(C), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x4f, &CoreSM83::LDtoC, 1, "LD", "C", GetPtr(C), "A", GetPtr(A));
 
     // 0x50
-    instrMap.emplace_back(0x50, &CoreSM83::LDtoD, 1);
-    instrMap.emplace_back(0x51, &CoreSM83::LDtoD, 1);
-    instrMap.emplace_back(0x52, &CoreSM83::LDtoD, 1);
-    instrMap.emplace_back(0x53, &CoreSM83::LDtoD, 1);
-    instrMap.emplace_back(0x54, &CoreSM83::LDtoD, 1);
-    instrMap.emplace_back(0x55, &CoreSM83::LDtoD, 1);
-    instrMap.emplace_back(0x56, &CoreSM83::LDtoD, 2);
-    instrMap.emplace_back(0x57, &CoreSM83::LDtoD, 1);
-    instrMap.emplace_back(0x58, &CoreSM83::LDtoE, 1);
-    instrMap.emplace_back(0x59, &CoreSM83::LDtoE, 1);
-    instrMap.emplace_back(0x5a, &CoreSM83::LDtoE, 1);
-    instrMap.emplace_back(0x5b, &CoreSM83::LDtoE, 1);
-    instrMap.emplace_back(0x5c, &CoreSM83::LDtoE, 1);
-    instrMap.emplace_back(0x5d, &CoreSM83::LDtoE, 1);
-    instrMap.emplace_back(0x5e, &CoreSM83::LDtoE, 2);
-    instrMap.emplace_back(0x5f, &CoreSM83::LDtoE, 1);
+    instrMap.emplace_back(0x50, &CoreSM83::LDtoD, 1, "LD", "D", GetPtr(D), "B", GetPtr(B));
+    instrMap.emplace_back(0x51, &CoreSM83::LDtoD, 1, "LD", "D", GetPtr(D), "C", GetPtr(C));
+    instrMap.emplace_back(0x52, &CoreSM83::LDtoD, 1, "LD", "D", GetPtr(D), "D", GetPtr(D));
+    instrMap.emplace_back(0x53, &CoreSM83::LDtoD, 1, "LD", "D", GetPtr(D), "E", GetPtr(E));
+    instrMap.emplace_back(0x54, &CoreSM83::LDtoD, 1, "LD", "D", GetPtr(D), "H", GetPtr(H));
+    instrMap.emplace_back(0x55, &CoreSM83::LDtoD, 1, "LD", "D", GetPtr(D), "L", GetPtr(L));
+    instrMap.emplace_back(0x56, &CoreSM83::LDtoD, 2, "LD", "D", GetPtr(D), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x57, &CoreSM83::LDtoD, 1, "LD", "D", GetPtr(D), "A", GetPtr(A));
+    instrMap.emplace_back(0x58, &CoreSM83::LDtoE, 1, "LD", "E", GetPtr(E), "B", GetPtr(B));
+    instrMap.emplace_back(0x59, &CoreSM83::LDtoE, 1, "LD", "E", GetPtr(E), "C", GetPtr(C));
+    instrMap.emplace_back(0x5a, &CoreSM83::LDtoE, 1, "LD", "E", GetPtr(E), "D", GetPtr(D));
+    instrMap.emplace_back(0x5b, &CoreSM83::LDtoE, 1, "LD", "E", GetPtr(E), "E", GetPtr(E));
+    instrMap.emplace_back(0x5c, &CoreSM83::LDtoE, 1, "LD", "E", GetPtr(E), "H", GetPtr(H));
+    instrMap.emplace_back(0x5d, &CoreSM83::LDtoE, 1, "LD", "E", GetPtr(E), "L", GetPtr(L));
+    instrMap.emplace_back(0x5e, &CoreSM83::LDtoE, 2, "LD", "E", GetPtr(E), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x5f, &CoreSM83::LDtoE, 1, "LD", "E", GetPtr(E), "A", GetPtr(A));
 
     // 0x60
-    instrMap.emplace_back(0x60, &CoreSM83::LDtoH, 1);
-    instrMap.emplace_back(0x61, &CoreSM83::LDtoH, 1);
-    instrMap.emplace_back(0x62, &CoreSM83::LDtoH, 1);
-    instrMap.emplace_back(0x63, &CoreSM83::LDtoH, 1);
-    instrMap.emplace_back(0x64, &CoreSM83::LDtoH, 1);
-    instrMap.emplace_back(0x65, &CoreSM83::LDtoH, 1);
-    instrMap.emplace_back(0x66, &CoreSM83::LDtoH, 2);
-    instrMap.emplace_back(0x67, &CoreSM83::LDtoH, 1);
-    instrMap.emplace_back(0x68, &CoreSM83::LDtoL, 1);
-    instrMap.emplace_back(0x69, &CoreSM83::LDtoL, 1);
-    instrMap.emplace_back(0x6a, &CoreSM83::LDtoL, 1);
-    instrMap.emplace_back(0x6b, &CoreSM83::LDtoL, 1);
-    instrMap.emplace_back(0x6c, &CoreSM83::LDtoL, 1);
-    instrMap.emplace_back(0x6d, &CoreSM83::LDtoL, 1);
-    instrMap.emplace_back(0x6e, &CoreSM83::LDtoL, 2);
-    instrMap.emplace_back(0x6f, &CoreSM83::LDtoL, 1);
+    instrMap.emplace_back(0x60, &CoreSM83::LDtoH, 1, "LD", "H", GetPtr(H), "B", GetPtr(B));
+    instrMap.emplace_back(0x61, &CoreSM83::LDtoH, 1, "LD", "H", GetPtr(H), "C", GetPtr(C));
+    instrMap.emplace_back(0x62, &CoreSM83::LDtoH, 1, "LD", "H", GetPtr(H), "D", GetPtr(D));
+    instrMap.emplace_back(0x63, &CoreSM83::LDtoH, 1, "LD", "H", GetPtr(H), "E", GetPtr(E));
+    instrMap.emplace_back(0x64, &CoreSM83::LDtoH, 1, "LD", "H", GetPtr(H), "H", GetPtr(H));
+    instrMap.emplace_back(0x65, &CoreSM83::LDtoH, 1, "LD", "H", GetPtr(H), "L", GetPtr(L));
+    instrMap.emplace_back(0x66, &CoreSM83::LDtoH, 2, "LD", "H", GetPtr(H), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x67, &CoreSM83::LDtoH, 1, "LD", "H", GetPtr(H), "A", GetPtr(A));
+    instrMap.emplace_back(0x68, &CoreSM83::LDtoL, 1, "LD", "L", GetPtr(L), "B", GetPtr(B));
+    instrMap.emplace_back(0x69, &CoreSM83::LDtoL, 1, "LD", "L", GetPtr(L), "C", GetPtr(C));
+    instrMap.emplace_back(0x6a, &CoreSM83::LDtoL, 1, "LD", "L", GetPtr(L), "D", GetPtr(D));
+    instrMap.emplace_back(0x6b, &CoreSM83::LDtoL, 1, "LD", "L", GetPtr(L), "E", GetPtr(E));
+    instrMap.emplace_back(0x6c, &CoreSM83::LDtoL, 1, "LD", "L", GetPtr(L), "H", GetPtr(H));
+    instrMap.emplace_back(0x6d, &CoreSM83::LDtoL, 1, "LD", "L", GetPtr(L), "L", GetPtr(L));
+    instrMap.emplace_back(0x6e, &CoreSM83::LDtoL, 2, "LD", "L", GetPtr(L), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x6f, &CoreSM83::LDtoL, 1, "LD", "L", GetPtr(L), "A", GetPtr(A));
 
     // 0x70
-    instrMap.emplace_back(0x70, &CoreSM83::LDtoHLref, 2);
-    instrMap.emplace_back(0x71, &CoreSM83::LDtoHLref, 2);
-    instrMap.emplace_back(0x72, &CoreSM83::LDtoHLref, 2);
-    instrMap.emplace_back(0x73, &CoreSM83::LDtoHLref, 2);
-    instrMap.emplace_back(0x74, &CoreSM83::LDtoHLref, 2);
-    instrMap.emplace_back(0x75, &CoreSM83::LDtoHLref, 2);
-    instrMap.emplace_back(0x76, &CoreSM83::HALT, 1);
-    instrMap.emplace_back(0x77, &CoreSM83::LDtoHLref, 2);
-    instrMap.emplace_back(0x78, &CoreSM83::LDtoA, 1);
-    instrMap.emplace_back(0x79, &CoreSM83::LDtoA, 1);
-    instrMap.emplace_back(0x7a, &CoreSM83::LDtoA, 1);
-    instrMap.emplace_back(0x7b, &CoreSM83::LDtoA, 1);
-    instrMap.emplace_back(0x7c, &CoreSM83::LDtoA, 1);
-    instrMap.emplace_back(0x7d, &CoreSM83::LDtoA, 1);
-    instrMap.emplace_back(0x7e, &CoreSM83::LDtoA, 2);
-    instrMap.emplace_back(0x7f, &CoreSM83::LDtoA, 1);
+    instrMap.emplace_back(0x70, &CoreSM83::LDtoHLref, 2, "LD", "(HL)", GetPtr(HL), "B", GetPtr(B));
+    instrMap.emplace_back(0x71, &CoreSM83::LDtoHLref, 2, "LD", "(HL)", GetPtr(HL), "C", GetPtr(C));
+    instrMap.emplace_back(0x72, &CoreSM83::LDtoHLref, 2, "LD", "(HL)", GetPtr(HL), "D", GetPtr(D));
+    instrMap.emplace_back(0x73, &CoreSM83::LDtoHLref, 2, "LD", "(HL)", GetPtr(HL), "E", GetPtr(E));
+    instrMap.emplace_back(0x74, &CoreSM83::LDtoHLref, 2, "LD", "(HL)", GetPtr(HL), "H", GetPtr(H));
+    instrMap.emplace_back(0x75, &CoreSM83::LDtoHLref, 2, "LD", "(HL)", GetPtr(HL), "L", GetPtr(L));
+    instrMap.emplace_back(0x76, &CoreSM83::HALT, 1, "HALT", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0x77, &CoreSM83::LDtoHLref, 2, "LD", "(HL)", GetPtr(HL), "A", GetPtr(A));
+    instrMap.emplace_back(0x78, &CoreSM83::LDtoA, 1, "LD", "A", GetPtr(A), "B", GetPtr(B));
+    instrMap.emplace_back(0x79, &CoreSM83::LDtoA, 1, "LD", "A", GetPtr(A), "C", GetPtr(C));
+    instrMap.emplace_back(0x7a, &CoreSM83::LDtoA, 1, "LD", "A", GetPtr(A), "D", GetPtr(D));
+    instrMap.emplace_back(0x7b, &CoreSM83::LDtoA, 1, "LD", "A", GetPtr(A), "E", GetPtr(E));
+    instrMap.emplace_back(0x7c, &CoreSM83::LDtoA, 1, "LD", "A", GetPtr(A), "H", GetPtr(H));
+    instrMap.emplace_back(0x7d, &CoreSM83::LDtoA, 1, "LD", "A", GetPtr(A), "L", GetPtr(L));
+    instrMap.emplace_back(0x7e, &CoreSM83::LDtoA, 2, "LD", "A", GetPtr(A), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x7f, &CoreSM83::LDtoA, 1, "LD", "A", GetPtr(A), "A", GetPtr(A));
 
     // 0x80
-    instrMap.emplace_back(0x80, &CoreSM83::ADD8, 1);
-    instrMap.emplace_back(0x81, &CoreSM83::ADD8, 1);
-    instrMap.emplace_back(0x82, &CoreSM83::ADD8, 1);
-    instrMap.emplace_back(0x83, &CoreSM83::ADD8, 1);
-    instrMap.emplace_back(0x84, &CoreSM83::ADD8, 1);
-    instrMap.emplace_back(0x85, &CoreSM83::ADD8, 1);
-    instrMap.emplace_back(0x86, &CoreSM83::ADD8, 2);
-    instrMap.emplace_back(0x87, &CoreSM83::ADD8, 1);
-    instrMap.emplace_back(0x88, &CoreSM83::ADC, 1);
-    instrMap.emplace_back(0x89, &CoreSM83::ADC, 1);
-    instrMap.emplace_back(0x8a, &CoreSM83::ADC, 1);
-    instrMap.emplace_back(0x8b, &CoreSM83::ADC, 1);
-    instrMap.emplace_back(0x8c, &CoreSM83::ADC, 1);
-    instrMap.emplace_back(0x8d, &CoreSM83::ADC, 1);
-    instrMap.emplace_back(0x8e, &CoreSM83::ADC, 2);
-    instrMap.emplace_back(0x8f, &CoreSM83::ADC, 1);
+    instrMap.emplace_back(0x80, &CoreSM83::ADD8, 1, "ADD", "A", GetPtr(A), "B", GetPtr(B));
+    instrMap.emplace_back(0x81, &CoreSM83::ADD8, 1, "ADD", "A", GetPtr(A), "C", GetPtr(C));
+    instrMap.emplace_back(0x82, &CoreSM83::ADD8, 1, "ADD", "A", GetPtr(A), "D", GetPtr(D));
+    instrMap.emplace_back(0x83, &CoreSM83::ADD8, 1, "ADD", "A", GetPtr(A), "E", GetPtr(E));
+    instrMap.emplace_back(0x84, &CoreSM83::ADD8, 1, "ADD", "A", GetPtr(A), "H", GetPtr(H));
+    instrMap.emplace_back(0x85, &CoreSM83::ADD8, 1, "ADD", "A", GetPtr(A), "L", GetPtr(L));
+    instrMap.emplace_back(0x86, &CoreSM83::ADD8, 2, "ADD", "A", GetPtr(A), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x87, &CoreSM83::ADD8, 1, "ADD", "A", GetPtr(A), "A", GetPtr(A));
+    instrMap.emplace_back(0x88, &CoreSM83::ADC, 1, "ADC", "A", GetPtr(A), "B", GetPtr(B));
+    instrMap.emplace_back(0x89, &CoreSM83::ADC, 1, "ADC", "A", GetPtr(A), "C", GetPtr(C));
+    instrMap.emplace_back(0x8a, &CoreSM83::ADC, 1, "ADC", "A", GetPtr(A), "D", GetPtr(D));
+    instrMap.emplace_back(0x8b, &CoreSM83::ADC, 1, "ADC", "A", GetPtr(A), "E", GetPtr(E));
+    instrMap.emplace_back(0x8c, &CoreSM83::ADC, 1, "ADC", "A", GetPtr(A), "H", GetPtr(H));
+    instrMap.emplace_back(0x8d, &CoreSM83::ADC, 1, "ADC", "A", GetPtr(A), "L", GetPtr(L));
+    instrMap.emplace_back(0x8e, &CoreSM83::ADC, 2, "ADC", "A", GetPtr(A), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x8f, &CoreSM83::ADC, 1, "ADC", "A", GetPtr(A), "A", GetPtr(A));
 
     // 0x90
-    instrMap.emplace_back(0x90, &CoreSM83::SUB, 1);
-    instrMap.emplace_back(0x91, &CoreSM83::SUB, 1);
-    instrMap.emplace_back(0x92, &CoreSM83::SUB, 1);
-    instrMap.emplace_back(0x93, &CoreSM83::SUB, 1);
-    instrMap.emplace_back(0x94, &CoreSM83::SUB, 1);
-    instrMap.emplace_back(0x95, &CoreSM83::SUB, 1);
-    instrMap.emplace_back(0x96, &CoreSM83::SUB, 1);
-    instrMap.emplace_back(0x97, &CoreSM83::SUB, 2);
-    instrMap.emplace_back(0x98, &CoreSM83::SBC, 1);
-    instrMap.emplace_back(0x99, &CoreSM83::SBC, 1);
-    instrMap.emplace_back(0x9a, &CoreSM83::SBC, 1);
-    instrMap.emplace_back(0x9b, &CoreSM83::SBC, 1);
-    instrMap.emplace_back(0x9c, &CoreSM83::SBC, 1);
-    instrMap.emplace_back(0x9d, &CoreSM83::SBC, 1);
-    instrMap.emplace_back(0x9e, &CoreSM83::SBC, 2);
-    instrMap.emplace_back(0x9f, &CoreSM83::SBC, 1);
+    instrMap.emplace_back(0x90, &CoreSM83::SUB, 1, "SUB", "A", GetPtr(A), "B", GetPtr(B));
+    instrMap.emplace_back(0x91, &CoreSM83::SUB, 1, "SUB", "A", GetPtr(A), "C", GetPtr(C));
+    instrMap.emplace_back(0x92, &CoreSM83::SUB, 1, "SUB", "A", GetPtr(A), "D", GetPtr(D));
+    instrMap.emplace_back(0x93, &CoreSM83::SUB, 1, "SUB", "A", GetPtr(A), "E", GetPtr(E));
+    instrMap.emplace_back(0x94, &CoreSM83::SUB, 1, "SUB", "A", GetPtr(A), "H", GetPtr(H));
+    instrMap.emplace_back(0x95, &CoreSM83::SUB, 1, "SUB", "A", GetPtr(A), "L", GetPtr(L));
+    instrMap.emplace_back(0x96, &CoreSM83::SUB, 1, "SUB", "A", GetPtr(A), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x97, &CoreSM83::SUB, 2, "SUB", "A", GetPtr(A), "A", GetPtr(A));
+    instrMap.emplace_back(0x98, &CoreSM83::SBC, 1, "SBC", "A", GetPtr(A), "B", GetPtr(B));
+    instrMap.emplace_back(0x99, &CoreSM83::SBC, 1, "SBC", "A", GetPtr(A), "C", GetPtr(C));
+    instrMap.emplace_back(0x9a, &CoreSM83::SBC, 1, "SBC", "A", GetPtr(A), "D", GetPtr(D));
+    instrMap.emplace_back(0x9b, &CoreSM83::SBC, 1, "SBC", "A", GetPtr(A), "E", GetPtr(E));
+    instrMap.emplace_back(0x9c, &CoreSM83::SBC, 1, "SBC", "A", GetPtr(A), "H", GetPtr(H));
+    instrMap.emplace_back(0x9d, &CoreSM83::SBC, 1, "SBC", "A", GetPtr(A), "L", GetPtr(L));
+    instrMap.emplace_back(0x9e, &CoreSM83::SBC, 2, "SBC", "A", GetPtr(A), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0x9f, &CoreSM83::SBC, 1, "SBC", "A", GetPtr(A), "A", GetPtr(A));
 
     // 0xa0
-    instrMap.emplace_back(0xa0, &CoreSM83::AND, 1);
-    instrMap.emplace_back(0xa1, &CoreSM83::AND, 1);
-    instrMap.emplace_back(0xa2, &CoreSM83::AND, 1);
-    instrMap.emplace_back(0xa3, &CoreSM83::AND, 1);
-    instrMap.emplace_back(0xa4, &CoreSM83::AND, 1);
-    instrMap.emplace_back(0xa5, &CoreSM83::AND, 1);
-    instrMap.emplace_back(0xa6, &CoreSM83::AND, 2);
-    instrMap.emplace_back(0xa7, &CoreSM83::AND, 1);
-    instrMap.emplace_back(0xa8, &CoreSM83::XOR, 1);
-    instrMap.emplace_back(0xa9, &CoreSM83::XOR, 1);
-    instrMap.emplace_back(0xaa, &CoreSM83::XOR, 1);
-    instrMap.emplace_back(0xab, &CoreSM83::XOR, 1);
-    instrMap.emplace_back(0xac, &CoreSM83::XOR, 1);
-    instrMap.emplace_back(0xad, &CoreSM83::XOR, 1);
-    instrMap.emplace_back(0xae, &CoreSM83::XOR, 2);
-    instrMap.emplace_back(0xaf, &CoreSM83::XOR, 1);
+    instrMap.emplace_back(0xa0, &CoreSM83::AND, 1, "AND", "A", GetPtr(A), "B", GetPtr(B));
+    instrMap.emplace_back(0xa1, &CoreSM83::AND, 1, "AND", "A", GetPtr(A), "C", GetPtr(C));
+    instrMap.emplace_back(0xa2, &CoreSM83::AND, 1, "AND", "A", GetPtr(A), "D", GetPtr(D));
+    instrMap.emplace_back(0xa3, &CoreSM83::AND, 1, "AND", "A", GetPtr(A), "E", GetPtr(E));
+    instrMap.emplace_back(0xa4, &CoreSM83::AND, 1, "AND", "A", GetPtr(A), "H", GetPtr(H));
+    instrMap.emplace_back(0xa5, &CoreSM83::AND, 1, "AND", "A", GetPtr(A), "L", GetPtr(L));
+    instrMap.emplace_back(0xa6, &CoreSM83::AND, 2, "AND", "A", GetPtr(A), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0xa7, &CoreSM83::AND, 1, "AND", "A", GetPtr(A), "A", GetPtr(A));
+    instrMap.emplace_back(0xa8, &CoreSM83::XOR, 1, "XOR", "A", GetPtr(A), "B", GetPtr(B));
+    instrMap.emplace_back(0xa9, &CoreSM83::XOR, 1, "XOR", "A", GetPtr(A), "C", GetPtr(C));
+    instrMap.emplace_back(0xaa, &CoreSM83::XOR, 1, "XOR", "A", GetPtr(A), "D", GetPtr(D));
+    instrMap.emplace_back(0xab, &CoreSM83::XOR, 1, "XOR", "A", GetPtr(A), "E", GetPtr(E));
+    instrMap.emplace_back(0xac, &CoreSM83::XOR, 1, "XOR", "A", GetPtr(A), "H", GetPtr(H));
+    instrMap.emplace_back(0xad, &CoreSM83::XOR, 1, "XOR", "A", GetPtr(A), "L", GetPtr(L));
+    instrMap.emplace_back(0xae, &CoreSM83::XOR, 2, "XOR", "A", GetPtr(A), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0xaf, &CoreSM83::XOR, 1, "XOR", "A", GetPtr(A), "A", GetPtr(A));
 
     // 0xb0
-    instrMap.emplace_back(0xb0, &CoreSM83::OR, 1);
-    instrMap.emplace_back(0xb1, &CoreSM83::OR, 1);
-    instrMap.emplace_back(0xb2, &CoreSM83::OR, 1);
-    instrMap.emplace_back(0xb3, &CoreSM83::OR, 1);
-    instrMap.emplace_back(0xb4, &CoreSM83::OR, 1);
-    instrMap.emplace_back(0xb5, &CoreSM83::OR, 1);
-    instrMap.emplace_back(0xb6, &CoreSM83::OR, 2);
-    instrMap.emplace_back(0xb7, &CoreSM83::OR, 1);
-    instrMap.emplace_back(0xb8, &CoreSM83::CP, 1);
-    instrMap.emplace_back(0xb9, &CoreSM83::CP, 1);
-    instrMap.emplace_back(0xba, &CoreSM83::CP, 1);
-    instrMap.emplace_back(0xbb, &CoreSM83::CP, 1);
-    instrMap.emplace_back(0xbc, &CoreSM83::CP, 1);
-    instrMap.emplace_back(0xbd, &CoreSM83::CP, 1);
-    instrMap.emplace_back(0xbe, &CoreSM83::CP, 2);
-    instrMap.emplace_back(0xbf, &CoreSM83::CP, 1);
+    instrMap.emplace_back(0xb0, &CoreSM83::OR, 1, "OR", "A", GetPtr(A), "B", GetPtr(B));
+    instrMap.emplace_back(0xb1, &CoreSM83::OR, 1, "OR", "A", GetPtr(A), "C", GetPtr(C));
+    instrMap.emplace_back(0xb2, &CoreSM83::OR, 1, "OR", "A", GetPtr(A), "D", GetPtr(D));
+    instrMap.emplace_back(0xb3, &CoreSM83::OR, 1, "OR", "A", GetPtr(A), "E", GetPtr(E));
+    instrMap.emplace_back(0xb4, &CoreSM83::OR, 1, "OR", "A", GetPtr(A), "H", GetPtr(H));
+    instrMap.emplace_back(0xb5, &CoreSM83::OR, 1, "OR", "A", GetPtr(A), "L", GetPtr(L));
+    instrMap.emplace_back(0xb6, &CoreSM83::OR, 2, "OR", "A", GetPtr(A), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0xb7, &CoreSM83::OR, 1, "OR", "A", GetPtr(A), "A", GetPtr(A));
+    instrMap.emplace_back(0xb8, &CoreSM83::CP, 1, "CP", "A", GetPtr(A), "B", GetPtr(B));
+    instrMap.emplace_back(0xb9, &CoreSM83::CP, 1, "CP", "A", GetPtr(A), "C", GetPtr(C));
+    instrMap.emplace_back(0xba, &CoreSM83::CP, 1, "CP", "A", GetPtr(A), "D", GetPtr(D));
+    instrMap.emplace_back(0xbb, &CoreSM83::CP, 1, "CP", "A", GetPtr(A), "E", GetPtr(E));
+    instrMap.emplace_back(0xbc, &CoreSM83::CP, 1, "CP", "A", GetPtr(A), "H", GetPtr(H));
+    instrMap.emplace_back(0xbd, &CoreSM83::CP, 1, "CP", "A", GetPtr(A), "L", GetPtr(L));
+    instrMap.emplace_back(0xbe, &CoreSM83::CP, 2, "CP", "A", GetPtr(A), "(HL)", GetPtr(HL));
+    instrMap.emplace_back(0xbf, &CoreSM83::CP, 1, "CP", "A", GetPtr(A), "A", GetPtr(A));
 
     // 0xc0
-    instrMap.emplace_back(0xc0, &CoreSM83::RET, 0);
-    instrMap.emplace_back(0xc1, &CoreSM83::POP, 3);
-    instrMap.emplace_back(0xc2, &CoreSM83::JP, 0);
-    instrMap.emplace_back(0xc3, &CoreSM83::JP, 4);
-    instrMap.emplace_back(0xc4, &CoreSM83::CALL, 0);
-    instrMap.emplace_back(0xc5, &CoreSM83::PUSH, 4);
-    instrMap.emplace_back(0xc6, &CoreSM83::ADD8, 2);
-    instrMap.emplace_back(0xc7, &CoreSM83::RST, 4);
-    instrMap.emplace_back(0xc8, &CoreSM83::RET, 0);
-    instrMap.emplace_back(0xc9, &CoreSM83::RET, 4);
-    instrMap.emplace_back(0xca, &CoreSM83::JP, 0);
-    instrMap.emplace_back(0xcb, &CoreSM83::CB, 1);
-    instrMap.emplace_back(0xcc, &CoreSM83::CALL, 0);
-    instrMap.emplace_back(0xcd, &CoreSM83::CALL, 6);
-    instrMap.emplace_back(0xce, &CoreSM83::ADC, 2);
-    instrMap.emplace_back(0xcf, &CoreSM83::RST, 4);
+    instrMap.emplace_back(0xc0, &CoreSM83::RET, 0, "RET NZ", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xc1, &CoreSM83::POP, 3, "POP", "BC", GetPtr(BC), "", nullptr);
+    instrMap.emplace_back(0xc2, &CoreSM83::JP, 0, "JP NZ", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xc3, &CoreSM83::JP, 4, "JP", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xc4, &CoreSM83::CALL, 0, "CALL NZ", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xc5, &CoreSM83::PUSH, 4, "PUSH", "BC", GetPtr(BC), "", nullptr);
+    instrMap.emplace_back(0xc6, &CoreSM83::ADD8, 2, "ADD", "A", GetPtr(A), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0xc7, &CoreSM83::RST, 4, "RST $00", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xc8, &CoreSM83::RET, 0, "RET Z", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xc9, &CoreSM83::RET, 4, "RET", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xca, &CoreSM83::JP, 0, "JP Z", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xcb, &CoreSM83::CB, 1, "CB", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xcc, &CoreSM83::CALL, 0, "CALL Z", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xcd, &CoreSM83::CALL, 6, "CALL", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xce, &CoreSM83::ADC, 2, "ADC", "A", GetPtr(A), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0xcf, &CoreSM83::RST, 4, "RST $08", "", nullptr, "", nullptr);
 
     // 0xd0
-    instrMap.emplace_back(0xd0, &CoreSM83::RET, 0);
-    instrMap.emplace_back(0xd1, &CoreSM83::POP, 3);
-    instrMap.emplace_back(0xd2, &CoreSM83::JP, 0);
-    instrMap.emplace_back(0xd3, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xd4, &CoreSM83::CALL, 0);
-    instrMap.emplace_back(0xd5, &CoreSM83::PUSH, 4);
-    instrMap.emplace_back(0xd6, &CoreSM83::SUB, 2);
-    instrMap.emplace_back(0xd7, &CoreSM83::RST, 4);
-    instrMap.emplace_back(0xd8, &CoreSM83::RET, 0);
-    instrMap.emplace_back(0xd9, &CoreSM83::RETI, 4);
-    instrMap.emplace_back(0xda, &CoreSM83::JP, 0);
-    instrMap.emplace_back(0xdb, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xdc, &CoreSM83::CALL, 0);
-    instrMap.emplace_back(0xdd, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xde, &CoreSM83::SBC, 2);
-    instrMap.emplace_back(0xdf, &CoreSM83::RST, 4);
+    instrMap.emplace_back(0xd0, &CoreSM83::RET, 0, "RET NC", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xd1, &CoreSM83::POP, 3, "POP", "DE", GetPtr(DE), "", nullptr);
+    instrMap.emplace_back(0xd2, &CoreSM83::JP, 0, "JP NC", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xd3, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xd4, &CoreSM83::CALL, 0, "CALL NC", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xd5, &CoreSM83::PUSH, 4, "PUSH", "DE", GetPtr(DE), "", nullptr);
+    instrMap.emplace_back(0xd6, &CoreSM83::SUB, 2, "SUB", "A", GetPtr(A), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0xd7, &CoreSM83::RST, 4, "RST $10", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xd8, &CoreSM83::RET, 0, "RET C", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xd9, &CoreSM83::RETI, 4, "RETI", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xda, &CoreSM83::JP, 0, "JP C", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xdb, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xdc, &CoreSM83::CALL, 0, "CALL C", "a16", GetPtr(DATA), "", nullptr);
+    instrMap.emplace_back(0xdd, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xde, &CoreSM83::SBC, 2, "SBC", "A", GetPtr(A), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0xdf, &CoreSM83::RST, 4, "RST $18", "", nullptr, "", nullptr);
 
     // 0xe0
-    instrMap.emplace_back(0xe0, &CoreSM83::LDH, 3);
-    instrMap.emplace_back(0xe1, &CoreSM83::POP, 3);
-    instrMap.emplace_back(0xe2, &CoreSM83::LDCref, 2);
-    instrMap.emplace_back(0xe3, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xe4, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xe5, &CoreSM83::PUSH, 4);
-    instrMap.emplace_back(0xe6, &CoreSM83::AND, 2);
-    instrMap.emplace_back(0xe7, &CoreSM83::RST, 4);
-    instrMap.emplace_back(0xe8, &CoreSM83::ADDSPr8, 4);
-    instrMap.emplace_back(0xe9, &CoreSM83::JP, 1);
-    instrMap.emplace_back(0xea, &CoreSM83::LDHa16, 4);
-    instrMap.emplace_back(0xeb, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xec, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xed, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xee, &CoreSM83::CP, 2);
-    instrMap.emplace_back(0xef, &CoreSM83::RST, 4);
+    instrMap.emplace_back(0xe0, &CoreSM83::LDH, 3, "LDH", "(a8)", GetPtr(DATA), "A", GetPtr(A));
+    instrMap.emplace_back(0xe1, &CoreSM83::POP, 3, "POP", "HL", GetPtr(HL), "", nullptr);
+    instrMap.emplace_back(0xe2, &CoreSM83::LDCref, 2, "LD", "(C)", GetPtr(C), "A", GetPtr(A));
+    instrMap.emplace_back(0xe3, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xe4, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xe5, &CoreSM83::PUSH, 4, "PUSH", "HL", GetPtr(HL), "", nullptr);
+    instrMap.emplace_back(0xe6, &CoreSM83::AND, 2, "AND", "A", GetPtr(A), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0xe7, &CoreSM83::RST, 4, "RST $20", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xe8, &CoreSM83::ADDSPr8, 4, "ADD", "SP", GetPtr(SP), "r8", GetPtr(DATA));
+    instrMap.emplace_back(0xe9, &CoreSM83::JP, 1, "JP", "(HL)", GetPtr(HL), "", nullptr);
+    instrMap.emplace_back(0xea, &CoreSM83::LDHa16, 4, "LD", "(a16)", GetPtr(DATA), "A", GetPtr(A));
+    instrMap.emplace_back(0xeb, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xec, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xed, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xee, &CoreSM83::XOR, 2, "XOR", "A", GetPtr(A), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0xef, &CoreSM83::RST, 4, "RST $28", "", nullptr, "", nullptr);
 
     // 0xf0
-    instrMap.emplace_back(0xf0, &CoreSM83::LDH, 3);
-    instrMap.emplace_back(0xf1, &CoreSM83::POP, 3);
-    instrMap.emplace_back(0xf2, &CoreSM83::LDCref, 2);
-    instrMap.emplace_back(0xf3, &CoreSM83::DI, 1);
-    instrMap.emplace_back(0xf4, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xf5, &CoreSM83::PUSH, 4);
-    instrMap.emplace_back(0xf6, &CoreSM83::OR, 2);
-    instrMap.emplace_back(0xf7, &CoreSM83::RST, 4);
-    instrMap.emplace_back(0xf8, &CoreSM83::LDHLSPr8, 3);
-    instrMap.emplace_back(0xf9, &CoreSM83::LDSPHL, 2);
-    instrMap.emplace_back(0xfa, &CoreSM83::LDHa16, 4);
-    instrMap.emplace_back(0xfb, &CoreSM83::EI, 1);
-    instrMap.emplace_back(0xfc, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xfd, &CoreSM83::NoInstruction, 0);
-    instrMap.emplace_back(0xfe, &CoreSM83::XOR, 2);
-    instrMap.emplace_back(0xff, &CoreSM83::RST, 4);
+    instrMap.emplace_back(0xf0, &CoreSM83::LDH, 3, "LD", "A", GetPtr(A), "(a8)", GetPtr(DATA));
+    instrMap.emplace_back(0xf1, &CoreSM83::POP, 3, "POP", "AF", GetPtr(AF), "", nullptr);
+    instrMap.emplace_back(0xf2, &CoreSM83::LDCref, 2, "LD", "A", GetPtr(A), "(C)", GetPtr(C));
+    instrMap.emplace_back(0xf3, &CoreSM83::DI, 1, "DI", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xf4, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xf5, &CoreSM83::PUSH, 4, "PUSH", "AF", GetPtr(AF), "", nullptr);
+    instrMap.emplace_back(0xf6, &CoreSM83::OR, 2, "OR", "A", GetPtr(A), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0xf7, &CoreSM83::RST, 4, "RST $30", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xf8, &CoreSM83::LDHLSPr8, 3, "LD", "HL", GetPtr(HL), "SP + r8", GetPtr(DATA));
+    instrMap.emplace_back(0xf9, &CoreSM83::LDSPHL, 2, "LD", "SP", GetPtr(SP), "HL", GetPtr(HL));
+    instrMap.emplace_back(0xfa, &CoreSM83::LDHa16, 4, "LD", "A", GetPtr(A), "(a16)", GetPtr(DATA));
+    instrMap.emplace_back(0xfb, &CoreSM83::EI, 1, "EI", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xfc, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xfd, &CoreSM83::NoInstruction, 0, "NoInstruction", "", nullptr, "", nullptr);
+    instrMap.emplace_back(0xfe, &CoreSM83::CP, 2, "CP", "A", GetPtr(A), "d8", GetPtr(DATA));
+    instrMap.emplace_back(0xff, &CoreSM83::RST, 4, "RST $38", "", nullptr, "", nullptr);
 }
 
 /* ***********************************************************************************************************
@@ -451,14 +541,12 @@ void CoreSM83::setupLookupTable() {
 *********************************************************************************************************** */
 // no instruction
 void CoreSM83::NoInstruction(){
-    LOG_ERROR("No instruction");
+    return;
 }
 
 // no operation
 void CoreSM83::NOP() {
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("NOP");
-    }
+    return;
 }
 
 // stop sm83_instruction
@@ -467,60 +555,38 @@ void CoreSM83::STOP() {
     Regs.PC++;
 
     if (data) { LOG_ERROR("Wrong usage of STOP instruction"); }
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("STOP");
-    }
 }
 
 // set halt state
 void CoreSM83::HALT() {
     halt = true;
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("HALT");
-    }
 }
 
 // flip c
 void CoreSM83::CCF() {
     RESET_FLAGS(FLAG_HCARRY | FLAG_SUB, Regs.F);
     Regs.F ^= FLAG_CARRY;
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("CCF");
-    }
 }
 
 // set c
 void CoreSM83::SCF() {
     RESET_FLAGS(FLAG_HCARRY | FLAG_SUB, Regs.F);
     Regs.F |= FLAG_CARRY;
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("SCF");
-    }
 }
 
 // disable interrupts
 void CoreSM83::DI() {
     ime = false;
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("DI");
-    }
 }
 
 // eneable interrupts
 void CoreSM83::EI() {
     ime = true;
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("EI");
-    }
 }
 
 // enable CB sm83_instructions for next opcode
 void CoreSM83::CB() {
     opcode_cb = true;
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("CB");
-    }
 }
 
 /* ***********************************************************************************************************
@@ -544,9 +610,6 @@ void CoreSM83::LDfromAtoRef() {
         mmu_instance->Write8Bit(Regs.A, Regs.HL);
         break;
     }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 void CoreSM83::LDtoAfromRef() {
@@ -565,9 +628,6 @@ void CoreSM83::LDtoAfromRef() {
         Regs.HL--;
         Regs.A = mmu_instance->Read8Bit(Regs.HL);
         break;
-    }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -601,9 +661,6 @@ void CoreSM83::LDd8() {
         Regs.A = data;
         break;
     }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 void CoreSM83::LDd16() {
@@ -624,9 +681,6 @@ void CoreSM83::LDd16() {
         Regs.SP = data;
         break;
     }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 void CoreSM83::LDCref() {
@@ -637,9 +691,6 @@ void CoreSM83::LDCref() {
     case 0xF2:
         Regs.A = mmu_instance->Read8Bit(Regs.BC_.C | 0xFF00);
         break;
-    }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -655,9 +706,6 @@ void CoreSM83::LDH() {
         Regs.A = mmu_instance->Read8Bit((data & 0xFF) | 0xFF00);
         break;
     }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LDH");
-    }
 }
 
 void CoreSM83::LDHa16() {
@@ -672,9 +720,6 @@ void CoreSM83::LDHa16() {
         Regs.A = mmu_instance->Read8Bit(data);
         break;
     }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LDH");
-    }
 }
 
 void CoreSM83::LDSPa16() {
@@ -682,9 +727,6 @@ void CoreSM83::LDSPa16() {
     Regs.PC += 2;
 
     mmu_instance->Write16Bit(Regs.SP, data);
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 void CoreSM83::LDtoB() {
@@ -713,9 +755,6 @@ void CoreSM83::LDtoB() {
     case 0x07:
         Regs.BC_.B = Regs.A;
         break;
-    }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -746,9 +785,6 @@ void CoreSM83::LDtoC() {
         Regs.BC_.C = Regs.A;
         break;
     }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 void CoreSM83::LDtoD() {
@@ -777,9 +813,6 @@ void CoreSM83::LDtoD() {
     case 0x07:
         Regs.DE_.D = Regs.A;
         break;
-    }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -810,9 +843,6 @@ void CoreSM83::LDtoE() {
         Regs.DE_.E = Regs.A;
         break;
     }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 void CoreSM83::LDtoH() {
@@ -841,9 +871,6 @@ void CoreSM83::LDtoH() {
     case 0x07:
         Regs.HL_.H = Regs.A;
         break;
-    }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -874,9 +901,6 @@ void CoreSM83::LDtoL() {
         Regs.HL_.L = Regs.A;
         break;
     }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 void CoreSM83::LDtoHLref() {
@@ -902,9 +926,6 @@ void CoreSM83::LDtoHLref() {
     case 0x07:
         mmu_instance->Write8Bit(Regs.A, Regs.HL);
         break;
-    }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
     }
 }
 
@@ -935,9 +956,6 @@ void CoreSM83::LDtoA() {
         Regs.A = Regs.A;
         break;
     }
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 // ld SP to HL and add signed 8 bit immediate data
@@ -949,17 +967,10 @@ void CoreSM83::LDHLSPr8() {
     RESET_ALL_FLAGS(Regs.F);
     ADD_8_FLAGS(Regs.HL, data, Regs.F);
     Regs.HL += *(i8*)&data;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 void CoreSM83::LDSPHL() {
     Regs.SP = Regs.HL;
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("LD");
-    }
 }
 
 // push PC to Stack
@@ -981,25 +992,21 @@ void CoreSM83::PUSH() {
         mmu_instance->Write16Bit(data, Regs.SP);
         break;
     }
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("PUSH");
-    }
 }
 
 // pop PC from Stack
 void CoreSM83::POP() {
     switch (opcode) {
-    case 0xc5:
+    case 0xc1:
         Regs.BC = mmu_instance->Read16Bit(Regs.SP);
         break;
-    case 0xd5:
+    case 0xd1:
         Regs.DE = mmu_instance->Read16Bit(Regs.SP);
         break;
-    case 0xe5:
+    case 0xe1:
         Regs.HL = mmu_instance->Read16Bit(Regs.SP);
         break;
-    case 0xf5:
+    case 0xf1:
         data = mmu_instance->Read16Bit(Regs.SP);
         Regs.A = (data & 0xFF00) >> 8;
         Regs.F = data & 0xFF;
@@ -1007,10 +1014,6 @@ void CoreSM83::POP() {
     }
 
     Regs.SP += 2;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("POP");
-    }
 }
 
 /* ***********************************************************************************************************
@@ -1064,10 +1067,6 @@ void CoreSM83::INC8() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("INC");
-    }
 }
 
 void CoreSM83::INC16() {
@@ -1085,10 +1084,6 @@ void CoreSM83::INC16() {
         Regs.SP += 1;
         break;
     }
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("INC");
-    }
 }
 
 // decrement 8/16 bit
@@ -1097,73 +1092,65 @@ void CoreSM83::DEC8() {
     SET_FLAGS(FLAG_SUB, Regs.F);
 
     switch (opcode) {
-    case 0x04:
+    case 0x05:
         SUB_8_HC(Regs.BC_.B, 1, Regs.F);
         Regs.BC_.B -= 1;
         ZERO_FLAG(Regs.BC_.B, Regs.F);
         break;
-    case 0x0c:
+    case 0x0d:
         SUB_8_HC(Regs.BC_.C, 1, Regs.F);
         Regs.BC_.C -= 1;
         ZERO_FLAG(Regs.BC_.C, Regs.F);
         break;
-    case 0x14:
+    case 0x15:
         SUB_8_HC(Regs.DE_.D, 1, Regs.F);
         Regs.DE_.D -= 1;
         ZERO_FLAG(Regs.DE_.D, Regs.F);
         break;
-    case 0x1c:
+    case 0x1d:
         SUB_8_HC(Regs.DE_.E, 1, Regs.F);
         Regs.DE_.E -= 1;
         ZERO_FLAG(Regs.DE_.E, Regs.F);
         break;
-    case 0x24:
+    case 0x25:
         SUB_8_HC(Regs.HL_.H, 1, Regs.F);
         Regs.HL_.H -= 1;
         ZERO_FLAG(Regs.HL_.H, Regs.F);
         break;
-    case 0x2c:
+    case 0x2d:
         SUB_8_HC(Regs.HL_.L, 1, Regs.F);
         Regs.HL_.L -= 1;
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
-    case 0x34:
+    case 0x35:
         data = mmu_instance->Read8Bit(Regs.HL);
         SUB_8_HC(data, 1, Regs.F);
         data -= 1;
         ZERO_FLAG(data, Regs.F);
         mmu_instance->Write8Bit(data, Regs.HL);
         break;
-    case 0x3c:
+    case 0x3d:
         SUB_8_HC(Regs.A, 1, Regs.F);
         Regs.A -= 1;
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("DEC");
-    }
 }
 
 void CoreSM83::DEC16() {
     switch (opcode) {
-    case 0x03:
+    case 0x0b:
         Regs.BC -= 1;
         break;
-    case 0x13:
+    case 0x1b:
         Regs.DE -= 1;
         break;
-    case 0x23:
+    case 0x2b:
         Regs.HL -= 1;
         break;
-    case 0x33:
+    case 0x3b:
         Regs.SP -= 1;
         break;
-    }
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("DEC");
     }
 }
 
@@ -1205,10 +1192,6 @@ void CoreSM83::ADD8() {
     ADD_8_FLAGS(Regs.A, data, Regs.F);
     Regs.A += data;
     ZERO_FLAG(Regs.A, Regs.F);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("ADD");
-    }
 }
 
 void CoreSM83::ADDHL() {
@@ -1231,10 +1214,6 @@ void CoreSM83::ADDHL() {
 
     ADD_16_FLAGS(Regs.HL, data, Regs.F);
     Regs.HL += data;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("ADD");
-    }
 }
 
 // add for SP + signed immediate data r8
@@ -1245,10 +1224,6 @@ void CoreSM83::ADDSPr8() {
     RESET_ALL_FLAGS(Regs.F);
     ADD_8_FLAGS(Regs.SP, data, Regs.F);
     Regs.SP += *(i8*)&data;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("ADD");
-    }
 }
 
 // adc for A + (register or immediate unsigned data d8) + carry
@@ -1291,10 +1266,6 @@ void CoreSM83::ADC() {
     ADC_8_C(Regs.A, data, carry, Regs.F);
     Regs.A += data + carry;
     ZERO_FLAG(Regs.A, Regs.F);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("ADC");
-    }
 }
 
 // sub with carry + halfcarry
@@ -1335,10 +1306,6 @@ void CoreSM83::SUB() {
     SUB_8_FLAGS(Regs.A, data, Regs.F);
     Regs.A -= data;
     ZERO_FLAG(Regs.A, Regs.F);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("SUB");
-    }
 }
 
 // adc for A + (register or immediate unsigned data d8) + carry
@@ -1381,10 +1348,6 @@ void CoreSM83::SBC() {
     SBC_8_C(Regs.A, data, carry, Regs.F);
     Regs.A -= (data + carry);
     ZERO_FLAG(Regs.A, Regs.F);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("SBC");
-    }
 }
 
 // bcd code addition and subtraction
@@ -1404,10 +1367,6 @@ void CoreSM83::DAA() {
     }
     ZERO_FLAG(Regs.A, Regs.F);
     Regs.F &= ~FLAG_HCARRY;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("DAA");
-    }
 }
 
 // and with hc=1 and z
@@ -1447,10 +1406,6 @@ void CoreSM83::AND() {
 
     Regs.A &= data;
     ZERO_FLAG(Regs.A, Regs.F);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("AND");
-    }
 }
 
 // or with z
@@ -1490,10 +1445,6 @@ void CoreSM83::OR() {
 
     Regs.A |= data;
     ZERO_FLAG(Regs.A, Regs.F);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("OR");
-    }
 }
 
 // xor with z
@@ -1533,10 +1484,6 @@ void CoreSM83::XOR() {
 
     Regs.A ^= data;
     ZERO_FLAG(Regs.A, Regs.F);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("XOR");
-    }
 }
 
 // compare (subtraction)
@@ -1577,20 +1524,12 @@ void CoreSM83::CP() {
     SUB_8_FLAGS(Regs.A, data, Regs.F);
     Regs.A -= data;
     ZERO_FLAG(Regs.A, Regs.F);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("CP");
-    }
 }
 
 // 1's complement of A
 void CoreSM83::CPL() {
     SET_FLAGS(FLAG_SUB | FLAG_HCARRY, Regs.F);
     Regs.A = ~(Regs.A);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("CPL");
-    }
 }
 
 /* ***********************************************************************************************************
@@ -1602,10 +1541,6 @@ void CoreSM83::RLCA() {
     Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
     Regs.A <<= 1;
     Regs.A |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("RLCA");
-    }
 }
 
 // rotate A right with carry
@@ -1614,10 +1549,6 @@ void CoreSM83::RRCA() {
     Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
     Regs.A >>= 1;
     Regs.A |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("RRCA");
-    }
 }
 
 // rotate A left through carry
@@ -1627,10 +1558,6 @@ void CoreSM83::RLA() {
     Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
     Regs.A <<= 1;
     Regs.A |= (carry ? LSB : 0x00);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("RLA");
-    }
 }
 
 // rotate A right through carry
@@ -1640,10 +1567,6 @@ void CoreSM83::RRA() {
     Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
     Regs.A >>= 1;
     Regs.A |= (carry ? MSB : 0x00);
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("RRA");
-    }
 }
 
 /* ***********************************************************************************************************
@@ -1703,10 +1626,6 @@ void CoreSM83::JP() {
         break;
     }
     machineCycles += 3;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("JP");
-    }
 }
 
 // jump relative to memory lecation
@@ -1714,8 +1633,8 @@ void CoreSM83::JR() {
     static bool carry;
     static bool zero;
 
-    data = mmu_instance->Read16Bit(Regs.PC);
-    Regs.PC += 2;
+    data = mmu_instance->Read8Bit(Regs.PC);
+    Regs.PC += 1;
 
     switch (opcode) {
     case 0x28:
@@ -1755,10 +1674,6 @@ void CoreSM83::JR() {
         break;
     }
     machineCycles += 2;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("JR");
-    }
 }
 
 void CoreSM83::jump_jp() {
@@ -1817,11 +1732,6 @@ void CoreSM83::CALL() {
         break;
     }
     machineCycles += 3;
-    return;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("CALL");
-    }
 }
 
 // call to interrupt vectors
@@ -1853,10 +1763,6 @@ void CoreSM83::RST() {
         break;
     }
     call();
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("RST");
-    }
 }
 
 void CoreSM83::call() {
@@ -1910,20 +1816,12 @@ void CoreSM83::RET() {
         break;
     }
     machineCycles += 2;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("RET");
-    }
 }
 
 // return and enable interrupts
 void CoreSM83::RETI() {
     ret();
     ime = true;
-
-    if (msgFifo.debug_instructions_enabled) {
-        msgFifo.debug_instructions.emplace("RETI");
-    }
 }
 
 void CoreSM83::ret() {
@@ -1940,277 +1838,277 @@ void CoreSM83::setupLookupTableCB() {
     instrMapCB.clear();
 
     // Elements: opcode, instruction function, machine cycles
-    instrMapCB.emplace_back(0x00, &CoreSM83::RLC, 2);
-    instrMapCB.emplace_back(0x01, &CoreSM83::RLC, 2);
-    instrMapCB.emplace_back(0x02, &CoreSM83::RLC, 2);
-    instrMapCB.emplace_back(0x03, &CoreSM83::RLC, 2);
-    instrMapCB.emplace_back(0x04, &CoreSM83::RLC, 2);
-    instrMapCB.emplace_back(0x05, &CoreSM83::RLC, 2);
-    instrMapCB.emplace_back(0x06, &CoreSM83::RLC, 4);
-    instrMapCB.emplace_back(0x07, &CoreSM83::RLC, 2);
-    instrMapCB.emplace_back(0x08, &CoreSM83::RRC, 2);
-    instrMapCB.emplace_back(0x09, &CoreSM83::RRC, 2);
-    instrMapCB.emplace_back(0x0a, &CoreSM83::RRC, 2);
-    instrMapCB.emplace_back(0x0b, &CoreSM83::RRC, 2);
-    instrMapCB.emplace_back(0x0c, &CoreSM83::RRC, 2);
-    instrMapCB.emplace_back(0x0d, &CoreSM83::RRC, 2);
-    instrMapCB.emplace_back(0x0e, &CoreSM83::RRC, 4);
-    instrMapCB.emplace_back(0x0f, &CoreSM83::RRC, 2);
+    instrMapCB.emplace_back(0x00, &CoreSM83::RLC, 2, "RLC", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x01, &CoreSM83::RLC, 2, "RLC", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x02, &CoreSM83::RLC, 2, "RLC", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x03, &CoreSM83::RLC, 2, "RLC", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x04, &CoreSM83::RLC, 2, "RLC", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x05, &CoreSM83::RLC, 2, "RLC", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x06, &CoreSM83::RLC, 4, "RLC", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x07, &CoreSM83::RLC, 2, "RLC", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x08, &CoreSM83::RRC, 2, "RRC", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x09, &CoreSM83::RRC, 2, "RRC", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x0a, &CoreSM83::RRC, 2, "RRC", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x0b, &CoreSM83::RRC, 2, "RRC", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x0c, &CoreSM83::RRC, 2, "RRC", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x0d, &CoreSM83::RRC, 2, "RRC", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x0e, &CoreSM83::RRC, 4, "RRC", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x0f, &CoreSM83::RRC, 2, "RRC", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0x10, &CoreSM83::RL, 2);
-    instrMapCB.emplace_back(0x11, &CoreSM83::RL, 2);
-    instrMapCB.emplace_back(0x12, &CoreSM83::RL, 2);
-    instrMapCB.emplace_back(0x13, &CoreSM83::RL, 2);
-    instrMapCB.emplace_back(0x14, &CoreSM83::RL, 2);
-    instrMapCB.emplace_back(0x15, &CoreSM83::RL, 2);
-    instrMapCB.emplace_back(0x16, &CoreSM83::RL, 4);
-    instrMapCB.emplace_back(0x17, &CoreSM83::RL, 2);
-    instrMapCB.emplace_back(0x18, &CoreSM83::RR, 2);
-    instrMapCB.emplace_back(0x19, &CoreSM83::RR, 2);
-    instrMapCB.emplace_back(0x1a, &CoreSM83::RR, 2);
-    instrMapCB.emplace_back(0x1b, &CoreSM83::RR, 2);
-    instrMapCB.emplace_back(0x1c, &CoreSM83::RR, 2);
-    instrMapCB.emplace_back(0x1d, &CoreSM83::RR, 2);
-    instrMapCB.emplace_back(0x1e, &CoreSM83::RR, 4);
-    instrMapCB.emplace_back(0x1f, &CoreSM83::RR, 2);
+    instrMapCB.emplace_back(0x10, &CoreSM83::RL, 2, "RL", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x11, &CoreSM83::RL, 2, "RL", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x12, &CoreSM83::RL, 2, "RL", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x13, &CoreSM83::RL, 2, "RL", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x14, &CoreSM83::RL, 2, "RL", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x15, &CoreSM83::RL, 2, "RL", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x16, &CoreSM83::RL, 4, "RL", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x17, &CoreSM83::RL, 2, "RL", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x18, &CoreSM83::RR, 2, "RR", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x19, &CoreSM83::RR, 2, "RR", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x1a, &CoreSM83::RR, 2, "RR", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x1b, &CoreSM83::RR, 2, "RR", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x1c, &CoreSM83::RR, 2, "RR", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x1d, &CoreSM83::RR, 2, "RR", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x1e, &CoreSM83::RR, 4, "RR", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x1f, &CoreSM83::RR, 2, "RR", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0x20, &CoreSM83::SLA, 2);
-    instrMapCB.emplace_back(0x21, &CoreSM83::SLA, 2);
-    instrMapCB.emplace_back(0x22, &CoreSM83::SLA, 2);
-    instrMapCB.emplace_back(0x23, &CoreSM83::SLA, 2);
-    instrMapCB.emplace_back(0x24, &CoreSM83::SLA, 2);
-    instrMapCB.emplace_back(0x25, &CoreSM83::SLA, 2);
-    instrMapCB.emplace_back(0x26, &CoreSM83::SLA, 4);
-    instrMapCB.emplace_back(0x27, &CoreSM83::SLA, 2);
-    instrMapCB.emplace_back(0x28, &CoreSM83::SRA, 2);
-    instrMapCB.emplace_back(0x29, &CoreSM83::SRA, 2);
-    instrMapCB.emplace_back(0x2a, &CoreSM83::SRA, 2);
-    instrMapCB.emplace_back(0x2b, &CoreSM83::SRA, 2);
-    instrMapCB.emplace_back(0x2c, &CoreSM83::SRA, 2);
-    instrMapCB.emplace_back(0x2d, &CoreSM83::SRA, 2);
-    instrMapCB.emplace_back(0x2e, &CoreSM83::SRA, 4);
-    instrMapCB.emplace_back(0x2f, &CoreSM83::SRA, 2);
+    instrMapCB.emplace_back(0x20, &CoreSM83::SLA, 2, "SLA", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x21, &CoreSM83::SLA, 2, "SLA", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x22, &CoreSM83::SLA, 2, "SLA", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x23, &CoreSM83::SLA, 2, "SLA", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x24, &CoreSM83::SLA, 2, "SLA", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x25, &CoreSM83::SLA, 2, "SLA", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x26, &CoreSM83::SLA, 4, "SLA", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x27, &CoreSM83::SLA, 2, "SLA", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x28, &CoreSM83::SRA, 2, "SRA", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x29, &CoreSM83::SRA, 2, "SRA", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x2a, &CoreSM83::SRA, 2, "SRA", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x2b, &CoreSM83::SRA, 2, "SRA", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x2c, &CoreSM83::SRA, 2, "SRA", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x2d, &CoreSM83::SRA, 2, "SRA", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x2e, &CoreSM83::SRA, 4, "SRA", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x2f, &CoreSM83::SRA, 2, "SRA", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0x30, &CoreSM83::SWAP, 2);
-    instrMapCB.emplace_back(0x31, &CoreSM83::SWAP, 2);
-    instrMapCB.emplace_back(0x32, &CoreSM83::SWAP, 2);
-    instrMapCB.emplace_back(0x33, &CoreSM83::SWAP, 2);
-    instrMapCB.emplace_back(0x34, &CoreSM83::SWAP, 2);
-    instrMapCB.emplace_back(0x35, &CoreSM83::SWAP, 2);
-    instrMapCB.emplace_back(0x36, &CoreSM83::SWAP, 4);
-    instrMapCB.emplace_back(0x37, &CoreSM83::SWAP, 2);
-    instrMapCB.emplace_back(0x38, &CoreSM83::SRL, 2);
-    instrMapCB.emplace_back(0x39, &CoreSM83::SRL, 2);
-    instrMapCB.emplace_back(0x3a, &CoreSM83::SRL, 2);
-    instrMapCB.emplace_back(0x3b, &CoreSM83::SRL, 2);
-    instrMapCB.emplace_back(0x3c, &CoreSM83::SRL, 2);
-    instrMapCB.emplace_back(0x3d, &CoreSM83::SRL, 2);
-    instrMapCB.emplace_back(0x3e, &CoreSM83::SRL, 4);
-    instrMapCB.emplace_back(0x3f, &CoreSM83::SRL, 2);
+    instrMapCB.emplace_back(0x30, &CoreSM83::SWAP, 2, "SWAP", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x31, &CoreSM83::SWAP, 2, "SWAP", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x32, &CoreSM83::SWAP, 2, "SWAP", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x33, &CoreSM83::SWAP, 2, "SWAP", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x34, &CoreSM83::SWAP, 2, "SWAP", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x35, &CoreSM83::SWAP, 2, "SWAP", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x36, &CoreSM83::SWAP, 4, "SWAP", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x37, &CoreSM83::SWAP, 2, "SWAP", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x38, &CoreSM83::SRL, 2, "SRL", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x39, &CoreSM83::SRL, 2, "SRL", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x3a, &CoreSM83::SRL, 2, "SRL", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x3b, &CoreSM83::SRL, 2, "SRL", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x3c, &CoreSM83::SRL, 2, "SRL", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x3d, &CoreSM83::SRL, 2, "SRL", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x3e, &CoreSM83::SRL, 4, "SRL", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x3f, &CoreSM83::SRL, 2, "SRL", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0x40, &CoreSM83::BIT0, 2);
-    instrMapCB.emplace_back(0x41, &CoreSM83::BIT0, 2);
-    instrMapCB.emplace_back(0x42, &CoreSM83::BIT0, 2);
-    instrMapCB.emplace_back(0x43, &CoreSM83::BIT0, 2);
-    instrMapCB.emplace_back(0x44, &CoreSM83::BIT0, 2);
-    instrMapCB.emplace_back(0x45, &CoreSM83::BIT0, 2);
-    instrMapCB.emplace_back(0x46, &CoreSM83::BIT0, 4);
-    instrMapCB.emplace_back(0x47, &CoreSM83::BIT0, 2);
-    instrMapCB.emplace_back(0x48, &CoreSM83::BIT1, 2);
-    instrMapCB.emplace_back(0x49, &CoreSM83::BIT1, 2);
-    instrMapCB.emplace_back(0x4a, &CoreSM83::BIT1, 2);
-    instrMapCB.emplace_back(0x4b, &CoreSM83::BIT1, 2);
-    instrMapCB.emplace_back(0x4c, &CoreSM83::BIT1, 2);
-    instrMapCB.emplace_back(0x4d, &CoreSM83::BIT1, 2);
-    instrMapCB.emplace_back(0x4e, &CoreSM83::BIT1, 4);
-    instrMapCB.emplace_back(0x4f, &CoreSM83::BIT1, 2);
+    instrMapCB.emplace_back(0x40, &CoreSM83::BIT0, 2, "BIT0", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x41, &CoreSM83::BIT0, 2, "BIT0", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x42, &CoreSM83::BIT0, 2, "BIT0", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x43, &CoreSM83::BIT0, 2, "BIT0", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x44, &CoreSM83::BIT0, 2, "BIT0", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x45, &CoreSM83::BIT0, 2, "BIT0", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x46, &CoreSM83::BIT0, 4, "BIT0", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x47, &CoreSM83::BIT0, 2, "BIT0", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x48, &CoreSM83::BIT1, 2, "BIT1", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x49, &CoreSM83::BIT1, 2, "BIT1", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x4a, &CoreSM83::BIT1, 2, "BIT1", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x4b, &CoreSM83::BIT1, 2, "BIT1", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x4c, &CoreSM83::BIT1, 2, "BIT1", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x4d, &CoreSM83::BIT1, 2, "BIT1", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x4e, &CoreSM83::BIT1, 4, "BIT1", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x4f, &CoreSM83::BIT1, 2, "BIT1", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0x50, &CoreSM83::BIT2, 2);
-    instrMapCB.emplace_back(0x51, &CoreSM83::BIT2, 2);
-    instrMapCB.emplace_back(0x52, &CoreSM83::BIT2, 2);
-    instrMapCB.emplace_back(0x53, &CoreSM83::BIT2, 2);
-    instrMapCB.emplace_back(0x54, &CoreSM83::BIT2, 2);
-    instrMapCB.emplace_back(0x55, &CoreSM83::BIT2, 2);
-    instrMapCB.emplace_back(0x56, &CoreSM83::BIT2, 4);
-    instrMapCB.emplace_back(0x57, &CoreSM83::BIT2, 2);
-    instrMapCB.emplace_back(0x58, &CoreSM83::BIT3, 2);
-    instrMapCB.emplace_back(0x59, &CoreSM83::BIT3, 2);
-    instrMapCB.emplace_back(0x5a, &CoreSM83::BIT3, 2);
-    instrMapCB.emplace_back(0x5b, &CoreSM83::BIT3, 2);
-    instrMapCB.emplace_back(0x5c, &CoreSM83::BIT3, 2);
-    instrMapCB.emplace_back(0x5d, &CoreSM83::BIT3, 2);
-    instrMapCB.emplace_back(0x5e, &CoreSM83::BIT3, 4);
-    instrMapCB.emplace_back(0x5f, &CoreSM83::BIT3, 2);
+    instrMapCB.emplace_back(0x50, &CoreSM83::BIT2, 2, "BIT2", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x51, &CoreSM83::BIT2, 2, "BIT2", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x52, &CoreSM83::BIT2, 2, "BIT2", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x53, &CoreSM83::BIT2, 2, "BIT2", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x54, &CoreSM83::BIT2, 2, "BIT2", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x55, &CoreSM83::BIT2, 2, "BIT2", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x56, &CoreSM83::BIT2, 4, "BIT2", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x57, &CoreSM83::BIT2, 2, "BIT2", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x58, &CoreSM83::BIT3, 2, "BIT3", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x59, &CoreSM83::BIT3, 2, "BIT3", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x5a, &CoreSM83::BIT3, 2, "BIT3", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x5b, &CoreSM83::BIT3, 2, "BIT3", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x5c, &CoreSM83::BIT3, 2, "BIT3", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x5d, &CoreSM83::BIT3, 2, "BIT3", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x5e, &CoreSM83::BIT3, 4, "BIT3", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x5f, &CoreSM83::BIT3, 2, "BIT3", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0x60, &CoreSM83::BIT4, 2);
-    instrMapCB.emplace_back(0x61, &CoreSM83::BIT4, 2);
-    instrMapCB.emplace_back(0x62, &CoreSM83::BIT4, 2);
-    instrMapCB.emplace_back(0x63, &CoreSM83::BIT4, 2);
-    instrMapCB.emplace_back(0x64, &CoreSM83::BIT4, 2);
-    instrMapCB.emplace_back(0x65, &CoreSM83::BIT4, 2);
-    instrMapCB.emplace_back(0x66, &CoreSM83::BIT4, 4);
-    instrMapCB.emplace_back(0x67, &CoreSM83::BIT4, 2);
-    instrMapCB.emplace_back(0x68, &CoreSM83::BIT5, 2);
-    instrMapCB.emplace_back(0x69, &CoreSM83::BIT5, 2);
-    instrMapCB.emplace_back(0x6a, &CoreSM83::BIT5, 2);
-    instrMapCB.emplace_back(0x6b, &CoreSM83::BIT5, 2);
-    instrMapCB.emplace_back(0x6c, &CoreSM83::BIT5, 2);
-    instrMapCB.emplace_back(0x6d, &CoreSM83::BIT5, 2);
-    instrMapCB.emplace_back(0x6e, &CoreSM83::BIT5, 4);
-    instrMapCB.emplace_back(0x6f, &CoreSM83::BIT5, 2);
+    instrMapCB.emplace_back(0x60, &CoreSM83::BIT4, 2, "BIT4", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x61, &CoreSM83::BIT4, 2, "BIT4", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x62, &CoreSM83::BIT4, 2, "BIT4", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x63, &CoreSM83::BIT4, 2, "BIT4", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x64, &CoreSM83::BIT4, 2, "BIT4", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x65, &CoreSM83::BIT4, 2, "BIT4", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x66, &CoreSM83::BIT4, 4, "BIT4", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x67, &CoreSM83::BIT4, 2, "BIT4", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x68, &CoreSM83::BIT5, 2, "BIT5", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x69, &CoreSM83::BIT5, 2, "BIT5", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x6a, &CoreSM83::BIT5, 2, "BIT5", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x6b, &CoreSM83::BIT5, 2, "BIT5", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x6c, &CoreSM83::BIT5, 2, "BIT5", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x6d, &CoreSM83::BIT5, 2, "BIT5", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x6e, &CoreSM83::BIT5, 4, "BIT5", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x6f, &CoreSM83::BIT5, 2, "BIT5", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0x70, &CoreSM83::BIT6, 2);
-    instrMapCB.emplace_back(0x71, &CoreSM83::BIT6, 2);
-    instrMapCB.emplace_back(0x72, &CoreSM83::BIT6, 2);
-    instrMapCB.emplace_back(0x73, &CoreSM83::BIT6, 2);
-    instrMapCB.emplace_back(0x74, &CoreSM83::BIT6, 2);
-    instrMapCB.emplace_back(0x75, &CoreSM83::BIT6, 2);
-    instrMapCB.emplace_back(0x76, &CoreSM83::BIT6, 4);
-    instrMapCB.emplace_back(0x77, &CoreSM83::BIT6, 2);
-    instrMapCB.emplace_back(0x78, &CoreSM83::BIT7, 2);
-    instrMapCB.emplace_back(0x79, &CoreSM83::BIT7, 2);
-    instrMapCB.emplace_back(0x7a, &CoreSM83::BIT7, 2);
-    instrMapCB.emplace_back(0x7b, &CoreSM83::BIT7, 2);
-    instrMapCB.emplace_back(0x7c, &CoreSM83::BIT7, 2);
-    instrMapCB.emplace_back(0x7d, &CoreSM83::BIT7, 2);
-    instrMapCB.emplace_back(0x7e, &CoreSM83::BIT7, 4);
-    instrMapCB.emplace_back(0x7f, &CoreSM83::BIT7, 2);
+    instrMapCB.emplace_back(0x70, &CoreSM83::BIT6, 2, "BIT6", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x71, &CoreSM83::BIT6, 2, "BIT6", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x72, &CoreSM83::BIT6, 2, "BIT6", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x73, &CoreSM83::BIT6, 2, "BIT6", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x74, &CoreSM83::BIT6, 2, "BIT6", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x75, &CoreSM83::BIT6, 2, "BIT6", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x76, &CoreSM83::BIT6, 4, "BIT6", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x77, &CoreSM83::BIT6, 2, "BIT6", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x78, &CoreSM83::BIT7, 2, "BIT7", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x79, &CoreSM83::BIT7, 2, "BIT7", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x7a, &CoreSM83::BIT7, 2, "BIT7", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x7b, &CoreSM83::BIT7, 2, "BIT7", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x7c, &CoreSM83::BIT7, 2, "BIT7", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x7d, &CoreSM83::BIT7, 2, "BIT7", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x7e, &CoreSM83::BIT7, 4, "BIT7", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x7f, &CoreSM83::BIT7, 2, "BIT7", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0x80, &CoreSM83::RES0, 2);
-    instrMapCB.emplace_back(0x81, &CoreSM83::RES0, 2);
-    instrMapCB.emplace_back(0x82, &CoreSM83::RES0, 2);
-    instrMapCB.emplace_back(0x83, &CoreSM83::RES0, 2);
-    instrMapCB.emplace_back(0x84, &CoreSM83::RES0, 2);
-    instrMapCB.emplace_back(0x85, &CoreSM83::RES0, 2);
-    instrMapCB.emplace_back(0x86, &CoreSM83::RES0, 4);
-    instrMapCB.emplace_back(0x87, &CoreSM83::RES0, 2);
-    instrMapCB.emplace_back(0x88, &CoreSM83::RES1, 2);
-    instrMapCB.emplace_back(0x89, &CoreSM83::RES1, 2);
-    instrMapCB.emplace_back(0x8a, &CoreSM83::RES1, 2);
-    instrMapCB.emplace_back(0x8b, &CoreSM83::RES1, 2);
-    instrMapCB.emplace_back(0x8c, &CoreSM83::RES1, 2);
-    instrMapCB.emplace_back(0x8d, &CoreSM83::RES1, 2);
-    instrMapCB.emplace_back(0x8e, &CoreSM83::RES1, 4);
-    instrMapCB.emplace_back(0x8f, &CoreSM83::RES1, 2);
+    instrMapCB.emplace_back(0x80, &CoreSM83::RES0, 2, "RES0", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x81, &CoreSM83::RES0, 2, "RES0", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x82, &CoreSM83::RES0, 2, "RES0", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x83, &CoreSM83::RES0, 2, "RES0", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x84, &CoreSM83::RES0, 2, "RES0", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x85, &CoreSM83::RES0, 2, "RES0", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x86, &CoreSM83::RES0, 4, "RES0", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x87, &CoreSM83::RES0, 2, "RES0", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x88, &CoreSM83::RES1, 2, "RES1", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x89, &CoreSM83::RES1, 2, "RES1", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x8a, &CoreSM83::RES1, 2, "RES1", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x8b, &CoreSM83::RES1, 2, "RES1", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x8c, &CoreSM83::RES1, 2, "RES1", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x8d, &CoreSM83::RES1, 2, "RES1", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x8e, &CoreSM83::RES1, 4, "RES1", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x8f, &CoreSM83::RES1, 2, "RES1", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0x90, &CoreSM83::RES2, 2);
-    instrMapCB.emplace_back(0x91, &CoreSM83::RES2, 2);
-    instrMapCB.emplace_back(0x92, &CoreSM83::RES2, 2);
-    instrMapCB.emplace_back(0x93, &CoreSM83::RES2, 2);
-    instrMapCB.emplace_back(0x94, &CoreSM83::RES2, 2);
-    instrMapCB.emplace_back(0x95, &CoreSM83::RES2, 2);
-    instrMapCB.emplace_back(0x96, &CoreSM83::RES2, 4);
-    instrMapCB.emplace_back(0x97, &CoreSM83::RES2, 2);
-    instrMapCB.emplace_back(0x98, &CoreSM83::RES3, 2);
-    instrMapCB.emplace_back(0x99, &CoreSM83::RES3, 2);
-    instrMapCB.emplace_back(0x9a, &CoreSM83::RES3, 2);
-    instrMapCB.emplace_back(0x9b, &CoreSM83::RES3, 2);
-    instrMapCB.emplace_back(0x9c, &CoreSM83::RES3, 2);
-    instrMapCB.emplace_back(0x9d, &CoreSM83::RES3, 2);
-    instrMapCB.emplace_back(0x9e, &CoreSM83::RES3, 4);
-    instrMapCB.emplace_back(0x9f, &CoreSM83::RES3, 2);
+    instrMapCB.emplace_back(0x90, &CoreSM83::RES2, 2, "RES2", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x91, &CoreSM83::RES2, 2, "RES2", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x92, &CoreSM83::RES2, 2, "RES2", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x93, &CoreSM83::RES2, 2, "RES2", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x94, &CoreSM83::RES2, 2, "RES2", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x95, &CoreSM83::RES2, 2, "RES2", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x96, &CoreSM83::RES2, 4, "RES2", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x97, &CoreSM83::RES2, 2, "RES2", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0x98, &CoreSM83::RES3, 2, "RES3", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0x99, &CoreSM83::RES3, 2, "RES3", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0x9a, &CoreSM83::RES3, 2, "RES3", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0x9b, &CoreSM83::RES3, 2, "RES3", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0x9c, &CoreSM83::RES3, 2, "RES3", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0x9d, &CoreSM83::RES3, 2, "RES3", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0x9e, &CoreSM83::RES3, 4, "RES3", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0x9f, &CoreSM83::RES3, 2, "RES3", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0xa0, &CoreSM83::RES4, 2);
-    instrMapCB.emplace_back(0xa1, &CoreSM83::RES4, 2);
-    instrMapCB.emplace_back(0xa2, &CoreSM83::RES4, 2);
-    instrMapCB.emplace_back(0xa3, &CoreSM83::RES4, 2);
-    instrMapCB.emplace_back(0xa4, &CoreSM83::RES4, 2);
-    instrMapCB.emplace_back(0xa5, &CoreSM83::RES4, 2);
-    instrMapCB.emplace_back(0xa6, &CoreSM83::RES4, 4);
-    instrMapCB.emplace_back(0xa7, &CoreSM83::RES4, 2);
-    instrMapCB.emplace_back(0xa8, &CoreSM83::RES5, 2);
-    instrMapCB.emplace_back(0xa9, &CoreSM83::RES5, 2);
-    instrMapCB.emplace_back(0xaa, &CoreSM83::RES5, 2);
-    instrMapCB.emplace_back(0xab, &CoreSM83::RES5, 2);
-    instrMapCB.emplace_back(0xac, &CoreSM83::RES5, 2);
-    instrMapCB.emplace_back(0xad, &CoreSM83::RES5, 2);
-    instrMapCB.emplace_back(0xae, &CoreSM83::RES5, 4);
-    instrMapCB.emplace_back(0xaf, &CoreSM83::RES5, 2);
+    instrMapCB.emplace_back(0xa0, &CoreSM83::RES4, 2, "RES4", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xa1, &CoreSM83::RES4, 2, "RES4", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xa2, &CoreSM83::RES4, 2, "RES4", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xa3, &CoreSM83::RES4, 2, "RES4", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xa4, &CoreSM83::RES4, 2, "RES4", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xa5, &CoreSM83::RES4, 2, "RES4", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xa6, &CoreSM83::RES4, 4, "RES4", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xa7, &CoreSM83::RES4, 2, "RES4", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0xa8, &CoreSM83::RES5, 2, "RES5", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xa9, &CoreSM83::RES5, 2, "RES5", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xaa, &CoreSM83::RES5, 2, "RES5", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xab, &CoreSM83::RES5, 2, "RES5", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xac, &CoreSM83::RES5, 2, "RES5", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xad, &CoreSM83::RES5, 2, "RES5", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xae, &CoreSM83::RES5, 4, "RES5", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xaf, &CoreSM83::RES5, 2, "RES5", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0xb0, &CoreSM83::RES6, 2);
-    instrMapCB.emplace_back(0xb1, &CoreSM83::RES6, 2);
-    instrMapCB.emplace_back(0xb2, &CoreSM83::RES6, 2);
-    instrMapCB.emplace_back(0xb3, &CoreSM83::RES6, 2);
-    instrMapCB.emplace_back(0xb4, &CoreSM83::RES6, 2);
-    instrMapCB.emplace_back(0xb5, &CoreSM83::RES6, 2);
-    instrMapCB.emplace_back(0xb6, &CoreSM83::RES6, 4);
-    instrMapCB.emplace_back(0xb7, &CoreSM83::RES6, 2);
-    instrMapCB.emplace_back(0xb8, &CoreSM83::RES7, 2);
-    instrMapCB.emplace_back(0xb9, &CoreSM83::RES7, 2);
-    instrMapCB.emplace_back(0xba, &CoreSM83::RES7, 2);
-    instrMapCB.emplace_back(0xbb, &CoreSM83::RES7, 2);
-    instrMapCB.emplace_back(0xbc, &CoreSM83::RES7, 2);
-    instrMapCB.emplace_back(0xbd, &CoreSM83::RES7, 2);
-    instrMapCB.emplace_back(0xbe, &CoreSM83::RES7, 4);
-    instrMapCB.emplace_back(0xbf, &CoreSM83::RES7, 2);
+    instrMapCB.emplace_back(0xb0, &CoreSM83::RES6, 2, "RES6", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xb1, &CoreSM83::RES6, 2, "RES6", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xb2, &CoreSM83::RES6, 2, "RES6", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xb3, &CoreSM83::RES6, 2, "RES6", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xb4, &CoreSM83::RES6, 2, "RES6", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xb5, &CoreSM83::RES6, 2, "RES6", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xb6, &CoreSM83::RES6, 4, "RES6", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xb7, &CoreSM83::RES6, 2, "RES6", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0xb8, &CoreSM83::RES7, 2, "RES7", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xb9, &CoreSM83::RES7, 2, "RES7", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xba, &CoreSM83::RES7, 2, "RES7", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xbb, &CoreSM83::RES7, 2, "RES7", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xbc, &CoreSM83::RES7, 2, "RES7", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xbd, &CoreSM83::RES7, 2, "RES7", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xbe, &CoreSM83::RES7, 4, "RES7", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xbf, &CoreSM83::RES7, 2, "RES7", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0xc0, &CoreSM83::SET0, 2);
-    instrMapCB.emplace_back(0xc1, &CoreSM83::SET0, 2);
-    instrMapCB.emplace_back(0xc2, &CoreSM83::SET0, 2);
-    instrMapCB.emplace_back(0xc3, &CoreSM83::SET0, 2);
-    instrMapCB.emplace_back(0xc4, &CoreSM83::SET0, 2);
-    instrMapCB.emplace_back(0xc5, &CoreSM83::SET0, 2);
-    instrMapCB.emplace_back(0xc6, &CoreSM83::SET0, 4);
-    instrMapCB.emplace_back(0xc7, &CoreSM83::SET0, 2);
-    instrMapCB.emplace_back(0xc8, &CoreSM83::SET1, 2);
-    instrMapCB.emplace_back(0xc9, &CoreSM83::SET1, 2);
-    instrMapCB.emplace_back(0xca, &CoreSM83::SET1, 2);
-    instrMapCB.emplace_back(0xcb, &CoreSM83::SET1, 2);
-    instrMapCB.emplace_back(0xcc, &CoreSM83::SET1, 2);
-    instrMapCB.emplace_back(0xcd, &CoreSM83::SET1, 2);
-    instrMapCB.emplace_back(0xce, &CoreSM83::SET1, 4);
-    instrMapCB.emplace_back(0xcf, &CoreSM83::SET1, 2);
+    instrMapCB.emplace_back(0xc0, &CoreSM83::SET0, 2, "SET0", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xc1, &CoreSM83::SET0, 2, "SET0", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xc2, &CoreSM83::SET0, 2, "SET0", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xc3, &CoreSM83::SET0, 2, "SET0", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xc4, &CoreSM83::SET0, 2, "SET0", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xc5, &CoreSM83::SET0, 2, "SET0", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xc6, &CoreSM83::SET0, 4, "SET0", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xc7, &CoreSM83::SET0, 2, "SET0", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0xc8, &CoreSM83::SET1, 2, "SET1", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xc9, &CoreSM83::SET1, 2, "SET1", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xca, &CoreSM83::SET1, 2, "SET1", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xcb, &CoreSM83::SET1, 2, "SET1", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xcc, &CoreSM83::SET1, 2, "SET1", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xcd, &CoreSM83::SET1, 2, "SET1", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xce, &CoreSM83::SET1, 4, "SET1", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xcf, &CoreSM83::SET1, 2, "SET1", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0xd0, &CoreSM83::SET2, 2);
-    instrMapCB.emplace_back(0xd1, &CoreSM83::SET2, 2);
-    instrMapCB.emplace_back(0xd2, &CoreSM83::SET2, 2);
-    instrMapCB.emplace_back(0xd3, &CoreSM83::SET2, 2);
-    instrMapCB.emplace_back(0xd4, &CoreSM83::SET2, 2);
-    instrMapCB.emplace_back(0xd5, &CoreSM83::SET2, 2);
-    instrMapCB.emplace_back(0xd6, &CoreSM83::SET2, 4);
-    instrMapCB.emplace_back(0xd7, &CoreSM83::SET2, 2);
-    instrMapCB.emplace_back(0xd8, &CoreSM83::SET3, 2);
-    instrMapCB.emplace_back(0xd9, &CoreSM83::SET3, 2);
-    instrMapCB.emplace_back(0xda, &CoreSM83::SET3, 2);
-    instrMapCB.emplace_back(0xdb, &CoreSM83::SET3, 2);
-    instrMapCB.emplace_back(0xdc, &CoreSM83::SET3, 2);
-    instrMapCB.emplace_back(0xdd, &CoreSM83::SET3, 2);
-    instrMapCB.emplace_back(0xde, &CoreSM83::SET3, 4);
-    instrMapCB.emplace_back(0xdf, &CoreSM83::SET3, 2);
+    instrMapCB.emplace_back(0xd0, &CoreSM83::SET2, 2, "SET2", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xd1, &CoreSM83::SET2, 2, "SET2", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xd2, &CoreSM83::SET2, 2, "SET2", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xd3, &CoreSM83::SET2, 2, "SET2", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xd4, &CoreSM83::SET2, 2, "SET2", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xd5, &CoreSM83::SET2, 2, "SET2", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xd6, &CoreSM83::SET2, 4, "SET2", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xd7, &CoreSM83::SET2, 2, "SET2", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0xd8, &CoreSM83::SET3, 2, "SET3", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xd9, &CoreSM83::SET3, 2, "SET3", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xda, &CoreSM83::SET3, 2, "SET3", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xdb, &CoreSM83::SET3, 2, "SET3", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xdc, &CoreSM83::SET3, 2, "SET3", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xdd, &CoreSM83::SET3, 2, "SET3", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xde, &CoreSM83::SET3, 4, "SET3", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xdf, &CoreSM83::SET3, 2, "SET3", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0xe0, &CoreSM83::SET4, 2);
-    instrMapCB.emplace_back(0xe1, &CoreSM83::SET4, 2);
-    instrMapCB.emplace_back(0xe2, &CoreSM83::SET4, 2);
-    instrMapCB.emplace_back(0xe3, &CoreSM83::SET4, 2);
-    instrMapCB.emplace_back(0xe4, &CoreSM83::SET4, 2);
-    instrMapCB.emplace_back(0xe5, &CoreSM83::SET4, 2);
-    instrMapCB.emplace_back(0xe6, &CoreSM83::SET4, 4);
-    instrMapCB.emplace_back(0xe7, &CoreSM83::SET4, 2);
-    instrMapCB.emplace_back(0xe8, &CoreSM83::SET5, 2);
-    instrMapCB.emplace_back(0xe9, &CoreSM83::SET5, 2);
-    instrMapCB.emplace_back(0xea, &CoreSM83::SET5, 2);
-    instrMapCB.emplace_back(0xeb, &CoreSM83::SET5, 2);
-    instrMapCB.emplace_back(0xec, &CoreSM83::SET5, 2);
-    instrMapCB.emplace_back(0xed, &CoreSM83::SET5, 2);
-    instrMapCB.emplace_back(0xee, &CoreSM83::SET5, 4);
-    instrMapCB.emplace_back(0xef, &CoreSM83::SET5, 2);
+    instrMapCB.emplace_back(0xe0, &CoreSM83::SET4, 2, "SET4", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xe1, &CoreSM83::SET4, 2, "SET4", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xe2, &CoreSM83::SET4, 2, "SET4", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xe3, &CoreSM83::SET4, 2, "SET4", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xe4, &CoreSM83::SET4, 2, "SET4", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xe5, &CoreSM83::SET4, 2, "SET4", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xe6, &CoreSM83::SET4, 4, "SET4", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xe7, &CoreSM83::SET4, 2, "SET4", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0xe8, &CoreSM83::SET5, 2, "SET5", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xe9, &CoreSM83::SET5, 2, "SET5", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xea, &CoreSM83::SET5, 2, "SET5", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xeb, &CoreSM83::SET5, 2, "SET5", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xec, &CoreSM83::SET5, 2, "SET5", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xed, &CoreSM83::SET5, 2, "SET5", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xee, &CoreSM83::SET5, 4, "SET5", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xef, &CoreSM83::SET5, 2, "SET5", "A", GetPtr(A),     "", nullptr);
 
-    instrMapCB.emplace_back(0xf0, &CoreSM83::SET6, 2);
-    instrMapCB.emplace_back(0xf1, &CoreSM83::SET6, 2);
-    instrMapCB.emplace_back(0xf2, &CoreSM83::SET6, 2);
-    instrMapCB.emplace_back(0xf3, &CoreSM83::SET6, 2);
-    instrMapCB.emplace_back(0xf4, &CoreSM83::SET6, 2);
-    instrMapCB.emplace_back(0xf5, &CoreSM83::SET6, 2);
-    instrMapCB.emplace_back(0xf6, &CoreSM83::SET6, 4);
-    instrMapCB.emplace_back(0xf7, &CoreSM83::SET6, 2);
-    instrMapCB.emplace_back(0xf8, &CoreSM83::SET7, 2);
-    instrMapCB.emplace_back(0xf9, &CoreSM83::SET7, 2);
-    instrMapCB.emplace_back(0xfa, &CoreSM83::SET7, 2);
-    instrMapCB.emplace_back(0xfb, &CoreSM83::SET7, 2);
-    instrMapCB.emplace_back(0xfc, &CoreSM83::SET7, 2);
-    instrMapCB.emplace_back(0xfd, &CoreSM83::SET7, 2);
-    instrMapCB.emplace_back(0xfe, &CoreSM83::SET7, 4);
-    instrMapCB.emplace_back(0xff, &CoreSM83::SET7, 2);
+    instrMapCB.emplace_back(0xf0, &CoreSM83::SET6, 2, "SET6", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xf1, &CoreSM83::SET6, 2, "SET6", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xf2, &CoreSM83::SET6, 2, "SET6", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xf3, &CoreSM83::SET6, 2, "SET6", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xf4, &CoreSM83::SET6, 2, "SET6", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xf5, &CoreSM83::SET6, 2, "SET6", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xf6, &CoreSM83::SET6, 4, "SET6", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xf7, &CoreSM83::SET6, 2, "SET6", "A", GetPtr(A),     "", nullptr);
+    instrMapCB.emplace_back(0xf8, &CoreSM83::SET7, 2, "SET7", "B", GetPtr(B),     "", nullptr);
+    instrMapCB.emplace_back(0xf9, &CoreSM83::SET7, 2, "SET7", "C", GetPtr(C),     "", nullptr);
+    instrMapCB.emplace_back(0xfa, &CoreSM83::SET7, 2, "SET7", "D", GetPtr(D),     "", nullptr);
+    instrMapCB.emplace_back(0xfb, &CoreSM83::SET7, 2, "SET7", "E", GetPtr(E),     "", nullptr);
+    instrMapCB.emplace_back(0xfc, &CoreSM83::SET7, 2, "SET7", "H", GetPtr(H),     "", nullptr);
+    instrMapCB.emplace_back(0xfd, &CoreSM83::SET7, 2, "SET7", "L", GetPtr(L),     "", nullptr);
+    instrMapCB.emplace_back(0xfe, &CoreSM83::SET7, 4, "SET7", "(HL)", GetPtr(HL), "", nullptr);
+    instrMapCB.emplace_back(0xff, &CoreSM83::SET7, 2, "SET7", "A", GetPtr(A),     "", nullptr);
 }
 
 /* ***********************************************************************************************************

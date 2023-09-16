@@ -4,11 +4,12 @@
 #include <string>
 
 // TODO: fifo for debug info (GUI)
-struct message_fifo {
-	std::queue<std::string> debug_instructions = std::queue<std::string>();
-	bool debug_instructions_enabled = false;
+struct message_buffer {
+	std::string debug_instruction = "";
+	bool debug_instruction_enabled = false;
 	bool pause_execution = true;
 	bool auto_run = false;
+	bool debug_instruction_log = true;
 };
 
 struct game_status {

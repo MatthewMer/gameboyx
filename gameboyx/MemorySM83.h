@@ -75,7 +75,7 @@ public:
 	void WriteHRAM(const u8& _data, const u16& _addr);
 	void WriteIE(const u8& _data);
 
-	machine_state_context* GetMemCtx() const;
+	machine_state_context* GetMachineContext() const;
 
 private:
 	// constructor
