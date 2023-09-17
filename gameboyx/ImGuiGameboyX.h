@@ -74,14 +74,13 @@ private:
 	void AddGameGuiCtx(const game_info& _game_ctx);
 	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
 	void InitGamesGuiCtx();
-	void CopyDebugInstructionOutput();
+	void CopyInstructionBuffer();
 	void ClearOutput();
 	void InitDebugOutputVectors();
 
 	// virtual hardware messages for debug
 	message_buffer& msgBuffer;
-	std::vector<std::string> debugInstructionOutput = std::vector<std::string>();
-	const int allowedOutputSize = 20;
+	std::vector<std::string> instructionOutput = std::vector<std::string>();
 	bool firstInstruction = true;
 
 	// game status variables

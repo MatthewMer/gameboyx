@@ -59,7 +59,7 @@ void ImGuiGameboyX::ProcessGUI() {
     IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
 
     if (showMainMenuBar) ShowMainMenuBar();
-    if (msgBuffer.debug_instruction_enabled) ShowDebugInstructions();
+    if (msgBuffer.instruction_buffer_enabled) ShowDebugInstructions();
     if (showWinAbout) ShowWindowAbout();
 
     if (!gameStatus.game_running) {
@@ -109,7 +109,7 @@ void ImGuiGameboyX::ShowMainMenuBar() {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
-            ImGui::MenuItem("Instruction execution", nullptr, &msgBuffer.debug_instruction_enabled);
+            ImGui::MenuItem("Instruction execution", nullptr, &msgBuffer.instruction_buffer_enabled);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
@@ -137,17 +137,17 @@ void ImGuiGameboyX::ShowWindowAbout() {
 }
 
 void ImGuiGameboyX::ShowDebugInstructions() {
-    CopyDebugInstructionOutput();
+    CopyInstructionBuffer();
 
     const ImGuiWindowFlags win_flags =
         ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoCollapse;
 
-    ImGui::SetNextWindowSize({ 700, 398 });
-    if (ImGui::Begin("Instructions", &msgBuffer.debug_instruction_enabled, win_flags)) {
-        for (int i = 0; i < allowedOutputSize; i++) {
-            ImGui::TextUnformatted(debugInstructionOutput[i].c_str());
+    ImGui::SetNextWindowSize({ 700, 396 });
+    if (ImGui::Begin("Instructions", &msgBuffer.instruction_buffer_enabled, win_flags)) {
+        for (int i = 0; i < DEBUG_ALLOWED_INSTRUCTION_OUTPUT_SIZE; i++) {
+            ImGui::TextUnformatted(instructionOutput[i].c_str());
         }
 
         if (gameStatus.game_running && !msgBuffer.auto_run) {
@@ -163,7 +163,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         ImGui::SameLine();
         ImGui::Checkbox("Auto run", &msgBuffer.auto_run);
         ImGui::SameLine();
-        ImGui::Checkbox("Send to debug_instruction.log", &msgBuffer.debug_instruction_log);
+        ImGui::Checkbox("Send to *_instructions.log", &msgBuffer.instruction_buffer_log);
     }
     ImGui::End();
 }
@@ -417,30 +417,30 @@ void ImGuiGameboyX::InitGamesGuiCtx() {
     }
 }
 
-void ImGuiGameboyX::CopyDebugInstructionOutput() {
-    if (msgBuffer.debug_instruction.compare("") != 0) {
-        debugInstructionOutput.push_back(msgBuffer.debug_instruction);
-        if (msgBuffer.debug_instruction_log) {
-            write_to_debug_log(msgBuffer.debug_instruction, LOG_FOLDER + games[gamesPrevIndex].title + "_" + DEBUG_INSTR_LOG, firstInstruction);
+void ImGuiGameboyX::CopyInstructionBuffer() {
+    if (msgBuffer.instruction_buffer.compare("") != 0) {
+        instructionOutput.push_back(msgBuffer.instruction_buffer);
+        if (msgBuffer.instruction_buffer_log) {
+            write_to_debug_log(msgBuffer.instruction_buffer, LOG_FOLDER + games[gamesPrevIndex].title + DEBUG_INSTR_LOG, firstInstruction);
             firstInstruction = false;
         }
-        msgBuffer.debug_instruction = "";
+        msgBuffer.instruction_buffer = "";
     }
 
-    while (debugInstructionOutput.size() > allowedOutputSize) {
-        debugInstructionOutput.erase(debugInstructionOutput.begin());
+    while (instructionOutput.size() > DEBUG_ALLOWED_INSTRUCTION_OUTPUT_SIZE) {
+        instructionOutput.erase(instructionOutput.begin());
     }
 }
 
 void ImGuiGameboyX::ClearOutput() {
-    for (auto& n : debugInstructionOutput) {
+    for (auto& n : instructionOutput) {
         n = "";
     }
 }
 
 void ImGuiGameboyX::InitDebugOutputVectors() {
-    for (int i = 0; i < allowedOutputSize; i++) {
-        debugInstructionOutput.emplace_back("");
+    for (int i = 0; i < DEBUG_ALLOWED_INSTRUCTION_OUTPUT_SIZE; i++) {
+        instructionOutput.emplace_back("");
     }
 }
 

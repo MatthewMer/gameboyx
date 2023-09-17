@@ -1,7 +1,7 @@
 #include "MmuSM83.h"
 
 #include "MemorySM83.h"
-#include "gameboy_config.h"
+#include "gameboy_defines.h"
 
 #include "logger.h"
 
@@ -207,16 +207,51 @@ void MmuSM83_MBC3::WriteClock(const u8& _data) {
 	MACHINE STATE ACCESS
 *********************************************************************************************************** */
 // access machine states
-int& MmuSM83_MBC3::GetCurrentSpeed() const {
+int MmuSM83_MBC3::GetCurrentSpeed() const {
 	return machine_ctx->currentSpeed;
 }
 
-u8& MmuSM83_MBC3::GetInterruptEnable() const {
+u8 MmuSM83_MBC3::GetInterruptEnable() const {
 	return machine_ctx->IE;
 }
 
-u8& MmuSM83_MBC3::GetInterruptRequests() const {
+u8 MmuSM83_MBC3::GetInterruptRequests() const {
 	return machine_ctx->IF;
+}
+
+void MmuSM83_MBC3::ResetInterruptRequest(const u8& _isr_flags) {
+	machine_ctx->IF &= ~_isr_flags;
+}
+
+void MmuSM83_MBC3::ProcessMachineCyclesCurInstruction(const int& _machine_cycles) {
+	machine_ctx->machineCyclesDIVCounter += _machine_cycles;
+	if (machine_ctx->machineCyclesDIVCounter > machine_ctx->machineCyclesPerDIVIncrement) {
+		machine_ctx->machineCyclesDIVCounter = 0;
+
+		if (machine_ctx->DIV == 0xFF) {
+			machine_ctx->DIV = 0x00;
+			// TODO: interrupt or whatever
+		}
+		else {
+			machine_ctx->DIV++;
+		}
+	}
+
+	if (machine_ctx->TAC & TAC_CLOCK_ENABLE) {
+		machine_ctx->machineCyclesTIMACounter += _machine_cycles;
+		if (machine_ctx->machineCyclesTIMACounter > machine_ctx->machineCyclesPerTIMAIncrement) {
+			machine_ctx->machineCyclesTIMACounter = 0;
+			
+			if (machine_ctx->TIMA == 0xFF) {
+				machine_ctx->TIMA = machine_ctx->TMA;
+				// request interrupt
+				machine_ctx->IF |= ISR_TIMER;
+			}
+			else {
+				machine_ctx->TIMA++;
+			}
+		}
+	}
 }
 
 /* ***********************************************************************************************************

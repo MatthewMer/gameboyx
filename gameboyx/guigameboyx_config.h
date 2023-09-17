@@ -38,3 +38,5 @@ inline const ImVec4 IMGUI_BG_COLOR(BG_COL, BG_COL, BG_COL, 1.0f);
 inline const ImVec4 IMGUI_CLR_COLOR(CLR_COL, CLR_COL, CLR_COL, 1.0f);
 
 inline const std::vector<std::string> popup_items = {"Test1", "Test2"};
+
+#define DEBUG_ALLOWED_INSTRUCTION_OUTPUT_SIZE 20

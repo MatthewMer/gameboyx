@@ -191,7 +191,7 @@
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="CoreBase.h" />
     <ClInclude Include="CoreSM83.h" />
-    <ClInclude Include="gameboy_config.h" />
+    <ClInclude Include="gameboy_defines.h" />
     <ClInclude Include="data_io.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="game_info.h" />

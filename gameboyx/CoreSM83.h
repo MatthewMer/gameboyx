@@ -46,7 +46,7 @@ public:
 	friend class CoreBase;
 
 	void RunCycles() override;
-	void ResetMachineCycleCounter() override;
+	//void ResetMachineCycleCounter() override;
 	bool CheckMachineCycles() const override;
 
 private:
@@ -61,7 +61,10 @@ private:
 	u8 opcode;
 	u16 data;
 
+	void RunCpu() override;
 	void ExecuteInstruction() override;
+	void ExecuteMachineCycles() override;
+	void ExecuteInterrupts() override;
 
 	std::string GetRegisterContents() const;
 	std::string GetDebugInstruction() const;
@@ -73,9 +76,13 @@ private:
 	void InitRegisterStates() override;
 
 	// cpu states
+	bool stop = false;
 	bool halt = false;
 	bool ime = false;
 	bool opcode_cb = false;
+
+	// ISR
+	void isr_push(const u8& _isr_handler);
 
 	// instruction members ****************
 	// lookup table
@@ -86,6 +93,7 @@ private:
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
 	int machineCycles = 0;
+	int currentMachineCycles = 0;
 	int GetDelayTime() override;
 
 	// pointer instances

@@ -44,14 +44,8 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_fifo
     FUNCTIONALITY
 *********************************************************************************************************** */
 void VHardwareMgr::ProcessNext() {
-    if (!msgBuffer.debug_instruction_enabled) { SimulateDelay(); }
-
+    SimulateDelay();
     core_instance->RunCycles();
-    if (core_instance->CheckMachineCycles()) {
-        // run gpu
-        core_instance->ResetMachineCycleCounter();
-        // TODO: gpu
-    }
 }
 
 void VHardwareMgr::SimulateDelay() {

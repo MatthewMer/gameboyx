@@ -3,18 +3,11 @@
 /* ***********************************************************************************************************
     INCLUDES
 *********************************************************************************************************** */
-#include "gameboy_config.h"
+#include "gameboy_defines.h"
 #include <format>
 #include "logger.h"
 
 using namespace std;
-
-/* ***********************************************************************************************************
-    MACHINE DEFINES
-*********************************************************************************************************** */
-// Clock = ~4.2MHz -> 4 CLocks per MachineCycle: 1.05MHz / 60 frames per second = 17500 Machine Cycles per frame
-const float baseClockMachineCycles = 1.05f;       // MHz
-const int displayFrequency = 60;                  // Hz
 
 /* ***********************************************************************************************************
     FLAG/BIT DEFINES
@@ -101,23 +94,41 @@ void CoreSM83::InitRegisterStates() {
     RUN CPU
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
-    
-    if (msgBuffer.debug_instruction_enabled) {
-        if (msgBuffer.pause_execution && !msgBuffer.auto_run) {
-            return;
+    if (!halt) {
+        if (msgBuffer.instruction_buffer_enabled) {
+            if (msgBuffer.pause_execution && !msgBuffer.auto_run) {
+                return;
+            }
+            else {
+                if (machineCycles > machineCyclesPerFrame * mmu_instance->GetCurrentSpeed()) {
+                    machineCycles = 0;
+                }
+
+                msgBuffer.instruction_buffer = GetRegisterContents();
+                RunCpu();
+                msgBuffer.instruction_buffer += GetDebugInstruction();
+                msgBuffer.pause_execution = true;
+            }
         }
         else {
-            msgBuffer.debug_instruction = GetRegisterContents();
-            ExecuteInstruction();
-            msgBuffer.debug_instruction += GetDebugInstruction();
-            msgBuffer.pause_execution = true;
+            machineCycles = 0;
+            while (machineCycles < machineCyclesPerFrame * mmu_instance->GetCurrentSpeed()) {
+                RunCpu();
+            }
         }
     }
     else {
-        while (machineCycles < machineCyclesPerFrame + 1) {
-            ExecuteInstruction();
-        }
+        u8 isr_enable = mmu_instance->GetInterruptEnable();
+        u8 isr_flags = mmu_instance->GetInterruptRequests();
+
+        halt = (isr_enable & isr_flags) != 0x00;
     }
+}
+
+void CoreSM83::RunCpu() {
+    ExecuteInstruction();
+    ExecuteMachineCycles();
+    ExecuteInterrupts();
 }
 
 void CoreSM83::ExecuteInstruction() {
@@ -127,22 +138,65 @@ void CoreSM83::ExecuteInstruction() {
 
     instrPtr = &instrMap[opcode];
     functionPtr = get<1>(*instrPtr);
-    machineCycles += get<2>(*instrPtr);
+    currentMachineCycles = get<2>(*instrPtr);
     (this->*functionPtr)();
+    machineCycles += currentMachineCycles;
 }
 
-void CoreSM83::ResetMachineCycleCounter() {
-    machineCycles = 0;
+void CoreSM83::ExecuteMachineCycles() {
+    mmu_instance->ProcessMachineCyclesCurInstruction(currentMachineCycles);
 }
 
+void CoreSM83::ExecuteInterrupts() {
+    if (ime) {
+        u8 isr_enable = mmu_instance->GetInterruptEnable();
+        u8 isr_flags = mmu_instance->GetInterruptRequests();
+
+        if (isr_flags & ISR_VBLANK) {
+            if (isr_enable & ISR_VBLANK) {
+                ime = false;
+
+                isr_push(ISR_VBLANK_HANDLER);
+            }
+        }
+        if (isr_flags & ISR_LCD_STAT) {
+            if (isr_enable & ISR_LCD_STAT) {
+                ime = false;
+
+                isr_push(ISR_LCD_STAT_HANDLER);
+            }
+        }
+        if (isr_flags & ISR_TIMER) {
+            if (isr_enable & ISR_TIMER) {
+                ime = false;
+
+                isr_push(ISR_TIMER_HANDLER);
+            }
+        }
+        /*if (isr_flags & ISR_SERIAL) {
+            // not implemented
+        }*/
+        if (isr_flags & ISR_JOYPAD) {
+            if (isr_enable & ISR_JOYPAD) {
+                ime = false;
+
+                isr_push(ISR_JOYPAD_HANDLER);
+            }
+        }
+    }
+}
+
+/* ***********************************************************************************************************
+    ACCESS CPU STATUS
+*********************************************************************************************************** */
 bool CoreSM83::CheckMachineCycles() const {
-    return machineCycles >= machineCyclesPerFrame;
+    return machineCycles > machineCyclesPerFrame * mmu_instance->GetCurrentSpeed();
 }
 
 // return delta t per frame in nanoseconds
 int CoreSM83::GetDelayTime() {
-    machineCyclesPerFrame = baseClockMachineCycles * pow(10, 6) / displayFrequency;
-    return 1.f / displayFrequency * pow(10, 9);
+    machineCyclesPerFrame = BASE_CLOCK_MACHINE_CYCLES * pow(10, 6) / DISPLAY_FREQUENCY;
+    return 1.f / DISPLAY_FREQUENCY * pow(10, 9);
 }
 
 std::string CoreSM83::GetRegisterContents() const {
@@ -554,7 +608,13 @@ void CoreSM83::STOP() {
     data = mmu_instance->Read8Bit(Regs.PC);
     Regs.PC++;
 
-    if (data) { LOG_ERROR("Wrong usage of STOP instruction"); }
+    if (data != 0x00) { 
+        LOG_ERROR("Wrong usage of STOP instruction"); 
+        return;
+    }
+
+    mmu_instance->Write8Bit(0x00, DIV_ADDR);
+    stop = true;
 }
 
 // set halt state
@@ -992,6 +1052,12 @@ void CoreSM83::PUSH() {
         mmu_instance->Write16Bit(data, Regs.SP);
         break;
     }
+}
+
+void CoreSM83::isr_push(const u8& _isr_handler) {
+    Regs.SP -= 2;
+    mmu_instance->Write16Bit(Regs.PC, Regs.SP);
+    Regs.PC = _isr_handler;
 }
 
 // pop PC from Stack
@@ -1591,7 +1657,7 @@ void CoreSM83::JP() {
         zero = Regs.F & FLAG_ZERO;
         if (zero) { 
             jump_jp(); 
-            machineCycles += 4;
+            currentMachineCycles += 4;
             return;
         }
         break;
@@ -1599,7 +1665,7 @@ void CoreSM83::JP() {
         zero = Regs.F & FLAG_ZERO;
         if (!zero) { 
             jump_jp(); 
-            machineCycles += 4;
+            currentMachineCycles += 4;
             return;
         }
         break;
@@ -1607,7 +1673,7 @@ void CoreSM83::JP() {
         carry = Regs.F & FLAG_CARRY;
         if (carry) { 
             jump_jp(); 
-            machineCycles += 4;
+            currentMachineCycles += 4;
             return;
         }
         break;
@@ -1615,17 +1681,17 @@ void CoreSM83::JP() {
         carry = Regs.F & FLAG_CARRY;
         if (!carry) { 
             jump_jp(); 
-            machineCycles += 4;
+            currentMachineCycles += 4;
             return;
         }
         break;
     default:
         jump_jp();
-        machineCycles += 4;
+        currentMachineCycles += 4;
         return;
         break;
     }
-    machineCycles += 3;
+    currentMachineCycles += 3;
 }
 
 // jump relative to memory lecation
@@ -1641,7 +1707,7 @@ void CoreSM83::JR() {
         zero = Regs.F & FLAG_ZERO;
         if (zero) { 
             jump_jr(); 
-            machineCycles += 3;
+            currentMachineCycles += 3;
             return;
         }
         break;
@@ -1649,7 +1715,7 @@ void CoreSM83::JR() {
         zero = Regs.F & FLAG_ZERO;
         if (!zero) { 
             jump_jr(); 
-            machineCycles += 3;
+            currentMachineCycles += 3;
             return;
         }
         break;
@@ -1657,7 +1723,7 @@ void CoreSM83::JR() {
         carry = Regs.F & FLAG_CARRY;
         if (carry) { 
             jump_jr(); 
-            machineCycles += 3;
+            currentMachineCycles += 3;
             return;
         }
         break;
@@ -1665,7 +1731,7 @@ void CoreSM83::JR() {
         carry = Regs.F & FLAG_CARRY;
         if (!carry) { 
             jump_jr();
-            machineCycles += 3;
+            currentMachineCycles += 3;
             return;
         }
         break;
@@ -1673,7 +1739,7 @@ void CoreSM83::JR() {
         jump_jr();
         break;
     }
-    machineCycles += 2;
+    currentMachineCycles += 2;
 }
 
 void CoreSM83::jump_jp() {
@@ -1697,7 +1763,7 @@ void CoreSM83::CALL() {
         zero = Regs.F & FLAG_ZERO;
         if (zero) { 
             call(); 
-            machineCycles += 6;
+            currentMachineCycles += 6;
             return;
         }
         break;
@@ -1705,7 +1771,7 @@ void CoreSM83::CALL() {
         zero = Regs.F & FLAG_ZERO;
         if (!zero) { 
             call(); 
-            machineCycles += 6;
+            currentMachineCycles += 6;
             return;
         }
         break;
@@ -1713,7 +1779,7 @@ void CoreSM83::CALL() {
         carry = Regs.F & FLAG_CARRY;
         if (carry) { 
             call(); 
-            machineCycles += 6;
+            currentMachineCycles += 6;
             return;
         }
         break;
@@ -1721,17 +1787,17 @@ void CoreSM83::CALL() {
         carry = Regs.F & FLAG_CARRY;
         if (!carry) { 
             call(); 
-            machineCycles += 6;
+            currentMachineCycles += 6;
             return;
         }
         break;
     default:
         call();
-        machineCycles += 6;
+        currentMachineCycles += 6;
         return;
         break;
     }
-    machineCycles += 3;
+    currentMachineCycles += 3;
 }
 
 // call to interrupt vectors
@@ -1781,7 +1847,7 @@ void CoreSM83::RET() {
         zero = Regs.F & FLAG_ZERO;
         if (zero) { 
             ret(); 
-            machineCycles += 5;
+            currentMachineCycles += 5;
             return;
         }
         break;
@@ -1789,7 +1855,7 @@ void CoreSM83::RET() {
         zero = Regs.F & FLAG_ZERO;
         if (!zero) { 
             ret(); 
-            machineCycles += 5;
+            currentMachineCycles += 5;
             return;
         }
         break;
@@ -1797,7 +1863,7 @@ void CoreSM83::RET() {
         carry = Regs.F & FLAG_CARRY;
         if (carry) { 
             ret(); 
-            machineCycles += 5;
+            currentMachineCycles += 5;
             return;
         }
         break;
@@ -1805,17 +1871,17 @@ void CoreSM83::RET() {
         carry = Regs.F & FLAG_CARRY;
         if (!carry) { 
             ret(); 
-            machineCycles += 5;
+            currentMachineCycles += 5;
             return;
         }
         break;
     default:
         ret();
-        machineCycles += 4;
+        currentMachineCycles += 4;
         return;
         break;
     }
-    machineCycles += 2;
+    currentMachineCycles += 2;
 }
 
 // return and enable interrupts

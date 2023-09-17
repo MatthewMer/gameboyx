@@ -24,6 +24,13 @@ public:
 
 	virtual void ResetChildMemoryInstances() = 0;
 
+	virtual int GetCurrentSpeed() const = 0;
+	virtual u8 GetInterruptEnable() const = 0;
+	virtual u8 GetInterruptRequests() const = 0;
+	virtual void ResetInterruptRequest(const u8& _isr_flags) = 0;
+
+	virtual void ProcessMachineCyclesCurInstruction(const int& _machine_cycles) = 0;
+
 protected:
 	// constructor
 	MmuBase() = default;

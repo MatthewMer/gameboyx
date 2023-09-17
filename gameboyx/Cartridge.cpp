@@ -1,7 +1,7 @@
 #include "Cartridge.h"
 
 #include "io_config.h"
-#include "gameboy_config.h"
+#include "gameboy_defines.h"
 #include "logger.h"
 #include "helper_functions.h"
 

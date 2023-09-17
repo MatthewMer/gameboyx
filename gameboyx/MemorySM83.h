@@ -6,13 +6,30 @@
 #include "defs.h"
 
 struct machine_state_context {
+	// interrupt
 	u8 IE = 0x00;
 	u8 IF = 0x00;
+
+	// speed switch
 	int currentSpeed = 1;
+
+	// bank selects
 	int wramBank = 0;
 	int romBank = 0;
 	int ramBank = 0;
+
+	// hardware / instructions
 	bool isCgb = false;
+
+	// timers
+	u8 DIV = 0;
+	int machineCyclesPerDIVIncrement = 0;
+	int machineCyclesDIVCounter = 0;
+	u8 TIMA = 0;
+	int machineCyclesPerTIMAIncrement = 0;
+	int machineCyclesTIMACounter = 0;
+	u8 TMA = 0;
+	u8 TAC = 0;
 };
 
 struct graphics_context {
@@ -39,6 +56,43 @@ struct graphics_context {
 	u8 BCPD_BGPD = 0;
 	u8 OCPS_OBPI = 0;
 	u8 OCPD_OBPD = 0;
+
+	// object prio mode
+	u8 OBJ_PRIO;
+};
+
+struct sound_context {
+	u8 NR10 = 0;
+	u8 NR11 = 0;
+	u8 NR12 = 0;
+	u8 NR13 = 0;
+	u8 NR14 = 0;
+
+	u8 NR21 = 0;
+	u8 NR22 = 0;
+	u8 NR23 = 0;
+	u8 NR24 = 0;
+
+	u8 NR30 = 0;
+	u8 NR31 = 0;
+	u8 NR32 = 0;
+	u8 NR33 = 0;
+	u8 NR34 = 0;
+
+	u8 NR41 = 0;
+	u8 NR42 = 0;
+	u8 NR43 = 0;
+	u8 NR44 = 0;
+
+	u8 NR50 = 0;
+	u8 NR51 = 0;
+	u8 NR52 = 0;
+	
+	u8* WAVE_RAM;
+};
+
+struct joypad_context {
+	u8 JOYP_P1 = 0;
 };
 
 class MemorySM83 : private MemoryBase
@@ -79,7 +133,9 @@ public:
 
 private:
 	// constructor
-	explicit MemorySM83(const Cartridge& _cart_obj);
+	explicit MemorySM83(const Cartridge& _cart_obj) {
+		InitMemory(_cart_obj);
+	};
 	static MemorySM83* instance;
 	// destructor
 	~MemorySM83() = default;
@@ -88,6 +144,8 @@ private:
 	void InitMemory(const Cartridge& _cart_obj) override;
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;
 	bool CopyRom(const std::vector<u8>& _vec_rom) override;
+	void InitTimers();
+	void ProcessTAC();
 
 	void AllocateMemory() override;
 	void CleanupMemory() override;
@@ -101,6 +159,7 @@ private:
 	u8** WRAM_N;
 	u8* OAM;
 	u8* HRAM;
+	u8* IO;
 
 	// IO *****************
 	u8 GetIOValue(const u16& _addr);
@@ -110,24 +169,23 @@ private:
 
 	// CGB IO registers mapped to IO array for direct access
 	// SPEED SWITCH
-	u8 SPEEDSWITCH;
+	u8 SPEEDSWITCH = 0;
 	// VRAM BANK SELECT
 	u8 VRAM_BANK = 0;
 	// LCD VRAM DMA ADDRESS SOURCE
-	u8 HDMA1;
-	u8 HDMA2;
+	u8 HDMA1 = 0;
+	u8 HDMA2 = 0;
 	// LCD VRAM DMA ADDRESS DESTINATION
-	u8 HDMA3;
-	u8 HDMA4;
+	u8 HDMA3 = 0;
+	u8 HDMA4 = 0;
 	// VRAM DMA length/mode/start
-	u8 HDMA5;
-	// OBJECT PRIORITY MODE
-	u8 OBJ_PRIO;
+	u8 HDMA5 = 0;
+	
 	// WRAM BANK SELECT
 	u8 WRAM_BANK = 1;
 
-	// IO registers
-	//u8 
+	// OAM DMA
+	u8 OAM_DMA_REG = 0;
 
 	// speed switch
 	void SwitchSpeed(const u8& _data);
@@ -137,4 +195,7 @@ private:
 
 	// memory cpu context
 	machine_state_context* machine_ctx = new machine_state_context();
+	graphics_context* graphics_ctx = new graphics_context();
+	sound_context* sound_ctx = new sound_context();
+	joypad_context* joyp_ctx = new joypad_context();
 };

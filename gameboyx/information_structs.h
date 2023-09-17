@@ -5,11 +5,11 @@
 
 // TODO: fifo for debug info (GUI)
 struct message_buffer {
-	std::string debug_instruction = "";
-	bool debug_instruction_enabled = false;
+	std::string instruction_buffer = "";
+	bool instruction_buffer_enabled = false;
 	bool pause_execution = true;
 	bool auto_run = false;
-	bool debug_instruction_log = true;
+	bool instruction_buffer_log = true;
 };
 
 struct game_status {

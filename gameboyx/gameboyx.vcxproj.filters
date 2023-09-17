@@ -71,7 +71,7 @@
     <ClInclude Include="Cartridge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="gameboy_config.h">
+    <ClInclude Include="gameboy_defines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="defs.h">

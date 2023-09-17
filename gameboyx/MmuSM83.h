@@ -18,9 +18,11 @@ public:
 	u16 Read16Bit(const u16& _addr) override;
 
 	// access machine states
-	int& GetCurrentSpeed() const;
-	u8& GetInterruptEnable() const;
-	u8& GetInterruptRequests() const;
+	int GetCurrentSpeed() const override;
+	u8 GetInterruptEnable() const override;
+	u8 GetInterruptRequests() const override;
+	void ResetInterruptRequest(const u8& _isr_flags) override;
+	void ProcessMachineCyclesCurInstruction(const int& _machine_cycles) override;
 
 private:
 	// constructor
@@ -35,7 +37,7 @@ private:
 	void InitMmu(const Cartridge& _cart_obj) override;
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom);
 
-	// hardware info
+	// hardware info and access
 	machine_state_context* machine_ctx;
 
 	// mbc3 control
