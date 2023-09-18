@@ -10,6 +10,12 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ```
 * compile with Visual Studio 2022 (open ./gameboyx.sln, set to Release and your target platform and start the build process)
 
+### Ressources ###
+
+* [Documents](./docs/)
+* [Pan Docs](https://gbdev.io/pandocs/)
+* [Instruction Set](https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html)
+
 ### Who do I talk to? ###
 
 * Repo owner
