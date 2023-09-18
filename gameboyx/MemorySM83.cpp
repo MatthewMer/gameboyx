@@ -29,6 +29,14 @@ machine_state_context* MemorySM83::GetMachineContext() const {
     return machine_ctx;
 }
 
+graphics_context* MemorySM83::GetGraphicsContext() const {
+    return graphics_ctx;
+}
+
+sound_context* MemorySM83::GetSoundContext() const {
+    return sound_ctx;
+}
+
 /* ***********************************************************************************************************
     INITIALIZE MEMORY
 *********************************************************************************************************** */
@@ -572,6 +580,7 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
             break;
         case OAM_DMA_ADDR:
             OAM_DMA_REG = _data;
+            OAM_DMA();
             break;
         }
         break;
@@ -671,14 +680,39 @@ void MemorySM83::VRAM_DMA() {
 }
 
 void MemorySM83::OAM_DMA() {
+    u16 source_address;
+    if (OAM_DMA_REG > OAM_DMA_SOURCE_MAX) {
+        source_address = OAM_DMA_SOURCE_MAX * 0x100;
+    }
+    else {
+        source_address = OAM_DMA_REG * 0x100;
+    }
 
+    if (source_address < ROM_BANK_N_OFFSET) {
+        memcpy(OAM, &ROM_0[source_address], OAM_DMA_LENGTH);
+    }
+    else if (source_address < VRAM_N_OFFSET) {
+        memcpy(OAM, &ROM_N[machine_ctx->romBank][source_address], OAM_DMA_LENGTH);
+    }
+    else if (source_address < RAM_BANK_N_OFFSET) {
+        memcpy(OAM, &VRAM_N[VRAM_BANK][source_address], OAM_DMA_LENGTH);
+    }
+    else if (source_address < WRAM_0_OFFSET) {
+        memcpy(OAM, &RAM_N[machine_ctx->ramBank][source_address], OAM_DMA_LENGTH);
+    }
+    else if (source_address < WRAM_N_OFFSET) {
+        memcpy(OAM, &WRAM_0[source_address], OAM_DMA_LENGTH);
+    }
+    else if (source_address < MIRROR_WRAM_OFFSET) {
+        memcpy(OAM, &WRAM_N[machine_ctx->wramBank][source_address], OAM_DMA_LENGTH);
+    }
 }
 
 /* ***********************************************************************************************************
     TIMERS
 *********************************************************************************************************** */
 void MemorySM83::InitTimers() {
-    machine_ctx->machineCyclesPerDIVIncrement = BASE_CLOCK_MACHINE_CYCLES * pow(10, 6) / DIV_FREQUENCY;
+    machine_ctx->machineCyclesPerDIVIncrement = ((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DIV_FREQUENCY;
 
     ProcessTAC();
 }
@@ -721,7 +755,8 @@ void MemorySM83::SwitchSpeed(const u8& _data) {
             }
 
             machine_ctx->IE = 0x00;
-            // TODO: JOYP = 0x30 and STOP
+            joyp_ctx->JOYP_P1 = 0x30;
+            // TODO: STOP
         }
     }
 }

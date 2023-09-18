@@ -101,7 +101,7 @@ void CoreSM83::RunCycles() {
             }
             else {
                 if (machineCycles > machineCyclesPerFrame * mmu_instance->GetCurrentSpeed()) {
-                    machineCycles = 0;
+                    machineCycles -= machineCyclesPerFrame * mmu_instance->GetCurrentSpeed();
                 }
 
                 msgBuffer.instruction_buffer = GetRegisterContents();
@@ -111,7 +111,7 @@ void CoreSM83::RunCycles() {
             }
         }
         else {
-            machineCycles = 0;
+            machineCycles -= machineCyclesPerFrame * mmu_instance->GetCurrentSpeed();
             while (machineCycles < machineCyclesPerFrame * mmu_instance->GetCurrentSpeed()) {
                 RunCpu();
             }
@@ -126,6 +126,7 @@ void CoreSM83::RunCycles() {
 }
 
 void CoreSM83::RunCpu() {
+
     ExecuteInstruction();
     ExecuteMachineCycles();
     ExecuteInterrupts();
@@ -195,7 +196,7 @@ bool CoreSM83::CheckMachineCycles() const {
 
 // return delta t per frame in nanoseconds
 int CoreSM83::GetDelayTime() {
-    machineCyclesPerFrame = BASE_CLOCK_MACHINE_CYCLES * pow(10, 6) / DISPLAY_FREQUENCY;
+    machineCyclesPerFrame = ((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DISPLAY_FREQUENCY;
     return 1.f / DISPLAY_FREQUENCY * pow(10, 9);
 }
 

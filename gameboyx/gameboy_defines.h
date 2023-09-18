@@ -145,6 +145,8 @@
 
 // OAM DMA
 #define OAM_DMA_ADDR                0xFF46              // RW
+#define OAM_DMA_SOURCE_MAX          0xDF
+#define OAM_DMA_LENGTH              0xA0
 
 // BG/OBJ PALETTES
 #define BGP_ADDR                    0xFF47              // RW
@@ -198,6 +200,5 @@
     FREQUENCIES
 *********************************************************************************************************** */
 #define DIV_FREQUENCY               16384               // Hz
-#define BASE_CLOCK_MACHINE_CYCLES   1.05f               // MHz
 #define BASE_CLOCK_CPU              4.20f               // MHz
 #define DISPLAY_FREQUENCY           60                  // Hz

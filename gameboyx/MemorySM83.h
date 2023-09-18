@@ -130,6 +130,8 @@ public:
 	void WriteIE(const u8& _data);
 
 	machine_state_context* GetMachineContext() const;
+	graphics_context* GetGraphicsContext() const;
+	sound_context* GetSoundContext() const;
 
 private:
 	// constructor

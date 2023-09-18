@@ -226,7 +226,7 @@ void MmuSM83_MBC3::ResetInterruptRequest(const u8& _isr_flags) {
 void MmuSM83_MBC3::ProcessMachineCyclesCurInstruction(const int& _machine_cycles) {
 	machine_ctx->machineCyclesDIVCounter += _machine_cycles;
 	if (machine_ctx->machineCyclesDIVCounter > machine_ctx->machineCyclesPerDIVIncrement) {
-		machine_ctx->machineCyclesDIVCounter = 0;
+		machine_ctx->machineCyclesDIVCounter -= machine_ctx->machineCyclesPerDIVIncrement;
 
 		if (machine_ctx->DIV == 0xFF) {
 			machine_ctx->DIV = 0x00;
@@ -240,7 +240,7 @@ void MmuSM83_MBC3::ProcessMachineCyclesCurInstruction(const int& _machine_cycles
 	if (machine_ctx->TAC & TAC_CLOCK_ENABLE) {
 		machine_ctx->machineCyclesTIMACounter += _machine_cycles;
 		if (machine_ctx->machineCyclesTIMACounter > machine_ctx->machineCyclesPerTIMAIncrement) {
-			machine_ctx->machineCyclesTIMACounter = 0;
+			machine_ctx->machineCyclesTIMACounter -= machine_ctx->machineCyclesPerTIMAIncrement;
 			
 			if (machine_ctx->TIMA == 0xFF) {
 				machine_ctx->TIMA = machine_ctx->TMA;
