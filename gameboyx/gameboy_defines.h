@@ -207,3 +207,35 @@
     GRAPHICS DEFINES
 *********************************************************************************************************** */
 #define PPU_VBLANK                  0x91
+
+// LCD CONTROL
+#define PPU_LCDC_ENABLE             0x80
+#define PPU_LCDC_WIN_TILEMAP        0x40
+#define PPU_LCDC_WIN_ENABLE         0x20
+#define PPU_LCDC_WINBG_TILEDATA     0x10
+#define PPU_LCDC_BG_TILEMAP         0x08
+#define PPU_LCDC_OBJ_SIZE           0x04
+#define PPU_LCDC_OBJ_ENABLE         0x02
+#define PPU_LCDC_WINBG_EN_PRIO      0x01
+
+// LCD STAT
+#define PPU_STAT_MODE               0x03
+//#define PPU_STAT_MODE0_HBLANK       0x00
+#define PPU_STAT_MODE1_VBLANK       0x01
+//#define PPU_STAT_MODE2_OAMSEARCH    0x02
+//#define PPU_STAT_MODE3_LCDCTRL      0x03
+
+#define PPU_STAT_LYC_FLAG           0x04
+#define PPU_STAT_MODE0_EN           0x08                // isr STAT hblank
+#define PPU_STAT_MODE1_EN           0x10                // isr STAT vblank
+#define PPU_STAT_MODE2_EN           0x20                // isr STAT oam
+#define PPU_STAT_LYC_SOURCE         0x40
+
+// VRAM Tile data
+#define PPU_VRAM_TILE_SIZE          16                  // Bytes
+#define PPU_VRAM_BASEPTR_8000       0x8000
+#define PPU_VRAM_BASEPTR_8800       0x8800
+
+// lcd
+#define LCD_SCANLINES               144
+#define LCD_SCANLINES_VBLANK        153

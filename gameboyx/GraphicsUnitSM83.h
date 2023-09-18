@@ -24,5 +24,8 @@ private:
 	MemorySM83* mem_instance;
 	graphics_context* graphics_ctx;
 
-	// 
+	// members
+	void SearchOAM();
+	void ReadVRAMandOAM();
+	void GenerateFrameData();
 };

@@ -2,7 +2,7 @@
 
 #include "Cartridge.h"
 #include "MemoryBase.h"
-
+#include "gameboy_defines.h"
 #include "defs.h"
 
 struct machine_state_context {
@@ -43,14 +43,15 @@ struct graphics_context {
 	// VRAM BANK SELECT
 	u8 VRAM_BANK = 0;
 
+	// TODO: chekc initial register states
 	// LCD Control
-	u8 LCDC = 0;
+	u8 LCDC = PPU_LCDC_ENABLE;
 
 	// LCD Status
 	u8 LY = 0;
 	u8 LY_COPY = 0;
 	u8 LYC = 0;
-	u8 STAT = 0;
+	u8 STAT = PPU_STAT_MODE1_VBLANK;
 
 	// Scrolling
 	u8 SCY = 0;

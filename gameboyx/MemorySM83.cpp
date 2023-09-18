@@ -581,7 +581,7 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
             graphics_ctx->LCDC = _data;
             break;
         case STAT_ADDR:
-            graphics_ctx->STAT = _data;
+            graphics_ctx->STAT = (graphics_ctx->STAT & (PPU_STAT_MODE | PPU_STAT_LYC_FLAG)) | (_data & ~(PPU_STAT_MODE | PPU_STAT_LYC_FLAG));
             break;
         case SCY_ADDR:
             graphics_ctx->SCY = _data;
