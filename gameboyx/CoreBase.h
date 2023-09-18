@@ -24,10 +24,6 @@ public:
 	virtual void RunCycles() = 0;
 	virtual void RunCpu() = 0;
 
-	virtual void ExecuteInstruction() = 0;
-	virtual void ExecuteMachineCycles() = 0;
-	virtual void ExecuteInterrupts() = 0;
-
 	virtual int GetDelayTime() = 0;
 	//virtual void ResetMachineCycleCounter() = 0;
 	virtual bool CheckMachineCycles() const = 0;
@@ -44,6 +40,10 @@ protected:
 
 	// members
 	int machineCyclesPerFrame = 0;
+
+	virtual void ExecuteInstruction() = 0;
+	virtual void ExecuteMachineCycles() = 0;
+	virtual void ExecuteInterrupts() = 0;
 	
 	virtual void InitCpu(const Cartridge& _cart_obj) = 0;
 	virtual void InitRegisterStates() = 0;

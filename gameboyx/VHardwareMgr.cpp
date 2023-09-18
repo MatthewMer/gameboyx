@@ -32,7 +32,7 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_fifo
     }
 
     core_instance = CoreBase::getInstance(*cart_instance, _msg_fifo);
-    graphics_instance = GraphicsUnitBase::getInstance(*cart_instance);
+    graphics_instance = GraphicsUnitBase::getInstance();
 
     // sets the machine cycle threshold for core and returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
@@ -44,8 +44,14 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_fifo
     FUNCTIONALITY
 *********************************************************************************************************** */
 void VHardwareMgr::ProcessNext() {
+    // simulate delay (60Hz display frequency)
     SimulateDelay();
+    // run cpu for 1/60Hz
     core_instance->RunCycles();
+    // if machine cycles per frame passed -> render frame
+    if (core_instance->CheckMachineCycles()) {
+        graphics_instance->NextFrame();
+    }
 }
 
 void VHardwareMgr::SimulateDelay() {

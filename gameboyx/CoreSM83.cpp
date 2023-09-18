@@ -100,7 +100,7 @@ void CoreSM83::RunCycles() {
                 return;
             }
             else {
-                if (machineCycles > machineCyclesPerFrame * mmu_instance->GetCurrentSpeed()) {
+                if (CheckMachineCycles()) {
                     machineCycles -= machineCyclesPerFrame * mmu_instance->GetCurrentSpeed();
                 }
 
@@ -121,7 +121,7 @@ void CoreSM83::RunCycles() {
         u8 isr_enable = mmu_instance->GetInterruptEnable();
         u8 isr_flags = mmu_instance->GetInterruptRequests();
 
-        halt = (isr_enable & isr_flags) != 0x00;
+        halt = (isr_enable & isr_flags) == 0x00;
     }
 }
 

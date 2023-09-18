@@ -11,9 +11,13 @@ using namespace std;
 MemorySM83* MemorySM83::instance = nullptr;
 
 MemorySM83* MemorySM83::getInstance(const Cartridge& _cart_obj) {
-    if (instance == nullptr) {
-        instance = new MemorySM83(_cart_obj);
-    }
+    resetInstance();
+    instance = new MemorySM83(_cart_obj);
+
+    return instance;
+}
+
+MemorySM83* MemorySM83::getInstance() {
     return instance;
 }
 
@@ -25,6 +29,9 @@ void MemorySM83::resetInstance() {
     }
 }
 
+/* ***********************************************************************************************************
+    HARDWARE ACCESS
+*********************************************************************************************************** */
 machine_state_context* MemorySM83::GetMachineContext() const {
     return machine_ctx;
 }
@@ -37,6 +44,10 @@ sound_context* MemorySM83::GetSoundContext() const {
     return sound_ctx;
 }
 
+void MemorySM83::RequestInterrupts(const u8& isr_flags) {
+    machine_ctx->IF |= isr_flags;
+}
+
 /* ***********************************************************************************************************
     INITIALIZE MEMORY
 *********************************************************************************************************** */
@@ -44,6 +55,7 @@ void MemorySM83::InitMemory(const Cartridge& _cart_obj) {
     const auto& vec_rom = _cart_obj.GetRomVector();
 
     machine_ctx->isCgb = _cart_obj.GetIsCgb();
+    graphics_ctx->isCgb = _cart_obj.GetIsCgb();
 
     if (!ReadRomHeaderInfo(vec_rom)) { return; }
 
@@ -93,9 +105,9 @@ void MemorySM83::AllocateMemory() {
         ROM_N[i] = new u8[ROM_BANK_N_SIZE];
     }
 
-    VRAM_N = new u8 * [machine_ctx->isCgb ? 2 : 1];
+    graphics_ctx->VRAM_N = new u8 * [machine_ctx->isCgb ? 2 : 1];
     for (int i = 0; i < (machine_ctx->isCgb ? 2 : 1); i++) {
-        VRAM_N[i] = new u8[VRAM_N_SIZE];
+        graphics_ctx->VRAM_N[i] = new u8[VRAM_N_SIZE];
     }
 
     RAM_N = new u8 * [ramBankNum];
@@ -109,7 +121,7 @@ void MemorySM83::AllocateMemory() {
         WRAM_N[i] = new u8[WRAM_N_SIZE];
     }
 
-    OAM = new u8[OAM_SIZE];
+    graphics_ctx->OAM = new u8[OAM_SIZE];
 
     HRAM = new u8[HRAM_SIZE];
 
@@ -124,9 +136,9 @@ void MemorySM83::CleanupMemory() {
     delete[] ROM_N;
 
     for (int i = 0; i < (machine_ctx->isCgb ? 2 : 1); i++) {
-        delete[] VRAM_N[i];
+        delete[] graphics_ctx->VRAM_N[i];
     }
-    delete[] VRAM_N;
+    delete[] graphics_ctx->VRAM_N;
 
     for (int i = 0; i < ramBankNum; i++) {
         delete[] RAM_N[i];
@@ -139,7 +151,7 @@ void MemorySM83::CleanupMemory() {
     }
     delete[] WRAM_N;
 
-    delete[] OAM;
+    delete[] graphics_ctx->OAM;
 
     delete[] HRAM;
 
@@ -214,9 +226,9 @@ u8 MemorySM83::ReadROM_N(const u16& _addr) {
 
 u8 MemorySM83::ReadVRAM_N(const u16& _addr) {
     if (machine_ctx->isCgb) {
-        return VRAM_N[VRAM_BANK][_addr - VRAM_N_OFFSET];
+        return graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][_addr - VRAM_N_OFFSET];
     }else{
-        return VRAM_N[0][_addr - VRAM_N_OFFSET];
+        return graphics_ctx->VRAM_N[0][_addr - VRAM_N_OFFSET];
     }
 }
 
@@ -238,7 +250,7 @@ u8 MemorySM83::ReadWRAM_N(const u16& _addr) {
 }
 
 u8 MemorySM83::ReadOAM(const u16& _addr) {
-    return OAM[_addr - OAM_OFFSET];
+    return graphics_ctx->OAM[_addr - OAM_OFFSET];
 }
 
 u8 MemorySM83::ReadIO(const u16& _addr) {
@@ -256,10 +268,10 @@ u8 MemorySM83::ReadIE() {
 // write *****
 void MemorySM83::WriteVRAM_N(const u8& _data, const u16& _addr) {
     if (machine_ctx->isCgb) {
-        VRAM_N[VRAM_BANK][_addr - VRAM_N_OFFSET] = _data;
+        graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][_addr - VRAM_N_OFFSET] = _data;
     }
     else {
-        VRAM_N[0][_addr - VRAM_N_OFFSET] = _data;
+        graphics_ctx->VRAM_N[0][_addr - VRAM_N_OFFSET] = _data;
     }
 }
 
@@ -281,7 +293,7 @@ void MemorySM83::WriteWRAM_N(const u8& _data, const u16& _addr) {
 }
 
 void MemorySM83::WriteOAM(const u8& _data, const u16& _addr) {
-    OAM[_addr - OAM_OFFSET] = _data;
+    graphics_ctx->OAM[_addr - OAM_OFFSET] = _data;
 }
 
 void MemorySM83::WriteIO(const u8& _data, const u16& _addr) {
@@ -386,7 +398,7 @@ u8 MemorySM83::GetIOValue(const u16& _addr) {
         // vram, lcd ********************
         switch (_addr) {
         case CGB_VRAM_SELECT_ADDR:
-            return VRAM_BANK;
+            return graphics_ctx->VRAM_BANK;
             break;
         case CGB_SPEED_SWITCH_ADDR:
             return SPEEDSWITCH;
@@ -404,7 +416,9 @@ u8 MemorySM83::GetIOValue(const u16& _addr) {
             return graphics_ctx->SCX;
             break;
         case LY_ADDR:
-            return graphics_ctx->LY;
+            graphics_ctx->LY_COPY = graphics_ctx->LY;
+            graphics_ctx->LY = 0x00;
+            return graphics_ctx->LY_COPY;
             break;
         case LYC_ADDR:
             return graphics_ctx->LYC;
@@ -556,7 +570,7 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
         // vram, lcd ********************
         switch (_addr) {
         case CGB_VRAM_SELECT_ADDR:
-            VRAM_BANK = _data & 0x01;
+            graphics_ctx->VRAM_BANK = _data & 0x01;
             break;
         case CGB_SPEED_SWITCH_ADDR:
             if (machine_ctx->isCgb) {
@@ -658,19 +672,19 @@ void MemorySM83::VRAM_DMA() {
     u16 dest_addr = ((u16)HDMA3 << 8) | HDMA4;
 
     if (source_addr < ROM_BANK_N_OFFSET) {
-        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &ROM_0[source_addr], length);
+        memcpy(&graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][dest_addr - VRAM_N_OFFSET], &ROM_0[source_addr], length);
     }
     else if (source_addr < VRAM_N_OFFSET) {
-        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &ROM_N[machine_ctx->romBank][source_addr - ROM_BANK_N_OFFSET], length);
+        memcpy(&graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][dest_addr - VRAM_N_OFFSET], &ROM_N[machine_ctx->romBank][source_addr - ROM_BANK_N_OFFSET], length);
     }
     else if (source_addr < WRAM_0_OFFSET && source_addr >= RAM_BANK_N_OFFSET) {
-        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &RAM_N[machine_ctx->ramBank][source_addr - RAM_BANK_N_OFFSET], length);
+        memcpy(&graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][dest_addr - VRAM_N_OFFSET], &RAM_N[machine_ctx->ramBank][source_addr - RAM_BANK_N_OFFSET], length);
     }
     else if (source_addr < WRAM_N_OFFSET) {
-        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
+        memcpy(&graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][dest_addr - VRAM_N_OFFSET], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
     }
-    else if (source_addr < MIRROR_WRAM_OFFSET && source_addr >= WRAM_N_OFFSET) {
-        memcpy(&VRAM_N[VRAM_BANK][dest_addr - VRAM_N_OFFSET], &WRAM_N[machine_ctx->wramBank][source_addr - WRAM_N_OFFSET], length);
+    else if (source_addr < MIRROR_WRAM_OFFSET) {
+        memcpy(&graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][dest_addr - VRAM_N_OFFSET], &WRAM_N[machine_ctx->wramBank][source_addr - WRAM_N_OFFSET], length);
     }
     else {
         return;
@@ -689,22 +703,22 @@ void MemorySM83::OAM_DMA() {
     }
 
     if (source_address < ROM_BANK_N_OFFSET) {
-        memcpy(OAM, &ROM_0[source_address], OAM_DMA_LENGTH);
+        memcpy(graphics_ctx->OAM, &ROM_0[source_address], OAM_DMA_LENGTH);
     }
     else if (source_address < VRAM_N_OFFSET) {
-        memcpy(OAM, &ROM_N[machine_ctx->romBank][source_address], OAM_DMA_LENGTH);
+        memcpy(graphics_ctx->OAM, &ROM_N[machine_ctx->romBank][source_address], OAM_DMA_LENGTH);
     }
     else if (source_address < RAM_BANK_N_OFFSET) {
-        memcpy(OAM, &VRAM_N[VRAM_BANK][source_address], OAM_DMA_LENGTH);
+        memcpy(graphics_ctx->OAM, &graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][source_address], OAM_DMA_LENGTH);
     }
     else if (source_address < WRAM_0_OFFSET) {
-        memcpy(OAM, &RAM_N[machine_ctx->ramBank][source_address], OAM_DMA_LENGTH);
+        memcpy(graphics_ctx->OAM, &RAM_N[machine_ctx->ramBank][source_address], OAM_DMA_LENGTH);
     }
     else if (source_address < WRAM_N_OFFSET) {
-        memcpy(OAM, &WRAM_0[source_address], OAM_DMA_LENGTH);
+        memcpy(graphics_ctx->OAM, &WRAM_0[source_address], OAM_DMA_LENGTH);
     }
     else if (source_address < MIRROR_WRAM_OFFSET) {
-        memcpy(OAM, &WRAM_N[machine_ctx->wramBank][source_address], OAM_DMA_LENGTH);
+        memcpy(graphics_ctx->OAM, &WRAM_N[machine_ctx->wramBank][source_address], OAM_DMA_LENGTH);
     }
 }
 

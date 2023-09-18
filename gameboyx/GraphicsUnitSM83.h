@@ -8,11 +8,21 @@ class GraphicsUnitSM83 : protected GraphicsUnitBase
 public:
 	friend class GraphicsUnitBase;
 
+	// members
+	void NextFrame() override;
+
 private:
 	// constructor
-	explicit GraphicsUnitSM83(const Cartridge& _cart_obj);
+	GraphicsUnitSM83() {
+		mem_instance = MemorySM83::getInstance();
+		graphics_ctx = mem_instance->GetGraphicsContext();
+	}
 	// destructor
 	~GraphicsUnitSM83() = default;
 
-	MemorySM83* mem_instance = nullptr;
+	// memory access
+	MemorySM83* mem_instance;
+	graphics_context* graphics_ctx;
+
+	// 
 };

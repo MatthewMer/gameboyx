@@ -1,5 +1,13 @@
 #include "GraphicsUnitSM83.h"
 
-GraphicsUnitSM83::GraphicsUnitSM83(const Cartridge& _cart_obj) {
-	mem_instance = MemorySM83::getInstance(_cart_obj);
+#include "gameboy_defines.h"
+
+void GraphicsUnitSM83::NextFrame() {
+	isrFlags = 0x00;
+
+
+
+
+	mem_instance->RequestInterrupts(isrFlags | ISR_VBLANK);
+	graphics_ctx->LY = PPU_VBLANK;
 }

@@ -18,7 +18,7 @@ struct machine_state_context {
 	int romBank = 0;
 	int ramBank = 0;
 
-	// hardware / instructions
+	// hardware
 	bool isCgb = false;
 
 	// timers
@@ -33,11 +33,22 @@ struct machine_state_context {
 };
 
 struct graphics_context {
+	// hardware
+	bool isCgb = false;
+
+	// VRAM/OAM
+	u8** VRAM_N;
+	u8* OAM;
+
+	// VRAM BANK SELECT
+	u8 VRAM_BANK = 0;
+
 	// LCD Control
 	u8 LCDC = 0;
 
 	// LCD Status
 	u8 LY = 0;
+	u8 LY_COPY = 0;
 	u8 LYC = 0;
 	u8 STAT = 0;
 
@@ -62,6 +73,9 @@ struct graphics_context {
 };
 
 struct sound_context {
+	// hardware
+	//bool isCgb = false;
+
 	u8 NR10 = 0;
 	u8 NR11 = 0;
 	u8 NR12 = 0;
@@ -100,6 +114,7 @@ class MemorySM83 : private MemoryBase
 public:
 	// get/reset instance
 	static MemorySM83* getInstance(const Cartridge& _cart_obj);
+	static MemorySM83* getInstance();
 	static void resetInstance();
 
 	// clone/assign protection
@@ -133,6 +148,8 @@ public:
 	graphics_context* GetGraphicsContext() const;
 	sound_context* GetSoundContext() const;
 
+	void RequestInterrupts(const u8& isr_flags) override;
+
 private:
 	// constructor
 	explicit MemorySM83(const Cartridge& _cart_obj) {
@@ -155,11 +172,9 @@ private:
 	// actual memory
 	u8* ROM_0;
 	u8** ROM_N;
-	u8** VRAM_N;
 	u8** RAM_N;
 	u8* WRAM_0;
 	u8** WRAM_N;
-	u8* OAM;
 	u8* HRAM;
 	u8* IO;
 
@@ -172,8 +187,6 @@ private:
 	// CGB IO registers mapped to IO array for direct access
 	// SPEED SWITCH
 	u8 SPEEDSWITCH = 0;
-	// VRAM BANK SELECT
-	u8 VRAM_BANK = 0;
 	// LCD VRAM DMA ADDRESS SOURCE
 	u8 HDMA1 = 0;
 	u8 HDMA2 = 0;

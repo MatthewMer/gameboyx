@@ -5,10 +5,10 @@
 
 GraphicsUnitBase* GraphicsUnitBase::instance = nullptr;
 
-GraphicsUnitBase* GraphicsUnitBase::getInstance(const Cartridge& _cart_obj) {
+GraphicsUnitBase* GraphicsUnitBase::getInstance() {
 	resetInstance();
 
-	instance = new GraphicsUnitSM83(_cart_obj);
+	instance = new GraphicsUnitSM83();
 	return instance;
 }
 

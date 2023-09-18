@@ -40,7 +40,7 @@ enum reg_types {
 /* ***********************************************************************************************************
 	CoreSM83 CLASS DECLARATION
 *********************************************************************************************************** */
-class CoreSM83 : public CoreBase
+class CoreSM83 : protected CoreBase
 {
 public:
 	friend class CoreBase;

@@ -18,4 +18,6 @@ protected:
 
 	int romBankNum = 0;
 	int ramBankNum = 0;
+
+	virtual void RequestInterrupts(const u8& isr_flags) = 0;
 };
