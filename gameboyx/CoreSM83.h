@@ -48,6 +48,8 @@ public:
 	void RunCycles() override;
 	//void ResetMachineCycleCounter() override;
 	bool CheckMachineCycles() const override;
+	u32 GetCurrentClock() const override;
+	int GetDisplayFrequency() const override;
 
 private:
 	// constructor
@@ -79,7 +81,7 @@ private:
 	bool stop = false;
 	bool halt = false;
 	bool ime = false;
-	bool opcode_cb = false;
+	bool opcodeCB = false;
 
 	// ISR
 	void isr_push(const u8& _isr_handler);

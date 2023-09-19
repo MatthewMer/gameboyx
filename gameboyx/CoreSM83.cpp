@@ -126,7 +126,6 @@ void CoreSM83::RunCycles() {
 }
 
 void CoreSM83::RunCpu() {
-
     ExecuteInstruction();
     ExecuteMachineCycles();
     ExecuteInterrupts();
@@ -137,7 +136,14 @@ void CoreSM83::ExecuteInstruction() {
     curPC = Regs.PC;
     Regs.PC++;
 
-    instrPtr = &instrMap[opcode];
+    if (opcodeCB) {
+        instrPtr = &instrMapCB[opcode];
+        opcodeCB = false;
+    }
+    else {
+        instrPtr = &instrMap[opcode];
+    }
+
     functionPtr = get<1>(*instrPtr);
     currentMachineCycles = get<2>(*instrPtr);
     (this->*functionPtr)();
@@ -198,6 +204,14 @@ bool CoreSM83::CheckMachineCycles() const {
 int CoreSM83::GetDelayTime() {
     machineCyclesPerFrame = ((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DISPLAY_FREQUENCY;
     return 1.f / DISPLAY_FREQUENCY * pow(10, 9);
+}
+
+u32 CoreSM83::GetCurrentClock() const {
+    return machineCycles * DISPLAY_FREQUENCY * 4;
+}
+
+int CoreSM83::GetDisplayFrequency() const {
+    return DISPLAY_FREQUENCY;
 }
 
 std::string CoreSM83::GetRegisterContents() const {
@@ -290,9 +304,6 @@ const Ptr* CoreSM83::GetPtr(const reg_types& _reg_type) {
 *********************************************************************************************************** */
 void CoreSM83::setupLookupTable() {
     instrMap.clear();
-
-    // create pointer instances
-     
 
     // Elements: opcode, instruction function, machine cycles
 
@@ -647,7 +658,7 @@ void CoreSM83::EI() {
 
 // enable CB sm83_instructions for next opcode
 void CoreSM83::CB() {
-    opcode_cb = true;
+    opcodeCB = true;
 }
 
 /* ***********************************************************************************************************

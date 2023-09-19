@@ -19,9 +19,11 @@ void GraphicsUnitSM83::NextFrame() {
 		}
 
 		// request ly compare interrupt (STAT) and set flag
-		if ((graphics_ctx->STAT & PPU_STAT_LYC_SOURCE) && (graphics_ctx->LYC <= LCD_SCANLINES_VBLANK)) {
+		if (graphics_ctx->LYC <= LCD_SCANLINES_VBLANK) {
 			graphics_ctx->STAT |= PPU_STAT_LYC_FLAG;
-			isrFlags |= ISR_LCD_STAT;
+			if (graphics_ctx->STAT & PPU_STAT_LYC_SOURCE) {
+				isrFlags |= ISR_LCD_STAT;
+			}
 		}
 		else {
 			graphics_ctx->STAT &= ~PPU_STAT_LYC_FLAG;

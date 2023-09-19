@@ -214,12 +214,6 @@ int main(int, char**)
             case SDL_KEYDOWN:
                 key = event.key.keysym.sym;
                 switch (key) {
-                case SDLK_F11:
-                    sdl_toggle_full_screen(window);
-                    break;
-                case SDLK_ESCAPE:
-                    game_state->pending_game_stop = true;
-                    break;
                 default:
                     if (game_state->game_running) {
                         vhwmgr_obj->KeyDown(key);
@@ -233,6 +227,15 @@ int main(int, char**)
             case SDL_KEYUP:
                 key = event.key.keysym.sym;
                 switch (key) {
+                case SDLK_ESCAPE:
+                    game_state->pending_game_stop = true;
+                    break;
+                case SDLK_F10:
+                    gbx_gui->KeyUp(key);
+                    break;
+                case SDLK_F11:
+                    sdl_toggle_full_screen(window);
+                    break;
                 default:
                     if (game_state->game_running) {
                         vhwmgr_obj->KeyUp(key);

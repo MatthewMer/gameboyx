@@ -38,10 +38,16 @@ private:
 	Cartridge* cart_instance;
 
 	// execution time
-	int timePerFrame = 0;
+	u32 timePerFrame = 0;
+	u32 currentTimePerFrame = 0;
+	u64 timeDelta = 0;
+	int timeDeltaCounter = 0;
+	int timeDeltaNumIncrements = 0;
 	steady_clock::time_point prev;
 	steady_clock::time_point cur;
+	u32 displayFrequency = 0;
 	void SimulateDelay();
+	void GetCurrentCoreFrequency();
 	void InitTime();
 
 	// message fifo

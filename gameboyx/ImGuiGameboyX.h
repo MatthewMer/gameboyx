@@ -64,6 +64,7 @@ private:
 	void ShowNewGameDialog();
 	void ShowGameSelect();
 	void ShowDebugInstructions();
+	void ShowHardwareInfo();
 
 	// actions
 	void ActionDeleteGames();

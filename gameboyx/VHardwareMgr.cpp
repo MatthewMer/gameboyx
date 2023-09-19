@@ -36,6 +36,7 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_fifo
 
     // sets the machine cycle threshold for core and returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
+    displayFrequency = core_instance->GetDisplayFrequency();
 
     LOG_INFO(_game_ctx.title, " started");
 }
@@ -52,13 +53,31 @@ void VHardwareMgr::ProcessNext() {
     if (core_instance->CheckMachineCycles()) {
         graphics_instance->NextFrame();
     }
+    
 }
 
 void VHardwareMgr::SimulateDelay() {
-    while (duration_cast<nanoseconds>(cur - prev).count() < timePerFrame) {
+    while (currentTimePerFrame < timePerFrame) {
+        currentTimePerFrame = duration_cast<nanoseconds>(cur - prev).count();
         cur = high_resolution_clock::now();
     }
     prev = cur;
+
+    if (msgBuffer.track_hardware_info) {
+        timeDelta += currentTimePerFrame;
+        timeDeltaCounter++;
+        if (timeDeltaCounter == displayFrequency) {
+            GetCurrentCoreFrequency();
+        }
+    }
+
+    currentTimePerFrame = 0;
+}
+
+void VHardwareMgr::GetCurrentCoreFrequency() {
+    msgBuffer.current_frequency = (((float)core_instance->GetCurrentClock() / timePerFrame) * ((float)timeDelta / timeDeltaCounter)) / 1000000;
+    timeDelta = 0;
+    timeDeltaCounter = 0;
 }
 
 void VHardwareMgr::InitTime() {

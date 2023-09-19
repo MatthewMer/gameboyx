@@ -77,7 +77,7 @@ bool delete_games_from_config(vector<game_info>& _games, const std::string& _con
 bool write_to_debug_log(const string& _output, const string& _file_path_rel, const bool& _rewrite) {
     check_and_create_log_folders();
 
-    write_data({ _output }, _file_path_rel, _rewrite);
+    return write_data({ _output }, _file_path_rel, _rewrite);
 }
 
 

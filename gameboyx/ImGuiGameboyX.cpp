@@ -61,6 +61,7 @@ void ImGuiGameboyX::ProcessGUI() {
     if (showMainMenuBar) ShowMainMenuBar();
     if (msgBuffer.instruction_buffer_enabled) ShowDebugInstructions();
     if (showWinAbout) ShowWindowAbout();
+    if (msgBuffer.track_hardware_info) ShowHardwareInfo();
 
     if (!gameStatus.game_running) {
         // gui elements
@@ -109,7 +110,8 @@ void ImGuiGameboyX::ShowMainMenuBar() {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
-            ImGui::MenuItem("Instruction execution", nullptr, &msgBuffer.instruction_buffer_enabled);
+            ImGui::MenuItem("Instruction Execution", nullptr, &msgBuffer.instruction_buffer_enabled);
+            ImGui::MenuItem("Hardware Info", nullptr, &msgBuffer.track_hardware_info);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
@@ -145,7 +147,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         ImGuiWindowFlags_NoCollapse;
 
     ImGui::SetNextWindowSize({ 700, 396 });
-    if (ImGui::Begin("Instructions", &msgBuffer.instruction_buffer_enabled, win_flags)) {
+    if (ImGui::Begin("Instruction execution", &msgBuffer.instruction_buffer_enabled, win_flags)) {
         for (int i = 0; i < DEBUG_ALLOWED_INSTRUCTION_OUTPUT_SIZE; i++) {
             ImGui::TextUnformatted(instructionOutput[i].c_str());
         }
@@ -164,6 +166,21 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         ImGui::Checkbox("Auto run", &msgBuffer.auto_run);
         ImGui::SameLine();
         ImGui::Checkbox("Send to *_instructions.log", &msgBuffer.instruction_buffer_log);
+    }
+    ImGui::End();
+}
+
+void ImGuiGameboyX::ShowHardwareInfo() {
+    const ImGuiWindowFlags win_flags =
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoCollapse;
+
+    ImGui::SetNextWindowSize({ 300, 300 });
+
+    if (ImGui::Begin("Hardware Info", &msgBuffer.track_hardware_info, win_flags)) {
+        ImGui::TextUnformatted("Base Clock:");
+        ImGui::TextUnformatted((to_string(msgBuffer.current_frequency) + " MHz").c_str());
     }
     ImGui::End();
 }

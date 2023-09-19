@@ -25,7 +25,8 @@ public:
 	virtual void RunCpu() = 0;
 
 	virtual int GetDelayTime() = 0;
-	//virtual void ResetMachineCycleCounter() = 0;
+	virtual u32 GetCurrentClock() const = 0;
+	virtual int GetDisplayFrequency() const = 0;
 	virtual bool CheckMachineCycles() const = 0;
 
 protected:
