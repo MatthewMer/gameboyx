@@ -24,13 +24,13 @@ static void create_fs_hierarchy();
 *********************************************************************************************************** */
 ImGuiGameboyX* ImGuiGameboyX::instance = nullptr;
 
-ImGuiGameboyX* ImGuiGameboyX::getInstance(message_buffer& _msg_fifo, game_status& _game_status) {
+ImGuiGameboyX* ImGuiGameboyX::getInstance(message_buffer& _msg_buffer, game_status& _game_status) {
     if (instance != nullptr) {
         delete instance;
         instance = nullptr;
     }
 
-    instance = new ImGuiGameboyX(_msg_fifo, _game_status);
+    instance = new ImGuiGameboyX(_msg_buffer, _game_status);
     return instance;
 }
 
@@ -42,7 +42,7 @@ void ImGuiGameboyX::resetInstance() {
     instance = nullptr;
 }
 
-ImGuiGameboyX::ImGuiGameboyX(message_buffer& _msg_fifo, game_status& _game_status) : msgBuffer(_msg_fifo), gameStatus(_game_status){
+ImGuiGameboyX::ImGuiGameboyX(message_buffer& _msg_buffer, game_status& _game_status) : msgBuffer(_msg_buffer), gameStatus(_game_status){
     NFD_Init();
     create_fs_hierarchy();
     if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
@@ -181,6 +181,21 @@ void ImGuiGameboyX::ShowHardwareInfo() {
     if (ImGui::Begin("Hardware Info", &msgBuffer.track_hardware_info, win_flags)) {
         ImGui::TextUnformatted("Base Clock:");
         ImGui::TextUnformatted((to_string(msgBuffer.current_frequency) + " MHz").c_str());
+
+        ImGui::TextUnformatted("ROM Banks:");
+        ImGui::TextUnformatted(to_string(msgBuffer.rom_bank_num).c_str());
+        ImGui::TextUnformatted("Selected:");
+        ImGui::TextUnformatted(to_string(msgBuffer.rom_bank_selected).c_str());
+
+        ImGui::TextUnformatted("RAM Banks:");
+        ImGui::TextUnformatted(to_string(msgBuffer.ram_bank_num).c_str());
+        ImGui::TextUnformatted("Selected:");
+        ImGui::TextUnformatted(to_string(msgBuffer.ram_bank_selected).c_str());
+
+        ImGui::TextUnformatted("WRAM Banks:");
+        ImGui::TextUnformatted(to_string(msgBuffer.wram_bank_num).c_str());
+        ImGui::TextUnformatted("Selected:");
+        ImGui::TextUnformatted(to_string(msgBuffer.wram_bank_selected).c_str());
     }
     ImGui::End();
 }

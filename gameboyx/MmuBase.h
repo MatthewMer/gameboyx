@@ -7,7 +7,7 @@ class MmuBase
 {
 public:
 	// get/reset instance
-	static MmuBase* getInstance(const Cartridge& _cart_obj);
+	static MmuBase* getInstance();
 	static void resetInstance();
 
 	// clone/assign protection
@@ -23,13 +23,6 @@ public:
 	virtual u16 Read16Bit(const u16& _addr) = 0;
 
 	virtual void ResetChildMemoryInstances() = 0;
-
-	virtual int GetCurrentSpeed() const = 0;
-	virtual u8 GetInterruptEnable() const = 0;
-	virtual u8 GetInterruptRequests() const = 0;
-	virtual void ResetInterruptRequest(const u8& _isr_flags) = 0;
-
-	virtual void ProcessMachineCyclesCurInstruction(const int& _machine_cycles) = 0;
 
 protected:
 	// constructor

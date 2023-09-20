@@ -25,10 +25,11 @@
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_MBC3::MmuSM83_MBC3(const Cartridge& _cart_obj){
-	InitMmu(_cart_obj);
+MmuSM83_MBC3::MmuSM83_MBC3(){
+	Cartridge* cart_obj = Cartridge::getInstance();
+	InitMmu(*cart_obj);
 
-	mem_instance = MemorySM83::getInstance(_cart_obj);
+	mem_instance = MemorySM83::getInstance();
 	machine_ctx = mem_instance->GetMachineContext();
 }
 
@@ -46,7 +47,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		else {
 			int romBankNumber = _data & ROM_BANK_MASK;
 			if (romBankNumber == 0) romBankNumber = 1;
-			machine_ctx->romBank = romBankNumber;
+			machine_ctx->rom_bank_selected = romBankNumber;
 		}
 	}
 	// ROM Bank 1-n -> RAM Bank select or RTC register select or Latch Clock Data
@@ -54,7 +55,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		// RAM Bank number or RTC register select
 		if (_addr < LATCH_CLOCK_DATA) {
 			int ramBankRtcNumber = _data;
-			machine_ctx->ramBank = ramBankRtcNumber;
+			machine_ctx->ram_bank_selected = ramBankRtcNumber;
 		}
 		else {
 			if (_data == 0x01 && rtcRegistersLastWrite == 0x00) {
@@ -72,7 +73,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	// RAM 0-n -> RTC Registers 08-0C
 	else if (_addr < WRAM_0_OFFSET) {
 		if (timerRamEnable) {
-			int ramBankNumber = machine_ctx->ramBank;
+			int ramBankNumber = machine_ctx->ram_bank_selected;
 			if (ramBankNumber < 0x04) {
 				mem_instance->WriteRAM_N(_data, _addr);
 			}
@@ -137,7 +138,7 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
 		if (timerRamEnable) {
-			int ramBankNumber = machine_ctx->ramBank;
+			int ramBankNumber = machine_ctx->ram_bank_selected;
 			if (ramBankNumber < 0x04) {
 				return mem_instance->ReadRAM_N(_addr);
 			}
@@ -200,57 +201,6 @@ u8 MmuSM83_MBC3::ReadClock() {
 
 void MmuSM83_MBC3::WriteClock(const u8& _data) {
 
-}
-
-/* ***********************************************************************************************************
-	MACHINE STATE ACCESS
-*********************************************************************************************************** */
-// access machine states
-int MmuSM83_MBC3::GetCurrentSpeed() const {
-	return machine_ctx->currentSpeed;
-}
-
-u8 MmuSM83_MBC3::GetInterruptEnable() const {
-	return machine_ctx->IE;
-}
-
-u8 MmuSM83_MBC3::GetInterruptRequests() const {
-	return machine_ctx->IF;
-}
-
-void MmuSM83_MBC3::ResetInterruptRequest(const u8& _isr_flags) {
-	machine_ctx->IF &= ~_isr_flags;
-}
-
-void MmuSM83_MBC3::ProcessMachineCyclesCurInstruction(const int& _machine_cycles) {
-	machine_ctx->machineCyclesDIVCounter += _machine_cycles;
-	if (machine_ctx->machineCyclesDIVCounter > machine_ctx->machineCyclesPerDIVIncrement) {
-		machine_ctx->machineCyclesDIVCounter -= machine_ctx->machineCyclesPerDIVIncrement;
-
-		if (machine_ctx->DIV == 0xFF) {
-			machine_ctx->DIV = 0x00;
-			// TODO: interrupt or whatever
-		}
-		else {
-			machine_ctx->DIV++;
-		}
-	}
-
-	if (machine_ctx->TAC & TAC_CLOCK_ENABLE) {
-		machine_ctx->machineCyclesTIMACounter += _machine_cycles;
-		if (machine_ctx->machineCyclesTIMACounter > machine_ctx->machineCyclesPerTIMAIncrement) {
-			machine_ctx->machineCyclesTIMACounter -= machine_ctx->machineCyclesPerTIMAIncrement;
-			
-			if (machine_ctx->TIMA == 0xFF) {
-				machine_ctx->TIMA = machine_ctx->TMA;
-				// request interrupt
-				machine_ctx->IF |= ISR_TIMER;
-			}
-			else {
-				machine_ctx->TIMA++;
-			}
-		}
-	}
 }
 
 /* ***********************************************************************************************************

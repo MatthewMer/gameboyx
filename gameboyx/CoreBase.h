@@ -11,7 +11,7 @@ class CoreBase
 {
 public:
 	// get/reset instance
-	static CoreBase* getInstance(const Cartridge& _cart_obj, message_buffer& _msg_fifo);
+	static CoreBase* getInstance(message_buffer& _msg_buffer);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -25,14 +25,16 @@ public:
 	virtual void RunCpu() = 0;
 
 	virtual int GetDelayTime() = 0;
-	virtual u32 GetCurrentClock() const = 0;
+	virtual void GetCurrentHardwareState(message_buffer& _msg_buffer) const = 0;
+	virtual void GetStartupHardwareInfo(message_buffer& _msg_buffer) const = 0;
+	virtual u32 GetCurrentClockCycles() const = 0;
 	virtual int GetDisplayFrequency() const = 0;
 	virtual bool CheckMachineCycles() const = 0;
 
 protected:
 	// constructor
-	CoreBase(const Cartridge& _cart_obj, message_buffer& _msg_fifo) : msgBuffer(_msg_fifo) {
-		mmu_instance = MmuBase::getInstance(_cart_obj);
+	CoreBase(message_buffer& _msg_buffer) : msgBuffer(_msg_buffer) {
+		mmu_instance = MmuBase::getInstance();
 	};
 
 	~CoreBase() = default;
@@ -43,8 +45,8 @@ protected:
 	int machineCyclesPerFrame = 0;
 
 	virtual void ExecuteInstruction() = 0;
-	virtual void ExecuteMachineCycles() = 0;
 	virtual void ExecuteInterrupts() = 0;
+	virtual void ExecuteMachineCycles() = 0;
 	
 	virtual void InitCpu(const Cartridge& _cart_obj) = 0;
 	virtual void InitRegisterStates() = 0;

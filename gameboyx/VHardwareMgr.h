@@ -10,7 +10,7 @@
 class VHardwareMgr
 {
 public:
-	static VHardwareMgr* getInstance(const game_info& _game_ctx, message_buffer& _msg_fifo);
+	static VHardwareMgr* getInstance(const game_info& _game_ctx, message_buffer& _msg_buffer);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -28,7 +28,7 @@ public:
 
 private:
 	// constructor
-	explicit VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_fifo);
+	explicit VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buffer);
 	static VHardwareMgr* instance;
 	~VHardwareMgr() = default;
 

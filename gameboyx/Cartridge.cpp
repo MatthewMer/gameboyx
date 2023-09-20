@@ -18,6 +18,10 @@ Cartridge* Cartridge::getInstance(const game_info& _game_ctx) {
 	return instance;
 }
 
+Cartridge* Cartridge::getInstance() {
+	return instance;
+}
+
 void Cartridge::resetInstance() {
 	if (instance != nullptr) {
 		delete instance;

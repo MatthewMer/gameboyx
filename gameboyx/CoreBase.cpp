@@ -5,10 +5,10 @@
 
 CoreBase* CoreBase::instance = nullptr;
 
-CoreBase* CoreBase::getInstance(const Cartridge& _cart_obj, message_buffer& _msg_fifo) {
+CoreBase* CoreBase::getInstance(message_buffer& _msg_buffer) {
 	resetInstance();
 
-	instance = new CoreSM83(_cart_obj, _msg_fifo);
+	instance = new CoreSM83(_msg_buffer);
 	return instance;
 }
 

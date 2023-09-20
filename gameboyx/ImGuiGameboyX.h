@@ -9,7 +9,7 @@
 class ImGuiGameboyX {
 public:
 	// singleton instance access
-	static ImGuiGameboyX* getInstance(message_buffer& _msg_fifo, game_status& _game_status);
+	static ImGuiGameboyX* getInstance(message_buffer& _msg_buffer, game_status& _game_status);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -31,7 +31,7 @@ public:
 
 private:
 	// constructor
-	ImGuiGameboyX(message_buffer& _msg_fifo, game_status& _game_status);
+	ImGuiGameboyX(message_buffer& _msg_buffer, game_status& _game_status);
 	static ImGuiGameboyX* instance;
 	~ImGuiGameboyX() = default;
 

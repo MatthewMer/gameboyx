@@ -4,6 +4,7 @@
 #include "Cartridge.h"
 #include "registers.h"
 #include "defs.h"
+#include "MemorySM83.h"
 
 #include <vector>
 
@@ -46,18 +47,17 @@ public:
 	friend class CoreBase;
 
 	void RunCycles() override;
-	//void ResetMachineCycleCounter() override;
+	void GetCurrentHardwareState(message_buffer& _msg_buffer) const override;
+	void GetStartupHardwareInfo(message_buffer& _msg_buffer) const override;
 	bool CheckMachineCycles() const override;
-	u32 GetCurrentClock() const override;
+	u32 GetCurrentClockCycles() const override;
 	int GetDisplayFrequency() const override;
 
 private:
 	// constructor
-	CoreSM83(const Cartridge& _cart_obj, message_buffer& _msg_fifo);
+	CoreSM83(message_buffer& _msg_buffer);
 	// destructor
 	~CoreSM83() = default;
-
-	bool isCgb = false;
 
 	// instruction data
 	u8 opcode;
@@ -65,8 +65,8 @@ private:
 
 	void RunCpu() override;
 	void ExecuteInstruction() override;
-	void ExecuteMachineCycles() override;
 	void ExecuteInterrupts() override;
+	void ExecuteMachineCycles() override;
 
 	std::string GetRegisterContents() const;
 	std::string GetDebugInstruction() const;
@@ -97,6 +97,8 @@ private:
 	int machineCycles = 0;
 	int currentMachineCycles = 0;
 	int GetDelayTime() override;
+
+	machine_state_context* machine_ctx;
 
 	// pointer instances
 	void CreatePointerInstances();

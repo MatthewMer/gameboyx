@@ -16,6 +16,7 @@ class Cartridge
 public:
 	// singleton instance access
 	static Cartridge* getInstance(const game_info& _game_ctx);
+	static Cartridge* getInstance();
 	static void resetInstance();
 
 	// clone/assign protection

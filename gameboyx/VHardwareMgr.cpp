@@ -7,10 +7,10 @@
 *********************************************************************************************************** */
 VHardwareMgr* VHardwareMgr::instance = nullptr;
 
-VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, message_buffer& _msg_fifo) {
+VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, message_buffer& _msg_buffer) {
     VHardwareMgr::resetInstance();
 
-    instance = new VHardwareMgr(_game_ctx, _msg_fifo);
+    instance = new VHardwareMgr(_game_ctx, _msg_buffer);
     return instance;
 }
 
@@ -24,19 +24,21 @@ void VHardwareMgr::resetInstance() {
     }
 }
 
-VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_fifo) : msgBuffer(_msg_fifo){
+VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buffer) : msgBuffer(_msg_buffer){
     cart_instance = Cartridge::getInstance(_game_ctx);
     if (cart_instance == nullptr) {
         LOG_ERROR("Couldn't create virtual cartridge");
         return;
     }
 
-    core_instance = CoreBase::getInstance(*cart_instance, _msg_fifo);
+    core_instance = CoreBase::getInstance(_msg_buffer);
     graphics_instance = GraphicsUnitBase::getInstance();
 
     // sets the machine cycle threshold for core and returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
     displayFrequency = core_instance->GetDisplayFrequency();
+
+    core_instance->GetStartupHardwareInfo(msgBuffer);
 
     LOG_INFO(_game_ctx.title, " started");
 }
@@ -54,30 +56,35 @@ void VHardwareMgr::ProcessNext() {
         graphics_instance->NextFrame();
     }
     
+    // get current 
+    if (msgBuffer.track_hardware_info) {
+        core_instance->GetCurrentHardwareState(msgBuffer);
+    }
 }
 
 void VHardwareMgr::SimulateDelay() {
     while (currentTimePerFrame < timePerFrame) {
-        currentTimePerFrame = duration_cast<nanoseconds>(cur - prev).count();
         cur = high_resolution_clock::now();
+        currentTimePerFrame = duration_cast<nanoseconds>(cur - prev).count();
     }
     prev = cur;
 
     if (msgBuffer.track_hardware_info) {
-        timeDelta += currentTimePerFrame;
-        timeDeltaCounter++;
-        if (timeDeltaCounter == displayFrequency) {
-            GetCurrentCoreFrequency();
-        }
+        GetCurrentCoreFrequency();
     }
 
     currentTimePerFrame = 0;
 }
 
+// calculate current core frequency
 void VHardwareMgr::GetCurrentCoreFrequency() {
-    msgBuffer.current_frequency = (((float)core_instance->GetCurrentClock() / timePerFrame) * ((float)timeDelta / timeDeltaCounter)) / 1000000;
-    timeDelta = 0;
-    timeDeltaCounter = 0;
+    timeDelta += currentTimePerFrame;
+    timeDeltaCounter++;
+    if (timeDeltaCounter == displayFrequency) {
+        msgBuffer.current_frequency = (((float)core_instance->GetCurrentClockCycles() / timePerFrame) * ((float)timeDelta / timeDeltaCounter)) / 1000000;
+        timeDelta = 0;
+        timeDeltaCounter = 0;
+    }
 }
 
 void VHardwareMgr::InitTime() {

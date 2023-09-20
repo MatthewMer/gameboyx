@@ -14,9 +14,9 @@ struct machine_state_context {
 	int currentSpeed = 1;
 
 	// bank selects
-	int wramBank = 0;
-	int romBank = 0;
-	int ramBank = 0;
+	int wram_bank_selected = 0;
+	int rom_bank_selected = 0;
+	int ram_bank_selected = 0;
 
 	// hardware
 	bool isCgb = false;
@@ -30,6 +30,10 @@ struct machine_state_context {
 	int machineCyclesTIMACounter = 0;
 	u8 TMA = 0;
 	u8 TAC = 0;
+
+	int rom_bank_num = 0;
+	int ram_bank_num = 0;
+	int wram_bank_num = 0;
 };
 
 struct graphics_context {
@@ -42,6 +46,7 @@ struct graphics_context {
 
 	// VRAM BANK SELECT
 	u8 VRAM_BANK = 0;
+	int vram_bank_num = 0;
 
 	// TODO: chekc initial register states
 	// LCD Control
@@ -114,7 +119,6 @@ class MemorySM83 : private MemoryBase
 {
 public:
 	// get/reset instance
-	static MemorySM83* getInstance(const Cartridge& _cart_obj);
 	static MemorySM83* getInstance();
 	static void resetInstance();
 
@@ -153,8 +157,8 @@ public:
 
 private:
 	// constructor
-	explicit MemorySM83(const Cartridge& _cart_obj) {
-		InitMemory(_cart_obj);
+	MemorySM83() {
+		InitMemory(*Cartridge::getInstance());
 	};
 	static MemorySM83* instance;
 	// destructor

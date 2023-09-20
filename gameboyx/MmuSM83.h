@@ -18,19 +18,18 @@ public:
 	u16 Read16Bit(const u16& _addr) override;
 
 	// access machine states
-	int GetCurrentSpeed() const override;
-	u8 GetInterruptEnable() const override;
-	u8 GetInterruptRequests() const override;
-	void ResetInterruptRequest(const u8& _isr_flags) override;
-	void ProcessMachineCyclesCurInstruction(const int& _machine_cycles) override;
+	//int GetCurrentSpeed() const override;
+	//u8 GetInterruptEnable() const override;
+	//u8 GetInterruptRequests() const override;
+	//void ResetInterruptRequest(const u8& _isr_flags) override;
 
 private:
 	// constructor
-	explicit MmuSM83_MBC3(const Cartridge& _cart_obj);
+	MmuSM83_MBC3();
 	// destructor
 	~MmuSM83_MBC3() = default;
 
-	void ResetChildMemoryInstances() override { mem_instance->resetInstance(); }
+	void ResetChildMemoryInstances() override { MemorySM83::resetInstance(); }
 	MemorySM83* mem_instance;
 
 	// members

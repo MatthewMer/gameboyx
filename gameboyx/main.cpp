@@ -185,9 +185,9 @@ int main(int, char**)
     auto clear_color = IMGUI_CLR_COLOR;
 
     // Main loop
-    auto* msg_fifo = new message_buffer();
+    auto* msg_buffer = new message_buffer();
     auto* game_state = new game_status();
-    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(*msg_fifo, *game_state);
+    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(*msg_buffer, *game_state);
     VHardwareMgr* vhwmgr_obj = nullptr;
     LOG_INFO("Initialization completed");
 
@@ -253,7 +253,7 @@ int main(int, char**)
 
         // game start/stop
         if (game_state->pending_game_start) {
-            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), *msg_fifo);
+            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), *msg_buffer);
             game_state->game_running = true;
             game_state->pending_game_start = false;
         }
@@ -262,6 +262,7 @@ int main(int, char**)
             gbx_gui->GameStopped();
             game_state->game_running = false;
             game_state->pending_game_stop = false;
+            reset_message_buffer(*msg_buffer);
         }
 
         // run virtual hardware

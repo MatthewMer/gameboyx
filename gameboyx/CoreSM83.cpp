@@ -48,10 +48,9 @@ using namespace std;
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
-CoreSM83::CoreSM83(const Cartridge& _cart_obj, message_buffer& _msg_fifo) : CoreBase(_cart_obj, _msg_fifo){
-    InitCpu(_cart_obj);
-
-    this->isCgb = _cart_obj.GetIsCgb();
+CoreSM83::CoreSM83(message_buffer& _msg_buffer) : CoreBase(_msg_buffer){
+    machine_ctx = MemorySM83::getInstance()->GetMachineContext();
+    InitCpu(*Cartridge::getInstance());
 
     CreatePointerInstances();
     setupLookupTable();
@@ -63,8 +62,6 @@ CoreSM83::CoreSM83(const Cartridge& _cart_obj, message_buffer& _msg_fifo) : Core
 *********************************************************************************************************** */
 // initial cpu state
 void CoreSM83::InitCpu(const Cartridge& _cart_obj) {
-    this->isCgb = _cart_obj.GetIsCgb();
-
     InitRegisterStates();
 }
 
@@ -79,7 +76,7 @@ void CoreSM83::InitRegisterStates() {
     Regs.SP = CGB_SP;
     Regs.PC = CGB_PC;
 
-    if (isCgb) {
+    if (machine_ctx->isCgb) {
         Regs.DE = CGB_CGB_DE;
         Regs.HL = CGB_CGB_HL;
     }
@@ -101,7 +98,7 @@ void CoreSM83::RunCycles() {
             }
             else {
                 if (CheckMachineCycles()) {
-                    machineCycles -= machineCyclesPerFrame * mmu_instance->GetCurrentSpeed();
+                    machineCycles -= machineCyclesPerFrame * machine_ctx->currentSpeed;
                 }
 
                 msgBuffer.instruction_buffer = GetRegisterContents();
@@ -111,17 +108,14 @@ void CoreSM83::RunCycles() {
             }
         }
         else {
-            machineCycles -= machineCyclesPerFrame * mmu_instance->GetCurrentSpeed();
-            while (machineCycles < machineCyclesPerFrame * mmu_instance->GetCurrentSpeed()) {
+            machineCycles -= machineCyclesPerFrame * machine_ctx->currentSpeed;
+            while (machineCycles < machineCyclesPerFrame * machine_ctx->currentSpeed) {
                 RunCpu();
             }
         }
     }
     else {
-        u8 isr_enable = mmu_instance->GetInterruptEnable();
-        u8 isr_flags = mmu_instance->GetInterruptRequests();
-
-        halt = (isr_enable & isr_flags) == 0x00;
+        halt = (machine_ctx->IE & machine_ctx->IF) == 0x00;
     }
 }
 
@@ -150,14 +144,10 @@ void CoreSM83::ExecuteInstruction() {
     machineCycles += currentMachineCycles;
 }
 
-void CoreSM83::ExecuteMachineCycles() {
-    mmu_instance->ProcessMachineCyclesCurInstruction(currentMachineCycles);
-}
-
 void CoreSM83::ExecuteInterrupts() {
     if (ime) {
-        u8 isr_enable = mmu_instance->GetInterruptEnable();
-        u8 isr_flags = mmu_instance->GetInterruptRequests();
+        u8 isr_enable = machine_ctx->IE;
+        u8 isr_flags = machine_ctx->IF;
 
         if (isr_flags & ISR_VBLANK) {
             if (isr_enable & ISR_VBLANK) {
@@ -193,27 +183,76 @@ void CoreSM83::ExecuteInterrupts() {
     }
 }
 
+void CoreSM83::ExecuteMachineCycles() {
+    machine_ctx->machineCyclesDIVCounter += currentMachineCycles;
+    if (machine_ctx->machineCyclesDIVCounter > machine_ctx->machineCyclesPerDIVIncrement) {
+        machine_ctx->machineCyclesDIVCounter -= machine_ctx->machineCyclesPerDIVIncrement;
+
+        if (machine_ctx->DIV == 0xFF) {
+            machine_ctx->DIV = 0x00;
+            // TODO: interrupt or whatever
+        }
+        else {
+            machine_ctx->DIV++;
+        }
+    }
+
+    if (machine_ctx->TAC & TAC_CLOCK_ENABLE) {
+        machine_ctx->machineCyclesTIMACounter += currentMachineCycles;
+        if (machine_ctx->machineCyclesTIMACounter > machine_ctx->machineCyclesPerTIMAIncrement) {
+            machine_ctx->machineCyclesTIMACounter -= machine_ctx->machineCyclesPerTIMAIncrement;
+
+            if (machine_ctx->TIMA == 0xFF) {
+                machine_ctx->TIMA = machine_ctx->TMA;
+                // request interrupt
+                machine_ctx->IF |= ISR_TIMER;
+            }
+            else {
+                machine_ctx->TIMA++;
+            }
+        }
+    }
+}
+
 /* ***********************************************************************************************************
     ACCESS CPU STATUS
 *********************************************************************************************************** */
-bool CoreSM83::CheckMachineCycles() const {
-    return machineCycles > machineCyclesPerFrame * mmu_instance->GetCurrentSpeed();
-}
-
 // return delta t per frame in nanoseconds
 int CoreSM83::GetDelayTime() {
     machineCyclesPerFrame = ((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DISPLAY_FREQUENCY;
-    return 1.f / DISPLAY_FREQUENCY * pow(10, 9);
+    return (1.f / DISPLAY_FREQUENCY) * pow(10, 9);
 }
 
-u32 CoreSM83::GetCurrentClock() const {
-    return machineCycles * DISPLAY_FREQUENCY * 4;
-}
-
+// get the machines LCD vertical frequency
 int CoreSM83::GetDisplayFrequency() const {
     return DISPLAY_FREQUENCY;
 }
 
+// check if cpu executed machinecycles per frame
+bool CoreSM83::CheckMachineCycles() const {
+    return machineCycles > machineCyclesPerFrame * machine_ctx->currentSpeed;
+}
+
+// return clock cycles per second
+u32 CoreSM83::GetCurrentClockCycles() const {
+    return machineCycles * DISPLAY_FREQUENCY * 4;
+}
+
+// get hardware info startup
+void CoreSM83::GetStartupHardwareInfo(message_buffer& _msg_buffer) const {
+    _msg_buffer.rom_bank_num = machine_ctx->rom_bank_num;
+    _msg_buffer.ram_bank_num = machine_ctx->ram_bank_num;
+    _msg_buffer.wram_bank_num = machine_ctx->wram_bank_num + 1;
+}
+
+// get current hardware status (currently mapped memory banks)
+void CoreSM83::GetCurrentHardwareState(message_buffer& _msg_buffer) const {
+    _msg_buffer.rom_bank_selected = machine_ctx->rom_bank_selected + 1;
+    _msg_buffer.ram_bank_selected = machine_ctx->ram_bank_selected;
+    _msg_buffer.wram_bank_selected = machine_ctx->wram_bank_selected + 1;
+}
+
+// get registers contents
 std::string CoreSM83::GetRegisterContents() const {
     return "A($" + format("{:x}", Regs.A) +
         "), F($" + format("{:x}", Regs.F) +
@@ -223,6 +262,7 @@ std::string CoreSM83::GetRegisterContents() const {
         "), SP($" + format("{:x}", Regs.SP) + ")";
 }
 
+// get currently executed instruction (as string)
 std::string CoreSM83::GetDebugInstruction() const {
     string result = " -> PC($" + format("{:x}", curPC) + "): " + get<3>(*instrPtr) + "($" + format("{:x}", opcode) + ")";
 

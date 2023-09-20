@@ -5,10 +5,10 @@
 
 MmuBase* MmuBase::instance = nullptr;
 
-MmuBase* MmuBase::getInstance(const Cartridge& _cart_obj) {
+MmuBase* MmuBase::getInstance() {
 	resetInstance();
 
-	instance = new MmuSM83_MBC3(_cart_obj);
+	instance = new MmuSM83_MBC3();
 	return instance;
 }
 
