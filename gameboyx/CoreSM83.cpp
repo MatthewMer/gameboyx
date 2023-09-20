@@ -142,6 +142,7 @@ void CoreSM83::ExecuteInstruction() {
     currentMachineCycles = get<2>(*instrPtr);
     (this->*functionPtr)();
     machineCycles += currentMachineCycles;
+    machineCycleCounterClock += currentMachineCycles;
 }
 
 void CoreSM83::ExecuteInterrupts() {
@@ -234,8 +235,10 @@ bool CoreSM83::CheckMachineCycles() const {
 }
 
 // return clock cycles per second
-u32 CoreSM83::GetCurrentClockCycles() const {
-    return machineCycles * DISPLAY_FREQUENCY * 4;
+u32 CoreSM83::GetPassedClockCycles() {
+    u32 result = machineCycleCounterClock * 4;
+    machineCycleCounterClock = 0;
+    return result;
 }
 
 // get hardware info startup

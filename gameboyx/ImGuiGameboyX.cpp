@@ -174,28 +174,59 @@ void ImGuiGameboyX::ShowHardwareInfo() {
     const ImGuiWindowFlags win_flags =
         ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoCollapse;
-
-    ImGui::SetNextWindowSize({ 300, 300 });
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_AlwaysAutoResize;
 
     if (ImGui::Begin("Hardware Info", &msgBuffer.track_hardware_info, win_flags)) {
-        ImGui::TextUnformatted("Base Clock:");
-        ImGui::TextUnformatted((to_string(msgBuffer.current_frequency) + " MHz").c_str());
 
-        ImGui::TextUnformatted("ROM Banks:");
-        ImGui::TextUnformatted(to_string(msgBuffer.rom_bank_num).c_str());
-        ImGui::TextUnformatted("Selected:");
-        ImGui::TextUnformatted(to_string(msgBuffer.rom_bank_selected).c_str());
+        static const ImGuiTableColumnFlags col_flags = ImGuiTableColumnFlags_WidthFixed;
 
-        ImGui::TextUnformatted("RAM Banks:");
-        ImGui::TextUnformatted(to_string(msgBuffer.ram_bank_num).c_str());
-        ImGui::TextUnformatted("Selected:");
-        ImGui::TextUnformatted(to_string(msgBuffer.ram_bank_selected).c_str());
+        static const ImGuiTableFlags table_flags = ImGuiTableFlags_BordersInnerV;
 
-        ImGui::TextUnformatted("WRAM Banks:");
-        ImGui::TextUnformatted(to_string(msgBuffer.wram_bank_num).c_str());
-        ImGui::TextUnformatted("Selected:");
-        ImGui::TextUnformatted(to_string(msgBuffer.wram_bank_selected).c_str());
+        if (ImGui::BeginTable("hardware_info", 2, table_flags)) {
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Base Clock");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted((to_string(msgBuffer.current_frequency) + " MHz").c_str());
+            ImGui::TableNextRow();
+            
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("ROM Banks");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(to_string(msgBuffer.rom_bank_num).c_str());
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("ROM Selected");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(to_string(msgBuffer.rom_bank_selected).c_str());
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("RAM Banks");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(to_string(msgBuffer.ram_bank_num).c_str());
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("RAM Selected");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(to_string(msgBuffer.ram_bank_selected).c_str());
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("WRAM Banks");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(to_string(msgBuffer.wram_bank_num).c_str());
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("WRAM Selected");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(to_string(msgBuffer.wram_bank_selected).c_str());
+            
+            ImGui::PopStyleVar();
+        }
+        ImGui::EndTable();
     }
     ImGui::End();
 }

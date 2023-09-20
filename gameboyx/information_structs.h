@@ -10,13 +10,14 @@
 // TODO: fifo for debug info (GUI)
 struct message_buffer {
 	// debug isntructions
-	std::string instruction_buffer = "";
 	bool instruction_buffer_enabled = false;
+	std::string instruction_buffer = "";
 	bool pause_execution = true;
 	bool auto_run = false;
 	bool instruction_buffer_log = true;
 
 	// current hardware state
+	bool track_hardware_info = false;
 	float current_frequency = .0f;
 	int wram_bank_selected = 0;
 	int wram_bank_num = 0;
@@ -26,7 +27,6 @@ struct message_buffer {
 	int rom_bank_num = 0;
 	int vram_bank = 0;
 	int num_vram = 0;
-	bool track_hardware_info = false;
 };
 
 struct game_status {
@@ -37,6 +37,15 @@ struct game_status {
 };
 
 static void reset_message_buffer(message_buffer& _msg_buffer) {
-	_msg_buffer.current_frequency = .0f;
 	_msg_buffer.instruction_buffer = "";
+	_msg_buffer.pause_execution = true;
+	_msg_buffer.current_frequency = .0f;
+	_msg_buffer.wram_bank_selected = 0;
+	_msg_buffer.wram_bank_num = 0;
+	_msg_buffer.ram_bank_selected = 0;
+	_msg_buffer.ram_bank_num = 0;
+	_msg_buffer.rom_bank_selected = 0;
+	_msg_buffer.rom_bank_num = 0;
+	_msg_buffer.vram_bank = 0;
+	_msg_buffer.num_vram = 0;
 }

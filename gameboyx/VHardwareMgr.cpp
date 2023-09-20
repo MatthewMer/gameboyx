@@ -1,6 +1,9 @@
 #include "VHardwareMgr.h"
 
 #include "logger.h"
+#include <thread>
+
+using namespace std;
 
 /* ***********************************************************************************************************
     CONSTRUCTOR AND (DE)INIT
@@ -40,6 +43,7 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buff
 
     core_instance->GetStartupHardwareInfo(msgBuffer);
 
+    this_thread::sleep_for(std::chrono::milliseconds(100));
     LOG_INFO(_game_ctx.title, " started");
 }
 
@@ -47,16 +51,17 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buff
     FUNCTIONALITY
 *********************************************************************************************************** */
 void VHardwareMgr::ProcessNext() {
-    // simulate delay (60Hz display frequency)
+    // simulate delay
     SimulateDelay();
-    // run cpu for 1/60Hz
+
+    // run cpu for 1/Display frequency
     core_instance->RunCycles();
     // if machine cycles per frame passed -> render frame
     if (core_instance->CheckMachineCycles()) {
         graphics_instance->NextFrame();
     }
     
-    // get current 
+    // get current hardware state
     if (msgBuffer.track_hardware_info) {
         core_instance->GetCurrentHardwareState(msgBuffer);
     }
@@ -80,8 +85,9 @@ void VHardwareMgr::SimulateDelay() {
 void VHardwareMgr::GetCurrentCoreFrequency() {
     timeDelta += currentTimePerFrame;
     timeDeltaCounter++;
+
     if (timeDeltaCounter == displayFrequency) {
-        msgBuffer.current_frequency = (((float)core_instance->GetCurrentClockCycles() / timePerFrame) * ((float)timeDelta / timeDeltaCounter)) / 1000000;
+        msgBuffer.current_frequency = (((float)core_instance->GetPassedClockCycles() / ((float)timeDelta / timeDeltaCounter)) / displayFrequency) * 1000;
         timeDelta = 0;
         timeDeltaCounter = 0;
     }

@@ -27,7 +27,7 @@ public:
 	virtual int GetDelayTime() = 0;
 	virtual void GetCurrentHardwareState(message_buffer& _msg_buffer) const = 0;
 	virtual void GetStartupHardwareInfo(message_buffer& _msg_buffer) const = 0;
-	virtual u32 GetCurrentClockCycles() const = 0;
+	virtual u32 GetPassedClockCycles() = 0;
 	virtual int GetDisplayFrequency() const = 0;
 	virtual bool CheckMachineCycles() const = 0;
 
@@ -42,7 +42,8 @@ protected:
 	MmuBase* mmu_instance;
 
 	// members
-	int machineCyclesPerFrame = 0;
+	int machineCyclesPerFrame = 0;					// threshold
+	int machineCycleCounterClock = 0;				// counter
 
 	virtual void ExecuteInstruction() = 0;
 	virtual void ExecuteInterrupts() = 0;
