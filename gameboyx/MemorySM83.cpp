@@ -2,6 +2,7 @@
 
 #include "gameboy_defines.h"
 #include "logger.h"
+#include "format"
 
 using namespace std;
 
@@ -51,7 +52,7 @@ void MemorySM83::InitMemory(const Cartridge& _cart_obj) {
     const auto& vec_rom = _cart_obj.GetRomVector();
 
     machine_ctx->isCgb = _cart_obj.GetIsCgb();
-    machine_ctx->wram_bank_num = (machine_ctx->isCgb ? 7 : 1);
+    machine_ctx->wram_bank_num = (machine_ctx->isCgb ? 8 : 2);
     graphics_ctx->isCgb = _cart_obj.GetIsCgb();
     graphics_ctx->vram_bank_num = (graphics_ctx->isCgb ? 2 : 1);
 
@@ -77,10 +78,10 @@ bool MemorySM83::CopyRom(const vector<u8>& _vec_rom) {
     }
 
     if (ROM_N != nullptr) {
-        for (int i = 0; i < machine_ctx->rom_bank_num; i++) {
+        for (int i = 0; i < machine_ctx->rom_bank_num - 1; i++) {
             if (ROM_N[i] != nullptr) {
                 for (int j = 0; j < ROM_BANK_N_SIZE; j++) {
-                    ROM_N[i][j] = _vec_rom[i * ROM_BANK_0_SIZE + j];
+                    ROM_N[i][j] = _vec_rom[ROM_BANK_0_SIZE + i * ROM_BANK_N_SIZE + j];
                 }
             }
             else {
@@ -98,8 +99,8 @@ bool MemorySM83::CopyRom(const vector<u8>& _vec_rom) {
 *********************************************************************************************************** */
 void MemorySM83::AllocateMemory() {
     ROM_0 = new u8[ROM_BANK_0_SIZE];
-    ROM_N = new u8 * [machine_ctx->rom_bank_num];
-    for (int i = 0; i < machine_ctx->rom_bank_num; i++) {
+    ROM_N = new u8 * [machine_ctx->rom_bank_num - 1];
+    for (int i = 0; i < machine_ctx->rom_bank_num - 1; i++) {
         ROM_N[i] = new u8[ROM_BANK_N_SIZE];
     }
 
@@ -114,8 +115,8 @@ void MemorySM83::AllocateMemory() {
     }
 
     WRAM_0 = new u8[WRAM_0_SIZE];
-    WRAM_N = new u8 * [machine_ctx->wram_bank_num];
-    for (int i = 0; i < machine_ctx->wram_bank_num; i++) {
+    WRAM_N = new u8 * [machine_ctx->wram_bank_num - 1];
+    for (int i = 0; i < machine_ctx->wram_bank_num - 1; i++) {
         WRAM_N[i] = new u8[WRAM_N_SIZE];
     }
 
@@ -127,34 +128,39 @@ void MemorySM83::AllocateMemory() {
 }
 
 void MemorySM83::CleanupMemory() {
+    // delete ROM
     delete[] ROM_0;
-    for (int i = 0; i < machine_ctx->rom_bank_num; i++) {
+    for (int i = 0; i < machine_ctx->rom_bank_num - 1; i++) {
         delete[] ROM_N[i];
     }
     delete[] ROM_N;
 
-    for (int i = 0; i < (machine_ctx->isCgb ? 2 : 1); i++) {
+    // delete VRAM
+    for (int i = 0; i < graphics_ctx->vram_bank_num; i++) {
         delete[] graphics_ctx->VRAM_N[i];
     }
     delete[] graphics_ctx->VRAM_N;
 
+    // delete SRAM
     for (int i = 0; i < machine_ctx->ram_bank_num; i++) {
         delete[] RAM_N[i];
     }
     delete[] RAM_N;
 
+    // delete WRAM
     delete[] WRAM_0;
-    for (int i = 0; i < (machine_ctx->isCgb ? 7 : 1); i++) {
+    for (int i = 0; i < machine_ctx->wram_bank_num - 1; i++) {
         delete[] WRAM_N[i];
     }
     delete[] WRAM_N;
 
+    // delete OAM
     delete[] graphics_ctx->OAM;
 
+    // delete HRAM
     delete[] HRAM;
 
-    delete[] IO;
-
+    // delete context for virtual hardware (mapped IO Registers)
     delete machine_ctx;
     delete graphics_ctx;
     delete[] sound_ctx->WAVE_RAM;
@@ -576,7 +582,9 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
             }
             break;
         case LCDC_ADDR:
+            // LCD CONTROL
             graphics_ctx->LCDC = _data;
+            SetLCDCValues();
             break;
         case STAT_ADDR:
             graphics_ctx->STAT = (graphics_ctx->STAT & (PPU_STAT_MODE | PPU_STAT_LYC_FLAG)) | (_data & ~(PPU_STAT_MODE | PPU_STAT_LYC_FLAG));
@@ -783,6 +791,35 @@ void MemorySM83::SetObjPrio(const u8& _data) {
         break;
     case PRIO_COORD:
         graphics_ctx->OBJ_PRIO |= PRIO_COORD;
+        break;
+    }
+}
+
+void MemorySM83::SetLCDCValues() {
+    switch (graphics_ctx->LCDC & PPU_LCDC_BG_TILEMAP) {
+    case 0x00:
+        graphics_ctx->bg_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
+        break;
+    case PPU_LCDC_BG_TILEMAP:
+        graphics_ctx->bg_tilemap_offset = PPU_TILE_MAP1 - VRAM_N_OFFSET;
+        break;
+    }
+
+    switch (graphics_ctx->LCDC & PPU_LCDC_WIN_TILEMAP) {
+    case 0x00:
+        graphics_ctx->win_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
+        break;
+    case PPU_LCDC_WIN_TILEMAP:
+        graphics_ctx->win_tilemap_offset = PPU_TILE_MAP1 - VRAM_N_OFFSET;
+        break;
+    }
+
+    switch (graphics_ctx->LCDC & PPU_LCDC_OBJ_SIZE) {
+    case 0x00:
+        graphics_ctx->obj_size = 1;
+        break;
+    case PPU_LCDC_OBJ_SIZE:
+        graphics_ctx->obj_size = 2;
         break;
     }
 }

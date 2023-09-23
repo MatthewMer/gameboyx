@@ -25,7 +25,15 @@ private:
 	graphics_context* graphics_ctx;
 
 	// members
-	void SearchOAM();
-	void ReadVRAMandOAM();
-	void GenerateFrameData();
+	void ReadTileDataBGWIN(const u8& _addr);
+	void ReadTileDataObject(const u8& _addr);
+
+	void DrawSprite();
+
+	void DrawTileMapBackground();
+	void DrawTileMapWindow();
+
+	// 8x8 pixel
+	u8 currentTile[PPU_VRAM_TILE_SIZE];
+	u8 pixel;
 };

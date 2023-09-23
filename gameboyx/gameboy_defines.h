@@ -231,11 +231,20 @@
 #define PPU_STAT_MODE2_EN           0x20                // isr STAT oam
 #define PPU_STAT_LYC_SOURCE         0x40
 
-// VRAM Tile data
-#define PPU_VRAM_TILE_SIZE          16                  // Bytes
-#define PPU_VRAM_BASEPTR_8000       0x8000
-#define PPU_VRAM_BASEPTR_8800       0x8800
-
 // lcd
 #define LCD_SCANLINES               144
 #define LCD_SCANLINES_VBLANK        153
+
+// VRAM Tile data
+#define PPU_VRAM_TILE_SIZE          16                  // Bytes
+#define PPU_VRAM_BASEPTR_8800       0x9000
+
+// tile maps
+#define PPU_TILE_MAP0               0x9800
+#define PPU_TILE_MAP1               0x9C00
+
+// screen
+//#define PPU_TILES_HORIZONTAL        20
+//#define PPU_TILES_VERTICAL          18
+#define PPU_SCREEN_X                160
+#define PPU_SCREEN_Y                144

@@ -43,7 +43,6 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buff
 
     core_instance->GetStartupHardwareInfo(msgBuffer);
 
-    this_thread::sleep_for(std::chrono::milliseconds(100));
     LOG_INFO(_game_ctx.title, " started");
 }
 
@@ -57,7 +56,7 @@ void VHardwareMgr::ProcessNext() {
     // run cpu for 1/Display frequency
     core_instance->RunCycles();
     // if machine cycles per frame passed -> render frame
-    if (core_instance->CheckMachineCycles()) {
+    if (core_instance->CheckNextFrame()) {
         graphics_instance->NextFrame();
     }
     

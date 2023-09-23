@@ -50,7 +50,11 @@ struct graphics_context {
 
 	// TODO: chekc initial register states
 	// LCD Control
-	u8 LCDC = PPU_LCDC_ENABLE;
+	u8 LCDC = 0x91;
+
+	u8 bg_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
+	u8 win_tilemap_offset = PPU_TILE_MAP1 - VRAM_N_OFFSET;
+	u8 obj_size = 1;
 
 	// LCD Status
 	u8 LY = 0;
@@ -65,9 +69,9 @@ struct graphics_context {
 	u8 WX = 0;
 
 	// Palettes (monochrome)
-	u8 BGP = 0;
-	u8 OBP0 = 0;
-	u8 OBP1 = 0;
+	u8 BGP = 0xFC;
+	u8 OBP0 = 0xFF;
+	u8 OBP1 = 0xFF;
 	// Palettes (color)
 	u8 BCPS_BGPI = 0;
 	u8 BCPD_BGPD = 0;
@@ -212,6 +216,9 @@ private:
 
 	// obj prio
 	void SetObjPrio(const u8& _data);
+
+	// action for LCDC write
+	void SetLCDCValues();
 
 	// memory cpu context
 	machine_state_context* machine_ctx = new machine_state_context();

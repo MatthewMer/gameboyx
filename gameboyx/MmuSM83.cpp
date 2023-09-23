@@ -18,6 +18,7 @@
 // masks
 #define ROM_BANK_MASK				0x7f
 #define RAM_ENABLE_MASK				0x0F
+#define RAM_BANK_MASK				0x0F
 
 // values
 #define RAM_ENABLE					0x0A
@@ -47,14 +48,14 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		else {
 			int romBankNumber = _data & ROM_BANK_MASK;
 			if (romBankNumber == 0) romBankNumber = 1;
-			machine_ctx->rom_bank_selected = romBankNumber;
+			machine_ctx->rom_bank_selected = romBankNumber - 1;
 		}
 	}
 	// ROM Bank 1-n -> RAM Bank select or RTC register select or Latch Clock Data
 	else if (_addr < VRAM_N_OFFSET) {
 		// RAM Bank number or RTC register select
 		if (_addr < LATCH_CLOCK_DATA) {
-			int ramBankRtcNumber = _data;
+			int ramBankRtcNumber = _data & RAM_BANK_MASK;
 			machine_ctx->ram_bank_selected = ramBankRtcNumber;
 		}
 		else {

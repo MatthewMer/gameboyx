@@ -36,12 +36,12 @@ using namespace std;
 
 #define ADD_16_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= ((u32)(d & 0xFFFF) + (s & 0xFFFF) > 0xFFFF ? FLAG_CARRY : 0); f |= ((u16)(d & 0xFFF) + (s & 0xFFF) > 0xFFF ? FLAG_HCARRY : 0);}
 
-#define SUB_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= ((u16)(d & 0xFF) - (s & 0xFF) > 0xFF ? FLAG_CARRY : 0); f |= ((d & 0xF) - (s & 0xF) > 0xF ? FLAG_HCARRY : 0);}
-#define SUB_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= ((u16)(d & 0xFF) - (s & 0xFF) > 0xFF ? FLAG_CARRY : 0);}
-#define SUB_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f|= ((d & 0xF) - (s & 0xF) > 0xF ? FLAG_HCARRY : 0);}
+#define SUB_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= ((d & 0xFF) < (s & 0xFF) ? FLAG_CARRY : 0); f |= ((d & 0xF) < (s & 0xF) ? FLAG_HCARRY : 0);}
+#define SUB_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= ((d & 0xFF) < (s & 0xFF) ? FLAG_CARRY : 0);}
+#define SUB_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f|= ((d & 0xF) < (s & 0xF) ? FLAG_HCARRY : 0);}
 
-#define SBC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((d & 0xFF) - (((u16)s & 0xFF) + c) > 0xFF ? FLAG_CARRY : 0);}
-#define SBC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= ((d & 0xF) - ((s & 0xF) + c) > 0xF ? FLAG_HCARRY : 0);}
+#define SBC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((d & 0xFF) < (((u16)s & 0xFF) + c) ? FLAG_CARRY : 0);}
+#define SBC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= ((d & 0xF) < ((s & 0xF) + c) ? FLAG_HCARRY : 0);}
 
 #define ZERO_FLAG(x, f) {f &= ~FLAG_ZERO; f |= (x == 0 ? FLAG_ZERO : 0);}
 
@@ -91,38 +91,35 @@ void CoreSM83::InitRegisterStates() {
     RUN CPU
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
-    if (!halt) {
-        if (msgBuffer.instruction_buffer_enabled) {
-            if (msgBuffer.pause_execution && !msgBuffer.auto_run) {
-                return;
+    if (!stop) {
+        if (!halt) {
+            if (msgBuffer.instruction_buffer_enabled) {
+                if (msgBuffer.pause_execution && !msgBuffer.auto_run) {
+                    return;
+                }
+                else {
+                    msgBuffer.instruction_buffer = GetRegisterContents();
+                    RunCpu();
+                    msgBuffer.instruction_buffer += GetDebugInstruction();
+                    msgBuffer.pause_execution = true;
+                }
             }
             else {
-                if (CheckMachineCycles()) {
-                    machineCycles -= machineCyclesPerFrame * machine_ctx->currentSpeed;
+                while (machineCycles < machineCyclesPerFrame * machine_ctx->currentSpeed) {
+                    RunCpu();
                 }
-
-                msgBuffer.instruction_buffer = GetRegisterContents();
-                RunCpu();
-                msgBuffer.instruction_buffer += GetDebugInstruction();
-                msgBuffer.pause_execution = true;
             }
         }
         else {
-            machineCycles -= machineCyclesPerFrame * machine_ctx->currentSpeed;
-            while (machineCycles < machineCyclesPerFrame * machine_ctx->currentSpeed) {
-                RunCpu();
-            }
+            halt = (machine_ctx->IE & machine_ctx->IF) == 0x00;
         }
-    }
-    else {
-        halt = (machine_ctx->IE & machine_ctx->IF) == 0x00;
     }
 }
 
 void CoreSM83::RunCpu() {
+    ExecuteInterrupts();
     ExecuteInstruction();
     ExecuteMachineCycles();
-    ExecuteInterrupts();
 }
 
 void CoreSM83::ExecuteInstruction() {
@@ -147,38 +144,39 @@ void CoreSM83::ExecuteInstruction() {
 
 void CoreSM83::ExecuteInterrupts() {
     if (ime) {
-        u8 isr_enable = machine_ctx->IE;
-        u8 isr_flags = machine_ctx->IF;
-
-        if (isr_flags & ISR_VBLANK) {
-            if (isr_enable & ISR_VBLANK) {
+        if (machine_ctx->IF & ISR_VBLANK) {
+            if (machine_ctx->IE & ISR_VBLANK) {
                 ime = false;
 
                 isr_push(ISR_VBLANK_HANDLER);
+                machine_ctx->IF &= ~ISR_VBLANK;
             }
         }
-        if (isr_flags & ISR_LCD_STAT) {
-            if (isr_enable & ISR_LCD_STAT) {
+        if (machine_ctx->IF & ISR_LCD_STAT) {
+            if (machine_ctx->IE & ISR_LCD_STAT) {
                 ime = false;
 
                 isr_push(ISR_LCD_STAT_HANDLER);
+                machine_ctx->IF &= ~ISR_LCD_STAT;
             }
         }
-        if (isr_flags & ISR_TIMER) {
-            if (isr_enable & ISR_TIMER) {
+        if (machine_ctx->IF & ISR_TIMER) {
+            if (machine_ctx->IE & ISR_TIMER) {
                 ime = false;
 
                 isr_push(ISR_TIMER_HANDLER);
+                machine_ctx->IF &= ~ISR_TIMER;
             }
         }
-        /*if (isr_flags & ISR_SERIAL) {
+        /*if (machine_ctx->IF & ISR_SERIAL) {
             // not implemented
         }*/
-        if (isr_flags & ISR_JOYPAD) {
-            if (isr_enable & ISR_JOYPAD) {
+        if (machine_ctx->IF & ISR_JOYPAD) {
+            if (machine_ctx->IE & ISR_JOYPAD) {
                 ime = false;
 
                 isr_push(ISR_JOYPAD_HANDLER);
+                machine_ctx->IF &= ~ISR_JOYPAD;
             }
         }
     }
@@ -230,8 +228,14 @@ int CoreSM83::GetDisplayFrequency() const {
 }
 
 // check if cpu executed machinecycles per frame
-bool CoreSM83::CheckMachineCycles() const {
-    return machineCycles > machineCyclesPerFrame * machine_ctx->currentSpeed;
+bool CoreSM83::CheckNextFrame() {
+    if (machineCycles >= machineCyclesPerFrame * machine_ctx->currentSpeed) {
+        machineCycles -= machineCyclesPerFrame * machine_ctx->currentSpeed;
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 // return clock cycles per second
@@ -245,7 +249,7 @@ u32 CoreSM83::GetPassedClockCycles() {
 void CoreSM83::GetStartupHardwareInfo(message_buffer& _msg_buffer) const {
     _msg_buffer.rom_bank_num = machine_ctx->rom_bank_num;
     _msg_buffer.ram_bank_num = machine_ctx->ram_bank_num;
-    _msg_buffer.wram_bank_num = machine_ctx->wram_bank_num + 1;
+    _msg_buffer.wram_bank_num = machine_ctx->wram_bank_num;
 }
 
 // get current hardware status (currently mapped memory banks)
@@ -419,7 +423,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x3b, &CoreSM83::DEC16, 2, "DEC", "SP", GetPtr(SP), "", nullptr);
     instrMap.emplace_back(0x3c, &CoreSM83::INC8, 1, "INC", "A", GetPtr(A), "", nullptr);
     instrMap.emplace_back(0x3d, &CoreSM83::DEC8, 1, "DEC", "A", GetPtr(A), "", nullptr);
-    instrMap.emplace_back(0x3e, &CoreSM83::LDd8, 2, "LD", "A", GetPtr(A), "", nullptr);
+    instrMap.emplace_back(0x3e, &CoreSM83::LDd8, 2, "LD", "A", GetPtr(A), "d8", GetPtr(DATA));
     instrMap.emplace_back(0x3f, &CoreSM83::CCF, 1, "CCF", "", nullptr, "", nullptr);
 
     // 0x40
@@ -1695,14 +1699,14 @@ void CoreSM83::RRA() {
 *********************************************************************************************************** */
 // jump to memory location
 void CoreSM83::JP() {
-    static bool carry;
-    static bool zero;
-
     if (opcode == 0xe9) {
         data = Regs.HL;
         jump_jp();
         return;
     }
+
+    static bool carry;
+    static bool zero;
 
     data = mmu_instance->Read16Bit(Regs.PC);
     Regs.PC += 2;
@@ -1740,9 +1744,8 @@ void CoreSM83::JP() {
             return;
         }
         break;
-    default:
+    case 0xC3:
         jump_jp();
-        currentMachineCycles += 4;
         return;
         break;
     }

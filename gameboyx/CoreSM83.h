@@ -49,7 +49,7 @@ public:
 	void RunCycles() override;
 	void GetCurrentHardwareState(message_buffer& _msg_buffer) const override;
 	void GetStartupHardwareInfo(message_buffer& _msg_buffer) const override;
-	bool CheckMachineCycles() const override;
+	bool CheckNextFrame() override;
 	u32 GetPassedClockCycles() override;
 	int GetDisplayFrequency() const override;
 

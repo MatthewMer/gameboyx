@@ -29,7 +29,7 @@ public:
 	virtual void GetStartupHardwareInfo(message_buffer& _msg_buffer) const = 0;
 	virtual u32 GetPassedClockCycles() = 0;
 	virtual int GetDisplayFrequency() const = 0;
-	virtual bool CheckMachineCycles() const = 0;
+	virtual bool CheckNextFrame() = 0;
 
 protected:
 	// constructor

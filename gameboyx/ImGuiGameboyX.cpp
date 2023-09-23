@@ -144,7 +144,8 @@ void ImGuiGameboyX::ShowDebugInstructions() {
     const ImGuiWindowFlags win_flags =
         ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoCollapse;
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_AlwaysAutoResize;
 
     ImGui::SetNextWindowSize({ 700, 396 });
     if (ImGui::Begin("Instruction execution", &msgBuffer.instruction_buffer_enabled, win_flags)) {
