@@ -243,8 +243,22 @@
 #define PPU_TILE_MAP0               0x9800
 #define PPU_TILE_MAP1               0x9C00
 
+#define PPU_OBJ_ATTRIBUTES          0xFE00
+#define PPU_OBJ_ATTR_SIZE           0xA0
+#define PPU_OBJ_ATTR_BYTES          4
+
+#define OBJ_ATTR_Y                  0
+#define OBJ_ATTR_X                  1
+#define OBJ_ATTR_INDEX              2
+#define OBJ_ATTR_FLAGS              3
+
+#define OBJ_ATTR_PALETTE            0x07
+#define OBJ_ATTR_VRAM_BANK          0x08
+
 // screen
-//#define PPU_TILES_HORIZONTAL        20
-//#define PPU_TILES_VERTICAL          18
+#define PPU_TILES_HORIZONTAL        20
+#define PPU_TILES_VERTICAL          18
+#define PPU_PIXELS_TILE_X           8
+#define PPU_PIXELS_TILE_Y           8
 #define PPU_SCREEN_X                160
 #define PPU_SCREEN_Y                144
