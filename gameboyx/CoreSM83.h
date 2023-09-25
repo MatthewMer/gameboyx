@@ -77,9 +77,8 @@ private:
 	void InitCpu(const Cartridge& _cart_obj) override;
 	void InitRegisterStates() override;
 
-	// cpu states
-	bool stop = false;
-	bool halt = false;
+	// cpu states and checks
+	bool halted = false;
 	bool ime = false;
 	bool opcodeCB = false;
 

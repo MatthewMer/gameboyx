@@ -165,7 +165,7 @@ void games_to_string(const vector<game_info>& _games, vector<string>& _config_ga
         _config_games.push_back(get_info_type_string(FILE_NAME) + "=" + n.file_name);
         _config_games.push_back(get_info_type_string(FILE_PATH) + "=" + n.file_path);
         _config_games.push_back(get_info_type_string(GAME_VER) + "=" + n.game_ver);
-        _config_games.push_back(get_info_type_string(IS_CGB) + "=" + (n.is_sgb ? PARAMETER_TRUE : PARAMETER_FALSE));
+        _config_games.push_back(get_info_type_string(IS_CGB) + "=" + (n.is_cgb ? PARAMETER_TRUE : PARAMETER_FALSE));
         _config_games.push_back(get_info_type_string(CART_TYPE) + "=" + n.cart_type);
         _config_games.push_back(get_info_type_string(LICENSEE) + "=" + n.licensee);
         _config_games.push_back(get_info_type_string(DEST_CODE) + "=" + n.dest_code);

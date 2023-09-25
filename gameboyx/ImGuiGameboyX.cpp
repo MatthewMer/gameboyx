@@ -212,7 +212,13 @@ void ImGuiGameboyX::ShowHardwareInfo() {
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("RAM Selected");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(msgBuffer.ram_bank_selected).c_str());
+            ImGui::TextUnformatted(msgBuffer.ram_bank_selected < msgBuffer.ram_bank_num ? to_string(msgBuffer.ram_bank_selected).c_str() : "-");
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("RTC Register");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(msgBuffer.ram_bank_selected >= msgBuffer.ram_bank_num ? to_string(msgBuffer.ram_bank_selected).c_str() : "-");
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();

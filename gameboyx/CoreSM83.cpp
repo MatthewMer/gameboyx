@@ -91,27 +91,27 @@ void CoreSM83::InitRegisterStates() {
     RUN CPU
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
-    if (!stop) {
-        if (!halt) {
-            if (msgBuffer.instruction_buffer_enabled) {
-                if (msgBuffer.pause_execution && !msgBuffer.auto_run) {
-                    return;
-                }
-                else {
-                    msgBuffer.instruction_buffer = GetRegisterContents();
-                    RunCpu();
-                    msgBuffer.instruction_buffer += GetDebugInstruction();
-                    msgBuffer.pause_execution = true;
-                }
+    if (halted) {
+        halted = (machine_ctx->IE & machine_ctx->IF) == 0x00;
+    }
+    else {
+        if (msgBuffer.instruction_buffer_enabled) {
+            if (msgBuffer.pause_execution && !msgBuffer.auto_run) {
+                return;
             }
             else {
-                while (machineCycles < machineCyclesPerFrame * machine_ctx->currentSpeed) {
-                    RunCpu();
-                }
+                msgBuffer.instruction_buffer = GetRegisterContents();
+                RunCpu();
+                msgBuffer.instruction_buffer += GetDebugInstruction();
+                msgBuffer.pause_execution = true;
             }
         }
         else {
-            halt = (machine_ctx->IE & machine_ctx->IF) == 0x00;
+            while (machineCycles < machineCyclesPerFrame * machine_ctx->currentSpeed) {
+                RunCpu();
+
+                if (halted) { return; }
+            }
         }
     }
 }
@@ -662,7 +662,7 @@ void CoreSM83::NOP() {
     return;
 }
 
-// stop sm83_instruction
+// halted
 void CoreSM83::STOP() {
     data = mmu_instance->Read8Bit(Regs.PC);
     Regs.PC++;
@@ -673,12 +673,12 @@ void CoreSM83::STOP() {
     }
 
     mmu_instance->Write8Bit(0x00, DIV_ADDR);
-    stop = true;
+    halted = true;
 }
 
-// set halt state
+// set halted state
 void CoreSM83::HALT() {
-    halt = true;
+    halted = true;
 }
 
 // flip c

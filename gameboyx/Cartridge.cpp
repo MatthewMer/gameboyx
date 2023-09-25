@@ -38,7 +38,7 @@ bool Cartridge::ReadData() {
 bool Cartridge::ReadHeaderConsole() {
 	if (vecRom.size() < ROM_HEAD_ADDR + ROM_HEAD_SIZE) { return false; }
 
-	isCgb = vecRom[ROM_HEAD_CGBFLAG] == 0xc0 || vecRom[ROM_HEAD_CGBFLAG] == 0x80;
+	isCgb = vecRom[ROM_HEAD_CGBFLAG] & 0x80;
 	return true;
 }
 
@@ -47,7 +47,7 @@ bool Cartridge::read_basic_header_info(game_info& _game_ctx, vector<u8>& _vec_ro
 	LOG_INFO("Reading header info");
 
 	// cgb/sgb flags
-	_game_ctx.is_cgb = _vec_rom[ROM_HEAD_CGBFLAG] == 0x80 || _vec_rom[ROM_HEAD_CGBFLAG] == 0xC0 ;
+	_game_ctx.is_cgb = _vec_rom[ROM_HEAD_CGBFLAG] & 0x80;
 	_game_ctx.is_sgb = _vec_rom[ROM_HEAD_SGBFLAG] == 0x03;
 
 	// title
@@ -134,7 +134,7 @@ bool Cartridge::read_new_game(game_info& _game_ctx, const string& _path_to_rom) 
 
 	_game_ctx.file_path = "";
 	for (int i = 0; i < vec_path_to_rom.size() - 1; i++) {
-		_game_ctx.file_path += vec_path_to_rom[i] + "\\";
+		_game_ctx.file_path += vec_path_to_rom[i] + "/";
 	}
 	_game_ctx.file_name = vec_path_to_rom.back();
 

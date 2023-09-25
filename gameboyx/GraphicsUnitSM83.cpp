@@ -41,7 +41,11 @@ void GraphicsUnitSM83::DrawTileMapBackground() {
 
 	for (int x = 0; x < PPU_TILES_HORIZONTAL; x++) {
 		for (int y = 0; y < PPU_TILES_VERTICAL; y++) {
-			u8 tile_index = graphics_ctx->VRAM_N[0][bg_offset + ((scy + (y * PPU_PIXELS_TILE_Y)) % PPU_SCREEN_Y) * PPU_SCREEN_X + (scx + (x * PPU_PIXELS_TILE_X)) % PPU_SCREEN_X];
+			u8 tile_index = graphics_ctx->VRAM_N[0][
+				bg_offset + 
+				((scy + (y * PPU_PIXELS_TILE_Y)) % PPU_TILEMAP_SIZE_1D) * PPU_TILEMAP_SIZE_1D + 
+				(scx + (x * PPU_PIXELS_TILE_X)) % PPU_TILEMAP_SIZE_1D
+			];
 			ReadTileDataBGWIN(tile_index);
 			DrawTileBGWIN(x, y);
 		}

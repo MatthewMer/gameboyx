@@ -41,7 +41,13 @@ string check_and_create_path(const string& _path_rel) {
 }
 
 string get_current_path() {
-    string current_path = fs::current_path().string();
+    vector<string> current_path_vec = split_string(fs::current_path().string(), "\\");
+    string current_path = "";
+    for (int i = 0; i < current_path_vec.size() - 1; i++) {
+        current_path += current_path_vec[i] + "/";
+    }
+    current_path += current_path_vec.back();
+
     return current_path;
 }
 

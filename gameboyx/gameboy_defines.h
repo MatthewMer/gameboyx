@@ -262,3 +262,4 @@
 #define PPU_PIXELS_TILE_Y           8
 #define PPU_SCREEN_X                160
 #define PPU_SCREEN_Y                144
+#define PPU_TILEMAP_SIZE_1D         256
