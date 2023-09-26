@@ -65,6 +65,7 @@ void MemorySM83::InitMemory(const Cartridge& _cart_obj) {
     }
 
     InitTimers();
+    SetLCDCValues(PPU_LCDC_INITIAL_STATE);
 }
 
 bool MemorySM83::CopyRom(const vector<u8>& _vec_rom) {
@@ -583,8 +584,7 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
             break;
         case LCDC_ADDR:
             // LCD CONTROL
-            graphics_ctx->LCDC = _data;
-            SetLCDCValues();
+            SetLCDCValues(_data);
             break;
         case STAT_ADDR:
             graphics_ctx->STAT = (graphics_ctx->STAT & (PPU_STAT_MODE | PPU_STAT_LYC_FLAG)) | (_data & ~(PPU_STAT_MODE | PPU_STAT_LYC_FLAG));
@@ -795,8 +795,35 @@ void MemorySM83::SetObjPrio(const u8& _data) {
     }
 }
 
-void MemorySM83::SetLCDCValues() {
-    switch (graphics_ctx->LCDC & PPU_LCDC_BG_TILEMAP) {
+void MemorySM83::SetLCDCValues(const u8& _data) {
+    switch (_data & PPU_LCDC_WINBG_EN_PRIO) {
+    case 0x00:
+        graphics_ctx->bg_win_enable = false;
+        break;
+    case PPU_LCDC_WINBG_EN_PRIO:
+        graphics_ctx->bg_win_enable = true;
+        break;
+    }
+
+    switch (_data & PPU_LCDC_OBJ_ENABLE) {
+    case 0x00:
+        graphics_ctx->obj_enable = false;
+        break;
+    case PPU_LCDC_OBJ_ENABLE:
+        graphics_ctx->obj_enable = true;
+        break;
+    }
+
+    switch (_data & PPU_LCDC_OBJ_SIZE) {
+    case 0x00:
+        graphics_ctx->obj_size_16 = false;
+        break;
+    case PPU_LCDC_OBJ_SIZE:
+        graphics_ctx->obj_size_16 = true;
+        break;
+    }
+
+    switch (_data & PPU_LCDC_BG_TILEMAP) {
     case 0x00:
         graphics_ctx->bg_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
         break;
@@ -805,7 +832,25 @@ void MemorySM83::SetLCDCValues() {
         break;
     }
 
-    switch (graphics_ctx->LCDC & PPU_LCDC_WIN_TILEMAP) {
+    switch (_data & PPU_LCDC_WINBG_TILEDATA) {
+    case 0x00:
+        graphics_ctx->bg_win_8800_addr_mode = true;
+        break;
+    case PPU_LCDC_WINBG_TILEDATA:
+        graphics_ctx->bg_win_8800_addr_mode = false;
+        break;
+    }
+
+    switch (_data & PPU_LCDC_WIN_ENABLE) {
+    case 0x00:
+        graphics_ctx->win_enable = false;
+        break;
+    case PPU_LCDC_WIN_TILEMAP:
+        graphics_ctx->win_enable = true;
+        break;
+    }
+    
+    switch (_data & PPU_LCDC_WIN_TILEMAP) {
     case 0x00:
         graphics_ctx->win_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
         break;
@@ -814,12 +859,14 @@ void MemorySM83::SetLCDCValues() {
         break;
     }
 
-    switch (graphics_ctx->LCDC & PPU_LCDC_OBJ_SIZE) {
+    switch (_data & PPU_LCDC_ENABLE) {
     case 0x00:
-        graphics_ctx->obj_size = 1;
+        graphics_ctx->ppu_enable = false;
         break;
-    case PPU_LCDC_OBJ_SIZE:
-        graphics_ctx->obj_size = 2;
+    case PPU_LCDC_ENABLE:
+        graphics_ctx->ppu_enable = true;
         break;
     }
+
+    graphics_ctx->LCDC = _data;
 }

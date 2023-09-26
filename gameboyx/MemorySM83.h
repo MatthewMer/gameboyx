@@ -50,11 +50,16 @@ struct graphics_context {
 
 	// TODO: chekc initial register states
 	// LCD Control
-	u8 LCDC = 0x91;
+	u8 LCDC = 0;
 
-	u8 bg_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
-	u8 win_tilemap_offset = PPU_TILE_MAP1 - VRAM_N_OFFSET;
-	u8 obj_size = 1;
+	u16 bg_tilemap_offset = 0;
+	u16 win_tilemap_offset = 0;
+	bool obj_size_16 = false;
+	bool obj_enable = false;
+	bool bg_win_enable = false;
+	bool bg_win_8800_addr_mode = false;
+	bool win_enable = false;
+	bool ppu_enable = false;
 
 	// LCD Status
 	u8 LY = 0;
@@ -218,7 +223,7 @@ private:
 	void SetObjPrio(const u8& _data);
 
 	// action for LCDC write
-	void SetLCDCValues();
+	void SetLCDCValues(const u8& _data);
 
 	// memory cpu context
 	machine_state_context* machine_ctx = new machine_state_context();

@@ -206,7 +206,8 @@
 /* ***********************************************************************************************************
     GRAPHICS DEFINES
 *********************************************************************************************************** */
-#define PPU_VBLANK                  0x91
+#define PPU_LCDC_INITIAL_STATE      0x91
+#define LCD_VBLANK_THRESHOLD        0x91
 
 // LCD CONTROL
 #define PPU_LCDC_ENABLE             0x80
@@ -242,6 +243,12 @@
 // tile maps
 #define PPU_TILE_MAP0               0x9800
 #define PPU_TILE_MAP1               0x9C00
+
+#define BG_ATTR_PALETTE             0x03
+#define BG_ATTR_VRAM_BANK           0x04
+#define BG_ATTR_FLIP_HORIZONTAL     0x20
+#define BG_ATTR_FLIP_VERTICAL       0x40
+#define BG_ATTR_OAM_PRIORITY        0x80
 
 #define PPU_OBJ_ATTRIBUTES          0xFE00
 #define PPU_OBJ_ATTR_SIZE           0xA0

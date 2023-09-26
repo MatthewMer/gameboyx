@@ -26,9 +26,13 @@ private:
 
 	// members
 	void DrawTileMapBackground();
+	void ReadBGMapAttributes(const u8& _offset);
+	void DrawTileBackground(const int& _pos_x, const int& _pos_y);
+
 	void DrawTileMapWindow();
+	void DrawTileWindow(const int& _pos_x, const int& _pos_y);
+
 	void ReadTileDataBGWIN(const u8& _addr);
-	void DrawTileBGWIN(const int& _pos_x, const int& _pos_y);
 
 	void DrawObjectTiles();
 	void ReadObjectAttributes(const int& _offset);
@@ -38,6 +42,7 @@ private:
 	void DrawPixel(const int& _pos_x, const int& _pos_y);
 
 	u8 objAttributes[PPU_OBJ_ATTR_BYTES];
+	u8 bgAttributes;
 
 	// 8x8 pixel
 	u8 currentTile[PPU_VRAM_TILE_SIZE];

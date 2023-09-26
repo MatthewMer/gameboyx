@@ -3,13 +3,40 @@
 #include "gameboy_defines.h"
 #include "logger.h"
 
+#include "vulkan/vulkan.h"
+
+// VK_FORMAT_R8G8B8A8_UNORM, gray scales
+const u32 DMG_COLOR_PALETTE[] = {
+	0x000000FF,
+	0x555555FF,
+	0xAAAAAAFF,
+	0xFFFFFFFF
+};
+
 void GraphicsUnitSM83::NextFrame() {
-	if (graphics_ctx->LCDC & PPU_LCDC_ENABLE) {
+	if (graphics_ctx->ppu_enable) {
 		isrFlags = 0x00;
 
 		// generate frame data
-
-		// TODO: render result to texture or prepare data for vulkan renderpass
+		if (graphics_ctx->isCgb) {
+			if (graphics_ctx->bg_win_enable) {
+				DrawTileMapBackground();
+			}
+			if (graphics_ctx->win_enable) {
+				DrawTileMapWindow();
+			}
+		}
+		else {
+			if (graphics_ctx->bg_win_enable) {
+				DrawTileMapBackground();
+				if (graphics_ctx->win_enable) {
+					DrawTileMapWindow();
+				}
+			}
+		}
+		if (graphics_ctx->obj_enable) {
+			DrawObjectTiles();
+		}
 
 		// everything from here just pretends to have processed the scanlines (horizontal lines) of the LCD *****
 		// request mode 0 to 2 interrupts (STAT)
@@ -29,62 +56,96 @@ void GraphicsUnitSM83::NextFrame() {
 		}
 
 		mem_instance->RequestInterrupts(isrFlags | ISR_VBLANK);
-		graphics_ctx->LY = PPU_VBLANK;
+		graphics_ctx->LY = LCD_VBLANK_THRESHOLD;
 	}
 }
 
 // draw tilemaps BG and WIN
 void GraphicsUnitSM83::DrawTileMapBackground() {
-	int bg_offset = graphics_ctx->bg_tilemap_offset;
 	int scx = graphics_ctx->SCX;
 	int scy = graphics_ctx->SCY;
 
-	for (int x = 0; x < PPU_TILES_HORIZONTAL; x++) {
-		for (int y = 0; y < PPU_TILES_VERTICAL; y++) {
+	for (int x = 0; x < PPU_SCREEN_X; x+= PPU_PIXELS_TILE_X) {
+		for (int y = 0; y < PPU_SCREEN_Y; y+= PPU_PIXELS_TILE_Y) {
 			u8 tile_index = graphics_ctx->VRAM_N[0][
-				bg_offset + 
-				((scy + (y * PPU_PIXELS_TILE_Y)) % PPU_TILEMAP_SIZE_1D) * PPU_TILEMAP_SIZE_1D + 
-				(scx + (x * PPU_PIXELS_TILE_X)) % PPU_TILEMAP_SIZE_1D
+				graphics_ctx->bg_tilemap_offset +
+				((scy + y) % PPU_TILEMAP_SIZE_1D) * PPU_TILEMAP_SIZE_1D + 
+				(scx + x) % PPU_TILEMAP_SIZE_1D
 			];
 			ReadTileDataBGWIN(tile_index);
-			DrawTileBGWIN(x, y);
+			if (graphics_ctx->isCgb) {
+				ReadBGMapAttributes(tile_index);
+			}
+			DrawTileBackground(scx + x, scy + y);
 		}
 	}
 }
 
+// in CGB mode: copy attributes
+void GraphicsUnitSM83::ReadBGMapAttributes(const u8& _offset) {
+	if (graphics_ctx->bg_win_8800_addr_mode) {
+		bgAttributes = graphics_ctx->VRAM_N[1][PPU_VRAM_BASEPTR_8800 - VRAM_N_OFFSET + (*(i8*)&_offset * PPU_VRAM_TILE_SIZE)];
+	}
+	else {
+		bgAttributes = graphics_ctx->VRAM_N[1][_offset * PPU_VRAM_TILE_SIZE];
+	}
+}
+
+// draw stored tile to screen
+void GraphicsUnitSM83::DrawTileBackground(const int& _pos_x, const int& _pos_y) {
+	// TODO: check attributes in CGB mode
+
+	for (int y = 0; y < PPU_VRAM_TILE_SIZE / 2; y += 2) {
+		for (int x = 0; x < 8; x++) {
+			pixel = (currentTile[y] & (0x80 >> x) ? 0x01 : 0x00);
+			pixel |= (currentTile[y + 1] & (0x80 >> x) ? 0x02 : 0x00);
+			DrawPixel(_pos_x + x, _pos_y + y);
+		}
+	}
+}
+
+// draw window (window pos at top left corner is (WX-7/WY) !)
 void GraphicsUnitSM83::DrawTileMapWindow() {
 	u8 win_offset = graphics_ctx->win_tilemap_offset;
-	int wx = graphics_ctx->WX;
+	int wx = graphics_ctx->WX - 7;
 	int wy = graphics_ctx->WY;
 
-	for (int x = (wx > 7 ? wx : -wx + 7); x < (wx > 7 ? PPU_SCREEN_X - (wx - 7) : PPU_SCREEN_X); x += PPU_PIXELS_TILE_X) {
-		for (int y = 0; y < (graphics_ctx->WY > 0 ? PPU_SCREEN_Y - graphics_ctx->WY : PPU_SCREEN_Y); y += PPU_PIXELS_TILE_Y) {
-			u8 tile_index = graphics_ctx->VRAM_N[0][win_offset + (y * PPU_SCREEN_X) + x];
+	for (int x = 0; x < PPU_TILES_HORIZONTAL - wx; x+=PPU_PIXELS_TILE_X) {
+		for (int y = 0; y < PPU_TILES_VERTICAL - wy; y+=PPU_PIXELS_TILE_Y) {
+			u8 tile_index = graphics_ctx->VRAM_N[0][win_offset + (y * PPU_TILEMAP_SIZE_1D) + x],
 			ReadTileDataBGWIN(tile_index);
-			DrawTileBGWIN(x, y);
+			DrawTileWindow(x, y);
+		}
+	}
+}
+
+// draw stored tile to screen
+void GraphicsUnitSM83::DrawTileWindow(const int& _pos_x, const int& _pos_y) {
+	for (int y = 0; y < PPU_VRAM_TILE_SIZE / 2; y += 2) {
+		for (int x = 0; x < 8; x++) {
+			pixel = (currentTile[y] & (0x80 >> x) ? 0x01 : 0x00);
+			pixel |= (currentTile[y + 1] & (0x80 >> x) ? 0x02 : 0x00);
+			DrawPixel(_pos_x + x, _pos_y + y);
 		}
 	}
 }
 
 // copy tile data (pixels) for BG and WIN
 void GraphicsUnitSM83::ReadTileDataBGWIN(const u8& _offset) {
-	if (graphics_ctx->LCDC & PPU_LCDC_WINBG_TILEDATA) {
-		memcpy(currentTile, &graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][_offset * PPU_VRAM_TILE_SIZE], PPU_VRAM_TILE_SIZE);
+	if (graphics_ctx->bg_win_8800_addr_mode) {
+		memcpy(currentTile, &graphics_ctx->VRAM_N[0][PPU_VRAM_BASEPTR_8800 - VRAM_N_OFFSET + (*(i8*)&_offset * PPU_VRAM_TILE_SIZE)], PPU_VRAM_TILE_SIZE);
 	}
 	else {
-		memcpy(currentTile, &graphics_ctx->VRAM_N[graphics_ctx->VRAM_BANK][PPU_VRAM_BASEPTR_8800 - VRAM_N_OFFSET + (*(i8*)&_offset * PPU_VRAM_TILE_SIZE)], PPU_VRAM_TILE_SIZE);
+		memcpy(currentTile, &graphics_ctx->VRAM_N[0][_offset * PPU_VRAM_TILE_SIZE], PPU_VRAM_TILE_SIZE);
 	}
 }
 
 // draw the objects to the screen
 void GraphicsUnitSM83::DrawObjectTiles() {
-	for (int i = 0; i < PPU_OBJ_ATTR_SIZE; i+= PPU_OBJ_ATTR_BYTES) {
+	for (int i = 0; i < PPU_OBJ_ATTR_SIZE; i += PPU_OBJ_ATTR_BYTES) {
 		ReadObjectAttributes(i);
-
-		bool mode16 = graphics_ctx->LCDC & PPU_LCDC_OBJ_SIZE;
-		ReadTileDataObject(objAttributes[OBJ_ATTR_INDEX], mode16);
-
-		DrawObject((int)objAttributes[OBJ_ATTR_X] - 8, (int)objAttributes[OBJ_ATTR_Y] - 16, mode16);
+		ReadTileDataObject(objAttributes[OBJ_ATTR_INDEX], graphics_ctx->obj_size_16);
+		DrawObject((int)objAttributes[OBJ_ATTR_X] - 8, (int)objAttributes[OBJ_ATTR_Y] - 16, graphics_ctx->obj_size_16);
 	}
 }
 
@@ -112,17 +173,6 @@ void GraphicsUnitSM83::ReadTileDataObject(const u8& _offset, const bool& _mode16
 	}
 }
 
-// draw stored tile to screen
-void GraphicsUnitSM83::DrawTileBGWIN(const int& _pos_x, const int& _pos_y) {
-	for (int y = 0; y < PPU_VRAM_TILE_SIZE / 2; y+=2) {
-		for (int x = 0; x < 8; x++) {
-			pixel = (currentTile[y] & (0x80 >> x) ? 0x01 : 0x00);
-			pixel |= (currentTile[y + 1] & (0x80 >> x) ? 0x02 : 0x00);
-			DrawPixel(_pos_x + x, _pos_y + y);
-		}
-	}
-}
-
 // draw stored object to screen
 void GraphicsUnitSM83::DrawObject(const int& _pos_x, const int& _pos_y, const bool& _mode16) {
 	for (int y = 0; y < PPU_VRAM_TILE_SIZE / 2; y += 2) {
@@ -147,4 +197,10 @@ void GraphicsUnitSM83::DrawObject(const int& _pos_x, const int& _pos_y, const bo
 // draw pixel to screen
 void GraphicsUnitSM83::DrawPixel(const int& _pos_x, const int& _pos_y) {
 	// TODO: draw pixel to screen based on color palette
+	if (graphics_ctx->isCgb) {
+
+	}
+	else {
+		DMG_COLOR_PALETTE[pixel];
+	}
 }
