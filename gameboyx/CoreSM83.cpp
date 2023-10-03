@@ -53,7 +53,7 @@ static const vector<pair<cgb_data_types, string>> data_names{
     {C_ref, "(C + $FF00)"},
 };
 
-static string get_data_name(const cgb_data_types& _type) {
+static inline string get_data_name(const cgb_data_types& _type) {
     for (const auto& [type, val] : data_names) {
         if (type == _type) { return val; }
     }
@@ -61,7 +61,7 @@ static string get_data_name(const cgb_data_types& _type) {
     return "";
 }
 
-static string resolve_data_enum(const cgb_data_types& _type, const int& _addr, const u16& _data) {
+static inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, const u16& _data) {
     string result = "";
     u8 data;
 
@@ -161,9 +161,6 @@ CoreSM83::CoreSM83(message_buffer& _msg_buffer) : CoreBase(_msg_buffer){
 
     setupLookupTable();
     setupLookupTableCB();
-    
-
-    InitMessageBufferProgram(_msg_buffer.program_buffer);
 }
 
 /* ***********************************************************************************************************
@@ -375,186 +372,115 @@ void CoreSM83::GetCurrentHardwareState(message_buffer& _msg_buffer) const {
     _msg_buffer.wram_bank_selected = machine_ctx->wram_bank_selected + 1;
 }
 
+inline void GetInstructionsArgs(u16& _addr, const vector<u8>& _bank, u16& _data, string& _raw_data, const cgb_data_types& _type) {
+    switch (_type) {
+    case d8:
+    case a8:
+    case a8_ref:
+    case r8:
+        _data = _bank[_addr++];
+        _raw_data += format("{:x} ", (u8)_data);
+        break;
+    case d16:
+    case a16:
+    case a16_ref:
+        _data = _bank[_addr++];
+        _data |= ((u16)_bank[_addr++]) << 8;
+        _raw_data += format("{:x} ", (u8)(_data & 0xFF));
+        _raw_data += format("{:x} ", (u8)((_data & 0xFF00) >> 8));
+        break;
+    }
+}
+
+inline void DataEnumsToString(const int& _bank, u16 _addr, const u16& _data, string& _args, const cgb_data_types& _type_1, const cgb_data_types& _type_2) {
+    if (_bank > 0) { _addr += ROM_BANK_N_OFFSET; }
+
+    _args = "";
+    if (_type_1 != NO_DATA) {
+        _args = resolve_data_enum(_type_1, _addr, _data);
+    }
+    if (_type_2 != NO_DATA) {
+        _args += ", " + resolve_data_enum(_type_2, _addr, _data);
+    }
+}
+
+void CoreSM83::WriteMessageBufferRomBank(vector<tuple<int, int, string, string>>& _program_buffer_bank, const int& _bank, const vector<u8>& _rom_bank) {
+    u16 data = 0;
+    bool cb = false;
+    int i;
+
+    for (u16 addr = 0, i = 0; addr < ROM_BANK_0_SIZE; i++) {
+
+        // print rom header info
+        if (addr == ROM_HEAD_LOGO && _bank == 0) {
+            tuple<int, int, string, string> current_entry(i, addr, "ROM" + to_string(_bank) + ": " + format("{:x}  ", addr), "- HEADER INFO -");
+            addr = ROM_HEAD_END + 1;
+            _program_buffer_bank.push_back(current_entry);
+        }
+        else {
+            tuple<int, int, string, string> current_entry;
+            u8 opcode = _rom_bank[addr];
+            if (_bank > 0) {
+                current_entry = tuple<int, int, string, string>(i, addr + ROM_BANK_N_OFFSET, "", "");
+            }
+            else {
+                current_entry = tuple<int, int, string, string>(i, addr, "", "");
+            }
+
+            instr_tuple* instr_ptr;
+
+            if (cb) {
+                instr_ptr = &instrMapCB[opcode];
+                cb = false;
+            }
+            else {
+                instr_ptr = &instrMap[opcode];
+            }
+            cb = opcode == 0xCB;
+
+            string raw_data;
+            if (_bank > 0) {
+                raw_data = "ROM" + to_string(_bank) + ": " + format("{:x}  ", addr + ROM_BANK_N_OFFSET);
+            }
+            else {
+                raw_data = "ROM" + to_string(_bank) + ": " + format("{:x}  ", addr);
+            }
+            addr++;
+
+            raw_data += format("{:x} ", opcode);
+
+            // arguments
+            GetInstructionsArgs(addr, _rom_bank, data, raw_data, get<4>(*instr_ptr));
+            GetInstructionsArgs(addr, _rom_bank, data, raw_data, get<5>(*instr_ptr));
+            get<2>(current_entry) = raw_data;
+
+            // instruction to assembly
+            string args;
+            DataEnumsToString(_bank, addr, data, args, get<4>(*instr_ptr), get<5>(*instr_ptr));
+            
+            get<3>(current_entry) = get<3>(*instr_ptr);
+            if (args.compare("") != 0) {
+                get<3>(current_entry) += " " + args;
+            }
+
+            _program_buffer_bank.push_back(current_entry);
+        }
+    }
+}
+
 void CoreSM83::InitMessageBufferProgram(vector<vector<tuple<int, int, string, string>>>& _program_buffer) {
     _program_buffer.clear();
     
     auto rom = vector<vector<u8>>();
     MemorySM83::getInstance()->CopyRomForDebug(rom);
-
-    u16 addr = 0;
-    int bank = 0;
-    u16 data = 0;
-    bool cb = false;
-
-    int i = 0;
     
-    _program_buffer.push_back(vector<tuple<int, int, string, string>>());
-    for (addr = 0, i = 0; addr < ROM_BANK_0_SIZE; i++) {
-
-        // print rom header info
-        if (addr == ROM_HEAD_LOGO) {
-            tuple<int, int, string, string> current_entry(i, addr, "ROM" + to_string(bank) + ": " + format("{:x}  ", addr), "- HEADER INFO -");
-            addr = ROM_HEAD_END + 1;
-            _program_buffer.back().push_back(current_entry);
-        }
-        else {
-
-            u8 opcode = rom[0][addr];
-            tuple<int, int, string, string> current_entry(i, addr, "", "");
-
-            instr_tuple* instr_ptr;
-
-            if (cb) {
-                instr_ptr = &instrMapCB[opcode];
-                cb = false;
-            }
-            else {
-                instr_ptr = &instrMap[opcode];
-            }
-
-            string raw_data = "ROM" + to_string(bank) + ": " + format("{:x}  ", addr);
-            addr++;
-
-            raw_data += format("{:x} ", opcode);
-
-            // first parameter
-            switch (get<4>(*instr_ptr)) {
-            case d8:
-            case a8:
-            case a8_ref:
-            case r8:
-                data = rom[0][addr++];
-                raw_data += format("{:x} ", (u8)data);
-                break;
-            case d16:
-            case a16:
-            case a16_ref:
-                data = rom[0][addr++];
-                data |= ((u16)rom[0][addr++]) << 8;
-                raw_data += format("{:x} ", (u8)(data & 0xFF));
-                raw_data += format("{:x} ", (u8)((data & 0xFF00) >> 8));
-                break;
-            }
-
-
-            // second parameter
-            switch (get<5>(*instr_ptr)) {
-            case d8:
-            case a8:
-            case a8_ref:
-            case r8:
-                data = rom[0][addr++];
-                raw_data += format("{:x} ", (u8)data);
-                break;
-            case d16:
-            case a16:
-            case a16_ref:
-                data = rom[0][addr++];
-                data |= ((u16)rom[0][addr++]) << 8;
-                raw_data += format("{:x} ", (u8)(data & 0xFF));
-                raw_data += format("{:x} ", (u8)((data & 0xFF00) >> 8));
-                break;
-            }
-            get<2>(current_entry) = raw_data;
-
-            string asm_data = get<3>(*instr_ptr);
-            string args;
-            if (get<4>(*instr_ptr) != NO_DATA) {
-                args = resolve_data_enum(get<4>(*instr_ptr), addr, data);
-            }
-            if (get<5>(*instr_ptr) != NO_DATA) {
-                args += ", " + resolve_data_enum(get<5>(*instr_ptr), addr, data);
-            }
-            get<3>(current_entry) = asm_data;
-            if (args.compare("") != 0) {
-                get<3>(current_entry) += " " + args;
-            }
-
-            _program_buffer.back().push_back(current_entry);
-        }
-    }
-
-    for (bank = 1; bank < machine_ctx->rom_bank_num; bank++) {
-        _program_buffer.push_back(vector<tuple<int, int, string, string>>());
-        for (addr = 0, i = 0; addr < ROM_BANK_0_SIZE; i++) {
-
-            u8 opcode = rom[bank][addr];
-            tuple<int, int, string, string> current_entry(i, addr + ROM_BANK_N_OFFSET, "", "");
-
-            instr_tuple* instr_ptr;
-
-            if (cb) {
-                instr_ptr = &instrMapCB[opcode];
-                cb = false;
-            }
-            else {
-                instr_ptr = &instrMap[opcode];
-            }
-
-            string raw_data = "ROM" + to_string(bank) + ": " + format("{:x}  ", addr + ROM_BANK_N_OFFSET);
-            addr++;
-
-            raw_data += format("{:x} ", opcode);
-
-            // first parameter
-            switch (get<4>(*instr_ptr)) {
-            case d8:
-            case a8:
-            case a8_ref:
-            case r8:
-                data = rom[bank][addr++];
-                raw_data += format("{:x} ", (u8)data);
-                break;
-            case d16:
-            case a16:
-            case a16_ref:
-                data = rom[bank][addr++];
-                data |= ((u16)rom[0][addr++]) << 8;
-                raw_data += format("{:x} ", (u8)(data & 0xFF));
-                raw_data += format("{:x} ", (u8)((data & 0xFF00) >> 8));
-                break;
-            }
-
-
-            // second parameter
-            switch (get<5>(*instr_ptr)) {
-            case d8:
-            case a8:
-            case a8_ref:
-            case r8:
-                data = rom[bank][addr++];
-                raw_data += format("{:x} ", (u8)data);
-                break;
-            case d16:
-            case a16:
-            case a16_ref:
-                data = rom[bank][addr++];
-                data |= ((u16)rom[0][addr++]) << 8;
-                raw_data += format("{:x} ", (u8)(data & 0xFF));
-                raw_data += format("{:x} ", (u8)((data & 0xFF00) >> 8));
-                break;
-            }
-            get<2>(current_entry) = raw_data;
-
-            string asm_data = get<3>(*instr_ptr);
-            string args;
-            if (get<4>(*instr_ptr) != NO_DATA) {
-                args = resolve_data_enum(get<4>(*instr_ptr), addr + ROM_BANK_N_OFFSET, data);
-            }
-            if (get<5>(*instr_ptr) != NO_DATA) {
-                args += ", " + resolve_data_enum(get<5>(*instr_ptr), addr + ROM_BANK_N_OFFSET, data);
-            }
-            get<3>(current_entry) = asm_data;
-            if (args.compare("") != 0) {
-                get<3>(current_entry) += " " + args;
-            }
-
-            _program_buffer.back().push_back(current_entry);
-        }
+    for (int bank = 0; bank < machine_ctx->rom_bank_num; bank++) {
+        _program_buffer.emplace_back(vector<tuple<int, int, string, string>>());
+        WriteMessageBufferRomBank(_program_buffer.back(), bank, rom[bank]);
     }
 }
 
-void CoreSM83::GetCurrentRegisterValues(vector<pair<string, string>>& _register_values) {
+void CoreSM83::GetCurrentRegisterValues(vector<pair<string, string>>& _register_values) const {
     _register_values.clear();
 
     _register_values.emplace_back(get_register_name(A), format("{:x}", Regs.A));
@@ -1869,8 +1795,7 @@ void CoreSM83::CP() {
     }
 
     SUB_8_FLAGS(Regs.A, data, Regs.F);
-    Regs.A -= data;
-    ZERO_FLAG(Regs.A, Regs.F);
+    ZERO_FLAG(Regs.A ^ data, Regs.F);
 }
 
 // 1's complement of A

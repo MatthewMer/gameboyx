@@ -33,7 +33,7 @@ public:
 
 	virtual void GetCurrentMemoryLocation(message_buffer& _msg_buffer) const = 0;
 	virtual void InitMessageBufferProgram(std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>& _program_buffer) = 0;
-	virtual void GetCurrentRegisterValues(std::vector<std::pair<std::string, std::string>>& _register_values) = 0;
+	virtual void GetCurrentRegisterValues(std::vector<std::pair<std::string, std::string>>& _register_values) const = 0;
 
 protected:
 	// constructor

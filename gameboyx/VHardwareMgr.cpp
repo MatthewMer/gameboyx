@@ -45,6 +45,8 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buff
     core_instance->GetCurrentRegisterValues(msgBuffer.register_values);
     core_instance->GetCurrentMemoryLocation(msgBuffer);
 
+    core_instance->InitMessageBufferProgram(msgBuffer.program_buffer);
+
     LOG_INFO(_game_ctx.title, " started");
 }
 

@@ -53,19 +53,14 @@ void MemorySM83::RequestInterrupts(const u8& isr_flags) {
 void MemorySM83::CopyRomForDebug(vector<vector<u8>>& _rom) {
     _rom.clear();
 
-    for (int i = 0; i < machine_ctx->rom_bank_num; i++) {
-        _rom.push_back(vector<u8>());
+    _rom.emplace_back(vector<u8>());
+    _rom.back().resize(ROM_BANK_0_SIZE);
+    _rom.back().insert(_rom.back().begin(), ROM_0, ROM_0 + ROM_BANK_0_SIZE);
 
-        if (i == 0) {
-            for (int j = 0; j < ROM_BANK_0_SIZE; j++) {
-                _rom[i].push_back(ROM_0[j]);
-            }
-        }
-        else {
-            for (int j = 0; j < ROM_BANK_N_SIZE; j++) {
-                _rom[i].push_back(ROM_N[i - 1][j]);
-            }
-        }
+    for (int i = 0; i < machine_ctx->rom_bank_num - 1; i++) {
+        _rom.emplace_back(vector<u8>());
+        _rom.back().resize(ROM_BANK_N_SIZE);
+        _rom.back().insert(_rom.back().begin(), ROM_N[i], ROM_N[i] + ROM_BANK_N_SIZE);
     }
 }
 

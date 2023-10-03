@@ -60,7 +60,7 @@ public:
 
 	void GetCurrentMemoryLocation(message_buffer& _msg_buffer) const override;
 	void InitMessageBufferProgram(std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>& _program_buffer) override;
-	void GetCurrentRegisterValues(std::vector<std::pair<std::string, std::string>>& _register_values) override;
+	void GetCurrentRegisterValues(std::vector<std::pair<std::string, std::string>>& _register_values) const  override;
 
 private:
 	// constructor
@@ -103,6 +103,7 @@ private:
 	int machineCycles = 0;
 	int currentMachineCycles = 0;
 	int GetDelayTime() override;
+	void WriteMessageBufferRomBank(std::vector<std::tuple<int, int, std::string, std::string>>& _program_buffer_bank, const int& _bank, const std::vector<u8>& _rom_bank);
 
 	machine_state_context* machine_ctx;
 
