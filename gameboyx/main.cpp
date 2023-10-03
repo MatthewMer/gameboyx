@@ -214,6 +214,9 @@ int main(int, char**)
             case SDL_KEYDOWN:
                 key = event.key.keysym.sym;
                 switch (key) {
+                case SDLK_LSHIFT:
+                    gbx_gui->KeyDown(key);
+                    break;
                 default:
                     if (game_state->game_running) {
                         vhwmgr_obj->KeyDown(key);
@@ -236,6 +239,9 @@ int main(int, char**)
                 case SDLK_F11:
                     sdl_toggle_full_screen(window);
                     break;
+                case SDLK_LSHIFT:
+                    gbx_gui->KeyUp(key);
+                    break;
                 default:
                     if (game_state->game_running) {
                         vhwmgr_obj->KeyUp(key);
@@ -245,6 +251,9 @@ int main(int, char**)
                     }
                     break;
                 }
+                break;
+            case SDL_MOUSEWHEEL:
+                gbx_gui->MouseWheelEvent(event.wheel.y);
                 break;
             default:
                 break;

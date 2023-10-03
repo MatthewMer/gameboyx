@@ -6,6 +6,55 @@
 
 #include "MemorySM83.h"
 
+/* ***********************************************************************************************************
+*
+*		MBC1
+*
+*********************************************************************************************************** */
+class MmuSM83_MBC1 : protected MmuBase
+{
+public:
+	friend class MmuBase;
+
+	// members
+	void Write8Bit(const u8& _data, const u16& _addr) override;
+	void Write16Bit(const u16& _data, const u16& _addr) override;
+	u8 Read8Bit(const u16& _addr) override;
+	u16 Read16Bit(const u16& _addr) override;
+
+	// access machine states
+	//int GetCurrentSpeed() const override;
+	//u8 GetInterruptEnable() const override;
+	//u8 GetInterruptRequests() const override;
+	//void ResetInterruptRequest(const u8& _isr_flags) override;
+
+private:
+	// constructor
+	MmuSM83_MBC1();
+	// destructor
+	~MmuSM83_MBC1() = default;
+
+	void ResetChildMemoryInstances() override { MemorySM83::resetInstance(); }
+	MemorySM83* mem_instance;
+
+	// hardware info and access
+	machine_state_context* machine_ctx;
+
+	// mbc3 control
+	bool ramEnable = false;
+	u8 rtcRegistersLastWrite = 0x00;
+
+	bool advancedBankingMode = false;
+	u8 advancedBankingValue = 0x00;
+
+	u16 dataBuffer;
+};
+
+/* ***********************************************************************************************************
+*
+*		MBC3
+*
+*********************************************************************************************************** */
 class MmuSM83_MBC3 : protected MmuBase
 {
 public:
@@ -31,10 +80,6 @@ private:
 
 	void ResetChildMemoryInstances() override { MemorySM83::resetInstance(); }
 	MemorySM83* mem_instance;
-
-	// members
-	void InitMmu(const Cartridge& _cart_obj) override;
-	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom);
 
 	// hardware info and access
 	machine_state_context* machine_ctx;

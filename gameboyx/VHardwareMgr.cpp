@@ -37,11 +37,13 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buff
     core_instance = CoreBase::getInstance(_msg_buffer);
     graphics_instance = GraphicsUnitBase::getInstance();
 
-    // sets the machine cycle threshold for core and returns the time per frame in ns
+    // returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
     displayFrequency = core_instance->GetDisplayFrequency();
 
     core_instance->GetStartupHardwareInfo(msgBuffer);
+    core_instance->GetCurrentRegisterValues(msgBuffer.register_values);
+    core_instance->GetCurrentMemoryLocation(msgBuffer);
 
     LOG_INFO(_game_ctx.title, " started");
 }
@@ -64,12 +66,23 @@ void VHardwareMgr::ProcessNext() {
     if (msgBuffer.track_hardware_info) {
         core_instance->GetCurrentHardwareState(msgBuffer);
     }
+
+    if (msgBuffer.instruction_debug_enabled) {
+        core_instance->GetCurrentRegisterValues(msgBuffer.register_values);
+        core_instance->GetCurrentMemoryLocation(msgBuffer);
+    }
 }
 
 void VHardwareMgr::SimulateDelay() {
-    while (currentTimePerFrame < timePerFrame) {
+    if (msgBuffer.instruction_debug_enabled) {
         cur = high_resolution_clock::now();
         currentTimePerFrame = duration_cast<nanoseconds>(cur - prev).count();
+    }
+    else {
+        while (currentTimePerFrame < timePerFrame) {
+            cur = high_resolution_clock::now();
+            currentTimePerFrame = duration_cast<nanoseconds>(cur - prev).count();
+        }
     }
     prev = cur;
 

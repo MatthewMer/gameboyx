@@ -31,7 +31,5 @@ protected:
 
 private:
 	static MmuBase* instance;
-
-	// members
-	virtual void InitMmu(const Cartridge& _cart_obj) = 0;
+	static MmuBase* getNewMmuInstance();
 };

@@ -11,31 +11,36 @@
 /* ***********************************************************************************************************
 	CLASSES FOR INSTRUCTION IN/OUTPUT POINTERS
 *********************************************************************************************************** */
-class Ptr {
-public:
-	virtual std::string GetValue() const = 0;
-
-protected:
-	Ptr() = default;
-	~Ptr() = default;
-};
-
-enum reg_types {
-	DATA,
+enum cgb_data_types {
+	NO_DATA,
 	BC,
+	BC_ref,
 	DE,
+	DE_ref,
 	HL,
+	HL_ref,
+	HL_INC_ref,
+	HL_DEC_ref,
 	SP,
+	SP_r8,
 	PC,
 	AF,
 	A,
 	F,
 	B,
 	C,
+	C_ref,
 	D,
 	E,
 	H,
-	L
+	L,
+	d8,
+	d16,
+	a8,
+	a8_ref,
+	a16,
+	a16_ref,
+	r8
 };
 
 /* ***********************************************************************************************************
@@ -53,6 +58,10 @@ public:
 	u32 GetPassedClockCycles() override;
 	int GetDisplayFrequency() const override;
 
+	void GetCurrentMemoryLocation(message_buffer& _msg_buffer) const override;
+	void InitMessageBufferProgram(std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>& _program_buffer) override;
+	void GetCurrentRegisterValues(std::vector<std::pair<std::string, std::string>>& _register_values) override;
+
 private:
 	// constructor
 	CoreSM83(message_buffer& _msg_buffer);
@@ -68,8 +77,6 @@ private:
 	void ExecuteInterrupts() override;
 	void ExecuteMachineCycles() override;
 
-	std::string GetRegisterContents() const;
-	std::string GetDebugInstruction() const;
 	u16 curPC;
 
 	// internals
@@ -90,7 +97,7 @@ private:
 	typedef void (CoreSM83::* instruction)();
 
 	// current instruction context
-	using instr_tuple = std::tuple < const u8, const instruction, const int, const std::string, const std::string, const Ptr*, const std::string, const Ptr*>;
+	using instr_tuple = std::tuple < const u8, const instruction, const int, const std::string, const cgb_data_types, const cgb_data_types>;
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
 	int machineCycles = 0;
@@ -98,11 +105,6 @@ private:
 	int GetDelayTime() override;
 
 	machine_state_context* machine_ctx;
-
-	// pointer instances
-	void CreatePointerInstances();
-	std::vector<std::pair<const reg_types, const Ptr*>> ptrInstances = std::vector<std::pair<const reg_types, const Ptr*>>();
-	const Ptr* GetPtr(const reg_types& _reg_type);
 
 	// basic instructions
 	std::vector<instr_tuple> instrMap;

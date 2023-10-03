@@ -10,11 +10,19 @@
 // TODO: fifo for debug info (GUI)
 struct message_buffer {
 	// debug isntructions
-	bool instruction_buffer_enabled = false;
-	std::string instruction_buffer = "";
+	bool instruction_debug_enabled = false;
+
 	bool pause_execution = true;
-	bool auto_run = false;
 	bool instruction_buffer_log = true;
+
+	// vector for loaded program
+	// index, pc location, raw data, resolved data
+	std::vector<std::vector<std::tuple<int, int, std::string, std::string>>> program_buffer = std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>();
+	std::vector<std::pair<std::string, std::string>> register_values = std::vector<std::pair<std::string, std::string>>();
+	int current_pc = 0;
+	int last_pc = -1;
+	int rom_bank_size = 0;
+	int current_rom_bank = 0;
 
 	// current hardware state
 	bool track_hardware_info = false;
@@ -37,7 +45,7 @@ struct game_status {
 };
 
 static void reset_message_buffer(message_buffer& _msg_buffer) {
-	_msg_buffer.instruction_buffer = "";
+	//_msg_buffer.instruction_buffer = "";
 	_msg_buffer.pause_execution = true;
 	_msg_buffer.current_frequency = .0f;
 	_msg_buffer.wram_bank_selected = 0;
@@ -48,4 +56,10 @@ static void reset_message_buffer(message_buffer& _msg_buffer) {
 	_msg_buffer.rom_bank_num = 0;
 	_msg_buffer.vram_bank = 0;
 	_msg_buffer.num_vram = 0;
+	_msg_buffer.program_buffer = std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>();
+	_msg_buffer.register_values = std::vector<std::pair<std::string, std::string>>();
+	_msg_buffer.current_pc = 0;
+	_msg_buffer.last_pc = -1;
+	_msg_buffer.rom_bank_size = 0;
+	_msg_buffer.current_rom_bank = 0;
 }

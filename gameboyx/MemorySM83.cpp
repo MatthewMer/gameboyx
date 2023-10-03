@@ -4,6 +4,8 @@
 #include "logger.h"
 #include "format"
 
+#include <iostream>
+
 using namespace std;
 
 /* ***********************************************************************************************************
@@ -46,6 +48,28 @@ void MemorySM83::RequestInterrupts(const u8& isr_flags) {
 }
 
 /* ***********************************************************************************************************
+    COPY ROM FOR DEBUG
+*********************************************************************************************************** */
+void MemorySM83::CopyRomForDebug(vector<vector<u8>>& _rom) {
+    _rom.clear();
+
+    for (int i = 0; i < machine_ctx->rom_bank_num; i++) {
+        _rom.push_back(vector<u8>());
+
+        if (i == 0) {
+            for (int j = 0; j < ROM_BANK_0_SIZE; j++) {
+                _rom[i].push_back(ROM_0[j]);
+            }
+        }
+        else {
+            for (int j = 0; j < ROM_BANK_N_SIZE; j++) {
+                _rom[i].push_back(ROM_N[i - 1][j]);
+            }
+        }
+    }
+}
+
+/* ***********************************************************************************************************
     INITIALIZE MEMORY
 *********************************************************************************************************** */
 void MemorySM83::InitMemory(const Cartridge& _cart_obj) {
@@ -63,9 +87,8 @@ void MemorySM83::InitMemory(const Cartridge& _cart_obj) {
         LOG_ERROR("Couldn't copy ROM");
         return;
     }
-
-    InitTimers();
-    SetLCDCValues(PPU_LCDC_INITIAL_STATE);
+    
+    InitMemoryState();
 }
 
 bool MemorySM83::CopyRom(const vector<u8>& _vec_rom) {
@@ -82,13 +105,26 @@ bool MemorySM83::CopyRom(const vector<u8>& _vec_rom) {
         for (int i = 0; i < machine_ctx->rom_bank_num - 1; i++) {
             if (ROM_N[i] != nullptr) {
                 for (int j = 0; j < ROM_BANK_N_SIZE; j++) {
-                    ROM_N[i][j] = _vec_rom[ROM_BANK_0_SIZE + i * ROM_BANK_N_SIZE + j];
+                    ROM_N[i][j] = _vec_rom[ROM_BANK_N_OFFSET + i * ROM_BANK_N_SIZE + j];
                 }
             }
             else {
+                LOG_ERROR("ROM ", i + 1, " is nullptr");
                 return false;
             }
         }
+
+        // TODO: remove, just debug output
+        /*
+        for (int i = 0; i < ((machine_ctx->rom_bank_num - 1) * ROM_BANK_N_SIZE) / 0x10; i++) {
+            printf("%.6x:", i * 0x10 + ROM_BANK_N_OFFSET);
+            for (int j = 0; j < 0x10; j++) {
+                printf("%.2x ", ROM_N[(i * 0x10 + j) / ROM_BANK_N_SIZE][(i * 0x10 + j) % ROM_BANK_N_SIZE]);
+            }
+            std::cout << std::endl;
+        }*/
+
+        return true;
     }
     else {
         return false;
@@ -167,6 +203,18 @@ void MemorySM83::CleanupMemory() {
     delete[] sound_ctx->WAVE_RAM;
     delete sound_ctx;
     delete joyp_ctx;
+    delete serial_ctx;
+}
+
+/* ***********************************************************************************************************
+    INIT MEMORY STATE
+*********************************************************************************************************** */
+void MemorySM83::InitMemoryState() {
+    InitTimers();
+    SetLCDCValues(CGB_LCDC);
+    graphics_ctx->STAT = CGB_STAT;
+    machine_ctx->IE = CGB_IE;
+    machine_ctx->IF = CGB_IF;
 }
 
 /* ***********************************************************************************************************
@@ -324,6 +372,12 @@ u8 MemorySM83::GetIOValue(const u16& _addr) {
         case JOYP_ADDR:
             return joyp_ctx->JOYP_P1;
             break;
+        case SERIAL_DATA:
+            return serial_ctx->SB;
+            break;
+        case SERIAL_CTRL:
+            return serial_ctx->SC;
+            break;
         case DIV_ADDR:
             return machine_ctx->DIV;
             break;
@@ -479,6 +533,17 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
         switch (_addr) {
         case JOYP_ADDR:
             joyp_ctx->JOYP_P1 = _data;
+            break;
+        case SERIAL_DATA:
+            serial_ctx->SB = _data;
+            if (serial_ctx->SC == 0x81) {
+                printf("%c", char(serial_ctx->SB));
+                serial_ctx->SC = 0x00;
+            }
+            break;
+        case SERIAL_CTRL:
+            serial_ctx->SC = _data;
+            //LOG_WARN("SC: ", format("{:x}", serial_ctx->SC));
             break;
         case DIV_ADDR:
             machine_ctx->DIV = 0x00;

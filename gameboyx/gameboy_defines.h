@@ -7,6 +7,7 @@
 #define ROM_HEAD_ADDR				0x0100
 #define ROM_HEAD_SIZE				0x0050
 
+#define ROM_HEAD_LOGO               0x0104
 #define ROM_HEAD_TITLE				0x0134
 #define ROM_HEAD_CGBFLAG			0x0143				// until here; 0x80 = supports CGB, 0xC0 = CGB only		(bit 6 gets ignored)
 #define ROM_HEAD_NEWLIC				0x0144				// 2 char ascii; only if oldlic = 0x33
@@ -18,6 +19,7 @@
 #define ROM_HEAD_OLDLIC				0x014B
 #define ROM_HEAD_VERSION			0x014C
 #define ROM_HEAD_CHKSUM				0x014D
+#define ROM_HEAD_END                0x014F
 
 #define ROM_HEAD_TITLE_SIZE_CGB		15
 #define ROM_HEAD_TITLE_SIZE_GB		16
@@ -39,6 +41,12 @@
 
 #define CGB_DMG_DE                  0x0008
 #define CGB_DMG_HL                  0x007C
+
+// initial memory states
+#define CGB_LCDC                    0x91
+#define CGB_STAT                    0x81
+#define CGB_IE                      0x00
+#define CGB_IF                      0xE1
 
 // SM83 MEMORY MAPPING *****
 #define ROM_BANK_0_OFFSET           0x0000
@@ -81,6 +89,10 @@
 *********************************************************************************************************** */
 // joypad
 #define JOYP_ADDR                   0xFF00              // Mixed
+
+// serial
+#define SERIAL_DATA                 0xFF01
+#define SERIAL_CTRL                 0xFF02
 
 // timers
 #define DIV_ADDR                    0xFF04              // RW
@@ -206,7 +218,6 @@
 /* ***********************************************************************************************************
     GRAPHICS DEFINES
 *********************************************************************************************************** */
-#define PPU_LCDC_INITIAL_STATE      0x91
 #define LCD_VBLANK_THRESHOLD        0x91
 
 // LCD CONTROL

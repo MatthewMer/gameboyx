@@ -120,6 +120,11 @@ struct sound_context {
 	u8* WAVE_RAM;
 };
 
+struct serial_context {
+	u8 SB = 0;
+	u8 SC = 0;
+};
+
 struct joypad_context {
 	u8 JOYP_P1 = 0;
 };
@@ -162,6 +167,8 @@ public:
 	graphics_context* GetGraphicsContext() const;
 	sound_context* GetSoundContext() const;
 
+	void CopyRomForDebug(std::vector<std::vector<u8>>& _rom);
+
 	void RequestInterrupts(const u8& isr_flags) override;
 
 private:
@@ -175,6 +182,7 @@ private:
 
 	// members
 	void InitMemory(const Cartridge& _cart_obj) override;
+	void InitMemoryState() override;
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;
 	bool CopyRom(const std::vector<u8>& _vec_rom) override;
 	void InitTimers();
@@ -230,4 +238,5 @@ private:
 	graphics_context* graphics_ctx = new graphics_context();
 	sound_context* sound_ctx = new sound_context();
 	joypad_context* joyp_ctx = new joypad_context();
+	serial_context* serial_ctx = new serial_context();
 };

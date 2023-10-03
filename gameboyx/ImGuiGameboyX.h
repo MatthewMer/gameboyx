@@ -5,6 +5,7 @@
 #include <vector>
 #include "game_info.h"
 #include "information_structs.h"
+#include "helper_functions.h"
 
 class ImGuiGameboyX {
 public:
@@ -23,6 +24,7 @@ public:
 	// sdl functions
 	void KeyDown(const SDL_Keycode& _key);
 	void KeyUp(const SDL_Keycode& _key);
+	void MouseWheelEvent(const Sint32& _wheel_y);
 
 	// main gets game context
 	game_info& GetGameStartContext();
@@ -41,12 +43,25 @@ private:
 	bool sdlkShiftDown = false;
 	bool sdlkDelDown = false;
 	bool sdlkADown = false;
+	bool sdlScrollDown = false;
+	bool sdlScrollUp = false;
 
 	// variables
 	std::vector<game_info> games = std::vector<game_info>();
 	std::vector<bool> gamesSelected = std::vector<bool>();
 	int gamesPrevIndex = 0;
 	bool deleteGames = false;
+
+	// debug instructions
+	Vec2 debug_instr_index = Vec2(0, 0);				// bank, index
+	Vec2 debug_scroll_start_index = Vec2(0, 0);			// bank. index
+	Vec2 debug_scroll_end_index = Vec2(0, 0);			// bank, index
+	int debug_current_pc_top = 0;						// pc
+	bool debug_scroll_down = false;
+	bool debug_scroll_up = false;
+	Vec2 break_point = Vec2(0, 0);
+	bool break_point_set = false;
+	bool auto_run = false;
 
 	// game run state
 	void ActionStartGame(int _index);
@@ -70,18 +85,26 @@ private:
 	void ActionDeleteGames();
 	bool ActionAddGame(const std::string& _path_to_rom);
 	void ActionProcessSpecialKeys();
+	void ActionDebugScrollUp(const int& _num);
+	void ActionDebugScrollDown(const int& _num);
+	
+	void ActionBankSwitch();
+	void ActionBankJumpToAddr();
 
 	// helpers
 	void AddGameGuiCtx(const game_info& _game_ctx);
 	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
 	void InitGamesGuiCtx();
-	void CopyInstructionBuffer();
-	void ClearOutput();
-	void InitDebugOutputVectors();
+	void ResetDebugInstr();
+	void BankPCAddrSet();
+	void BankScrollAddrSet(const int& _bank, const int& _index);
+	void ActionScrollToCurrentPC();
+	void CurrentPCAutoScroll();
+	bool CheckBreakPoint();
+	void SetBreakPoint(const Vec2& _current_index);
 
 	// virtual hardware messages for debug
 	message_buffer& msgBuffer;
-	std::vector<std::string> instructionOutput = std::vector<std::string>();
 	bool firstInstruction = true;
 
 	// game status variables

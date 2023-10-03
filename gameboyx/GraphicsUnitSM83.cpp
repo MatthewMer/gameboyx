@@ -107,7 +107,7 @@ void GraphicsUnitSM83::DrawTileBackground(const int& _pos_x, const int& _pos_y) 
 // draw window (window pos at top left corner is (WX-7/WY) !)
 void GraphicsUnitSM83::DrawTileMapWindow() {
 	u8 win_offset = graphics_ctx->win_tilemap_offset;
-	int wx = graphics_ctx->WX - 7;
+	int wx = (int)graphics_ctx->WX - 7;
 	int wy = graphics_ctx->WY;
 
 	for (int x = 0; x < PPU_TILES_HORIZONTAL - wx; x+=PPU_PIXELS_TILE_X) {

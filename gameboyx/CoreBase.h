@@ -31,6 +31,10 @@ public:
 	virtual int GetDisplayFrequency() const = 0;
 	virtual bool CheckNextFrame() = 0;
 
+	virtual void GetCurrentMemoryLocation(message_buffer& _msg_buffer) const = 0;
+	virtual void InitMessageBufferProgram(std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>& _program_buffer) = 0;
+	virtual void GetCurrentRegisterValues(std::vector<std::pair<std::string, std::string>>& _register_values) = 0;
+
 protected:
 	// constructor
 	CoreBase(message_buffer& _msg_buffer) : msgBuffer(_msg_buffer) {

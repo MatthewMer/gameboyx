@@ -10,6 +10,7 @@ protected:
 
 	// members
 	virtual void InitMemory(const Cartridge& _cart_obj) = 0;
+	virtual void InitMemoryState() = 0;
 	virtual bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) = 0;
 	virtual bool CopyRom(const std::vector<u8>& _vec_rom) = 0;
 
