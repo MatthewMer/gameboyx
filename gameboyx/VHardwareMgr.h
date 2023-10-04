@@ -10,7 +10,7 @@
 class VHardwareMgr
 {
 public:
-	static VHardwareMgr* getInstance(const game_info& _game_ctx, message_buffer& _msg_buffer);
+	static VHardwareMgr* getInstance(const game_info& _game_ctx, machine_information& _machine_info);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -23,12 +23,12 @@ public:
 	void ProcessNext();
 
 	// SDL
-	void KeyDown(const SDL_Keycode& _key);
-	void KeyUp(const SDL_Keycode& _key);
+	void EventKeyDown(const SDL_Keycode& _key);
+	void EventKeyUp(const SDL_Keycode& _key);
 
 private:
 	// constructor
-	explicit VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buffer);
+	explicit VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info);
 	static VHardwareMgr* instance;
 	~VHardwareMgr() = default;
 
@@ -40,16 +40,19 @@ private:
 	// execution time
 	u32 timePerFrame = 0;
 	u32 currentTimePerFrame = 0;
-	u64 timeDelta = 0;
-	int timeDeltaCounter = 0;
 	steady_clock::time_point prev;
 	steady_clock::time_point cur;
-	u32 displayFrequency = 0;
 	void SimulateDelay();
 	void GetCurrentCoreFrequency();
 	void InitTime();
 
+	// timestamps for core frequency calculation
+	const int nsPerSecond = 1000000;
+	steady_clock::time_point timePointPrev;
+	steady_clock::time_point timePointCur;
+	u32 accumulatedTime = 0;
+
 	// message fifo
-	message_buffer& msgBuffer;
+	machine_information& machineInfo;
 };
 

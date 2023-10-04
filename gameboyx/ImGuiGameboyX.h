@@ -10,7 +10,7 @@
 class ImGuiGameboyX {
 public:
 	// singleton instance access
-	static ImGuiGameboyX* getInstance(message_buffer& _msg_buffer, game_status& _game_status);
+	static ImGuiGameboyX* getInstance(machine_information& _machine_info, game_status& _game_status);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -22,9 +22,9 @@ public:
 	// functions
 	void ProcessGUI();
 	// sdl functions
-	void KeyDown(const SDL_Keycode& _key);
-	void KeyUp(const SDL_Keycode& _key);
-	void MouseWheelEvent(const Sint32& _wheel_y);
+	void EventKeyDown(const SDL_Keycode& _key);
+	void EventKeyUp(const SDL_Keycode& _key);
+	void EventMouseWheel(const Sint32& _wheel_y);
 
 	// main gets game context
 	game_info& GetGameStartContext();
@@ -33,7 +33,7 @@ public:
 
 private:
 	// constructor
-	ImGuiGameboyX(message_buffer& _msg_buffer, game_status& _game_status);
+	ImGuiGameboyX(machine_information& _machine_info, game_status& _game_status);
 	static ImGuiGameboyX* instance;
 	~ImGuiGameboyX() = default;
 
@@ -49,24 +49,19 @@ private:
 	// variables
 	std::vector<game_info> games = std::vector<game_info>();
 	std::vector<bool> gamesSelected = std::vector<bool>();
-	int gamesPrevIndex = 0;
+	int gameSelectedIndex = 0;
 	bool deleteGames = false;
 
 	// debug instructions
-	Vec2 debug_instr_index = Vec2(0, 0);				// bank, index
-	Vec2 debug_scroll_start_index = Vec2(0, 0);			// bank. index
-	Vec2 debug_scroll_end_index = Vec2(0, 0);			// bank, index
-	int debug_current_pc_top = 0;						// pc
-	bool debug_scroll_down = false;
-	bool debug_scroll_up = false;
-	Vec2 break_point = Vec2(0, 0);
-	bool break_point_set = false;
-	bool auto_run = false;
-
-	// game run state
-	void ActionStartGame(int _index);
-	void ActionEndGame();
-	
+	Vec2 debugInstrIndex = Vec2(0, 0);				// bank, index
+	Vec2 debugScrollStartIndex = Vec2(0, 0);			// bank. index
+	Vec2 debugScrollEndIndex = Vec2(0, 0);			// bank, index
+	int debugAddrToSearch = 0;						// pc
+	bool debugScrollDown = false;
+	bool debugScrollUp = false;
+	Vec2 debugCurrentBreakpoint = Vec2(0, 0);
+	bool debugCurrentBreakpointSet = false;
+	bool debugAutoRun = false;
 
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;
@@ -84,9 +79,17 @@ private:
 	// actions
 	void ActionDeleteGames();
 	bool ActionAddGame(const std::string& _path_to_rom);
+
 	void ActionProcessSpecialKeys();
+
 	void ActionDebugScrollUp(const int& _num);
 	void ActionDebugScrollDown(const int& _num);
+	void ActionScrollToCurrentPC();
+
+	// game run state
+	void ActionStartGame(int _index);
+	void ActionEndGame();
+	void ActionRequestReset();
 	
 	void ActionBankSwitch();
 	void ActionBankJumpToAddr();
@@ -96,17 +99,16 @@ private:
 	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
 	void InitGamesGuiCtx();
 	void ResetDebugInstr();
-	void BankPCAddrSet();
+	void DebugSearchAddrSet();
 	void BankScrollAddrSet(const int& _bank, const int& _index);
-	void ActionScrollToCurrentPC();
 	void CurrentPCAutoScroll();
 	bool CheckBreakPoint();
 	void SetBreakPoint(const Vec2& _current_index);
 
 	// virtual hardware messages for debug
-	message_buffer& msgBuffer;
+	machine_information& machineInfo;
 	bool firstInstruction = true;
 
 	// game status variables
-	game_status& gameStatus;
+	game_status& gameState;
 };

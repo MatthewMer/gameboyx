@@ -5,10 +5,10 @@
 
 CoreBase* CoreBase::instance = nullptr;
 
-CoreBase* CoreBase::getInstance(message_buffer& _msg_buffer) {
+CoreBase* CoreBase::getInstance(machine_information& _machine_info) {
 	resetInstance();
 
-	instance = new CoreSM83(_msg_buffer);
+	instance = new CoreSM83(_machine_info);
 	return instance;
 }
 

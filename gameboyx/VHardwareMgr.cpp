@@ -10,10 +10,10 @@ using namespace std;
 *********************************************************************************************************** */
 VHardwareMgr* VHardwareMgr::instance = nullptr;
 
-VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, message_buffer& _msg_buffer) {
+VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, machine_information& _machine_info) {
     VHardwareMgr::resetInstance();
 
-    instance = new VHardwareMgr(_game_ctx, _msg_buffer);
+    instance = new VHardwareMgr(_game_ctx, _machine_info);
     return instance;
 }
 
@@ -27,25 +27,24 @@ void VHardwareMgr::resetInstance() {
     }
 }
 
-VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buffer) : msgBuffer(_msg_buffer){
+VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info) : machineInfo(_machine_info){
     cart_instance = Cartridge::getInstance(_game_ctx);
     if (cart_instance == nullptr) {
         LOG_ERROR("Couldn't create virtual cartridge");
         return;
     }
 
-    core_instance = CoreBase::getInstance(_msg_buffer);
+    core_instance = CoreBase::getInstance(_machine_info);
     graphics_instance = GraphicsUnitBase::getInstance();
 
     // returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
-    displayFrequency = core_instance->GetDisplayFrequency();
 
-    core_instance->GetStartupHardwareInfo(msgBuffer);
-    core_instance->GetCurrentRegisterValues(msgBuffer.register_values);
-    core_instance->GetCurrentMemoryLocation(msgBuffer);
+    core_instance->GetStartupHardwareInfo(machineInfo);
+    core_instance->GetCurrentRegisterValues(machineInfo.register_values);
+    core_instance->GetCurrentMemoryLocation(machineInfo);
 
-    core_instance->InitMessageBufferProgram(msgBuffer.program_buffer);
+    core_instance->InitMessageBufferProgram(machineInfo.program_buffer);
 
     LOG_INFO(_game_ctx.title, " started");
 }
@@ -54,75 +53,66 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, message_buffer& _msg_buff
     FUNCTIONALITY
 *********************************************************************************************************** */
 void VHardwareMgr::ProcessNext() {
-    // simulate delay
-    SimulateDelay();
-
     // run cpu for 1/Display frequency
     core_instance->RunCycles();
     // if machine cycles per frame passed -> render frame
     if (core_instance->CheckNextFrame()) {
+        SimulateDelay();
         graphics_instance->NextFrame();
     }
     
     // get current hardware state
-    if (msgBuffer.track_hardware_info) {
-        core_instance->GetCurrentHardwareState(msgBuffer);
+    if (machineInfo.track_hardware_info) {
+        core_instance->GetCurrentHardwareState(machineInfo);  
+        GetCurrentCoreFrequency();
     }
 
-    if (msgBuffer.instruction_debug_enabled) {
-        core_instance->GetCurrentRegisterValues(msgBuffer.register_values);
-        core_instance->GetCurrentMemoryLocation(msgBuffer);
+    if (machineInfo.instruction_debug_enabled) {
+        core_instance->GetCurrentRegisterValues(machineInfo.register_values);
+        core_instance->GetCurrentMemoryLocation(machineInfo);
     }
 }
 
 void VHardwareMgr::SimulateDelay() {
-    if (msgBuffer.instruction_debug_enabled) {
+    while (currentTimePerFrame < timePerFrame) {
         cur = high_resolution_clock::now();
         currentTimePerFrame = duration_cast<nanoseconds>(cur - prev).count();
     }
-    else {
-        while (currentTimePerFrame < timePerFrame) {
-            cur = high_resolution_clock::now();
-            currentTimePerFrame = duration_cast<nanoseconds>(cur - prev).count();
-        }
-    }
     prev = cur;
-
-    if (msgBuffer.track_hardware_info) {
-        GetCurrentCoreFrequency();
-    }
 
     currentTimePerFrame = 0;
 }
 
 // calculate current core frequency
 void VHardwareMgr::GetCurrentCoreFrequency() {
-    timeDelta += currentTimePerFrame;
-    timeDeltaCounter++;
+    timePointCur = high_resolution_clock::now();
+    accumulatedTime += duration_cast<microseconds>(timePointCur - timePointPrev).count();
+    timePointPrev = timePointCur;
 
-    if (timeDeltaCounter == displayFrequency) {
-        msgBuffer.current_frequency = (((float)core_instance->GetPassedClockCycles() / ((float)timeDelta / timeDeltaCounter)) / displayFrequency) * 1000;
-        timeDelta = 0;
-        timeDeltaCounter = 0;
+    if (accumulatedTime >= nsPerSecond) {
+        machineInfo.current_frequency = core_instance->GetCurrentCoreFrequency();
+        accumulatedTime = 0;
     }
 }
 
 void VHardwareMgr::InitTime() {
     prev = high_resolution_clock::now();
     cur = high_resolution_clock::now();
+    timePointPrev = high_resolution_clock::now();
+    timePointCur = high_resolution_clock::now();
 }
 
 /* ***********************************************************************************************************
     VHARDWAREMANAGER SDL FUNCTIONS
 *********************************************************************************************************** */
-void VHardwareMgr::KeyDown(const SDL_Keycode& _key) {
+void VHardwareMgr::EventKeyDown(const SDL_Keycode& _key) {
     switch (_key) {
     default:
         break;
     }
 }
 
-void VHardwareMgr::KeyUp(const SDL_Keycode& _key) {
+void VHardwareMgr::EventKeyUp(const SDL_Keycode& _key) {
     switch (_key) {
     default:
         break;

@@ -185,9 +185,9 @@ int main(int, char**)
     auto clear_color = IMGUI_CLR_COLOR;
 
     // Main loop
-    auto* msg_buffer = new message_buffer();
+    auto* machine_info = new machine_information();
     auto* game_state = new game_status();
-    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(*msg_buffer, *game_state);
+    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(*machine_info, *game_state);
     VHardwareMgr* vhwmgr_obj = nullptr;
     LOG_INFO("Initialization completed");
 
@@ -215,14 +215,14 @@ int main(int, char**)
                 key = event.key.keysym.sym;
                 switch (key) {
                 case SDLK_LSHIFT:
-                    gbx_gui->KeyDown(key);
+                    gbx_gui->EventKeyDown(key);
                     break;
                 default:
                     if (game_state->game_running) {
-                        vhwmgr_obj->KeyDown(key);
+                        vhwmgr_obj->EventKeyDown(key);
                     }
                     else {
-                        gbx_gui->KeyDown(key);
+                        gbx_gui->EventKeyDown(key);
                     }
                     break;
                 }
@@ -234,26 +234,26 @@ int main(int, char**)
                     game_state->pending_game_stop = true;
                     break;
                 case SDLK_F10:
-                    gbx_gui->KeyUp(key);
+                    gbx_gui->EventKeyUp(key);
                     break;
                 case SDLK_F11:
                     sdl_toggle_full_screen(window);
                     break;
                 case SDLK_LSHIFT:
-                    gbx_gui->KeyUp(key);
+                    gbx_gui->EventKeyUp(key);
                     break;
                 default:
                     if (game_state->game_running) {
-                        vhwmgr_obj->KeyUp(key);
+                        vhwmgr_obj->EventKeyUp(key);
                     }
                     else {
-                        gbx_gui->KeyUp(key);
+                        gbx_gui->EventKeyUp(key);
                     }
                     break;
                 }
                 break;
             case SDL_MOUSEWHEEL:
-                gbx_gui->MouseWheelEvent(event.wheel.y);
+                gbx_gui->EventMouseWheel(event.wheel.y);
                 break;
             default:
                 break;
@@ -261,17 +261,21 @@ int main(int, char**)
         }
 
         // game start/stop
-        if (game_state->pending_game_start) {
-            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), *msg_buffer);
-            game_state->game_running = true;
+        if (game_state->pending_game_start || game_state->request_reset) {
+            VHardwareMgr::resetInstance();
+            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), *machine_info);
+            
+            game_state->request_reset = false;
             game_state->pending_game_start = false;
+
+            game_state->game_running = true;
         }
         if (game_state->pending_game_stop) {
             VHardwareMgr::resetInstance();
             gbx_gui->GameStopped();
             game_state->game_running = false;
             game_state->pending_game_stop = false;
-            reset_message_buffer(*msg_buffer);
+            reset_message_buffer(*machine_info);
         }
 
         // run virtual hardware

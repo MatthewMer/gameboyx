@@ -29,13 +29,13 @@ static void create_fs_hierarchy();
 *********************************************************************************************************** */
 ImGuiGameboyX* ImGuiGameboyX::instance = nullptr;
 
-ImGuiGameboyX* ImGuiGameboyX::getInstance(message_buffer& _msg_buffer, game_status& _game_status) {
+ImGuiGameboyX* ImGuiGameboyX::getInstance(machine_information& _machine_info, game_status& _game_status) {
     if (instance != nullptr) {
         delete instance;
         instance = nullptr;
     }
 
-    instance = new ImGuiGameboyX(_msg_buffer, _game_status);
+    instance = new ImGuiGameboyX(_machine_info, _game_status);
     return instance;
 }
 
@@ -47,7 +47,7 @@ void ImGuiGameboyX::resetInstance() {
     instance = nullptr;
 }
 
-ImGuiGameboyX::ImGuiGameboyX(message_buffer& _msg_buffer, game_status& _game_status) : msgBuffer(_msg_buffer), gameStatus(_game_status){
+ImGuiGameboyX::ImGuiGameboyX(machine_information& _machine_info, game_status& _game_status) : machineInfo(_machine_info), gameState(_game_status){
     NFD_Init();
     create_fs_hierarchy();
     if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
@@ -62,19 +62,19 @@ void ImGuiGameboyX::ProcessGUI() {
     IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
 
     if (showMainMenuBar) ShowMainMenuBar();
-    if (msgBuffer.instruction_debug_enabled) ShowDebugInstructions();
+    if (machineInfo.instruction_debug_enabled) ShowDebugInstructions();
     if (showWinAbout) ShowWindowAbout();
-    if (msgBuffer.track_hardware_info) ShowHardwareInfo();
+    if (machineInfo.track_hardware_info) ShowHardwareInfo();
 
-    if (!gameStatus.game_running) {
+    if (!gameState.game_running) {
         // gui elements
         if (showGameSelect) ShowGameSelect();
         if (showNewGameDialog) ShowNewGameDialog();
         
         // actions
         if (deleteGames) ActionDeleteGames();
-        if (gameStatus.pending_game_start) {
-            ActionStartGame(gamesPrevIndex);
+        if (gameState.pending_game_start) {
+            ActionStartGame(gameSelectedIndex);
         }
 
         // special funktions
@@ -89,13 +89,13 @@ void ImGuiGameboyX::ShowMainMenuBar() {
     if (ImGui::BeginMainMenuBar()) {
         
         if (ImGui::BeginMenu("Games")) {
-            if (gameStatus.game_running) {
-                ImGui::MenuItem("Stop game", nullptr, &gameStatus.pending_game_stop);
+            if (gameState.game_running) {
+                ImGui::MenuItem("Stop game", nullptr, &gameState.pending_game_stop);
             }
             else {
                 ImGui::MenuItem("Add new game", nullptr, &showNewGameDialog);
                 ImGui::MenuItem("Remove game(s)", nullptr, &deleteGames);
-                ImGui::MenuItem("Start game", nullptr, &gameStatus.pending_game_start);
+                ImGui::MenuItem("Start game", nullptr, &gameState.pending_game_start);
             }
             ImGui::EndMenu();
         }
@@ -112,8 +112,8 @@ void ImGuiGameboyX::ShowMainMenuBar() {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
-            ImGui::MenuItem("Instruction Execution", nullptr, &msgBuffer.instruction_debug_enabled);
-            ImGui::MenuItem("Hardware Info", nullptr, &msgBuffer.track_hardware_info);
+            ImGui::MenuItem("Debug Instructions", nullptr, &machineInfo.instruction_debug_enabled);
+            ImGui::MenuItem("Hardware Info", nullptr, &machineInfo.track_hardware_info);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
@@ -142,7 +142,7 @@ void ImGuiGameboyX::ShowWindowAbout() {
 
 void ImGuiGameboyX::ShowDebugInstructions() {
 
-    if (gameStatus.game_running) {
+    if (gameState.game_running) {
         // if cpu was running -> automatic scrolling
         CurrentPCAutoScroll();
     }
@@ -155,10 +155,10 @@ void ImGuiGameboyX::ShowDebugInstructions() {
 
     ImGui::SetNextWindowSize(debug_win_size);
 
-    if (ImGui::Begin("Debug instructions", &msgBuffer.instruction_debug_enabled, win_flags)) {
-        if (gameStatus.game_running && !auto_run) {
+    if (ImGui::Begin("Debug Instructions", &machineInfo.instruction_debug_enabled, win_flags)) {
+        if (gameState.game_running && !debugAutoRun) {
             if (ImGui::Button("Next Instruction")) {
-                msgBuffer.pause_execution = CheckBreakPoint();
+                machineInfo.pause_execution = CheckBreakPoint();
             }
         }
         else {
@@ -167,33 +167,38 @@ void ImGuiGameboyX::ShowDebugInstructions() {
             ImGui::EndDisabled();
         }
         ImGui::SameLine();
-        ImGui::Checkbox("Auto run", &auto_run);
-        if (auto_run) {
-            msgBuffer.pause_execution = CheckBreakPoint();
-        }
-        ImGui::SameLine();
-        ImGui::Checkbox("Send to *_instructions.log", &msgBuffer.instruction_buffer_log);
-
-        if (gameStatus.game_running) {
+        if (gameState.game_running) {
             if (ImGui::Button("Jump to PC")) {
                 ActionScrollToCurrentPC();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Reset")) {
+                ActionRequestReset();
             }
         }
         else {
             ImGui::BeginDisabled();
             ImGui::Button("Jump to PC");
+            ImGui::SameLine();
+            ImGui::Button("Reset");
             ImGui::EndDisabled();
         }
 
-        static const ImGuiTableColumnFlags col_flags = ImGuiTableColumnFlags_WidthFixed;
+        ImGui::Checkbox("Auto run", &debugAutoRun);
+        if (debugAutoRun) {
+            machineInfo.pause_execution = CheckBreakPoint();
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox("Send to *_instructions.log", &machineInfo.instruction_logging);
 
-        static const ImGuiTableFlags table_flags = 
+        const ImGuiTableFlags table_flags = 
             ImGuiTableFlags_BordersInnerV |
             ImGuiTableFlags_BordersOuterH;
 
-        static const ImGuiTableColumnFlags column_flags =
+        const ImGuiTableColumnFlags column_flags =
             ImGuiTableColumnFlags_NoHeaderLabel |
-            ImGuiTableColumnFlags_NoResize;
+            ImGuiTableColumnFlags_NoResize |
+            ImGuiTableColumnFlags_WidthFixed;
 
         const int column_num_instr = DEBUG_INSTR_COLUMNS.size();
 
@@ -206,15 +211,15 @@ void ImGuiGameboyX::ShowDebugInstructions() {
                 ImGui::TableSetupColumn("", column_flags, DEBUG_INSTR_COLUMNS[i] * (debug_win_size.x - (style.WindowPadding.x * 2)));
             }
 
-            if (!msgBuffer.program_buffer.empty()) {
+            if (!machineInfo.program_buffer.empty()) {
                 // print instructions
                 const ImGuiSelectableFlags sel_flags = ImGuiSelectableFlags_SpanAllColumns;
 
-                Vec2 current_index = debug_scroll_start_index;
-                Vec2 current_end_index = debug_scroll_end_index;
+                Vec2 current_index = debugScrollStartIndex;
+                Vec2 current_end_index = debugScrollEndIndex;
 
                 bool overflow = current_index.x < current_end_index.x;
-                int start_bank_size = msgBuffer.program_buffer[current_index.x].size();
+                int start_bank_size = machineInfo.program_buffer[current_index.x].size();
 
                 for (; current_index.x != current_end_index.x ? true : current_index.y <= current_end_index.y; current_index.y++) {
                     if (overflow) {
@@ -228,47 +233,37 @@ void ImGuiGameboyX::ShowDebugInstructions() {
 
                     ImGui::TableNextColumn();
 
-                    if (break_point_set) {
-                        if (current_index == break_point) {
-                            ImGui::TextColored(style.Colors[ImGuiCol_TabActive], "->");
+                    if (debugCurrentBreakpointSet) {
+                        if (current_index == debugCurrentBreakpoint) {
+                            ImGui::TextColored(style.Colors[ImGuiCol_HeaderHovered], ">>>");
                         }
                     }
                     ImGui::TableNextColumn();
 
-                    if (current_index.x == debug_instr_index.x) {
-                        ImGui::Selectable(get<2>(msgBuffer.program_buffer[current_index.x][current_index.y]).c_str(), get<0>(msgBuffer.program_buffer[current_index.x][current_index.y]) == debug_instr_index.y, sel_flags);
+                    if (current_index.x == debugInstrIndex.x) {
+                        ImGui::Selectable(get<2>(machineInfo.program_buffer[current_index.x][current_index.y]).c_str(), get<0>(machineInfo.program_buffer[current_index.x][current_index.y]) == debugInstrIndex.y, sel_flags);
                     }
                     else {
-                        ImGui::Selectable(get<2>(msgBuffer.program_buffer[current_index.x][current_index.y]).c_str(), false, sel_flags);
+                        ImGui::Selectable(get<2>(machineInfo.program_buffer[current_index.x][current_index.y]).c_str(), false, sel_flags);
                     }
                     
                     // process actions
                     if (ImGui::IsItemHovered()) {
                         if (sdlScrollUp) {
                             sdlScrollUp = false;
-                            if (sdlkShiftDown) {
-                                ActionDebugScrollUp(DEBUG_INSTR_ELEMENTS);
-                            }
-                            else {
-                                ActionDebugScrollUp(1);
-                            }
+                            if (sdlkShiftDown) { ActionDebugScrollUp(DEBUG_INSTR_ELEMENTS); }
+                            else { ActionDebugScrollUp(1); }
                         }
                         else if (sdlScrollDown) {
                             sdlScrollDown = false;
-                            if (sdlkShiftDown) {
-                                ActionDebugScrollDown(DEBUG_INSTR_ELEMENTS);
-                            }
-                            else {
-                                ActionDebugScrollDown(1);
-                            }
+                            if (sdlkShiftDown) { ActionDebugScrollDown(DEBUG_INSTR_ELEMENTS); }
+                            else { ActionDebugScrollDown(1); }
                         }
-                    }
-                    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
-                        SetBreakPoint(current_index);
+                        if (ImGui::IsMouseClicked(0)) { SetBreakPoint(current_index); }
                     }
                     ImGui::TableNextColumn();
 
-                    ImGui::TextUnformatted(get<3>(msgBuffer.program_buffer[current_index.x][current_index.y]).c_str());
+                    ImGui::TextUnformatted(get<3>(machineInfo.program_buffer[current_index.x][current_index.y]).c_str());
                     ImGui::TableNextRow();
                 }
             }
@@ -288,41 +283,45 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         }
         ImGui::EndTable();
 
-        if (!gameStatus.game_running) { ImGui::BeginDisabled(); }
-        if (ImGui::InputInt("ROM Bank", &debug_scroll_start_index.x)) {
-            ActionBankSwitch();
+        if (gameState.game_running) { 
+            if (ImGui::InputInt("ROM Bank", &debugScrollStartIndex.x)) {
+                ActionBankSwitch();
+            }
+            const ImGuiInputTextFlags bank_addr_flags =
+                ImGuiInputTextFlags_CharsHexadecimal |
+                ImGuiInputTextFlags_CharsUppercase |
+                ImGuiInputTextFlags_EnterReturnsTrue;
+            if (ImGui::InputInt("ROM Address", &debugAddrToSearch, 1, 100, bank_addr_flags)) {
+                ActionBankJumpToAddr();
+            }
         }
-        const ImGuiInputTextFlags bank_addr_flags = 
-            ImGuiInputTextFlags_CharsHexadecimal |
-            ImGuiInputTextFlags_CharsUppercase |
-            ImGuiInputTextFlags_EnterReturnsTrue;
-        if (ImGui::InputInt("ROM Address", &debug_current_pc_top, 1, 100, bank_addr_flags)) {
-            ActionBankJumpToAddr();
+        else {
+            ImGui::BeginDisabled();
+            ImGui::InputInt("ROM Bank", &debugScrollStartIndex.x);
+            ImGui::InputInt("ROM Address", &debugAddrToSearch, 1, 100, 0);
+            ImGui::EndDisabled();
         }
-        if (!gameStatus.game_running) { ImGui::EndDisabled(); }
+        
 
         const int column_num_registers = DEBUG_REGISTER_COLUMNS.size();
 
         ImGui::TextColored(style.Colors[ImGuiCol_TabActive], "Registers:");
 
-        if (!msgBuffer.register_values.empty()) {
+        if (!machineInfo.register_values.empty()) {
             if (ImGui::BeginTable("registers_debug", column_num_registers, table_flags)) {
                 for (int i = 0; i < column_num_registers; i++) {
                     ImGui::TableSetupColumn("", column_flags, DEBUG_REGISTER_COLUMNS[i] * (debug_win_size.x - (style.WindowPadding.x * 2)));
                 }
 
                 ImGui::TableNextColumn();
-                for (int i = 0; const auto & n : msgBuffer.register_values) {
+                for (int i = 0; const auto & n : machineInfo.register_values) {
                     ImGui::TextUnformatted(n.first.c_str());
                     ImGui::TableNextColumn();
 
                     ImGui::TextUnformatted(n.second.c_str());
 
-                    if (i % 2) {
-                        ImGui::TableNextRow();
-                    }
+                    if (i++ % 2) { ImGui::TableNextRow(); }
                     ImGui::TableNextColumn();
-                    i++;
                 }
             }
             ImGui::EndTable();
@@ -340,7 +339,7 @@ void ImGuiGameboyX::ShowHardwareInfo() {
 
     ImGui::SetNextWindowSize(hw_info_win_size);
 
-    if (ImGui::Begin("Hardware Info", &msgBuffer.track_hardware_info, win_flags)) {
+    if (ImGui::Begin("Hardware Info", &machineInfo.track_hardware_info, win_flags)) {
 
         static const ImGuiTableColumnFlags column_flags =
             ImGuiTableColumnFlags_NoHeaderLabel |
@@ -362,46 +361,46 @@ void ImGuiGameboyX::ShowHardwareInfo() {
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("CPU Clock");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted((to_string(msgBuffer.current_frequency) + " MHz").c_str());
+            ImGui::TextUnformatted((to_string(machineInfo.current_frequency) + " MHz").c_str());
             ImGui::TableNextRow();
             
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("ROM Banks");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(msgBuffer.rom_bank_num).c_str());
+            ImGui::TextUnformatted(to_string(machineInfo.rom_bank_num).c_str());
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("ROM Selected");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(msgBuffer.rom_bank_selected).c_str());
+            ImGui::TextUnformatted(to_string(machineInfo.rom_bank_selected).c_str());
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("RAM Banks");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(msgBuffer.ram_bank_num).c_str());
+            ImGui::TextUnformatted(to_string(machineInfo.ram_bank_num).c_str());
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("RAM Selected");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(msgBuffer.ram_bank_selected < msgBuffer.ram_bank_num ? to_string(msgBuffer.ram_bank_selected).c_str() : "-");
+            ImGui::TextUnformatted(machineInfo.ram_bank_selected < machineInfo.ram_bank_num ? to_string(machineInfo.ram_bank_selected).c_str() : "-");
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("RTC Register");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(msgBuffer.ram_bank_selected >= msgBuffer.ram_bank_num ? to_string(msgBuffer.ram_bank_selected).c_str() : "-");
+            ImGui::TextUnformatted(machineInfo.ram_bank_selected >= machineInfo.ram_bank_num ? to_string(machineInfo.ram_bank_selected).c_str() : "-");
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("WRAM Banks");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(msgBuffer.wram_bank_num).c_str());
+            ImGui::TextUnformatted(to_string(machineInfo.wram_bank_num).c_str());
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("WRAM Selected");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(msgBuffer.wram_bank_selected).c_str());
+            ImGui::TextUnformatted(to_string(machineInfo.wram_bank_selected).c_str());
             
             ImGui::PopStyleVar();
         }
@@ -499,12 +498,12 @@ void ImGuiGameboyX::ShowGameSelect() {
                 if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
                     if (sdlkShiftDown) {
                         static int lower, upper;
-                        if (i <= gamesPrevIndex) {
+                        if (i <= gameSelectedIndex) {
                             lower = i;
-                            upper = gamesPrevIndex;
+                            upper = gameSelectedIndex;
                         }
                         else {
-                            lower = gamesPrevIndex;
+                            lower = gameSelectedIndex;
                             upper = i;
                         }
 
@@ -516,7 +515,7 @@ void ImGuiGameboyX::ShowGameSelect() {
                         for (int j = 0; j < gamesSelected.size(); j++) {
                             gamesSelected[j] = (i == j ? !gamesSelected[j] : (sdlkCtrlDown ? gamesSelected[j] : false));
                         }
-                        gamesPrevIndex = i;
+                        gameSelectedIndex = i;
                         if (!sdlkCtrlDown) {
                             gamesSelected[i] = true;
                         }
@@ -608,135 +607,143 @@ void ImGuiGameboyX::ActionProcessSpecialKeys() {
 }
 
 void ImGuiGameboyX::ActionStartGame(int _index) {
-    gameStatus.pending_game_start = true;
-    gameStatus.game_to_start = _index;
+    gameState.pending_game_start = true;
+    gameState.game_to_start = _index;
     firstInstruction = true;
 }
 
 void ImGuiGameboyX::ActionEndGame() {
-    if (gameStatus.game_running) {
+    if (gameState.game_running) {
         for (int i = 0; i < gamesSelected.size(); i++) {
             gamesSelected[i] = false;
         }
-        gamesSelected[gameStatus.game_to_start] = true;
+        gamesSelected[gameState.game_to_start] = true;
     }
-    gameStatus.pending_game_stop = false;
+    gameState.pending_game_stop = false;
     ResetDebugInstr();
 }
 
-void ImGuiGameboyX::ActionDebugScrollUp(const int& _num) {
-    for (int i = 0; i < _num; i++) {
-        if (debug_scroll_start_index.y == 0) {
-            if (debug_scroll_start_index.x > 0) {
-                debug_scroll_start_index.x--;
-                debug_scroll_start_index.y = msgBuffer.program_buffer[debug_scroll_start_index.x].size() - 1;
+void ImGuiGameboyX::ActionRequestReset() {
+    gameState.request_reset = true;
+}
 
-                debug_scroll_end_index.y--;
+void ImGuiGameboyX::ActionDebugScrollUp(const int& _num) {
+    static bool full_scroll = true;
+
+    if (debugScrollStartIndex.x > 0 || debugScrollStartIndex.y > 0) {
+        debugScrollStartIndex.y -= _num;
+        if (debugScrollStartIndex.y < 0) {
+            if (debugScrollStartIndex.x == 0) {
+                debugScrollStartIndex.y = 0;
+                full_scroll = false;
+            }
+            else {
+                debugScrollStartIndex.x--;
+                debugScrollStartIndex.y += machineInfo.program_buffer[debugScrollStartIndex.x].size();
+            }
+        }
+
+        if (full_scroll) {
+            debugScrollEndIndex.y -= _num;
+            if (debugScrollEndIndex.y < 0) {
+                debugScrollEndIndex.x--;
+                debugScrollEndIndex.y += machineInfo.program_buffer[debugScrollEndIndex.x].size();
             }
         }
         else {
-            debug_scroll_start_index.y--;
-
-            if (debug_scroll_end_index.y == 0) {
-                debug_scroll_end_index.x--;
-                debug_scroll_end_index.y = msgBuffer.program_buffer[debug_scroll_end_index.x].size() - 1;
-            }
-            else {
-                debug_scroll_end_index.y--;
-            }
+            debugScrollEndIndex.y = debugScrollStartIndex.y + DEBUG_INSTR_ELEMENTS - 1;
         }
     }
 
-    BankPCAddrSet();
+    DebugSearchAddrSet();
 }
 
 void ImGuiGameboyX::ActionDebugScrollDown(const int& _num) {
-    for (int i = 0; i < _num; i++) {
-        if (debug_scroll_end_index.y == msgBuffer.program_buffer[debug_scroll_end_index.x].size() - 1) {
-            if (debug_scroll_end_index.x < msgBuffer.program_buffer.size() - 1) {
-                debug_scroll_end_index.x++;
-                debug_scroll_end_index.y = 0;
+    static bool full_scroll = true;
 
-                debug_scroll_start_index.y++;
+    if (debugScrollEndIndex.x < machineInfo.program_buffer.size() - 1 || debugScrollEndIndex.y < machineInfo.program_buffer[debugScrollEndIndex.x].size() - 1) {
+        debugScrollEndIndex.y += _num;
+        if (debugScrollEndIndex.y >= machineInfo.program_buffer[debugScrollEndIndex.x].size()) {
+            if (debugScrollEndIndex.x == machineInfo.program_buffer.size() - 1) {
+                debugScrollEndIndex.y = machineInfo.program_buffer[debugScrollEndIndex.x].size() - 1;
+                full_scroll = false;
+            }
+            else {
+                debugScrollEndIndex.y -= machineInfo.program_buffer[debugScrollEndIndex.x].size();
+                debugScrollEndIndex.x++;
+            }
+        }
+        
+        
+        if (full_scroll) {
+            debugScrollStartIndex.y += _num;
+            if (debugScrollStartIndex.y >= machineInfo.program_buffer[debugScrollStartIndex.x].size()) {
+                debugScrollStartIndex.y -= machineInfo.program_buffer[debugScrollStartIndex.x].size();
+                debugScrollStartIndex.x++;
             }
         }
         else {
-            debug_scroll_end_index.y++;
-
-            if (debug_scroll_start_index.y == msgBuffer.program_buffer[debug_scroll_start_index.x].size() - 1) {
-                debug_scroll_start_index.x++;
-                debug_scroll_start_index.y = 0;
-            }
-            else {
-                debug_scroll_start_index.y++;
-            }
+            debugScrollStartIndex.y = debugScrollEndIndex.y - (DEBUG_INSTR_ELEMENTS - 1);
         }
     }
 
-    BankPCAddrSet();
+    DebugSearchAddrSet();
 }
 
 void ImGuiGameboyX::ActionBankSwitch() {
-    if (debug_scroll_start_index.x < 0) { debug_scroll_start_index.x = 0; }
-    if (debug_scroll_start_index.x >= msgBuffer.rom_bank_num) { debug_scroll_start_index.x = msgBuffer.rom_bank_num - 1; }
+    if (debugScrollStartIndex.x < 0) { debugScrollStartIndex.x = 0; }
+    if (debugScrollStartIndex.x >= machineInfo.rom_bank_num) { debugScrollStartIndex.x = machineInfo.rom_bank_num - 1; }
 
-    debug_scroll_start_index.y = 0;
+    debugScrollStartIndex.y = 0;
 
-    debug_scroll_end_index.x = msgBuffer.program_buffer[debug_scroll_start_index.x].size() > DEBUG_INSTR_ELEMENTS ?
-        debug_scroll_start_index.x : (debug_scroll_start_index.x == msgBuffer.program_buffer.size() - 1 ?
-            debug_scroll_start_index.x : debug_scroll_start_index.x + 1);
-    debug_scroll_end_index.y = debug_scroll_start_index.x != debug_scroll_end_index.x ?
-        (DEBUG_INSTR_ELEMENTS - msgBuffer.program_buffer[debug_scroll_start_index.x].size()) - 1 : DEBUG_INSTR_ELEMENTS - 1;
+    debugScrollEndIndex.x = debugScrollStartIndex.x;
+    debugScrollEndIndex.y = debugScrollStartIndex.y + DEBUG_INSTR_ELEMENTS - 1;
 
-    BankPCAddrSet();
+    DebugSearchAddrSet();
 }
 
 void ImGuiGameboyX::ActionBankJumpToAddr() {
-    if (debug_current_pc_top < get<1>(msgBuffer.program_buffer[debug_scroll_start_index.x][0])) 
+    // limit given address to address space of current bank
+    if (debugAddrToSearch < get<1>(machineInfo.program_buffer[debugScrollStartIndex.x][0]))
     {
-        debug_current_pc_top = get<1>(msgBuffer.program_buffer[debug_scroll_start_index.x][0]);
+        debugAddrToSearch = get<1>(machineInfo.program_buffer[debugScrollStartIndex.x][0]);
+    }
+    if ((int)((float)debugAddrToSearch / machineInfo.rom_bank_size) >
+        (int)((float)get<1>(machineInfo.program_buffer[debugScrollStartIndex.x].back()) / machineInfo.rom_bank_size))
+    {
+        debugAddrToSearch = get<1>(machineInfo.program_buffer[debugScrollStartIndex.x].back());
     }
 
-    if ((int)((float)debug_current_pc_top / msgBuffer.rom_bank_size) >
-        (int)((float)get<1>(msgBuffer.program_buffer[debug_scroll_start_index.x].back()) / msgBuffer.rom_bank_size))
-    {
-        debug_current_pc_top = get<1>(msgBuffer.program_buffer[debug_scroll_start_index.x].back());
-    }
-
-    int index = 0;
+    int index;
     int prev_addr, next_addr;
-    int bank_size = msgBuffer.program_buffer[debug_scroll_start_index.x].size();
+    int bank_size = machineInfo.program_buffer[debugScrollStartIndex.x].size();
     for (index = 0; index < bank_size - 1; index++) {
-        prev_addr = get<1>(msgBuffer.program_buffer[debug_scroll_start_index.x][index]);
+        prev_addr = get<1>(machineInfo.program_buffer[debugScrollStartIndex.x][index]);
 
-        if (index + 1 == bank_size) {
-            next_addr = bank_size;
-        }
-        else {
-            next_addr = get<1>(msgBuffer.program_buffer[debug_scroll_start_index.x][index + 1]);
-        }
+        if (index + 1 == bank_size) { next_addr = bank_size; }
+        else { next_addr = get<1>(machineInfo.program_buffer[debugScrollStartIndex.x][index + 1]); }
 
-        if (prev_addr <= debug_current_pc_top &&
-            next_addr > debug_current_pc_top)
+        if (prev_addr <= debugAddrToSearch &&
+            next_addr > debugAddrToSearch)
         {
             break;
         }
     }
 
-    if (index > debug_scroll_start_index.y) {
-        ActionDebugScrollDown(index - debug_scroll_start_index.y);
+    if (index > debugScrollStartIndex.y) {
+        ActionDebugScrollDown(index - debugScrollStartIndex.y);
     }
-    else if (index < debug_scroll_start_index.y) {
-        ActionDebugScrollUp(debug_scroll_start_index.y - index);
+    else if (index < debugScrollStartIndex.y) {
+        ActionDebugScrollUp(debugScrollStartIndex.y - index);
     }
 }
 
 void ImGuiGameboyX::ActionScrollToCurrentPC() {
-    for (const auto& n : msgBuffer.program_buffer[debug_instr_index.x]) {
-        if (get<1>(n) == msgBuffer.current_pc) {
-            debug_instr_index.y = get<0>(n);
+    for (const auto& n : machineInfo.program_buffer[debugInstrIndex.x]) {
+        if (get<1>(n) == machineInfo.current_pc) {
+            debugInstrIndex.y = get<0>(n);
 
-            BankScrollAddrSet(debug_instr_index.x, debug_instr_index.y);
+            BankScrollAddrSet(debugInstrIndex.x, debugInstrIndex.y);
             break;
         }
     }
@@ -752,7 +759,7 @@ void ImGuiGameboyX::AddGameGuiCtx(const game_info& _game_ctx) {
         gamesSelected.push_back(false);
     }
     gamesSelected.back() = true;
-    gamesPrevIndex = gamesSelected.size() - 1;
+    gameSelectedIndex = gamesSelected.size() - 1;
 }
 
 vector<game_info> ImGuiGameboyX::DeleteGamesGuiCtx(const vector<int>& _index) {
@@ -766,7 +773,7 @@ vector<game_info> ImGuiGameboyX::DeleteGamesGuiCtx(const vector<int>& _index) {
     }
 
     if (result.size() > 0) {
-        gamesPrevIndex = 0;
+        gameSelectedIndex = 0;
     }
 
     return result;
@@ -779,16 +786,16 @@ void ImGuiGameboyX::InitGamesGuiCtx() {
 }
 
 void ImGuiGameboyX::ResetDebugInstr() {
-    debug_instr_index = Vec2(0, 0);
-    debug_scroll_start_index = Vec2(0, 0);
-    debug_scroll_end_index = Vec2(0, 0);
-    debug_current_pc_top = 0;
-    break_point = Vec2(0, 0);
-    break_point_set = false;
+    debugInstrIndex = Vec2(0, 0);
+    debugScrollStartIndex = Vec2(0, 0);
+    debugScrollEndIndex = Vec2(0, 0);
+    debugAddrToSearch = 0;
+    debugCurrentBreakpoint = Vec2(0, 0);
+    debugCurrentBreakpointSet = false;
 }
 
-void ImGuiGameboyX::BankPCAddrSet() {
-    debug_current_pc_top = get<1>(msgBuffer.program_buffer[debug_scroll_start_index.x][debug_scroll_start_index.y]);
+void ImGuiGameboyX::DebugSearchAddrSet() {
+    debugAddrToSearch = get<1>(machineInfo.program_buffer[debugScrollStartIndex.x][debugScrollStartIndex.y]);
 }
 
 void ImGuiGameboyX::BankScrollAddrSet(const int& _bank, const int& _index) {
@@ -801,39 +808,39 @@ void ImGuiGameboyX::BankScrollAddrSet(const int& _bank, const int& _index) {
     }
 
     debug_end = debug_start + DEBUG_INSTR_ELEMENTS - 1;
-    if (_bank == msgBuffer.rom_bank_num - 1 && debug_end > msgBuffer.program_buffer[msgBuffer.rom_bank_num - 1].size() - 1) {
-        debug_end = msgBuffer.program_buffer[msgBuffer.rom_bank_num - 1].size() - 1;
+    if (_bank == machineInfo.rom_bank_num - 1 && debug_end > machineInfo.program_buffer[machineInfo.rom_bank_num - 1].size() - 1) {
+        debug_end = machineInfo.program_buffer[machineInfo.rom_bank_num - 1].size() - 1;
     }
 
     if (debug_start < 0) {
-        debug_scroll_start_index = Vec2(_bank - 1, msgBuffer.program_buffer[_bank - 1].size() + debug_start);
+        debugScrollStartIndex = Vec2(_bank - 1, machineInfo.program_buffer[_bank - 1].size() + debug_start);
     }
     else {
-        debug_scroll_start_index = Vec2(_bank, debug_start);
+        debugScrollStartIndex = Vec2(_bank, debug_start);
     }
 
-    if (debug_end > msgBuffer.program_buffer[_bank].size() - 1) {
-        debug_scroll_end_index = Vec2(_bank + 1, debug_end - (msgBuffer.program_buffer[_bank].size() - 1));
+    if (debug_end > machineInfo.program_buffer[_bank].size() - 1) {
+        debugScrollEndIndex = Vec2(_bank + 1, debug_end - (machineInfo.program_buffer[_bank].size() - 1));
     }
     else {
-        debug_scroll_end_index = Vec2(_bank, debug_end);
+        debugScrollEndIndex = Vec2(_bank, debug_end);
     }
 
-    BankPCAddrSet();
+    DebugSearchAddrSet();
 }
 
 void ImGuiGameboyX::CurrentPCAutoScroll() {
-    if (msgBuffer.current_pc != msgBuffer.last_pc) {
-        msgBuffer.last_pc = msgBuffer.current_pc;
-        debug_instr_index.x = msgBuffer.current_rom_bank;
+    if (machineInfo.current_pc != machineInfo.last_pc) {
+        machineInfo.last_pc = machineInfo.current_pc;
+        debugInstrIndex.x = machineInfo.current_rom_bank;
 
         ActionScrollToCurrentPC();
     }
 }
 
 bool ImGuiGameboyX::CheckBreakPoint() {
-    if (break_point_set) {
-        return debug_instr_index == break_point;
+    if (debugCurrentBreakpointSet) {
+        return debugInstrIndex == debugCurrentBreakpoint;
     }
     else {
         return false;
@@ -841,17 +848,17 @@ bool ImGuiGameboyX::CheckBreakPoint() {
 }
 
 void ImGuiGameboyX::SetBreakPoint(const Vec2& _current_index) {
-    if (break_point_set) {
-        if (break_point == _current_index) {
-            break_point_set = false;
+    if (debugCurrentBreakpointSet) {
+        if (debugCurrentBreakpoint == _current_index) {
+            debugCurrentBreakpointSet = false;
         }
         else {
-            break_point = _current_index;
+            debugCurrentBreakpoint = _current_index;
         }
     }
     else {
-        break_point = _current_index;
-        break_point_set = true;
+        debugCurrentBreakpoint = _current_index;
+        debugCurrentBreakpointSet = true;
     }
 }
 
@@ -861,7 +868,7 @@ void ImGuiGameboyX::SetBreakPoint(const Vec2& _current_index) {
 game_info& ImGuiGameboyX::GetGameStartContext() {
     //game_running = true;
     //pending_game_start = false;
-    return games[gameStatus.game_to_start];
+    return games[gameState.game_to_start];
 }
 
 void ImGuiGameboyX::GameStopped() {
@@ -871,7 +878,7 @@ void ImGuiGameboyX::GameStopped() {
 /* ***********************************************************************************************************
     IMGUIGAMEBOYX SDL FUNCTIONS
 *********************************************************************************************************** */
-void ImGuiGameboyX::KeyDown(const SDL_Keycode& _key) {
+void ImGuiGameboyX::EventKeyDown(const SDL_Keycode& _key) {
     switch (_key) {
     case SDLK_a:
         sdlkADown = true;
@@ -892,7 +899,7 @@ void ImGuiGameboyX::KeyDown(const SDL_Keycode& _key) {
     }
 }
 
-void ImGuiGameboyX::KeyUp(const SDL_Keycode& _key) {
+void ImGuiGameboyX::EventKeyUp(const SDL_Keycode& _key) {
     switch (_key) {
     case SDLK_a:
         sdlkADown = false;
@@ -915,7 +922,7 @@ void ImGuiGameboyX::KeyUp(const SDL_Keycode& _key) {
     }
 }
 
-void ImGuiGameboyX::MouseWheelEvent(const Sint32& _wheel_y) {
+void ImGuiGameboyX::EventMouseWheel(const Sint32& _wheel_y) {
     if (_wheel_y > 0) {
         sdlScrollUp = true;
     }

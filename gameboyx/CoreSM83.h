@@ -52,19 +52,18 @@ public:
 	friend class CoreBase;
 
 	void RunCycles() override;
-	void GetCurrentHardwareState(message_buffer& _msg_buffer) const override;
-	void GetStartupHardwareInfo(message_buffer& _msg_buffer) const override;
+	void GetCurrentHardwareState(machine_information& _machine_info) const override;
+	void GetStartupHardwareInfo(machine_information& _machine_info) const override;
 	bool CheckNextFrame() override;
-	u32 GetPassedClockCycles() override;
-	int GetDisplayFrequency() const override;
+	float GetCurrentCoreFrequency() override;
 
-	void GetCurrentMemoryLocation(message_buffer& _msg_buffer) const override;
+	void GetCurrentMemoryLocation(machine_information& _machine_info) const override;
 	void InitMessageBufferProgram(std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>& _program_buffer) override;
 	void GetCurrentRegisterValues(std::vector<std::pair<std::string, std::string>>& _register_values) const  override;
 
 private:
 	// constructor
-	CoreSM83(message_buffer& _msg_buffer);
+	CoreSM83(machine_information& _machine_info);
 	// destructor
 	~CoreSM83() = default;
 

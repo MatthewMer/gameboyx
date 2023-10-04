@@ -155,7 +155,7 @@ static inline string resolve_data_enum(const cgb_data_types& _type, const int& _
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
-CoreSM83::CoreSM83(message_buffer& _msg_buffer) : CoreBase(_msg_buffer){
+CoreSM83::CoreSM83(machine_information& _machine_info) : CoreBase(_machine_info){
     machine_ctx = MemorySM83::getInstance()->GetMachineContext();
     InitCpu(*Cartridge::getInstance());
 
@@ -203,13 +203,13 @@ void CoreSM83::RunCycles() {
         halted = (machine_ctx->IE & machine_ctx->IF) == 0x00;
     }
     else {
-        if (msgBuffer.instruction_debug_enabled) {
-            if (msgBuffer.pause_execution) {
+        if (machineInfo.instruction_debug_enabled) {
+            if (machineInfo.pause_execution) {
                 return;
             }
             else {
                 RunCpu();
-                msgBuffer.pause_execution = true;
+                machineInfo.pause_execution = true;
             }
         }
         else {
@@ -326,11 +326,6 @@ int CoreSM83::GetDelayTime() {
     return (1.f / DISPLAY_FREQUENCY) * pow(10, 9);
 }
 
-// get the machines LCD vertical frequency
-int CoreSM83::GetDisplayFrequency() const {
-    return DISPLAY_FREQUENCY;
-}
-
 // check if cpu executed machinecycles per frame
 bool CoreSM83::CheckNextFrame() {
     if (machineCycles >= machineCyclesPerFrame * machine_ctx->currentSpeed) {
@@ -343,33 +338,33 @@ bool CoreSM83::CheckNextFrame() {
 }
 
 // return clock cycles per second
-u32 CoreSM83::GetPassedClockCycles() {
+float CoreSM83::GetCurrentCoreFrequency() {
     u32 result = machineCycleCounterClock * 4;
     machineCycleCounterClock = 0;
-    return result;
+    return (float)result / pow(10, 6);
 }
 
-void CoreSM83::GetCurrentMemoryLocation(message_buffer& _msg_buffer) const {
-    _msg_buffer.current_pc = (int)Regs.PC;
-    _msg_buffer.current_rom_bank = (Regs.PC < ROM_BANK_N_OFFSET ? 0 : machine_ctx->rom_bank_selected + 1);
+void CoreSM83::GetCurrentMemoryLocation(machine_information& _machine_info) const {
+    _machine_info.current_pc = (int)Regs.PC;
+    _machine_info.current_rom_bank = (Regs.PC < ROM_BANK_N_OFFSET ? 0 : machine_ctx->rom_bank_selected + 1);
 }
 
 /* ***********************************************************************************************************
     ACCESS HARDWARE STATUS
 *********************************************************************************************************** */
 // get hardware info startup
-void CoreSM83::GetStartupHardwareInfo(message_buffer& _msg_buffer) const {
-    _msg_buffer.rom_bank_num = machine_ctx->rom_bank_num;
-    _msg_buffer.ram_bank_num = machine_ctx->ram_bank_num;
-    _msg_buffer.wram_bank_num = machine_ctx->wram_bank_num;
-    _msg_buffer.rom_bank_size = ROM_BANK_N_SIZE;
+void CoreSM83::GetStartupHardwareInfo(machine_information& _machine_info) const {
+    _machine_info.rom_bank_num = machine_ctx->rom_bank_num;
+    _machine_info.ram_bank_num = machine_ctx->ram_bank_num;
+    _machine_info.wram_bank_num = machine_ctx->wram_bank_num;
+    _machine_info.rom_bank_size = ROM_BANK_N_SIZE;
 }
 
 // get current hardware status (currently mapped memory banks)
-void CoreSM83::GetCurrentHardwareState(message_buffer& _msg_buffer) const {
-    _msg_buffer.rom_bank_selected = machine_ctx->rom_bank_selected + 1;
-    _msg_buffer.ram_bank_selected = machine_ctx->ram_bank_selected;
-    _msg_buffer.wram_bank_selected = machine_ctx->wram_bank_selected + 1;
+void CoreSM83::GetCurrentHardwareState(machine_information& _machine_info) const {
+    _machine_info.rom_bank_selected = machine_ctx->rom_bank_selected + 1;
+    _machine_info.ram_bank_selected = machine_ctx->ram_bank_selected;
+    _machine_info.wram_bank_selected = machine_ctx->wram_bank_selected + 1;
 }
 
 inline void GetInstructionsArgs(u16& _addr, const vector<u8>& _bank, u16& _data, string& _raw_data, const cgb_data_types& _type) {

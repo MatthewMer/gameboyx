@@ -156,20 +156,20 @@ void GraphicsUnitSM83::ReadObjectAttributes(const int& _offset){
 
 // copy tile data (pixels) for OBJ
 void GraphicsUnitSM83::ReadTileDataObject(const u8& _offset, const bool& _mode16) {
-	int vram_bank;
+	int vram_bank_selected;
 
 	switch (graphics_ctx->isCgb) {
 	case true:
-		vram_bank = (objAttributes[OBJ_ATTR_FLAGS] & OBJ_ATTR_VRAM_BANK ? 1 : 0);
+		vram_bank_selected = (objAttributes[OBJ_ATTR_FLAGS] & OBJ_ATTR_VRAM_BANK ? 1 : 0);
 		break;
 	case false:
-		vram_bank = 0;
+		vram_bank_selected = 0;
 		break;
 	}
 
-	memcpy(currentTile, &graphics_ctx->VRAM_N[vram_bank][_offset * PPU_VRAM_TILE_SIZE], PPU_VRAM_TILE_SIZE);
+	memcpy(currentTile, &graphics_ctx->VRAM_N[vram_bank_selected][_offset * PPU_VRAM_TILE_SIZE], PPU_VRAM_TILE_SIZE);
 	if(_mode16){
-		memcpy(currentTile16, &graphics_ctx->VRAM_N[vram_bank][(_offset + 1) * PPU_VRAM_TILE_SIZE], PPU_VRAM_TILE_SIZE);
+		memcpy(currentTile16, &graphics_ctx->VRAM_N[vram_bank_selected][(_offset + 1) * PPU_VRAM_TILE_SIZE], PPU_VRAM_TILE_SIZE);
 	}
 }
 
