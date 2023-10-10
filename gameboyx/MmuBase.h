@@ -2,12 +2,13 @@
 
 #include "Cartridge.h"
 #include "MemoryBase.h"
+#include "information_structs.h"
 
 class MmuBase
 {
 public:
 	// get/reset instance
-	static MmuBase* getInstance();
+	static MmuBase* getInstance(machine_information& _machine_info);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -26,10 +27,12 @@ public:
 
 protected:
 	// constructor
-	MmuBase() = default;
+	explicit MmuBase(machine_information& _machine_info) : machineInfo(_machine_info) {};
 	~MmuBase() = default;
 
 private:
 	static MmuBase* instance;
-	static MmuBase* getNewMmuInstance();
+	static MmuBase* getNewMmuInstance(machine_information& _machine_info);
+
+	machine_information& machineInfo;
 };

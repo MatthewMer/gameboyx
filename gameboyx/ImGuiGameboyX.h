@@ -6,6 +6,7 @@
 #include "game_info.h"
 #include "information_structs.h"
 #include "helper_functions.h"
+#include "ScrollableTable.h"
 
 class ImGuiGameboyX {
 public:
@@ -15,9 +16,9 @@ public:
 
 	// clone/assign protection
 	ImGuiGameboyX(ImGuiGameboyX const&) = delete;
-	ImGuiGameboyX(ImGuiGameboyX &&) = delete;
+	ImGuiGameboyX(ImGuiGameboyX&&) = delete;
 	ImGuiGameboyX& operator=(ImGuiGameboyX const&) = delete;
-	ImGuiGameboyX& operator=(ImGuiGameboyX &&) = delete;
+	ImGuiGameboyX& operator=(ImGuiGameboyX&&) = delete;
 
 	// functions
 	void ProcessGUI();
@@ -30,6 +31,7 @@ public:
 	game_info& GetGameStartContext();
 	// main reenables gui
 	void GameStopped();
+	void GameStartCallback();
 
 private:
 	// constructor
@@ -53,20 +55,29 @@ private:
 	bool deleteGames = false;
 
 	// debug instructions
-	Vec2 debugInstrIndex = Vec2(0, 0);				// bank, index
-	Vec2 debugScrollStartIndex = Vec2(0, 0);			// bank. index
-	Vec2 debugScrollEndIndex = Vec2(0, 0);			// bank, index
-	int debugAddrToSearch = 0;						// pc
+	Vec2 debugInstrIndex = Vec2(0, 0);					// bank, index
+
+	int debugAddrToSearch = 0;
+	int debugBankToSearch = 0;
+
 	bool debugScrollDown = false;
 	bool debugScrollUp = false;
+
 	Vec2 debugCurrentBreakpoint = Vec2(0, 0);
 	bool debugCurrentBreakpointSet = false;
+
 	bool debugAutoRun = false;
+
+	int debugLastProgramCounter = -1;
+
+	// vector per memory type <start index, end index>
+	std::vector<std::pair<int, std::vector<std::pair<Vec2, Vec2>>>> debugMemoryIndex = std::vector<std::pair<int, std::vector<std::pair<Vec2, Vec2>>>>();
 
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;
 	bool showNewGameDialog = false;
 	bool showGameSelect = true;
+	bool showMemoryInspector = false;
 
 	// gui functions
 	void ShowMainMenuBar();
@@ -74,36 +85,40 @@ private:
 	void ShowNewGameDialog();
 	void ShowGameSelect();
 	void ShowDebugInstructions();
+	void ShowDebugMemoryInspector();
 	void ShowHardwareInfo();
 
 	// actions
 	void ActionDeleteGames();
 	bool ActionAddGame(const std::string& _path_to_rom);
 
-	void ActionProcessSpecialKeys();
-
-	void ActionDebugScrollUp(const int& _num);
-	void ActionDebugScrollDown(const int& _num);
 	void ActionScrollToCurrentPC();
 
 	// game run state
 	void ActionStartGame(int _index);
 	void ActionEndGame();
 	void ActionRequestReset();
-	
+
 	void ActionBankSwitch();
-	void ActionBankJumpToAddr();
+	void ActionDebugInstrJumpToAddr();
 
 	// helpers
 	void AddGameGuiCtx(const game_info& _game_ctx);
 	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
 	void InitGamesGuiCtx();
-	void ResetDebugInstr();
+	void SetupMemInspectorIndex();
+	void ResetDebugInstr(); 
+	void ResetMemInspector();
 	void DebugSearchAddrSet();
 	void BankScrollAddrSet(const int& _bank, const int& _index);
 	void CurrentPCAutoScroll();
 	bool CheckBreakPoint();
 	void SetBreakPoint(const Vec2& _current_index);
+	void WriteInstructionLog();
+
+	void DebugCheckScroll(ScrollableTableBase& _table_obj);
+
+	void ProcessMainMenuKeys();
 
 	// virtual hardware messages for debug
 	machine_information& machineInfo;

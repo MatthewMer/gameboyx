@@ -13,7 +13,7 @@
 
 #include "ImGuiGameboyX.h"
 #include "logger.h"
-#include "guigameboyx_config.h"
+#include "imguigameboyx_config.h"
 #include "Cartridge.h"
 #include "VHardwareMgr.h"
 #include "information_structs.h"
@@ -39,7 +39,7 @@ static VkQueue                  g_Queue = VK_NULL_HANDLE;
 static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
-       
+
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
@@ -185,9 +185,9 @@ int main(int, char**)
     auto clear_color = IMGUI_CLR_COLOR;
 
     // Main loop
-    auto* machine_info = new machine_information();
-    auto* game_state = new game_status();
-    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(*machine_info, *game_state);
+    auto machine_info = machine_information();
+    auto game_stat = game_status();
+    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat);
     VHardwareMgr* vhwmgr_obj = nullptr;
     LOG_INFO("Initialization completed");
 
@@ -218,7 +218,7 @@ int main(int, char**)
                     gbx_gui->EventKeyDown(key);
                     break;
                 default:
-                    if (game_state->game_running) {
+                    if (game_stat.game_running) {
                         vhwmgr_obj->EventKeyDown(key);
                     }
                     else {
@@ -231,7 +231,7 @@ int main(int, char**)
                 key = event.key.keysym.sym;
                 switch (key) {
                 case SDLK_ESCAPE:
-                    game_state->pending_game_stop = true;
+                    game_stat.pending_game_stop = true;
                     break;
                 case SDLK_F10:
                     gbx_gui->EventKeyUp(key);
@@ -243,7 +243,7 @@ int main(int, char**)
                     gbx_gui->EventKeyUp(key);
                     break;
                 default:
-                    if (game_state->game_running) {
+                    if (game_stat.game_running) {
                         vhwmgr_obj->EventKeyUp(key);
                     }
                     else {
@@ -261,25 +261,28 @@ int main(int, char**)
         }
 
         // game start/stop
-        if (game_state->pending_game_start || game_state->request_reset) {
+        if (game_stat.pending_game_start || game_stat.request_reset) {
             VHardwareMgr::resetInstance();
-            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), *machine_info);
-            
-            game_state->request_reset = false;
-            game_state->pending_game_start = false;
+            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), machine_info);
 
-            game_state->game_running = true;
+            game_stat.request_reset = false;
+            game_stat.pending_game_start = false;
+
+            game_stat.game_running = true;
+
+            gbx_gui->GameStartCallback();
         }
-        if (game_state->pending_game_stop) {
+        if (game_stat.pending_game_stop) {
             VHardwareMgr::resetInstance();
             gbx_gui->GameStopped();
-            game_state->game_running = false;
-            game_state->pending_game_stop = false;
-            reset_message_buffer(*machine_info);
+
+            game_stat.game_running = false;
+            game_stat.pending_game_stop = false;
+            machine_info.reset_machine_information();
         }
 
         // run virtual hardware
-        if (game_state->game_running) {
+        if (game_stat.game_running) {
             vhwmgr_obj->ProcessNext();
         }
 
@@ -388,7 +391,7 @@ static void sdl_toggle_full_screen(SDL_Window* window) {
         //SDL_SetWindowDisplayMode(window, )
     }
     else {
-        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
 }
 

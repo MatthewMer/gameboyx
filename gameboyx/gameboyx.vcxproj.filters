@@ -92,7 +92,7 @@
     <ClInclude Include="helper_functions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="guigameboyx_config.h">
+    <ClInclude Include="imguigameboyx_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CoreBase.h">
@@ -126,6 +126,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="information_structs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ScrollableTable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

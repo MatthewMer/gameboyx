@@ -4,11 +4,23 @@
 #include "MemoryBase.h"
 #include "gameboy_defines.h"
 #include "defs.h"
+#include "information_structs.h"
+
+enum memory_areas {
+	ENUM_ROM_N,
+	ENUM_VRAM_N,
+	ENUM_RAM_N,
+	ENUM_WRAM_N,
+	ENUM_OAM,
+	ENUM_IO,
+	ENUM_HRAM,
+	ENUM_IE
+};
 
 struct machine_state_context {
 	// interrupt
-	u8 IE = 0x00;
-	u8 IF = 0x00;
+	u8 IE;
+	u8* IF;
 
 	// speed switch
 	int currentSpeed = 1;
@@ -22,14 +34,14 @@ struct machine_state_context {
 	bool isCgb = false;
 
 	// timers
-	u8 DIV = 0;
+	u8* DIV;
 	int machineCyclesPerDIVIncrement = 0;
 	int machineCyclesDIVCounter = 0;
-	u8 TIMA = 0;
+	u8* TIMA;
 	int machineCyclesPerTIMAIncrement = 0;
 	int machineCyclesTIMACounter = 0;
-	u8 TMA = 0;
-	u8 TAC = 0;
+	u8* TMA;
+	u8* TAC;
 
 	int rom_bank_num = 0;
 	int ram_bank_num = 0;
@@ -45,12 +57,12 @@ struct graphics_context {
 	u8* OAM;
 
 	// VRAM BANK SELECT
-	u8 VRAM_BANK = 0;
+	u8* VRAM_BANK;
 	int vram_bank_num = 0;
 
 	// TODO: chekc initial register states
 	// LCD Control
-	u8 LCDC = 0;
+	u8* LCDC;
 
 	u16 bg_tilemap_offset = 0;
 	u16 win_tilemap_offset = 0;
@@ -62,77 +74,77 @@ struct graphics_context {
 	bool ppu_enable = false;
 
 	// LCD Status
-	u8 LY = 0;
-	u8 LY_COPY = 0;
-	u8 LYC = 0;
-	u8 STAT = PPU_STAT_MODE1_VBLANK;
+	u8* LY;
+	u8* LYC;
+	u8* STAT;
 
 	// Scrolling
-	u8 SCY = 0;
-	u8 SCX = 0;
-	u8 WY = 0;
-	u8 WX = 0;
+	u8* SCY;
+	u8* SCX;
+	u8* WY;
+	u8* WX;
 
 	// Palettes (monochrome)
-	u8 BGP = 0xFC;
-	u8 OBP0 = 0xFF;
-	u8 OBP1 = 0xFF;
+	u8* BGP;
+	u8* OBP0;
+	u8* OBP1;
 	// Palettes (color)
-	u8 BCPS_BGPI = 0;
-	u8 BCPD_BGPD = 0;
-	u8 OCPS_OBPI = 0;
-	u8 OCPD_OBPD = 0;
+	u8* BCPS_BGPI;
+	u8* BCPD_BGPD;
+	u8* OCPS_OBPI;
+	u8* OCPD_OBPD;
 
 	// object prio mode
-	u8 OBJ_PRIO;
+	u8* OBJ_PRIO;
 };
 
 struct sound_context {
 	// hardware
 	//bool isCgb = false;
 
-	u8 NR10 = 0;
-	u8 NR11 = 0;
-	u8 NR12 = 0;
-	u8 NR13 = 0;
-	u8 NR14 = 0;
+	u8* NR10;
+	u8* NR11;
+	u8* NR12;
+	u8* NR13;
+	u8* NR14;
 
-	u8 NR21 = 0;
-	u8 NR22 = 0;
-	u8 NR23 = 0;
-	u8 NR24 = 0;
+	u8* NR21;
+	u8* NR22;
+	u8* NR23;
+	u8* NR24;
 
-	u8 NR30 = 0;
-	u8 NR31 = 0;
-	u8 NR32 = 0;
-	u8 NR33 = 0;
-	u8 NR34 = 0;
+	u8* NR30;
+	u8* NR31;
+	u8* NR32;
+	u8* NR33;
+	u8* NR34;
 
-	u8 NR41 = 0;
-	u8 NR42 = 0;
-	u8 NR43 = 0;
-	u8 NR44 = 0;
+	u8* NR41;
+	u8* NR42;
+	u8* NR43;
+	u8* NR44;
 
-	u8 NR50 = 0;
-	u8 NR51 = 0;
-	u8 NR52 = 0;
-	
+	u8* NR50;
+	u8* NR51;
+	u8* NR52;
+
 	u8* WAVE_RAM;
 };
 
 struct serial_context {
-	u8 SB = 0;
-	u8 SC = 0;
+	u8* SB;
+	u8* SC;
 };
 
 struct joypad_context {
-	u8 JOYP_P1 = 0;
+	u8* JOYP_P1;
 };
 
 class MemorySM83 : private MemoryBase
 {
 public:
 	// get/reset instance
+	static MemorySM83* getInstance(machine_information& _machine_info);
 	static MemorySM83* getInstance();
 	static void resetInstance();
 
@@ -167,22 +179,24 @@ public:
 	graphics_context* GetGraphicsContext() const;
 	sound_context* GetSoundContext() const;
 
-	void CopyRomForDebug(std::vector<std::vector<u8>>& _rom);
-
 	void RequestInterrupts(const u8& isr_flags) override;
 
 private:
 	// constructor
-	MemorySM83() {
-		InitMemory(*Cartridge::getInstance());
+	explicit MemorySM83(machine_information& _machine_info) : MemoryBase(_machine_info) {
+		InitMemory();
 	};
 	static MemorySM83* instance;
 	// destructor
 	~MemorySM83() = default;
 
 	// members
-	void InitMemory(const Cartridge& _cart_obj) override;
+	void InitMemory() override;
 	void InitMemoryState() override;
+	void SetupDebugMemoryAccess() override;
+
+	void SetIOReferences();
+
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;
 	bool CopyRom(const std::vector<u8>& _vec_rom) override;
 	void InitTimers();
@@ -203,26 +217,26 @@ private:
 	// IO *****************
 	u8 GetIOValue(const u16& _addr);
 	void SetIOValue(const u8& _data, const u16& _addr);
-	void VRAM_DMA();
+	void VRAM_DMA(const u8& _data);
 	void OAM_DMA();
 
 	// CGB IO registers mapped to IO array for direct access
 	// SPEED SWITCH
-	u8 SPEEDSWITCH = 0;
+	u8* SPEEDSWITCH;
 	// LCD VRAM DMA ADDRESS SOURCE
-	u8 HDMA1 = 0;
-	u8 HDMA2 = 0;
+	u8* HDMA1;
+	u8* HDMA2;
 	// LCD VRAM DMA ADDRESS DESTINATION
-	u8 HDMA3 = 0;
-	u8 HDMA4 = 0;
+	u8* HDMA3;
+	u8* HDMA4;
 	// VRAM DMA length/mode/start
-	u8 HDMA5 = 0;
-	
+	u8* HDMA5;
+
 	// WRAM BANK SELECT
-	u8 WRAM_BANK = 1;
+	u8* WRAM_BANK;
 
 	// OAM DMA
-	u8 OAM_DMA_REG = 0;
+	u8* OAM_DMA_REG;
 
 	// speed switch
 	void SwitchSpeed(const u8& _data);
@@ -232,6 +246,9 @@ private:
 
 	// action for LCDC write
 	void SetLCDCValues(const u8& _data);
+
+	void SetVRAMBank(const u8& _data);
+	void SetWRAMBank(const u8& _data);
 
 	// memory cpu context
 	machine_state_context* machine_ctx = new machine_state_context();

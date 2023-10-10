@@ -6,13 +6,24 @@
 #include "gameboy_defines.h"
 #include <format>
 #include "logger.h"
+#include "MemorySM83.h"
+#include "ScrollableTable.h"
 
 using namespace std;
 
 /* ***********************************************************************************************************
     MISC LOOKUPS
 *********************************************************************************************************** */
-static const vector<pair<cgb_data_types, string>> register_names{
+enum instr_lookup_enums {
+    INSTR_OPCODE,
+    INSTR_FUNC,
+    INSTR_MC,
+    INSTR_MNEMONIC,
+    INSTR_ARG_1,
+    INSTR_ARG_2
+};
+
+const vector<pair<cgb_data_types, string>> register_names{
     {A, "A"},
     {F, "F"},
     {BC, "BC"},
@@ -28,7 +39,7 @@ static const vector<pair<cgb_data_types, string>> register_names{
     {PC, "PC"}
 };
 
-static string get_register_name(const cgb_data_types& _type) {
+inline string get_register_name(const cgb_data_types& _type) {
     for (const auto& [type, val] : register_names) {
         if (type == _type) { return val; }
     }
@@ -36,7 +47,7 @@ static string get_register_name(const cgb_data_types& _type) {
     return "";
 }
 
-static const vector<pair<cgb_data_types, string>> data_names{
+const vector<pair<cgb_data_types, string>> data_names{
     {d8, "d8"},
     {d16, "d16"},
     {a8, "a8"},
@@ -53,7 +64,7 @@ static const vector<pair<cgb_data_types, string>> data_names{
     {C_ref, "(C + $FF00)"},
 };
 
-static inline string get_data_name(const cgb_data_types& _type) {
+inline string get_data_name(const cgb_data_types& _type) {
     for (const auto& [type, val] : data_names) {
         if (type == _type) { return val; }
     }
@@ -61,7 +72,22 @@ static inline string get_data_name(const cgb_data_types& _type) {
     return "";
 }
 
-static inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, const u16& _data) {
+/*
+*   Resolve enums to strings for log output (to compare actual instruction execution to debug window)
+*   probably no reason to keep the log output
+*/
+inline string get_arg_name(const cgb_data_types& _type) {
+    string result = get_register_name(_type);
+    if (result.compare("") == 0) {
+        result = get_data_name(_type);
+    }
+    return result;
+}
+
+/*
+*   Resolve enums to strings for program debugger
+*/
+inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, const u16& _data) {
     string result = "";
     u8 data;
 
@@ -112,8 +138,42 @@ static inline string resolve_data_enum(const cgb_data_types& _type, const int& _
         result = get_data_name(_type);
         break;
     }
-    
+
     return result;
+}
+
+inline void instruction_args_to_string(u16& _addr, const u8* _bank, u16& _data, string& _raw_data, const cgb_data_types& _type) {
+    switch (_type) {
+    case d8:
+    case a8:
+    case a8_ref:
+    case r8:
+        _data = _bank[_addr++];
+        _raw_data += format("{:x} ", (u8)_data);
+        break;
+    case d16:
+    case a16:
+    case a16_ref:
+        _data = _bank[_addr++];
+        _data |= ((u16)_bank[_addr++]) << 8;
+        _raw_data += format("{:x} ", (u8)(_data & 0xFF));
+        _raw_data += format("{:x} ", (u8)((_data & 0xFF00) >> 8));
+        break;
+    default:
+        break;
+    }
+}
+
+inline void data_enums_to_string(const int& _bank, u16 _addr, const u16& _data, string& _args, const cgb_data_types& _type_1, const cgb_data_types& _type_2) {
+    if (_bank > 0) { _addr += ROM_N_OFFSET; }
+
+    _args = "";
+    if (_type_1 != NO_DATA) {
+        _args = resolve_data_enum(_type_1, _addr, _data);
+    }
+    if (_type_2 != NO_DATA) {
+        _args += ", " + resolve_data_enum(_type_2, _addr, _data);
+    }
 }
 
 /* ***********************************************************************************************************
@@ -155,10 +215,10 @@ static inline string resolve_data_enum(const cgb_data_types& _type, const int& _
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
-CoreSM83::CoreSM83(machine_information& _machine_info) : CoreBase(_machine_info){
+CoreSM83::CoreSM83(machine_information& _machine_info) : CoreBase(_machine_info) {
     machine_ctx = MemorySM83::getInstance()->GetMachineContext();
-    InitCpu(*Cartridge::getInstance());
 
+    InitCpu();
     setupLookupTable();
     setupLookupTableCB();
 }
@@ -167,7 +227,7 @@ CoreSM83::CoreSM83(machine_information& _machine_info) : CoreBase(_machine_info)
     INIT CPU
 *********************************************************************************************************** */
 // initial cpu state
-void CoreSM83::InitCpu(const Cartridge& _cart_obj) {
+void CoreSM83::InitCpu() {
     InitRegisterStates();
 
     machineCyclesPerFrame = ((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DISPLAY_FREQUENCY;
@@ -177,20 +237,20 @@ void CoreSM83::InitCpu(const Cartridge& _cart_obj) {
 void CoreSM83::InitRegisterStates() {
     Regs = gbc_registers();
 
-    Regs.A = (CGB_AF & 0xFF00) >> 8;
-    Regs.F = CGB_AF & 0xFF;
+    Regs.A = (INIT_CGB_AF & 0xFF00) >> 8;
+    Regs.F = INIT_CGB_AF & 0xFF;
 
-    Regs.BC = CGB_BC;
-    Regs.SP = CGB_SP;
-    Regs.PC = CGB_PC;
+    Regs.BC = INIT_CGB_BC;
+    Regs.SP = INIT_CGB_SP;
+    Regs.PC = INIT_CGB_PC;
 
     if (machine_ctx->isCgb) {
-        Regs.DE = CGB_CGB_DE;
-        Regs.HL = CGB_CGB_HL;
+        Regs.DE = INIT_CGB_CGB_DE;
+        Regs.HL = INIT_CGB_CGB_HL;
     }
     else {
-        Regs.DE = CGB_DMG_DE;
-        Regs.HL = CGB_DMG_HL;
+        Regs.DE = INIT_CGB_DMG_DE;
+        Regs.HL = INIT_CGB_DMG_HL;
     }
 }
 
@@ -200,7 +260,7 @@ void CoreSM83::InitRegisterStates() {
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
     if (halted) {
-        halted = (machine_ctx->IE & machine_ctx->IF) == 0x00;
+        halted = (machine_ctx->IE & *machine_ctx->IF) == 0x00;
     }
     else {
         if (machineInfo.instruction_debug_enabled) {
@@ -210,12 +270,12 @@ void CoreSM83::RunCycles() {
             else {
                 RunCpu();
                 machineInfo.pause_execution = true;
+                GetCurrentInstruction();
             }
         }
         else {
-            while (machineCycles < machineCyclesPerFrame * machine_ctx->currentSpeed) {
+            while (machineCycles < machineCyclesPerFrame * machine_ctx->currentSpeed && !halted) {
                 RunCpu();
-                if (halted) { return; }
             }
         }
     }
@@ -240,8 +300,8 @@ void CoreSM83::ExecuteInstruction() {
         instrPtr = &instrMap[opcode];
     }
 
-    functionPtr = get<1>(*instrPtr);
-    currentMachineCycles = get<2>(*instrPtr);
+    functionPtr = get<INSTR_FUNC>(*instrPtr);
+    currentMachineCycles = get<INSTR_MC>(*instrPtr);
     (this->*functionPtr)();
     machineCycles += currentMachineCycles;
     machineCycleCounterClock += currentMachineCycles;
@@ -249,40 +309,41 @@ void CoreSM83::ExecuteInstruction() {
 
 void CoreSM83::ExecuteInterrupts() {
     if (ime) {
-        if (machine_ctx->IF & ISR_VBLANK) {
+        if (*machine_ctx->IF & ISR_VBLANK) {
             if (machine_ctx->IE & ISR_VBLANK) {
                 ime = false;
 
                 isr_push(ISR_VBLANK_HANDLER);
-                machine_ctx->IF &= ~ISR_VBLANK;
+                *machine_ctx->IF &= ~ISR_VBLANK;
             }
         }
-        if (machine_ctx->IF & ISR_LCD_STAT) {
+        if (*machine_ctx->IF & ISR_LCD_STAT) {
             if (machine_ctx->IE & ISR_LCD_STAT) {
                 ime = false;
 
                 isr_push(ISR_LCD_STAT_HANDLER);
-                machine_ctx->IF &= ~ISR_LCD_STAT;
+                *machine_ctx->IF &= ~ISR_LCD_STAT;
             }
         }
-        if (machine_ctx->IF & ISR_TIMER) {
+        if (*machine_ctx->IF & ISR_TIMER) {
             if (machine_ctx->IE & ISR_TIMER) {
                 ime = false;
 
                 isr_push(ISR_TIMER_HANDLER);
-                machine_ctx->IF &= ~ISR_TIMER;
+                *machine_ctx->IF &= ~ISR_TIMER;
             }
         }
         /*if (machine_ctx->IF & ISR_SERIAL) {
             // not implemented
         }*/
-        if (machine_ctx->IF & ISR_JOYPAD) {
+        if (*machine_ctx->IF & ISR_JOYPAD) {
             if (machine_ctx->IE & ISR_JOYPAD) {
                 ime = false;
 
                 isr_push(ISR_JOYPAD_HANDLER);
-                machine_ctx->IF &= ~ISR_JOYPAD;
+                *machine_ctx->IF &= ~ISR_JOYPAD;
             }
+
         }
     }
 }
@@ -292,27 +353,27 @@ void CoreSM83::ExecuteMachineCycles() {
     if (machine_ctx->machineCyclesDIVCounter > machine_ctx->machineCyclesPerDIVIncrement) {
         machine_ctx->machineCyclesDIVCounter -= machine_ctx->machineCyclesPerDIVIncrement;
 
-        if (machine_ctx->DIV == 0xFF) {
-            machine_ctx->DIV = 0x00;
+        if (*machine_ctx->DIV == 0xFF) {
+            *machine_ctx->DIV = 0x00;
             // TODO: interrupt or whatever
         }
         else {
-            machine_ctx->DIV++;
+            *machine_ctx->DIV++;
         }
     }
 
-    if (machine_ctx->TAC & TAC_CLOCK_ENABLE) {
+    if (*machine_ctx->TAC & TAC_CLOCK_ENABLE) {
         machine_ctx->machineCyclesTIMACounter += currentMachineCycles;
         if (machine_ctx->machineCyclesTIMACounter > machine_ctx->machineCyclesPerTIMAIncrement) {
             machine_ctx->machineCyclesTIMACounter -= machine_ctx->machineCyclesPerTIMAIncrement;
 
-            if (machine_ctx->TIMA == 0xFF) {
-                machine_ctx->TIMA = machine_ctx->TMA;
+            if (*machine_ctx->TIMA == 0xFF) {
+                *machine_ctx->TIMA = *machine_ctx->TMA;
                 // request interrupt
-                machine_ctx->IF |= ISR_TIMER;
+                *machine_ctx->IF |= ISR_TIMER;
             }
             else {
-                machine_ctx->TIMA++;
+                *machine_ctx->TIMA++;
             }
         }
     }
@@ -338,95 +399,60 @@ bool CoreSM83::CheckNextFrame() {
 }
 
 // return clock cycles per second
-float CoreSM83::GetCurrentCoreFrequency() {
+void CoreSM83::GetCurrentCoreFrequency() {
     u32 result = machineCycleCounterClock * 4;
     machineCycleCounterClock = 0;
-    return (float)result / pow(10, 6);
+    machineInfo.current_frequency = (float)result / pow(10, 6);
 }
 
-void CoreSM83::GetCurrentMemoryLocation(machine_information& _machine_info) const {
-    _machine_info.current_pc = (int)Regs.PC;
-    _machine_info.current_rom_bank = (Regs.PC < ROM_BANK_N_OFFSET ? 0 : machine_ctx->rom_bank_selected + 1);
+void CoreSM83::GetCurrentMemoryLocation() const {
+    machineInfo.current_pc = (int)Regs.PC;
+    machineInfo.current_rom_bank = (Regs.PC < ROM_N_OFFSET ? 0 : machine_ctx->rom_bank_selected + 1);
 }
 
 /* ***********************************************************************************************************
     ACCESS HARDWARE STATUS
 *********************************************************************************************************** */
 // get hardware info startup
-void CoreSM83::GetStartupHardwareInfo(machine_information& _machine_info) const {
-    _machine_info.rom_bank_num = machine_ctx->rom_bank_num;
-    _machine_info.ram_bank_num = machine_ctx->ram_bank_num;
-    _machine_info.wram_bank_num = machine_ctx->wram_bank_num;
-    _machine_info.rom_bank_size = ROM_BANK_N_SIZE;
+void CoreSM83::GetStartupHardwareInfo() const {
+    machineInfo.rom_bank_num = machine_ctx->rom_bank_num;
+    machineInfo.ram_bank_num = machine_ctx->ram_bank_num;
+    machineInfo.wram_bank_num = machine_ctx->wram_bank_num;
+    machineInfo.rom_bank_size = ROM_N_SIZE;
 }
 
 // get current hardware status (currently mapped memory banks)
-void CoreSM83::GetCurrentHardwareState(machine_information& _machine_info) const {
-    _machine_info.rom_bank_selected = machine_ctx->rom_bank_selected + 1;
-    _machine_info.ram_bank_selected = machine_ctx->ram_bank_selected;
-    _machine_info.wram_bank_selected = machine_ctx->wram_bank_selected + 1;
+void CoreSM83::GetCurrentHardwareState() const {
+    machineInfo.rom_bank_selected = machine_ctx->rom_bank_selected + 1;
+    machineInfo.ram_bank_selected = machine_ctx->ram_bank_selected;
+    machineInfo.wram_bank_selected = machine_ctx->wram_bank_selected + 1;
 }
 
-inline void GetInstructionsArgs(u16& _addr, const vector<u8>& _bank, u16& _data, string& _raw_data, const cgb_data_types& _type) {
-    switch (_type) {
-    case d8:
-    case a8:
-    case a8_ref:
-    case r8:
-        _data = _bank[_addr++];
-        _raw_data += format("{:x} ", (u8)_data);
-        break;
-    case d16:
-    case a16:
-    case a16_ref:
-        _data = _bank[_addr++];
-        _data |= ((u16)_bank[_addr++]) << 8;
-        _raw_data += format("{:x} ", (u8)(_data & 0xFF));
-        _raw_data += format("{:x} ", (u8)((_data & 0xFF00) >> 8));
-        break;
-    }
-}
-
-inline void DataEnumsToString(const int& _bank, u16 _addr, const u16& _data, string& _args, const cgb_data_types& _type_1, const cgb_data_types& _type_2) {
-    if (_bank > 0) { _addr += ROM_BANK_N_OFFSET; }
-
-    _args = "";
-    if (_type_1 != NO_DATA) {
-        _args = resolve_data_enum(_type_1, _addr, _data);
-    }
-    if (_type_2 != NO_DATA) {
-        _args += ", " + resolve_data_enum(_type_2, _addr, _data);
-    }
-}
-
-void CoreSM83::WriteMessageBufferRomBank(vector<tuple<int, int, string, string>>& _program_buffer_bank, const int& _bank, const vector<u8>& _rom_bank) {
+void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const int& _bank, const int& _base_ptr, const int& _size, const u8* _rom_bank) {
     u16 data = 0;
     bool cb = false;
-    int i;
 
-    for (u16 addr = 0, i = 0; addr < ROM_BANK_0_SIZE; i++) {
+    auto& buffer = get<ST_BUF_BUFFER>(_program_buffer);
+    buffer.clear();
+
+    for (u16 addr = 0, i = 0; addr < _size; i++) {
+
+        ScrollableTableEntry<debug_instr_data> current_entry;
 
         // print rom header info
         if (addr == ROM_HEAD_LOGO && _bank == 0) {
-            tuple<int, int, string, string> current_entry(i, addr, "ROM" + to_string(_bank) + ": " + format("{:x}  ", addr), "- HEADER INFO -");
+            current_entry = ScrollableTableEntry<debug_instr_data>(i, addr, debug_instr_data("ROM" + to_string(_bank) + ": " + format("{:x}  ", addr), "- HEADER INFO -"));
             addr = ROM_HEAD_END + 1;
-            _program_buffer_bank.push_back(current_entry);
+            buffer.emplace_back(current_entry);
         }
         else {
-            tuple<int, int, string, string> current_entry;
             u8 opcode = _rom_bank[addr];
-            if (_bank > 0) {
-                current_entry = tuple<int, int, string, string>(i, addr + ROM_BANK_N_OFFSET, "", "");
-            }
-            else {
-                current_entry = tuple<int, int, string, string>(i, addr, "", "");
-            }
+            current_entry = ScrollableTableEntry<debug_instr_data>(i, addr + _base_ptr, debug_instr_data("", ""));
 
             instr_tuple* instr_ptr;
 
             if (cb) {
                 instr_ptr = &instrMapCB[opcode];
-                cb = false;
             }
             else {
                 instr_ptr = &instrMap[opcode];
@@ -434,57 +460,81 @@ void CoreSM83::WriteMessageBufferRomBank(vector<tuple<int, int, string, string>>
             cb = opcode == 0xCB;
 
             string raw_data;
-            if (_bank > 0) {
-                raw_data = "ROM" + to_string(_bank) + ": " + format("{:x}  ", addr + ROM_BANK_N_OFFSET);
-            }
-            else {
-                raw_data = "ROM" + to_string(_bank) + ": " + format("{:x}  ", addr);
-            }
+            raw_data = "ROM" + to_string(_bank) + ": " + format("{:x}  ", addr + _base_ptr);
             addr++;
 
             raw_data += format("{:x} ", opcode);
 
             // arguments
-            GetInstructionsArgs(addr, _rom_bank, data, raw_data, get<4>(*instr_ptr));
-            GetInstructionsArgs(addr, _rom_bank, data, raw_data, get<5>(*instr_ptr));
-            get<2>(current_entry) = raw_data;
+            instruction_args_to_string(addr, _rom_bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
+            instruction_args_to_string(addr, _rom_bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
+            get<ST_ENTRY_DATA>(current_entry).first = raw_data;
 
             // instruction to assembly
             string args;
-            DataEnumsToString(_bank, addr, data, args, get<4>(*instr_ptr), get<5>(*instr_ptr));
-            
-            get<3>(current_entry) = get<3>(*instr_ptr);
+            data_enums_to_string(_bank, addr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
+
+            get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
             if (args.compare("") != 0) {
-                get<3>(current_entry) += " " + args;
+                get<ST_ENTRY_DATA>(current_entry).second += " " + args;
             }
 
-            _program_buffer_bank.push_back(current_entry);
+            buffer.emplace_back(current_entry);
+        }
+    }
+
+    get<ST_BUF_SIZE>(_program_buffer) = get<ST_BUF_BUFFER>(_program_buffer).size();
+    get<ST_BUF_OFFSET>(_program_buffer) = _base_ptr;
+}
+
+void CoreSM83::InitMessageBufferProgram() {
+    int bank_num = 0;
+    for (const auto& [type, num, size, base_ptr, ref] : machineInfo.debug_memory) {
+        if (type.first == ENUM_ROM_N) {
+            for (int i = 0; i < num; i++) {
+
+                // index, address, raw data, resolved data
+                auto next_bank_table = ScrollableTableBuffer<debug_instr_data>();
+
+                DecodeRomBankContent(next_bank_table, bank_num, base_ptr, size, ref[i]);
+                bank_num++;
+
+                machineInfo.program_buffer.AddMemoryArea(next_bank_table);
+            }
         }
     }
 }
 
-void CoreSM83::InitMessageBufferProgram(vector<vector<tuple<int, int, string, string>>>& _program_buffer) {
-    _program_buffer.clear();
-    
-    auto rom = vector<vector<u8>>();
-    MemorySM83::getInstance()->CopyRomForDebug(rom);
-    
-    for (int bank = 0; bank < machine_ctx->rom_bank_num; bank++) {
-        _program_buffer.emplace_back(vector<tuple<int, int, string, string>>());
-        WriteMessageBufferRomBank(_program_buffer.back(), bank, rom[bank]);
-    }
+void CoreSM83::GetCurrentRegisterValues() const {
+    machineInfo.register_values.clear();
+
+    machineInfo.register_values.emplace_back(get_register_name(A), format("{:x}", Regs.A));
+    machineInfo.register_values.emplace_back(get_register_name(F), format("{:x}", Regs.F));
+    machineInfo.register_values.emplace_back(get_register_name(BC), format("{:x}", Regs.BC));
+    machineInfo.register_values.emplace_back(get_register_name(DE), format("{:x}", Regs.DE));
+    machineInfo.register_values.emplace_back(get_register_name(HL), format("{:x}", Regs.HL));
+    machineInfo.register_values.emplace_back(get_register_name(SP), format("{:x}", Regs.SP));
+    machineInfo.register_values.emplace_back(get_register_name(PC), format("{:x}", Regs.PC));
 }
 
-void CoreSM83::GetCurrentRegisterValues(vector<pair<string, string>>& _register_values) const {
-    _register_values.clear();
+void CoreSM83::GetCurrentInstruction() const {
+    machineInfo.current_instruction =
+        get_register_name(A) + get_register_name(F) + format("({:x})", (((u16)Regs.A) << 8) | Regs.F) +
+        get_register_name(BC) + format("({:x}) ", Regs.BC) +
+        get_register_name(DE) + format("({:x}) ", Regs.DE) +
+        get_register_name(HL) + format("({:x}) ", Regs.HL) +
+        get_register_name(SP) + format("({:x}) ", Regs.SP);
 
-    _register_values.emplace_back(get_register_name(A), format("{:x}", Regs.A));
-    _register_values.emplace_back(get_register_name(F), format("{:x}", Regs.F));
-    _register_values.emplace_back(get_register_name(BC), format("{:x}", Regs.BC));
-    _register_values.emplace_back(get_register_name(DE), format("{:x}", Regs.DE));
-    _register_values.emplace_back(get_register_name(HL), format("{:x}", Regs.HL));
-    _register_values.emplace_back(get_register_name(SP), format("{:x}", Regs.SP));
-    _register_values.emplace_back(get_register_name(PC), format("{:x}", Regs.PC));
+    machineInfo.current_instruction += " -> ";
+
+    machineInfo.current_instruction += get_register_name(PC) + format("({:x}): ", Regs.PC) +
+        get<3>(*instrPtr) + format("({:x}) ", opcode);
+
+    string arg = get_arg_name(get<4>(*instrPtr));
+    if (arg.compare("") != 0) { machineInfo.current_instruction += " " + arg; }
+
+    arg = get_arg_name(get<5>(*instrPtr));
+    if (arg.compare("") != 0) { machineInfo.current_instruction += ", " + arg; }
 }
 
 /* ***********************************************************************************************************
@@ -496,7 +546,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.clear();
 
     // Elements: opcode, instruction function, machine cycles, bytes (without opcode), instr_info
-    
+
     // 0x00
     instrMap.emplace_back(0x00, &CoreSM83::NOP, 1, "NOP", NO_DATA, NO_DATA);
     instrMap.emplace_back(0x01, &CoreSM83::LDd16, 3, "LD", BC, d16);
@@ -514,7 +564,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x0d, &CoreSM83::DEC8, 1, "DEC", C, NO_DATA);
     instrMap.emplace_back(0x0e, &CoreSM83::LDd8, 2, "LD", C, d8);
     instrMap.emplace_back(0x0f, &CoreSM83::RRCA, 1, "RRCA", A, NO_DATA);
-    
+
     // 0x10
     instrMap.emplace_back(0x10, &CoreSM83::STOP, 1, "STOP", d8, NO_DATA);
     instrMap.emplace_back(0x11, &CoreSM83::LDd16, 3, "LD", DE, d16);
@@ -550,7 +600,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x2d, &CoreSM83::DEC8, 1, "DEC", L, NO_DATA);
     instrMap.emplace_back(0x2e, &CoreSM83::LDd8, 2, "LD", L, NO_DATA);
     instrMap.emplace_back(0x2f, &CoreSM83::CPL, 1, "CPL", A, NO_DATA);
-    
+
     // 0x30
     instrMap.emplace_back(0x30, &CoreSM83::JR, 0, "JR NC", r8, NO_DATA);
     instrMap.emplace_back(0x31, &CoreSM83::LDd16, 3, "LD", SP, d16);
@@ -568,7 +618,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x3d, &CoreSM83::DEC8, 1, "DEC", A, NO_DATA);
     instrMap.emplace_back(0x3e, &CoreSM83::LDd8, 2, "LD", A, d8);
     instrMap.emplace_back(0x3f, &CoreSM83::CCF, 1, "CCF", NO_DATA, NO_DATA);
-    
+
     // 0x40
     instrMap.emplace_back(0x40, &CoreSM83::LDtoB, 1, "LD", B, B);
     instrMap.emplace_back(0x41, &CoreSM83::LDtoB, 1, "LD", B, C);
@@ -796,7 +846,7 @@ void CoreSM83::setupLookupTable() {
     CPU CONTROL
 *********************************************************************************************************** */
 // no instruction
-void CoreSM83::NoInstruction(){
+void CoreSM83::NoInstruction() {
     return;
 }
 
@@ -810,8 +860,8 @@ void CoreSM83::STOP() {
     data = mmu_instance->Read8Bit(Regs.PC);
     Regs.PC++;
 
-    if (data != 0x00) { 
-        LOG_ERROR("Wrong usage of STOP instruction"); 
+    if (data != 0x00) {
+        LOG_ERROR("Wrong usage of STOP instruction");
         return;
     }
 
@@ -1010,7 +1060,7 @@ void CoreSM83::LDtoB() {
         break;
     case 0x05:
         Regs.BC_.B = Regs.HL_.L;
-        break; 
+        break;
     case 0x06:
         Regs.BC_.B = mmu_instance->Read8Bit(Regs.HL);
         break;
@@ -1856,32 +1906,32 @@ void CoreSM83::JP() {
     switch (opcode) {
     case 0xCA:
         zero = Regs.F & FLAG_ZERO;
-        if (zero) { 
-            jump_jp(); 
+        if (zero) {
+            jump_jp();
             currentMachineCycles += 4;
             return;
         }
         break;
     case 0xC2:
         zero = Regs.F & FLAG_ZERO;
-        if (!zero) { 
-            jump_jp(); 
+        if (!zero) {
+            jump_jp();
             currentMachineCycles += 4;
             return;
         }
         break;
     case 0xDA:
         carry = Regs.F & FLAG_CARRY;
-        if (carry) { 
-            jump_jp(); 
+        if (carry) {
+            jump_jp();
             currentMachineCycles += 4;
             return;
         }
         break;
     case 0xD2:
         carry = Regs.F & FLAG_CARRY;
-        if (!carry) { 
-            jump_jp(); 
+        if (!carry) {
+            jump_jp();
             currentMachineCycles += 4;
             return;
         }
@@ -1905,31 +1955,31 @@ void CoreSM83::JR() {
     switch (opcode) {
     case 0x28:
         zero = Regs.F & FLAG_ZERO;
-        if (zero) { 
-            jump_jr(); 
+        if (zero) {
+            jump_jr();
             currentMachineCycles += 3;
             return;
         }
         break;
     case 0x20:
         zero = Regs.F & FLAG_ZERO;
-        if (!zero) { 
-            jump_jr(); 
+        if (!zero) {
+            jump_jr();
             currentMachineCycles += 3;
             return;
         }
         break;
     case 0x38:
         carry = Regs.F & FLAG_CARRY;
-        if (carry) { 
-            jump_jr(); 
+        if (carry) {
+            jump_jr();
             currentMachineCycles += 3;
             return;
         }
         break;
     case 0x30:
         carry = Regs.F & FLAG_CARRY;
-        if (!carry) { 
+        if (!carry) {
             jump_jr();
             currentMachineCycles += 3;
             return;
@@ -1961,32 +2011,32 @@ void CoreSM83::CALL() {
     switch (opcode) {
     case 0xCC:
         zero = Regs.F & FLAG_ZERO;
-        if (zero) { 
-            call(); 
+        if (zero) {
+            call();
             currentMachineCycles += 6;
             return;
         }
         break;
     case 0xC4:
         zero = Regs.F & FLAG_ZERO;
-        if (!zero) { 
-            call(); 
+        if (!zero) {
+            call();
             currentMachineCycles += 6;
             return;
         }
         break;
     case 0xDC:
         carry = Regs.F & FLAG_CARRY;
-        if (carry) { 
-            call(); 
+        if (carry) {
+            call();
             currentMachineCycles += 6;
             return;
         }
         break;
     case 0xD4:
         carry = Regs.F & FLAG_CARRY;
-        if (!carry) { 
-            call(); 
+        if (!carry) {
+            call();
             currentMachineCycles += 6;
             return;
         }
@@ -2045,32 +2095,32 @@ void CoreSM83::RET() {
     switch (opcode) {
     case 0xC8:
         zero = Regs.F & FLAG_ZERO;
-        if (zero) { 
-            ret(); 
+        if (zero) {
+            ret();
             currentMachineCycles += 5;
             return;
         }
         break;
     case 0xC0:
         zero = Regs.F & FLAG_ZERO;
-        if (!zero) { 
-            ret(); 
+        if (!zero) {
+            ret();
             currentMachineCycles += 5;
             return;
         }
         break;
     case 0xD8:
         carry = Regs.F & FLAG_CARRY;
-        if (carry) { 
-            ret(); 
+        if (carry) {
+            ret();
             currentMachineCycles += 5;
             return;
         }
         break;
     case 0xD0:
         carry = Regs.F & FLAG_CARRY;
-        if (!carry) { 
-            ret(); 
+        if (!carry) {
+            ret();
             currentMachineCycles += 5;
             return;
         }
@@ -2104,277 +2154,277 @@ void CoreSM83::setupLookupTableCB() {
     instrMapCB.clear();
 
     // Elements: opcode, instruction function, machine cycles
-    instrMapCB.emplace_back(0x00, &CoreSM83::RLC, 2, "RLC", B,     NO_DATA);
-    instrMapCB.emplace_back(0x01, &CoreSM83::RLC, 2, "RLC", C,     NO_DATA);
-    instrMapCB.emplace_back(0x02, &CoreSM83::RLC, 2, "RLC", D,     NO_DATA);
-    instrMapCB.emplace_back(0x03, &CoreSM83::RLC, 2, "RLC", E,     NO_DATA);
-    instrMapCB.emplace_back(0x04, &CoreSM83::RLC, 2, "RLC", H,     NO_DATA);
-    instrMapCB.emplace_back(0x05, &CoreSM83::RLC, 2, "RLC", L,     NO_DATA);
+    instrMapCB.emplace_back(0x00, &CoreSM83::RLC, 2, "RLC", B, NO_DATA);
+    instrMapCB.emplace_back(0x01, &CoreSM83::RLC, 2, "RLC", C, NO_DATA);
+    instrMapCB.emplace_back(0x02, &CoreSM83::RLC, 2, "RLC", D, NO_DATA);
+    instrMapCB.emplace_back(0x03, &CoreSM83::RLC, 2, "RLC", E, NO_DATA);
+    instrMapCB.emplace_back(0x04, &CoreSM83::RLC, 2, "RLC", H, NO_DATA);
+    instrMapCB.emplace_back(0x05, &CoreSM83::RLC, 2, "RLC", L, NO_DATA);
     instrMapCB.emplace_back(0x06, &CoreSM83::RLC, 4, "RLC", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x07, &CoreSM83::RLC, 2, "RLC", A,     NO_DATA);
-    instrMapCB.emplace_back(0x08, &CoreSM83::RRC, 2, "RRC", B,     NO_DATA);
-    instrMapCB.emplace_back(0x09, &CoreSM83::RRC, 2, "RRC", C,     NO_DATA);
-    instrMapCB.emplace_back(0x0a, &CoreSM83::RRC, 2, "RRC", D,     NO_DATA);
-    instrMapCB.emplace_back(0x0b, &CoreSM83::RRC, 2, "RRC", E,     NO_DATA);
-    instrMapCB.emplace_back(0x0c, &CoreSM83::RRC, 2, "RRC", H,     NO_DATA);
-    instrMapCB.emplace_back(0x0d, &CoreSM83::RRC, 2, "RRC", L,     NO_DATA);
+    instrMapCB.emplace_back(0x07, &CoreSM83::RLC, 2, "RLC", A, NO_DATA);
+    instrMapCB.emplace_back(0x08, &CoreSM83::RRC, 2, "RRC", B, NO_DATA);
+    instrMapCB.emplace_back(0x09, &CoreSM83::RRC, 2, "RRC", C, NO_DATA);
+    instrMapCB.emplace_back(0x0a, &CoreSM83::RRC, 2, "RRC", D, NO_DATA);
+    instrMapCB.emplace_back(0x0b, &CoreSM83::RRC, 2, "RRC", E, NO_DATA);
+    instrMapCB.emplace_back(0x0c, &CoreSM83::RRC, 2, "RRC", H, NO_DATA);
+    instrMapCB.emplace_back(0x0d, &CoreSM83::RRC, 2, "RRC", L, NO_DATA);
     instrMapCB.emplace_back(0x0e, &CoreSM83::RRC, 4, "RRC", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x0f, &CoreSM83::RRC, 2, "RRC", A,     NO_DATA);
+    instrMapCB.emplace_back(0x0f, &CoreSM83::RRC, 2, "RRC", A, NO_DATA);
 
-    instrMapCB.emplace_back(0x10, &CoreSM83::RL, 2, "RL", B,     NO_DATA);
-    instrMapCB.emplace_back(0x11, &CoreSM83::RL, 2, "RL", C,     NO_DATA);
-    instrMapCB.emplace_back(0x12, &CoreSM83::RL, 2, "RL", D,     NO_DATA);
-    instrMapCB.emplace_back(0x13, &CoreSM83::RL, 2, "RL", E,     NO_DATA);
-    instrMapCB.emplace_back(0x14, &CoreSM83::RL, 2, "RL", H,     NO_DATA);
-    instrMapCB.emplace_back(0x15, &CoreSM83::RL, 2, "RL", L,     NO_DATA);
+    instrMapCB.emplace_back(0x10, &CoreSM83::RL, 2, "RL", B, NO_DATA);
+    instrMapCB.emplace_back(0x11, &CoreSM83::RL, 2, "RL", C, NO_DATA);
+    instrMapCB.emplace_back(0x12, &CoreSM83::RL, 2, "RL", D, NO_DATA);
+    instrMapCB.emplace_back(0x13, &CoreSM83::RL, 2, "RL", E, NO_DATA);
+    instrMapCB.emplace_back(0x14, &CoreSM83::RL, 2, "RL", H, NO_DATA);
+    instrMapCB.emplace_back(0x15, &CoreSM83::RL, 2, "RL", L, NO_DATA);
     instrMapCB.emplace_back(0x16, &CoreSM83::RL, 4, "RL", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x17, &CoreSM83::RL, 2, "RL", A,     NO_DATA);
-    instrMapCB.emplace_back(0x18, &CoreSM83::RR, 2, "RR", B,     NO_DATA);
-    instrMapCB.emplace_back(0x19, &CoreSM83::RR, 2, "RR", C,     NO_DATA);
-    instrMapCB.emplace_back(0x1a, &CoreSM83::RR, 2, "RR", D,     NO_DATA);
-    instrMapCB.emplace_back(0x1b, &CoreSM83::RR, 2, "RR", E,     NO_DATA);
-    instrMapCB.emplace_back(0x1c, &CoreSM83::RR, 2, "RR", H,     NO_DATA);
-    instrMapCB.emplace_back(0x1d, &CoreSM83::RR, 2, "RR", L,     NO_DATA);
+    instrMapCB.emplace_back(0x17, &CoreSM83::RL, 2, "RL", A, NO_DATA);
+    instrMapCB.emplace_back(0x18, &CoreSM83::RR, 2, "RR", B, NO_DATA);
+    instrMapCB.emplace_back(0x19, &CoreSM83::RR, 2, "RR", C, NO_DATA);
+    instrMapCB.emplace_back(0x1a, &CoreSM83::RR, 2, "RR", D, NO_DATA);
+    instrMapCB.emplace_back(0x1b, &CoreSM83::RR, 2, "RR", E, NO_DATA);
+    instrMapCB.emplace_back(0x1c, &CoreSM83::RR, 2, "RR", H, NO_DATA);
+    instrMapCB.emplace_back(0x1d, &CoreSM83::RR, 2, "RR", L, NO_DATA);
     instrMapCB.emplace_back(0x1e, &CoreSM83::RR, 4, "RR", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x1f, &CoreSM83::RR, 2, "RR", A,     NO_DATA);
+    instrMapCB.emplace_back(0x1f, &CoreSM83::RR, 2, "RR", A, NO_DATA);
 
-    instrMapCB.emplace_back(0x20, &CoreSM83::SLA, 2, "SLA", B,     NO_DATA);
-    instrMapCB.emplace_back(0x21, &CoreSM83::SLA, 2, "SLA", C,     NO_DATA);
-    instrMapCB.emplace_back(0x22, &CoreSM83::SLA, 2, "SLA", D,     NO_DATA);
-    instrMapCB.emplace_back(0x23, &CoreSM83::SLA, 2, "SLA", E,     NO_DATA);
-    instrMapCB.emplace_back(0x24, &CoreSM83::SLA, 2, "SLA", H,     NO_DATA);
-    instrMapCB.emplace_back(0x25, &CoreSM83::SLA, 2, "SLA", L,     NO_DATA);
+    instrMapCB.emplace_back(0x20, &CoreSM83::SLA, 2, "SLA", B, NO_DATA);
+    instrMapCB.emplace_back(0x21, &CoreSM83::SLA, 2, "SLA", C, NO_DATA);
+    instrMapCB.emplace_back(0x22, &CoreSM83::SLA, 2, "SLA", D, NO_DATA);
+    instrMapCB.emplace_back(0x23, &CoreSM83::SLA, 2, "SLA", E, NO_DATA);
+    instrMapCB.emplace_back(0x24, &CoreSM83::SLA, 2, "SLA", H, NO_DATA);
+    instrMapCB.emplace_back(0x25, &CoreSM83::SLA, 2, "SLA", L, NO_DATA);
     instrMapCB.emplace_back(0x26, &CoreSM83::SLA, 4, "SLA", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x27, &CoreSM83::SLA, 2, "SLA", A,     NO_DATA);
-    instrMapCB.emplace_back(0x28, &CoreSM83::SRA, 2, "SRA", B,     NO_DATA);
-    instrMapCB.emplace_back(0x29, &CoreSM83::SRA, 2, "SRA", C,     NO_DATA);
-    instrMapCB.emplace_back(0x2a, &CoreSM83::SRA, 2, "SRA", D,     NO_DATA);
-    instrMapCB.emplace_back(0x2b, &CoreSM83::SRA, 2, "SRA", E,     NO_DATA);
-    instrMapCB.emplace_back(0x2c, &CoreSM83::SRA, 2, "SRA", H,     NO_DATA);
-    instrMapCB.emplace_back(0x2d, &CoreSM83::SRA, 2, "SRA", L,     NO_DATA);
+    instrMapCB.emplace_back(0x27, &CoreSM83::SLA, 2, "SLA", A, NO_DATA);
+    instrMapCB.emplace_back(0x28, &CoreSM83::SRA, 2, "SRA", B, NO_DATA);
+    instrMapCB.emplace_back(0x29, &CoreSM83::SRA, 2, "SRA", C, NO_DATA);
+    instrMapCB.emplace_back(0x2a, &CoreSM83::SRA, 2, "SRA", D, NO_DATA);
+    instrMapCB.emplace_back(0x2b, &CoreSM83::SRA, 2, "SRA", E, NO_DATA);
+    instrMapCB.emplace_back(0x2c, &CoreSM83::SRA, 2, "SRA", H, NO_DATA);
+    instrMapCB.emplace_back(0x2d, &CoreSM83::SRA, 2, "SRA", L, NO_DATA);
     instrMapCB.emplace_back(0x2e, &CoreSM83::SRA, 4, "SRA", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x2f, &CoreSM83::SRA, 2, "SRA", A,     NO_DATA);
+    instrMapCB.emplace_back(0x2f, &CoreSM83::SRA, 2, "SRA", A, NO_DATA);
 
-    instrMapCB.emplace_back(0x30, &CoreSM83::SWAP, 2, "SWAP", B,     NO_DATA);
-    instrMapCB.emplace_back(0x31, &CoreSM83::SWAP, 2, "SWAP", C,     NO_DATA);
-    instrMapCB.emplace_back(0x32, &CoreSM83::SWAP, 2, "SWAP", D,     NO_DATA);
-    instrMapCB.emplace_back(0x33, &CoreSM83::SWAP, 2, "SWAP", E,     NO_DATA);
-    instrMapCB.emplace_back(0x34, &CoreSM83::SWAP, 2, "SWAP", H,     NO_DATA);
-    instrMapCB.emplace_back(0x35, &CoreSM83::SWAP, 2, "SWAP", L,     NO_DATA);
+    instrMapCB.emplace_back(0x30, &CoreSM83::SWAP, 2, "SWAP", B, NO_DATA);
+    instrMapCB.emplace_back(0x31, &CoreSM83::SWAP, 2, "SWAP", C, NO_DATA);
+    instrMapCB.emplace_back(0x32, &CoreSM83::SWAP, 2, "SWAP", D, NO_DATA);
+    instrMapCB.emplace_back(0x33, &CoreSM83::SWAP, 2, "SWAP", E, NO_DATA);
+    instrMapCB.emplace_back(0x34, &CoreSM83::SWAP, 2, "SWAP", H, NO_DATA);
+    instrMapCB.emplace_back(0x35, &CoreSM83::SWAP, 2, "SWAP", L, NO_DATA);
     instrMapCB.emplace_back(0x36, &CoreSM83::SWAP, 4, "SWAP", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x37, &CoreSM83::SWAP, 2, "SWAP", A,     NO_DATA);
-    instrMapCB.emplace_back(0x38, &CoreSM83::SRL, 2, "SRL", B,     NO_DATA);
-    instrMapCB.emplace_back(0x39, &CoreSM83::SRL, 2, "SRL", C,     NO_DATA);
-    instrMapCB.emplace_back(0x3a, &CoreSM83::SRL, 2, "SRL", D,     NO_DATA);
-    instrMapCB.emplace_back(0x3b, &CoreSM83::SRL, 2, "SRL", E,     NO_DATA);
-    instrMapCB.emplace_back(0x3c, &CoreSM83::SRL, 2, "SRL", H,     NO_DATA);
-    instrMapCB.emplace_back(0x3d, &CoreSM83::SRL, 2, "SRL", L,     NO_DATA);
+    instrMapCB.emplace_back(0x37, &CoreSM83::SWAP, 2, "SWAP", A, NO_DATA);
+    instrMapCB.emplace_back(0x38, &CoreSM83::SRL, 2, "SRL", B, NO_DATA);
+    instrMapCB.emplace_back(0x39, &CoreSM83::SRL, 2, "SRL", C, NO_DATA);
+    instrMapCB.emplace_back(0x3a, &CoreSM83::SRL, 2, "SRL", D, NO_DATA);
+    instrMapCB.emplace_back(0x3b, &CoreSM83::SRL, 2, "SRL", E, NO_DATA);
+    instrMapCB.emplace_back(0x3c, &CoreSM83::SRL, 2, "SRL", H, NO_DATA);
+    instrMapCB.emplace_back(0x3d, &CoreSM83::SRL, 2, "SRL", L, NO_DATA);
     instrMapCB.emplace_back(0x3e, &CoreSM83::SRL, 4, "SRL", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x3f, &CoreSM83::SRL, 2, "SRL", A,     NO_DATA);
+    instrMapCB.emplace_back(0x3f, &CoreSM83::SRL, 2, "SRL", A, NO_DATA);
 
-    instrMapCB.emplace_back(0x40, &CoreSM83::BIT0, 2, "BIT0", B,     NO_DATA);
-    instrMapCB.emplace_back(0x41, &CoreSM83::BIT0, 2, "BIT0", C,     NO_DATA);
-    instrMapCB.emplace_back(0x42, &CoreSM83::BIT0, 2, "BIT0", D,     NO_DATA);
-    instrMapCB.emplace_back(0x43, &CoreSM83::BIT0, 2, "BIT0", E,     NO_DATA);
-    instrMapCB.emplace_back(0x44, &CoreSM83::BIT0, 2, "BIT0", H,     NO_DATA);
-    instrMapCB.emplace_back(0x45, &CoreSM83::BIT0, 2, "BIT0", L,     NO_DATA);
+    instrMapCB.emplace_back(0x40, &CoreSM83::BIT0, 2, "BIT0", B, NO_DATA);
+    instrMapCB.emplace_back(0x41, &CoreSM83::BIT0, 2, "BIT0", C, NO_DATA);
+    instrMapCB.emplace_back(0x42, &CoreSM83::BIT0, 2, "BIT0", D, NO_DATA);
+    instrMapCB.emplace_back(0x43, &CoreSM83::BIT0, 2, "BIT0", E, NO_DATA);
+    instrMapCB.emplace_back(0x44, &CoreSM83::BIT0, 2, "BIT0", H, NO_DATA);
+    instrMapCB.emplace_back(0x45, &CoreSM83::BIT0, 2, "BIT0", L, NO_DATA);
     instrMapCB.emplace_back(0x46, &CoreSM83::BIT0, 4, "BIT0", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x47, &CoreSM83::BIT0, 2, "BIT0", A,     NO_DATA);
-    instrMapCB.emplace_back(0x48, &CoreSM83::BIT1, 2, "BIT1", B,     NO_DATA);
-    instrMapCB.emplace_back(0x49, &CoreSM83::BIT1, 2, "BIT1", C,     NO_DATA);
-    instrMapCB.emplace_back(0x4a, &CoreSM83::BIT1, 2, "BIT1", D,     NO_DATA);
-    instrMapCB.emplace_back(0x4b, &CoreSM83::BIT1, 2, "BIT1", E,     NO_DATA);
-    instrMapCB.emplace_back(0x4c, &CoreSM83::BIT1, 2, "BIT1", H,     NO_DATA);
-    instrMapCB.emplace_back(0x4d, &CoreSM83::BIT1, 2, "BIT1", L,     NO_DATA);
+    instrMapCB.emplace_back(0x47, &CoreSM83::BIT0, 2, "BIT0", A, NO_DATA);
+    instrMapCB.emplace_back(0x48, &CoreSM83::BIT1, 2, "BIT1", B, NO_DATA);
+    instrMapCB.emplace_back(0x49, &CoreSM83::BIT1, 2, "BIT1", C, NO_DATA);
+    instrMapCB.emplace_back(0x4a, &CoreSM83::BIT1, 2, "BIT1", D, NO_DATA);
+    instrMapCB.emplace_back(0x4b, &CoreSM83::BIT1, 2, "BIT1", E, NO_DATA);
+    instrMapCB.emplace_back(0x4c, &CoreSM83::BIT1, 2, "BIT1", H, NO_DATA);
+    instrMapCB.emplace_back(0x4d, &CoreSM83::BIT1, 2, "BIT1", L, NO_DATA);
     instrMapCB.emplace_back(0x4e, &CoreSM83::BIT1, 4, "BIT1", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x4f, &CoreSM83::BIT1, 2, "BIT1", A,     NO_DATA);
+    instrMapCB.emplace_back(0x4f, &CoreSM83::BIT1, 2, "BIT1", A, NO_DATA);
 
-    instrMapCB.emplace_back(0x50, &CoreSM83::BIT2, 2, "BIT2", B,     NO_DATA);
-    instrMapCB.emplace_back(0x51, &CoreSM83::BIT2, 2, "BIT2", C,     NO_DATA);
-    instrMapCB.emplace_back(0x52, &CoreSM83::BIT2, 2, "BIT2", D,     NO_DATA);
-    instrMapCB.emplace_back(0x53, &CoreSM83::BIT2, 2, "BIT2", E,     NO_DATA);
-    instrMapCB.emplace_back(0x54, &CoreSM83::BIT2, 2, "BIT2", H,     NO_DATA);
-    instrMapCB.emplace_back(0x55, &CoreSM83::BIT2, 2, "BIT2", L,     NO_DATA);
+    instrMapCB.emplace_back(0x50, &CoreSM83::BIT2, 2, "BIT2", B, NO_DATA);
+    instrMapCB.emplace_back(0x51, &CoreSM83::BIT2, 2, "BIT2", C, NO_DATA);
+    instrMapCB.emplace_back(0x52, &CoreSM83::BIT2, 2, "BIT2", D, NO_DATA);
+    instrMapCB.emplace_back(0x53, &CoreSM83::BIT2, 2, "BIT2", E, NO_DATA);
+    instrMapCB.emplace_back(0x54, &CoreSM83::BIT2, 2, "BIT2", H, NO_DATA);
+    instrMapCB.emplace_back(0x55, &CoreSM83::BIT2, 2, "BIT2", L, NO_DATA);
     instrMapCB.emplace_back(0x56, &CoreSM83::BIT2, 4, "BIT2", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x57, &CoreSM83::BIT2, 2, "BIT2", A,     NO_DATA);
-    instrMapCB.emplace_back(0x58, &CoreSM83::BIT3, 2, "BIT3", B,     NO_DATA);
-    instrMapCB.emplace_back(0x59, &CoreSM83::BIT3, 2, "BIT3", C,     NO_DATA);
-    instrMapCB.emplace_back(0x5a, &CoreSM83::BIT3, 2, "BIT3", D,     NO_DATA);
-    instrMapCB.emplace_back(0x5b, &CoreSM83::BIT3, 2, "BIT3", E,     NO_DATA);
-    instrMapCB.emplace_back(0x5c, &CoreSM83::BIT3, 2, "BIT3", H,     NO_DATA);
-    instrMapCB.emplace_back(0x5d, &CoreSM83::BIT3, 2, "BIT3", L,     NO_DATA);
+    instrMapCB.emplace_back(0x57, &CoreSM83::BIT2, 2, "BIT2", A, NO_DATA);
+    instrMapCB.emplace_back(0x58, &CoreSM83::BIT3, 2, "BIT3", B, NO_DATA);
+    instrMapCB.emplace_back(0x59, &CoreSM83::BIT3, 2, "BIT3", C, NO_DATA);
+    instrMapCB.emplace_back(0x5a, &CoreSM83::BIT3, 2, "BIT3", D, NO_DATA);
+    instrMapCB.emplace_back(0x5b, &CoreSM83::BIT3, 2, "BIT3", E, NO_DATA);
+    instrMapCB.emplace_back(0x5c, &CoreSM83::BIT3, 2, "BIT3", H, NO_DATA);
+    instrMapCB.emplace_back(0x5d, &CoreSM83::BIT3, 2, "BIT3", L, NO_DATA);
     instrMapCB.emplace_back(0x5e, &CoreSM83::BIT3, 4, "BIT3", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x5f, &CoreSM83::BIT3, 2, "BIT3", A,     NO_DATA);
+    instrMapCB.emplace_back(0x5f, &CoreSM83::BIT3, 2, "BIT3", A, NO_DATA);
 
-    instrMapCB.emplace_back(0x60, &CoreSM83::BIT4, 2, "BIT4", B,     NO_DATA);
-    instrMapCB.emplace_back(0x61, &CoreSM83::BIT4, 2, "BIT4", C,     NO_DATA);
-    instrMapCB.emplace_back(0x62, &CoreSM83::BIT4, 2, "BIT4", D,     NO_DATA);
-    instrMapCB.emplace_back(0x63, &CoreSM83::BIT4, 2, "BIT4", E,     NO_DATA);
-    instrMapCB.emplace_back(0x64, &CoreSM83::BIT4, 2, "BIT4", H,     NO_DATA);
-    instrMapCB.emplace_back(0x65, &CoreSM83::BIT4, 2, "BIT4", L,     NO_DATA);
+    instrMapCB.emplace_back(0x60, &CoreSM83::BIT4, 2, "BIT4", B, NO_DATA);
+    instrMapCB.emplace_back(0x61, &CoreSM83::BIT4, 2, "BIT4", C, NO_DATA);
+    instrMapCB.emplace_back(0x62, &CoreSM83::BIT4, 2, "BIT4", D, NO_DATA);
+    instrMapCB.emplace_back(0x63, &CoreSM83::BIT4, 2, "BIT4", E, NO_DATA);
+    instrMapCB.emplace_back(0x64, &CoreSM83::BIT4, 2, "BIT4", H, NO_DATA);
+    instrMapCB.emplace_back(0x65, &CoreSM83::BIT4, 2, "BIT4", L, NO_DATA);
     instrMapCB.emplace_back(0x66, &CoreSM83::BIT4, 4, "BIT4", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x67, &CoreSM83::BIT4, 2, "BIT4", A,     NO_DATA);
-    instrMapCB.emplace_back(0x68, &CoreSM83::BIT5, 2, "BIT5", B,     NO_DATA);
-    instrMapCB.emplace_back(0x69, &CoreSM83::BIT5, 2, "BIT5", C,     NO_DATA);
-    instrMapCB.emplace_back(0x6a, &CoreSM83::BIT5, 2, "BIT5", D,     NO_DATA);
-    instrMapCB.emplace_back(0x6b, &CoreSM83::BIT5, 2, "BIT5", E,     NO_DATA);
-    instrMapCB.emplace_back(0x6c, &CoreSM83::BIT5, 2, "BIT5", H,     NO_DATA);
-    instrMapCB.emplace_back(0x6d, &CoreSM83::BIT5, 2, "BIT5", L,     NO_DATA);
+    instrMapCB.emplace_back(0x67, &CoreSM83::BIT4, 2, "BIT4", A, NO_DATA);
+    instrMapCB.emplace_back(0x68, &CoreSM83::BIT5, 2, "BIT5", B, NO_DATA);
+    instrMapCB.emplace_back(0x69, &CoreSM83::BIT5, 2, "BIT5", C, NO_DATA);
+    instrMapCB.emplace_back(0x6a, &CoreSM83::BIT5, 2, "BIT5", D, NO_DATA);
+    instrMapCB.emplace_back(0x6b, &CoreSM83::BIT5, 2, "BIT5", E, NO_DATA);
+    instrMapCB.emplace_back(0x6c, &CoreSM83::BIT5, 2, "BIT5", H, NO_DATA);
+    instrMapCB.emplace_back(0x6d, &CoreSM83::BIT5, 2, "BIT5", L, NO_DATA);
     instrMapCB.emplace_back(0x6e, &CoreSM83::BIT5, 4, "BIT5", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x6f, &CoreSM83::BIT5, 2, "BIT5", A,     NO_DATA);
+    instrMapCB.emplace_back(0x6f, &CoreSM83::BIT5, 2, "BIT5", A, NO_DATA);
 
-    instrMapCB.emplace_back(0x70, &CoreSM83::BIT6, 2, "BIT6", B,     NO_DATA);
-    instrMapCB.emplace_back(0x71, &CoreSM83::BIT6, 2, "BIT6", C,     NO_DATA);
-    instrMapCB.emplace_back(0x72, &CoreSM83::BIT6, 2, "BIT6", D,     NO_DATA);
-    instrMapCB.emplace_back(0x73, &CoreSM83::BIT6, 2, "BIT6", E,     NO_DATA);
-    instrMapCB.emplace_back(0x74, &CoreSM83::BIT6, 2, "BIT6", H,     NO_DATA);
-    instrMapCB.emplace_back(0x75, &CoreSM83::BIT6, 2, "BIT6", L,     NO_DATA);
+    instrMapCB.emplace_back(0x70, &CoreSM83::BIT6, 2, "BIT6", B, NO_DATA);
+    instrMapCB.emplace_back(0x71, &CoreSM83::BIT6, 2, "BIT6", C, NO_DATA);
+    instrMapCB.emplace_back(0x72, &CoreSM83::BIT6, 2, "BIT6", D, NO_DATA);
+    instrMapCB.emplace_back(0x73, &CoreSM83::BIT6, 2, "BIT6", E, NO_DATA);
+    instrMapCB.emplace_back(0x74, &CoreSM83::BIT6, 2, "BIT6", H, NO_DATA);
+    instrMapCB.emplace_back(0x75, &CoreSM83::BIT6, 2, "BIT6", L, NO_DATA);
     instrMapCB.emplace_back(0x76, &CoreSM83::BIT6, 4, "BIT6", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x77, &CoreSM83::BIT6, 2, "BIT6", A,     NO_DATA);
-    instrMapCB.emplace_back(0x78, &CoreSM83::BIT7, 2, "BIT7", B,     NO_DATA);
-    instrMapCB.emplace_back(0x79, &CoreSM83::BIT7, 2, "BIT7", C,     NO_DATA);
-    instrMapCB.emplace_back(0x7a, &CoreSM83::BIT7, 2, "BIT7", D,     NO_DATA);
-    instrMapCB.emplace_back(0x7b, &CoreSM83::BIT7, 2, "BIT7", E,     NO_DATA);
-    instrMapCB.emplace_back(0x7c, &CoreSM83::BIT7, 2, "BIT7", H,     NO_DATA);
-    instrMapCB.emplace_back(0x7d, &CoreSM83::BIT7, 2, "BIT7", L,     NO_DATA);
+    instrMapCB.emplace_back(0x77, &CoreSM83::BIT6, 2, "BIT6", A, NO_DATA);
+    instrMapCB.emplace_back(0x78, &CoreSM83::BIT7, 2, "BIT7", B, NO_DATA);
+    instrMapCB.emplace_back(0x79, &CoreSM83::BIT7, 2, "BIT7", C, NO_DATA);
+    instrMapCB.emplace_back(0x7a, &CoreSM83::BIT7, 2, "BIT7", D, NO_DATA);
+    instrMapCB.emplace_back(0x7b, &CoreSM83::BIT7, 2, "BIT7", E, NO_DATA);
+    instrMapCB.emplace_back(0x7c, &CoreSM83::BIT7, 2, "BIT7", H, NO_DATA);
+    instrMapCB.emplace_back(0x7d, &CoreSM83::BIT7, 2, "BIT7", L, NO_DATA);
     instrMapCB.emplace_back(0x7e, &CoreSM83::BIT7, 4, "BIT7", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x7f, &CoreSM83::BIT7, 2, "BIT7", A,     NO_DATA);
+    instrMapCB.emplace_back(0x7f, &CoreSM83::BIT7, 2, "BIT7", A, NO_DATA);
 
-    instrMapCB.emplace_back(0x80, &CoreSM83::RES0, 2, "RES0", B,     NO_DATA);
-    instrMapCB.emplace_back(0x81, &CoreSM83::RES0, 2, "RES0", C,     NO_DATA);
-    instrMapCB.emplace_back(0x82, &CoreSM83::RES0, 2, "RES0", D,     NO_DATA);
-    instrMapCB.emplace_back(0x83, &CoreSM83::RES0, 2, "RES0", E,     NO_DATA);
-    instrMapCB.emplace_back(0x84, &CoreSM83::RES0, 2, "RES0", H,     NO_DATA);
-    instrMapCB.emplace_back(0x85, &CoreSM83::RES0, 2, "RES0", L,     NO_DATA);
+    instrMapCB.emplace_back(0x80, &CoreSM83::RES0, 2, "RES0", B, NO_DATA);
+    instrMapCB.emplace_back(0x81, &CoreSM83::RES0, 2, "RES0", C, NO_DATA);
+    instrMapCB.emplace_back(0x82, &CoreSM83::RES0, 2, "RES0", D, NO_DATA);
+    instrMapCB.emplace_back(0x83, &CoreSM83::RES0, 2, "RES0", E, NO_DATA);
+    instrMapCB.emplace_back(0x84, &CoreSM83::RES0, 2, "RES0", H, NO_DATA);
+    instrMapCB.emplace_back(0x85, &CoreSM83::RES0, 2, "RES0", L, NO_DATA);
     instrMapCB.emplace_back(0x86, &CoreSM83::RES0, 4, "RES0", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x87, &CoreSM83::RES0, 2, "RES0", A,     NO_DATA);
-    instrMapCB.emplace_back(0x88, &CoreSM83::RES1, 2, "RES1", B,     NO_DATA);
-    instrMapCB.emplace_back(0x89, &CoreSM83::RES1, 2, "RES1", C,     NO_DATA);
-    instrMapCB.emplace_back(0x8a, &CoreSM83::RES1, 2, "RES1", D,     NO_DATA);
-    instrMapCB.emplace_back(0x8b, &CoreSM83::RES1, 2, "RES1", E,     NO_DATA);
-    instrMapCB.emplace_back(0x8c, &CoreSM83::RES1, 2, "RES1", H,     NO_DATA);
-    instrMapCB.emplace_back(0x8d, &CoreSM83::RES1, 2, "RES1", L,     NO_DATA);
+    instrMapCB.emplace_back(0x87, &CoreSM83::RES0, 2, "RES0", A, NO_DATA);
+    instrMapCB.emplace_back(0x88, &CoreSM83::RES1, 2, "RES1", B, NO_DATA);
+    instrMapCB.emplace_back(0x89, &CoreSM83::RES1, 2, "RES1", C, NO_DATA);
+    instrMapCB.emplace_back(0x8a, &CoreSM83::RES1, 2, "RES1", D, NO_DATA);
+    instrMapCB.emplace_back(0x8b, &CoreSM83::RES1, 2, "RES1", E, NO_DATA);
+    instrMapCB.emplace_back(0x8c, &CoreSM83::RES1, 2, "RES1", H, NO_DATA);
+    instrMapCB.emplace_back(0x8d, &CoreSM83::RES1, 2, "RES1", L, NO_DATA);
     instrMapCB.emplace_back(0x8e, &CoreSM83::RES1, 4, "RES1", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x8f, &CoreSM83::RES1, 2, "RES1", A,     NO_DATA);
+    instrMapCB.emplace_back(0x8f, &CoreSM83::RES1, 2, "RES1", A, NO_DATA);
 
-    instrMapCB.emplace_back(0x90, &CoreSM83::RES2, 2, "RES2", B,     NO_DATA);
-    instrMapCB.emplace_back(0x91, &CoreSM83::RES2, 2, "RES2", C,     NO_DATA);
-    instrMapCB.emplace_back(0x92, &CoreSM83::RES2, 2, "RES2", D,     NO_DATA);
-    instrMapCB.emplace_back(0x93, &CoreSM83::RES2, 2, "RES2", E,     NO_DATA);
-    instrMapCB.emplace_back(0x94, &CoreSM83::RES2, 2, "RES2", H,     NO_DATA);
-    instrMapCB.emplace_back(0x95, &CoreSM83::RES2, 2, "RES2", L,     NO_DATA);
+    instrMapCB.emplace_back(0x90, &CoreSM83::RES2, 2, "RES2", B, NO_DATA);
+    instrMapCB.emplace_back(0x91, &CoreSM83::RES2, 2, "RES2", C, NO_DATA);
+    instrMapCB.emplace_back(0x92, &CoreSM83::RES2, 2, "RES2", D, NO_DATA);
+    instrMapCB.emplace_back(0x93, &CoreSM83::RES2, 2, "RES2", E, NO_DATA);
+    instrMapCB.emplace_back(0x94, &CoreSM83::RES2, 2, "RES2", H, NO_DATA);
+    instrMapCB.emplace_back(0x95, &CoreSM83::RES2, 2, "RES2", L, NO_DATA);
     instrMapCB.emplace_back(0x96, &CoreSM83::RES2, 4, "RES2", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x97, &CoreSM83::RES2, 2, "RES2", A,     NO_DATA);
-    instrMapCB.emplace_back(0x98, &CoreSM83::RES3, 2, "RES3", B,     NO_DATA);
-    instrMapCB.emplace_back(0x99, &CoreSM83::RES3, 2, "RES3", C,     NO_DATA);
-    instrMapCB.emplace_back(0x9a, &CoreSM83::RES3, 2, "RES3", D,     NO_DATA);
-    instrMapCB.emplace_back(0x9b, &CoreSM83::RES3, 2, "RES3", E,     NO_DATA);
-    instrMapCB.emplace_back(0x9c, &CoreSM83::RES3, 2, "RES3", H,     NO_DATA);
-    instrMapCB.emplace_back(0x9d, &CoreSM83::RES3, 2, "RES3", L,     NO_DATA);
+    instrMapCB.emplace_back(0x97, &CoreSM83::RES2, 2, "RES2", A, NO_DATA);
+    instrMapCB.emplace_back(0x98, &CoreSM83::RES3, 2, "RES3", B, NO_DATA);
+    instrMapCB.emplace_back(0x99, &CoreSM83::RES3, 2, "RES3", C, NO_DATA);
+    instrMapCB.emplace_back(0x9a, &CoreSM83::RES3, 2, "RES3", D, NO_DATA);
+    instrMapCB.emplace_back(0x9b, &CoreSM83::RES3, 2, "RES3", E, NO_DATA);
+    instrMapCB.emplace_back(0x9c, &CoreSM83::RES3, 2, "RES3", H, NO_DATA);
+    instrMapCB.emplace_back(0x9d, &CoreSM83::RES3, 2, "RES3", L, NO_DATA);
     instrMapCB.emplace_back(0x9e, &CoreSM83::RES3, 4, "RES3", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0x9f, &CoreSM83::RES3, 2, "RES3", A,     NO_DATA);
+    instrMapCB.emplace_back(0x9f, &CoreSM83::RES3, 2, "RES3", A, NO_DATA);
 
-    instrMapCB.emplace_back(0xa0, &CoreSM83::RES4, 2, "RES4", B,     NO_DATA);
-    instrMapCB.emplace_back(0xa1, &CoreSM83::RES4, 2, "RES4", C,     NO_DATA);
-    instrMapCB.emplace_back(0xa2, &CoreSM83::RES4, 2, "RES4", D,     NO_DATA);
-    instrMapCB.emplace_back(0xa3, &CoreSM83::RES4, 2, "RES4", E,     NO_DATA);
-    instrMapCB.emplace_back(0xa4, &CoreSM83::RES4, 2, "RES4", H,     NO_DATA);
-    instrMapCB.emplace_back(0xa5, &CoreSM83::RES4, 2, "RES4", L,     NO_DATA);
+    instrMapCB.emplace_back(0xa0, &CoreSM83::RES4, 2, "RES4", B, NO_DATA);
+    instrMapCB.emplace_back(0xa1, &CoreSM83::RES4, 2, "RES4", C, NO_DATA);
+    instrMapCB.emplace_back(0xa2, &CoreSM83::RES4, 2, "RES4", D, NO_DATA);
+    instrMapCB.emplace_back(0xa3, &CoreSM83::RES4, 2, "RES4", E, NO_DATA);
+    instrMapCB.emplace_back(0xa4, &CoreSM83::RES4, 2, "RES4", H, NO_DATA);
+    instrMapCB.emplace_back(0xa5, &CoreSM83::RES4, 2, "RES4", L, NO_DATA);
     instrMapCB.emplace_back(0xa6, &CoreSM83::RES4, 4, "RES4", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xa7, &CoreSM83::RES4, 2, "RES4", A,     NO_DATA);
-    instrMapCB.emplace_back(0xa8, &CoreSM83::RES5, 2, "RES5", B,     NO_DATA);
-    instrMapCB.emplace_back(0xa9, &CoreSM83::RES5, 2, "RES5", C,     NO_DATA);
-    instrMapCB.emplace_back(0xaa, &CoreSM83::RES5, 2, "RES5", D,     NO_DATA);
-    instrMapCB.emplace_back(0xab, &CoreSM83::RES5, 2, "RES5", E,     NO_DATA);
-    instrMapCB.emplace_back(0xac, &CoreSM83::RES5, 2, "RES5", H,     NO_DATA);
-    instrMapCB.emplace_back(0xad, &CoreSM83::RES5, 2, "RES5", L,     NO_DATA);
+    instrMapCB.emplace_back(0xa7, &CoreSM83::RES4, 2, "RES4", A, NO_DATA);
+    instrMapCB.emplace_back(0xa8, &CoreSM83::RES5, 2, "RES5", B, NO_DATA);
+    instrMapCB.emplace_back(0xa9, &CoreSM83::RES5, 2, "RES5", C, NO_DATA);
+    instrMapCB.emplace_back(0xaa, &CoreSM83::RES5, 2, "RES5", D, NO_DATA);
+    instrMapCB.emplace_back(0xab, &CoreSM83::RES5, 2, "RES5", E, NO_DATA);
+    instrMapCB.emplace_back(0xac, &CoreSM83::RES5, 2, "RES5", H, NO_DATA);
+    instrMapCB.emplace_back(0xad, &CoreSM83::RES5, 2, "RES5", L, NO_DATA);
     instrMapCB.emplace_back(0xae, &CoreSM83::RES5, 4, "RES5", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xaf, &CoreSM83::RES5, 2, "RES5", A,     NO_DATA);
+    instrMapCB.emplace_back(0xaf, &CoreSM83::RES5, 2, "RES5", A, NO_DATA);
 
-    instrMapCB.emplace_back(0xb0, &CoreSM83::RES6, 2, "RES6", B,     NO_DATA);
-    instrMapCB.emplace_back(0xb1, &CoreSM83::RES6, 2, "RES6", C,     NO_DATA);
-    instrMapCB.emplace_back(0xb2, &CoreSM83::RES6, 2, "RES6", D,     NO_DATA);
-    instrMapCB.emplace_back(0xb3, &CoreSM83::RES6, 2, "RES6", E,     NO_DATA);
-    instrMapCB.emplace_back(0xb4, &CoreSM83::RES6, 2, "RES6", H,     NO_DATA);
-    instrMapCB.emplace_back(0xb5, &CoreSM83::RES6, 2, "RES6", L,     NO_DATA);
+    instrMapCB.emplace_back(0xb0, &CoreSM83::RES6, 2, "RES6", B, NO_DATA);
+    instrMapCB.emplace_back(0xb1, &CoreSM83::RES6, 2, "RES6", C, NO_DATA);
+    instrMapCB.emplace_back(0xb2, &CoreSM83::RES6, 2, "RES6", D, NO_DATA);
+    instrMapCB.emplace_back(0xb3, &CoreSM83::RES6, 2, "RES6", E, NO_DATA);
+    instrMapCB.emplace_back(0xb4, &CoreSM83::RES6, 2, "RES6", H, NO_DATA);
+    instrMapCB.emplace_back(0xb5, &CoreSM83::RES6, 2, "RES6", L, NO_DATA);
     instrMapCB.emplace_back(0xb6, &CoreSM83::RES6, 4, "RES6", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xb7, &CoreSM83::RES6, 2, "RES6", A,     NO_DATA);
-    instrMapCB.emplace_back(0xb8, &CoreSM83::RES7, 2, "RES7", B,     NO_DATA);
-    instrMapCB.emplace_back(0xb9, &CoreSM83::RES7, 2, "RES7", C,     NO_DATA);
-    instrMapCB.emplace_back(0xba, &CoreSM83::RES7, 2, "RES7", D,     NO_DATA);
-    instrMapCB.emplace_back(0xbb, &CoreSM83::RES7, 2, "RES7", E,     NO_DATA);
-    instrMapCB.emplace_back(0xbc, &CoreSM83::RES7, 2, "RES7", H,     NO_DATA);
-    instrMapCB.emplace_back(0xbd, &CoreSM83::RES7, 2, "RES7", L,     NO_DATA);
+    instrMapCB.emplace_back(0xb7, &CoreSM83::RES6, 2, "RES6", A, NO_DATA);
+    instrMapCB.emplace_back(0xb8, &CoreSM83::RES7, 2, "RES7", B, NO_DATA);
+    instrMapCB.emplace_back(0xb9, &CoreSM83::RES7, 2, "RES7", C, NO_DATA);
+    instrMapCB.emplace_back(0xba, &CoreSM83::RES7, 2, "RES7", D, NO_DATA);
+    instrMapCB.emplace_back(0xbb, &CoreSM83::RES7, 2, "RES7", E, NO_DATA);
+    instrMapCB.emplace_back(0xbc, &CoreSM83::RES7, 2, "RES7", H, NO_DATA);
+    instrMapCB.emplace_back(0xbd, &CoreSM83::RES7, 2, "RES7", L, NO_DATA);
     instrMapCB.emplace_back(0xbe, &CoreSM83::RES7, 4, "RES7", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xbf, &CoreSM83::RES7, 2, "RES7", A,     NO_DATA);
+    instrMapCB.emplace_back(0xbf, &CoreSM83::RES7, 2, "RES7", A, NO_DATA);
 
-    instrMapCB.emplace_back(0xc0, &CoreSM83::SET0, 2, "SET0", B,     NO_DATA);
-    instrMapCB.emplace_back(0xc1, &CoreSM83::SET0, 2, "SET0", C,     NO_DATA);
-    instrMapCB.emplace_back(0xc2, &CoreSM83::SET0, 2, "SET0", D,     NO_DATA);
-    instrMapCB.emplace_back(0xc3, &CoreSM83::SET0, 2, "SET0", E,     NO_DATA);
-    instrMapCB.emplace_back(0xc4, &CoreSM83::SET0, 2, "SET0", H,     NO_DATA);
-    instrMapCB.emplace_back(0xc5, &CoreSM83::SET0, 2, "SET0", L,     NO_DATA);
+    instrMapCB.emplace_back(0xc0, &CoreSM83::SET0, 2, "SET0", B, NO_DATA);
+    instrMapCB.emplace_back(0xc1, &CoreSM83::SET0, 2, "SET0", C, NO_DATA);
+    instrMapCB.emplace_back(0xc2, &CoreSM83::SET0, 2, "SET0", D, NO_DATA);
+    instrMapCB.emplace_back(0xc3, &CoreSM83::SET0, 2, "SET0", E, NO_DATA);
+    instrMapCB.emplace_back(0xc4, &CoreSM83::SET0, 2, "SET0", H, NO_DATA);
+    instrMapCB.emplace_back(0xc5, &CoreSM83::SET0, 2, "SET0", L, NO_DATA);
     instrMapCB.emplace_back(0xc6, &CoreSM83::SET0, 4, "SET0", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xc7, &CoreSM83::SET0, 2, "SET0", A,     NO_DATA);
-    instrMapCB.emplace_back(0xc8, &CoreSM83::SET1, 2, "SET1", B,     NO_DATA);
-    instrMapCB.emplace_back(0xc9, &CoreSM83::SET1, 2, "SET1", C,     NO_DATA);
-    instrMapCB.emplace_back(0xca, &CoreSM83::SET1, 2, "SET1", D,     NO_DATA);
-    instrMapCB.emplace_back(0xcb, &CoreSM83::SET1, 2, "SET1", E,     NO_DATA);
-    instrMapCB.emplace_back(0xcc, &CoreSM83::SET1, 2, "SET1", H,     NO_DATA);
-    instrMapCB.emplace_back(0xcd, &CoreSM83::SET1, 2, "SET1", L,     NO_DATA);
+    instrMapCB.emplace_back(0xc7, &CoreSM83::SET0, 2, "SET0", A, NO_DATA);
+    instrMapCB.emplace_back(0xc8, &CoreSM83::SET1, 2, "SET1", B, NO_DATA);
+    instrMapCB.emplace_back(0xc9, &CoreSM83::SET1, 2, "SET1", C, NO_DATA);
+    instrMapCB.emplace_back(0xca, &CoreSM83::SET1, 2, "SET1", D, NO_DATA);
+    instrMapCB.emplace_back(0xcb, &CoreSM83::SET1, 2, "SET1", E, NO_DATA);
+    instrMapCB.emplace_back(0xcc, &CoreSM83::SET1, 2, "SET1", H, NO_DATA);
+    instrMapCB.emplace_back(0xcd, &CoreSM83::SET1, 2, "SET1", L, NO_DATA);
     instrMapCB.emplace_back(0xce, &CoreSM83::SET1, 4, "SET1", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xcf, &CoreSM83::SET1, 2, "SET1", A,     NO_DATA);
+    instrMapCB.emplace_back(0xcf, &CoreSM83::SET1, 2, "SET1", A, NO_DATA);
 
-    instrMapCB.emplace_back(0xd0, &CoreSM83::SET2, 2, "SET2", B,     NO_DATA);
-    instrMapCB.emplace_back(0xd1, &CoreSM83::SET2, 2, "SET2", C,     NO_DATA);
-    instrMapCB.emplace_back(0xd2, &CoreSM83::SET2, 2, "SET2", D,     NO_DATA);
-    instrMapCB.emplace_back(0xd3, &CoreSM83::SET2, 2, "SET2", E,     NO_DATA);
-    instrMapCB.emplace_back(0xd4, &CoreSM83::SET2, 2, "SET2", H,     NO_DATA);
-    instrMapCB.emplace_back(0xd5, &CoreSM83::SET2, 2, "SET2", L,     NO_DATA);
+    instrMapCB.emplace_back(0xd0, &CoreSM83::SET2, 2, "SET2", B, NO_DATA);
+    instrMapCB.emplace_back(0xd1, &CoreSM83::SET2, 2, "SET2", C, NO_DATA);
+    instrMapCB.emplace_back(0xd2, &CoreSM83::SET2, 2, "SET2", D, NO_DATA);
+    instrMapCB.emplace_back(0xd3, &CoreSM83::SET2, 2, "SET2", E, NO_DATA);
+    instrMapCB.emplace_back(0xd4, &CoreSM83::SET2, 2, "SET2", H, NO_DATA);
+    instrMapCB.emplace_back(0xd5, &CoreSM83::SET2, 2, "SET2", L, NO_DATA);
     instrMapCB.emplace_back(0xd6, &CoreSM83::SET2, 4, "SET2", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xd7, &CoreSM83::SET2, 2, "SET2", A,     NO_DATA);
-    instrMapCB.emplace_back(0xd8, &CoreSM83::SET3, 2, "SET3", B,     NO_DATA);
-    instrMapCB.emplace_back(0xd9, &CoreSM83::SET3, 2, "SET3", C,     NO_DATA);
-    instrMapCB.emplace_back(0xda, &CoreSM83::SET3, 2, "SET3", D,     NO_DATA);
-    instrMapCB.emplace_back(0xdb, &CoreSM83::SET3, 2, "SET3", E,     NO_DATA);
-    instrMapCB.emplace_back(0xdc, &CoreSM83::SET3, 2, "SET3", H,     NO_DATA);
-    instrMapCB.emplace_back(0xdd, &CoreSM83::SET3, 2, "SET3", L,     NO_DATA);
+    instrMapCB.emplace_back(0xd7, &CoreSM83::SET2, 2, "SET2", A, NO_DATA);
+    instrMapCB.emplace_back(0xd8, &CoreSM83::SET3, 2, "SET3", B, NO_DATA);
+    instrMapCB.emplace_back(0xd9, &CoreSM83::SET3, 2, "SET3", C, NO_DATA);
+    instrMapCB.emplace_back(0xda, &CoreSM83::SET3, 2, "SET3", D, NO_DATA);
+    instrMapCB.emplace_back(0xdb, &CoreSM83::SET3, 2, "SET3", E, NO_DATA);
+    instrMapCB.emplace_back(0xdc, &CoreSM83::SET3, 2, "SET3", H, NO_DATA);
+    instrMapCB.emplace_back(0xdd, &CoreSM83::SET3, 2, "SET3", L, NO_DATA);
     instrMapCB.emplace_back(0xde, &CoreSM83::SET3, 4, "SET3", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xdf, &CoreSM83::SET3, 2, "SET3", A,     NO_DATA);
+    instrMapCB.emplace_back(0xdf, &CoreSM83::SET3, 2, "SET3", A, NO_DATA);
 
-    instrMapCB.emplace_back(0xe0, &CoreSM83::SET4, 2, "SET4", B,     NO_DATA);
-    instrMapCB.emplace_back(0xe1, &CoreSM83::SET4, 2, "SET4", C,     NO_DATA);
-    instrMapCB.emplace_back(0xe2, &CoreSM83::SET4, 2, "SET4", D,     NO_DATA);
-    instrMapCB.emplace_back(0xe3, &CoreSM83::SET4, 2, "SET4", E,     NO_DATA);
-    instrMapCB.emplace_back(0xe4, &CoreSM83::SET4, 2, "SET4", H,     NO_DATA);
-    instrMapCB.emplace_back(0xe5, &CoreSM83::SET4, 2, "SET4", L,     NO_DATA);
+    instrMapCB.emplace_back(0xe0, &CoreSM83::SET4, 2, "SET4", B, NO_DATA);
+    instrMapCB.emplace_back(0xe1, &CoreSM83::SET4, 2, "SET4", C, NO_DATA);
+    instrMapCB.emplace_back(0xe2, &CoreSM83::SET4, 2, "SET4", D, NO_DATA);
+    instrMapCB.emplace_back(0xe3, &CoreSM83::SET4, 2, "SET4", E, NO_DATA);
+    instrMapCB.emplace_back(0xe4, &CoreSM83::SET4, 2, "SET4", H, NO_DATA);
+    instrMapCB.emplace_back(0xe5, &CoreSM83::SET4, 2, "SET4", L, NO_DATA);
     instrMapCB.emplace_back(0xe6, &CoreSM83::SET4, 4, "SET4", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xe7, &CoreSM83::SET4, 2, "SET4", A,     NO_DATA);
-    instrMapCB.emplace_back(0xe8, &CoreSM83::SET5, 2, "SET5", B,     NO_DATA);
-    instrMapCB.emplace_back(0xe9, &CoreSM83::SET5, 2, "SET5", C,     NO_DATA);
-    instrMapCB.emplace_back(0xea, &CoreSM83::SET5, 2, "SET5", D,     NO_DATA);
-    instrMapCB.emplace_back(0xeb, &CoreSM83::SET5, 2, "SET5", E,     NO_DATA);
-    instrMapCB.emplace_back(0xec, &CoreSM83::SET5, 2, "SET5", H,     NO_DATA);
-    instrMapCB.emplace_back(0xed, &CoreSM83::SET5, 2, "SET5", L,     NO_DATA);
+    instrMapCB.emplace_back(0xe7, &CoreSM83::SET4, 2, "SET4", A, NO_DATA);
+    instrMapCB.emplace_back(0xe8, &CoreSM83::SET5, 2, "SET5", B, NO_DATA);
+    instrMapCB.emplace_back(0xe9, &CoreSM83::SET5, 2, "SET5", C, NO_DATA);
+    instrMapCB.emplace_back(0xea, &CoreSM83::SET5, 2, "SET5", D, NO_DATA);
+    instrMapCB.emplace_back(0xeb, &CoreSM83::SET5, 2, "SET5", E, NO_DATA);
+    instrMapCB.emplace_back(0xec, &CoreSM83::SET5, 2, "SET5", H, NO_DATA);
+    instrMapCB.emplace_back(0xed, &CoreSM83::SET5, 2, "SET5", L, NO_DATA);
     instrMapCB.emplace_back(0xee, &CoreSM83::SET5, 4, "SET5", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xef, &CoreSM83::SET5, 2, "SET5", A,     NO_DATA);
+    instrMapCB.emplace_back(0xef, &CoreSM83::SET5, 2, "SET5", A, NO_DATA);
 
-    instrMapCB.emplace_back(0xf0, &CoreSM83::SET6, 2, "SET6", B,     NO_DATA);
-    instrMapCB.emplace_back(0xf1, &CoreSM83::SET6, 2, "SET6", C,     NO_DATA);
-    instrMapCB.emplace_back(0xf2, &CoreSM83::SET6, 2, "SET6", D,     NO_DATA);
-    instrMapCB.emplace_back(0xf3, &CoreSM83::SET6, 2, "SET6", E,     NO_DATA);
-    instrMapCB.emplace_back(0xf4, &CoreSM83::SET6, 2, "SET6", H,     NO_DATA);
-    instrMapCB.emplace_back(0xf5, &CoreSM83::SET6, 2, "SET6", L,     NO_DATA);
+    instrMapCB.emplace_back(0xf0, &CoreSM83::SET6, 2, "SET6", B, NO_DATA);
+    instrMapCB.emplace_back(0xf1, &CoreSM83::SET6, 2, "SET6", C, NO_DATA);
+    instrMapCB.emplace_back(0xf2, &CoreSM83::SET6, 2, "SET6", D, NO_DATA);
+    instrMapCB.emplace_back(0xf3, &CoreSM83::SET6, 2, "SET6", E, NO_DATA);
+    instrMapCB.emplace_back(0xf4, &CoreSM83::SET6, 2, "SET6", H, NO_DATA);
+    instrMapCB.emplace_back(0xf5, &CoreSM83::SET6, 2, "SET6", L, NO_DATA);
     instrMapCB.emplace_back(0xf6, &CoreSM83::SET6, 4, "SET6", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xf7, &CoreSM83::SET6, 2, "SET6", A,     NO_DATA);
-    instrMapCB.emplace_back(0xf8, &CoreSM83::SET7, 2, "SET7", B,     NO_DATA);
-    instrMapCB.emplace_back(0xf9, &CoreSM83::SET7, 2, "SET7", C,     NO_DATA);
-    instrMapCB.emplace_back(0xfa, &CoreSM83::SET7, 2, "SET7", D,     NO_DATA);
-    instrMapCB.emplace_back(0xfb, &CoreSM83::SET7, 2, "SET7", E,     NO_DATA);
-    instrMapCB.emplace_back(0xfc, &CoreSM83::SET7, 2, "SET7", H,     NO_DATA);
-    instrMapCB.emplace_back(0xfd, &CoreSM83::SET7, 2, "SET7", L,     NO_DATA);
+    instrMapCB.emplace_back(0xf7, &CoreSM83::SET6, 2, "SET6", A, NO_DATA);
+    instrMapCB.emplace_back(0xf8, &CoreSM83::SET7, 2, "SET7", B, NO_DATA);
+    instrMapCB.emplace_back(0xf9, &CoreSM83::SET7, 2, "SET7", C, NO_DATA);
+    instrMapCB.emplace_back(0xfa, &CoreSM83::SET7, 2, "SET7", D, NO_DATA);
+    instrMapCB.emplace_back(0xfb, &CoreSM83::SET7, 2, "SET7", E, NO_DATA);
+    instrMapCB.emplace_back(0xfc, &CoreSM83::SET7, 2, "SET7", H, NO_DATA);
+    instrMapCB.emplace_back(0xfd, &CoreSM83::SET7, 2, "SET7", L, NO_DATA);
     instrMapCB.emplace_back(0xfe, &CoreSM83::SET7, 4, "SET7", HL_ref, NO_DATA);
-    instrMapCB.emplace_back(0xff, &CoreSM83::SET7, 2, "SET7", A,     NO_DATA);
+    instrMapCB.emplace_back(0xff, &CoreSM83::SET7, 2, "SET7", A, NO_DATA);
 }
 
 /* ***********************************************************************************************************

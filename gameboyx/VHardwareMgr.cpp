@@ -27,7 +27,7 @@ void VHardwareMgr::resetInstance() {
     }
 }
 
-VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info) : machineInfo(_machine_info){
+VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info) : machineInfo(_machine_info) {
     cart_instance = Cartridge::getInstance(_game_ctx);
     if (cart_instance == nullptr) {
         LOG_ERROR("Couldn't create virtual cartridge");
@@ -40,11 +40,11 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
     // returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
 
-    core_instance->GetStartupHardwareInfo(machineInfo);
-    core_instance->GetCurrentRegisterValues(machineInfo.register_values);
-    core_instance->GetCurrentMemoryLocation(machineInfo);
+    core_instance->GetStartupHardwareInfo();
+    core_instance->GetCurrentRegisterValues();
+    core_instance->GetCurrentMemoryLocation();
 
-    core_instance->InitMessageBufferProgram(machineInfo.program_buffer);
+    core_instance->InitMessageBufferProgram();
 
     LOG_INFO(_game_ctx.title, " started");
 }
@@ -60,46 +60,47 @@ void VHardwareMgr::ProcessNext() {
         SimulateDelay();
         graphics_instance->NextFrame();
     }
-    
+
     // get current hardware state
     if (machineInfo.track_hardware_info) {
-        core_instance->GetCurrentHardwareState(machineInfo);  
-        GetCurrentCoreFrequency();
+        core_instance->GetCurrentHardwareState();
+        CheckCoreFrequency();
     }
 
     if (machineInfo.instruction_debug_enabled) {
-        core_instance->GetCurrentRegisterValues(machineInfo.register_values);
-        core_instance->GetCurrentMemoryLocation(machineInfo);
+        core_instance->GetCurrentRegisterValues();
+        core_instance->GetCurrentMemoryLocation();
     }
 }
 
 void VHardwareMgr::SimulateDelay() {
     while (currentTimePerFrame < timePerFrame) {
-        cur = high_resolution_clock::now();
-        currentTimePerFrame = duration_cast<nanoseconds>(cur - prev).count();
+        timeFrameCur = high_resolution_clock::now();
+        currentTimePerFrame = (u32)duration_cast<nanoseconds>(timeFrameCur - timeFramePrev).count();
     }
-    prev = cur;
+    timeFramePrev = timeFrameCur;
 
     currentTimePerFrame = 0;
 }
 
-// calculate current core frequency
-void VHardwareMgr::GetCurrentCoreFrequency() {
-    timePointCur = high_resolution_clock::now();
-    accumulatedTime += duration_cast<microseconds>(timePointCur - timePointPrev).count();
-    timePointPrev = timePointCur;
+// get core frequency once per second to stabilize output
+void VHardwareMgr::CheckCoreFrequency() {
+    timeSecondCur = high_resolution_clock::now();
+    accumulatedTime += duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
+    timeSecondPrev = timeSecondCur;
 
-    if (accumulatedTime >= nsPerSecond) {
-        machineInfo.current_frequency = core_instance->GetCurrentCoreFrequency();
+    if (accumulatedTime > msPerSecondThreshold) {
+        core_instance->GetCurrentCoreFrequency();
         accumulatedTime = 0;
     }
 }
 
+// init time points for waits/delays
 void VHardwareMgr::InitTime() {
-    prev = high_resolution_clock::now();
-    cur = high_resolution_clock::now();
-    timePointPrev = high_resolution_clock::now();
-    timePointCur = high_resolution_clock::now();
+    timeFramePrev = high_resolution_clock::now();
+    timeFrameCur = high_resolution_clock::now();
+    timeSecondPrev = high_resolution_clock::now();
+    timeSecondCur = high_resolution_clock::now();
 }
 
 /* ***********************************************************************************************************

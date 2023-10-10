@@ -11,7 +11,7 @@ using namespace std;
 	MAPPER TYPES (GAMEBOY)
 *********************************************************************************************************** */
 enum gameboy_mapper_types {
-	GB_NONE,
+	MAPPER_NONE,
 	ROM,
 	MBC1,
 	MBC2,
@@ -24,7 +24,7 @@ enum gameboy_mapper_types {
 	HuC3
 };
 
-const static vector<pair<u8, gameboy_mapper_types>> gameboy_mapper_map{
+inline const vector<pair<u8, gameboy_mapper_types>> gameboy_mapper_map{
 	{0x00, ROM},
 	{0x01, MBC1},
 	{0x02, MBC1},
@@ -49,17 +49,17 @@ const static vector<pair<u8, gameboy_mapper_types>> gameboy_mapper_map{
 	{0x1E, MBC5},
 	{0x20, MBC6},
 	{0x22, MBC7},
-	{0xFC, GB_NONE},			// TODO
-	{0xFD, GB_NONE},			// TODO
+	{0xFC, MAPPER_NONE},			// TODO
+	{0xFD, MAPPER_NONE},			// TODO
 	{0xFE, HuC3},
 	{0xFF, HuC1}
 };
 
-static gameboy_mapper_types gameboy_get_mapper(const u8& mapper_type) {
-	for (const auto& [code, type] : gameboy_mapper_map) {
-		if (code == mapper_type) { return type; }
+inline gameboy_mapper_types gameboy_get_mapper(const u8& _type_code) {
+	for (const auto& n : gameboy_mapper_map) {
+		if (n.first == _type_code) { return n.second; }
 	}
-	return GB_NONE;
+	return MAPPER_NONE;
 }
 
 /* ***********************************************************************************************************
@@ -67,10 +67,10 @@ static gameboy_mapper_types gameboy_get_mapper(const u8& mapper_type) {
 *********************************************************************************************************** */
 MmuBase* MmuBase::instance = nullptr;
 
-MmuBase* MmuBase::getInstance() {
+MmuBase* MmuBase::getInstance(machine_information& _machine_info) {
 	resetInstance();
 
-	instance = getNewMmuInstance();
+	instance = getNewMmuInstance(_machine_info);
 	if (instance == nullptr) {
 		LOG_ERROR("Couldn't create MMU");
 	}
@@ -85,15 +85,15 @@ void MmuBase::resetInstance() {
 	}
 }
 
-MmuBase* MmuBase::getNewMmuInstance() {
+MmuBase* MmuBase::getNewMmuInstance(machine_information& _machine_info) {
 	vector<u8> vec_rom = Cartridge::getInstance()->GetRomVector();
 
 	switch (gameboy_get_mapper(vec_rom[ROM_HEAD_HW_TYPE])) {
 	case MBC1:
-		return new MmuSM83_MBC1();
+		return new MmuSM83_MBC1(_machine_info);
 		break;
 	case MBC3:
-		return new MmuSM83_MBC3();
+		return new MmuSM83_MBC3(_machine_info);
 		break;
 	default:
 		return nullptr;

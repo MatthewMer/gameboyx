@@ -30,7 +30,7 @@ public:
 
 private:
 	// constructor
-	MmuSM83_MBC1();
+	explicit MmuSM83_MBC1(machine_information& _machine_info);
 	// destructor
 	~MmuSM83_MBC1() = default;
 
@@ -59,7 +59,7 @@ class MmuSM83_MBC3 : protected MmuBase
 {
 public:
 	friend class MmuBase;
-	
+
 	// members
 	void Write8Bit(const u8& _data, const u16& _addr) override;
 	void Write16Bit(const u16& _data, const u16& _addr) override;
@@ -74,7 +74,7 @@ public:
 
 private:
 	// constructor
-	MmuSM83_MBC3();
+	explicit MmuSM83_MBC3(machine_information& _machine_info);
 	// destructor
 	~MmuSM83_MBC3() = default;
 

@@ -40,30 +40,30 @@ void GraphicsUnitSM83::NextFrame() {
 
 		// everything from here just pretends to have processed the scanlines (horizontal lines) of the LCD *****
 		// request mode 0 to 2 interrupts (STAT)
-		if (graphics_ctx->STAT & (PPU_STAT_MODE0_EN | PPU_STAT_MODE1_EN | PPU_STAT_MODE2_EN)) {
+		if (*graphics_ctx->STAT & (PPU_STAT_MODE0_EN | PPU_STAT_MODE1_EN | PPU_STAT_MODE2_EN)) {
 			isrFlags |= ISR_LCD_STAT;
 		}
 
 		// request ly compare interrupt (STAT) and set flag
-		if (graphics_ctx->LYC <= LCD_SCANLINES_VBLANK) {
-			graphics_ctx->STAT |= PPU_STAT_LYC_FLAG;
-			if (graphics_ctx->STAT & PPU_STAT_LYC_SOURCE) {
+		if (*graphics_ctx->LYC <= LCD_SCANLINES_VBLANK) {
+			*graphics_ctx->STAT |= PPU_STAT_LYC_FLAG;
+			if (*graphics_ctx->STAT & PPU_STAT_LYC_SOURCE) {
 				isrFlags |= ISR_LCD_STAT;
 			}
 		}
 		else {
-			graphics_ctx->STAT &= ~PPU_STAT_LYC_FLAG;
+			*graphics_ctx->STAT &= ~PPU_STAT_LYC_FLAG;
 		}
 
 		mem_instance->RequestInterrupts(isrFlags | ISR_VBLANK);
-		graphics_ctx->LY = LCD_VBLANK_THRESHOLD;
+		*graphics_ctx->LY = LCD_VBLANK_THRESHOLD;
 	}
 }
 
 // draw tilemaps BG and WIN
 void GraphicsUnitSM83::DrawTileMapBackground() {
-	int scx = graphics_ctx->SCX;
-	int scy = graphics_ctx->SCY;
+	int scx = *graphics_ctx->SCX;
+	int scy = *graphics_ctx->SCY;
 
 	for (int x = 0; x < PPU_SCREEN_X; x+= PPU_PIXELS_TILE_X) {
 		for (int y = 0; y < PPU_SCREEN_Y; y+= PPU_PIXELS_TILE_Y) {
@@ -107,8 +107,8 @@ void GraphicsUnitSM83::DrawTileBackground(const int& _pos_x, const int& _pos_y) 
 // draw window (window pos at top left corner is (WX-7/WY) !)
 void GraphicsUnitSM83::DrawTileMapWindow() {
 	u8 win_offset = graphics_ctx->win_tilemap_offset;
-	int wx = (int)graphics_ctx->WX - 7;
-	int wy = graphics_ctx->WY;
+	int wx = (int)*graphics_ctx->WX - 7;
+	int wy = *graphics_ctx->WY;
 
 	for (int x = 0; x < PPU_TILES_HORIZONTAL - wx; x+=PPU_PIXELS_TILE_X) {
 		for (int y = 0; y < PPU_TILES_VERTICAL - wy; y+=PPU_PIXELS_TILE_Y) {

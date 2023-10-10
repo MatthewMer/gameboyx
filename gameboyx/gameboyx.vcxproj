@@ -199,7 +199,7 @@
     <ClInclude Include="GraphicsUnitSM83.h" />
     <ClInclude Include="helper_functions.h" />
     <ClInclude Include="ImGuiGameboyX.h" />
-    <ClInclude Include="guigameboyx_config.h" />
+    <ClInclude Include="imguigameboyx_config.h" />
     <ClInclude Include="include\logger.h" />
     <ClInclude Include="MemoryBase.h" />
     <ClInclude Include="MemorySM83.h" />
@@ -207,6 +207,7 @@
     <ClInclude Include="MmuBase.h" />
     <ClInclude Include="MmuSM83.h" />
     <ClInclude Include="registers.h" />
+    <ClInclude Include="ScrollableTable.h" />
     <ClInclude Include="VHardwareMgr.h" />
   </ItemGroup>
   <ItemGroup>

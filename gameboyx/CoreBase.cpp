@@ -9,6 +9,7 @@ CoreBase* CoreBase::getInstance(machine_information& _machine_info) {
 	resetInstance();
 
 	instance = new CoreSM83(_machine_info);
+
 	return instance;
 }
 

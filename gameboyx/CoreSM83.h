@@ -52,18 +52,18 @@ public:
 	friend class CoreBase;
 
 	void RunCycles() override;
-	void GetCurrentHardwareState(machine_information& _machine_info) const override;
-	void GetStartupHardwareInfo(machine_information& _machine_info) const override;
+	void GetCurrentHardwareState() const override;
+	void GetStartupHardwareInfo() const override;
 	bool CheckNextFrame() override;
-	float GetCurrentCoreFrequency() override;
+	void GetCurrentCoreFrequency() override;
 
-	void GetCurrentMemoryLocation(machine_information& _machine_info) const override;
-	void InitMessageBufferProgram(std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>& _program_buffer) override;
-	void GetCurrentRegisterValues(std::vector<std::pair<std::string, std::string>>& _register_values) const  override;
+	void GetCurrentMemoryLocation() const override;
+	void InitMessageBufferProgram() override;
+	void GetCurrentRegisterValues() const  override;
 
 private:
 	// constructor
-	CoreSM83(machine_information& _machine_info);
+	explicit CoreSM83(machine_information& _machine_info);
 	// destructor
 	~CoreSM83() = default;
 
@@ -80,7 +80,7 @@ private:
 
 	// internals
 	gbc_registers Regs = gbc_registers();
-	void InitCpu(const Cartridge& _cart_obj) override;
+	void InitCpu() override;
 	void InitRegisterStates() override;
 
 	// cpu states and checks
@@ -94,15 +94,17 @@ private:
 	// instruction members ****************
 	// lookup table
 	typedef void (CoreSM83::* instruction)();
+	// raw data, decoded data
 
 	// current instruction context
-	using instr_tuple = std::tuple < const u8, const instruction, const int, const std::string, const cgb_data_types, const cgb_data_types>;
+	using instr_tuple = std::tuple <const u8, const instruction, const int, const std::string, const cgb_data_types, const cgb_data_types>;
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
 	int machineCycles = 0;
 	int currentMachineCycles = 0;
 	int GetDelayTime() override;
-	void WriteMessageBufferRomBank(std::vector<std::tuple<int, int, std::string, std::string>>& _program_buffer_bank, const int& _bank, const std::vector<u8>& _rom_bank);
+	void GetCurrentInstruction() const override;
+	void DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const int& _bank, const int& _base_ptr, const int& _size, const u8* _rom_bank);
 
 	machine_state_context* machine_ctx;
 
@@ -113,10 +115,10 @@ private:
 	// CB instructions
 	std::vector<instr_tuple> instrMapCB;
 	void setupLookupTableCB();
-	 
+
 	// basic instruction set *****
 	void NoInstruction();
-	
+
 	// cpu control
 	void NOP();
 	void STOP();

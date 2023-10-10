@@ -36,8 +36,8 @@
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_MBC1::MmuSM83_MBC1() {
-	mem_instance = MemorySM83::getInstance();
+MmuSM83_MBC1::MmuSM83_MBC1(machine_information& _machine_info) : MmuBase(_machine_info) {
+	mem_instance = MemorySM83::getInstance(_machine_info);
 	machine_ctx = mem_instance->GetMachineContext();
 }
 
@@ -46,7 +46,7 @@ MmuSM83_MBC1::MmuSM83_MBC1() {
 *********************************************************************************************************** */
 void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 	// ROM Bank 0 -> RAM/Timer enable and ROM Bank select
-	if (_addr < ROM_BANK_N_OFFSET) {
+	if (_addr < ROM_N_OFFSET) {
 		// RAM/TIMER enable
 		if (_addr < MBC1_ROM_BANK_NUMBER_SEL_0_4) {
 			ramEnable = (_data & MBC1_RAM_ENABLE_MASK) == MBC1_RAM_ENABLE;
@@ -73,7 +73,7 @@ void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 		}
 	}
 	// VRAM 0-n
-	else if (_addr < RAM_BANK_N_OFFSET) {
+	else if (_addr < RAM_N_OFFSET) {
 		mem_instance->WriteVRAM_N(_data, _addr);
 	}
 	// RAM 0-n
@@ -130,9 +130,9 @@ void MmuSM83_MBC1::Write16Bit(const u16& _data, const u16& _addr) {
 
 u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 	// ROM Bank 0
-	if (_addr < ROM_BANK_N_OFFSET) {
+	if (_addr < ROM_N_OFFSET) {
 		if (advancedBankingMode) {
-			
+
 		}
 		else {
 			return mem_instance->ReadROM_0(_addr);
@@ -143,7 +143,7 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 		return mem_instance->ReadROM_N(_addr);
 	}
 	// VRAM 0-n
-	else if (_addr < RAM_BANK_N_OFFSET) {
+	else if (_addr < RAM_N_OFFSET) {
 		return mem_instance->ReadVRAM_N(_addr);
 	}
 	// RAM 0-n
@@ -194,7 +194,7 @@ u16 MmuSM83_MBC1::Read16Bit(const u16& _addr) {
 /* ***********************************************************************************************************
 *
 *		MBC3
-* 
+*
 *********************************************************************************************************** */
 
 /* ***********************************************************************************************************
@@ -209,7 +209,7 @@ u16 MmuSM83_MBC1::Read16Bit(const u16& _addr) {
 
 // masks
 #define MBC3_ROM_BANK_MASK				0x7f
-#define MBC3_RAM_ENABLE_MASK				0x0F
+#define MBC3_RAM_ENABLE_MASK			0x0F
 #define MBC3_RAM_BANK_MASK				0x0F
 
 // values
@@ -218,8 +218,8 @@ u16 MmuSM83_MBC1::Read16Bit(const u16& _addr) {
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_MBC3::MmuSM83_MBC3(){
-	mem_instance = MemorySM83::getInstance();
+MmuSM83_MBC3::MmuSM83_MBC3(machine_information& _machine_info) : MmuBase(_machine_info) {
+	mem_instance = MemorySM83::getInstance(_machine_info);
 	machine_ctx = mem_instance->GetMachineContext();
 }
 
@@ -228,7 +228,7 @@ MmuSM83_MBC3::MmuSM83_MBC3(){
 *********************************************************************************************************** */
 void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	// ROM Bank 0 -> RAM/Timer enable and ROM Bank select
-	if (_addr < ROM_BANK_N_OFFSET) {
+	if (_addr < ROM_N_OFFSET) {
 		// RAM/TIMER enable
 		if (_addr < MBC3_ROM_BANK_NUMBER_SELECT) {
 			timerRamEnable = (_data & MBC3_RAM_ENABLE_MASK) == MBC3_RAM_ENABLE;
@@ -257,7 +257,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		}
 	}
 	// VRAM 0-n
-	else if (_addr < RAM_BANK_N_OFFSET) {
+	else if (_addr < RAM_N_OFFSET) {
 		mem_instance->WriteVRAM_N(_data, _addr);
 	}
 	// RAM 0-n -> RTC Registers 08-0C
@@ -314,7 +314,7 @@ void MmuSM83_MBC3::Write16Bit(const u16& _data, const u16& _addr) {
 
 u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	// ROM Bank 0
-	if (_addr < ROM_BANK_N_OFFSET) {
+	if (_addr < ROM_N_OFFSET) {
 		return mem_instance->ReadROM_0(_addr);
 	}
 	// ROM Bank 1-n
@@ -322,7 +322,7 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 		return mem_instance->ReadROM_N(_addr);
 	}
 	// VRAM 0-n
-	else if (_addr < RAM_BANK_N_OFFSET) {
+	else if (_addr < RAM_N_OFFSET) {
 		return mem_instance->ReadVRAM_N(_addr);
 	}
 	// RAM 0-n

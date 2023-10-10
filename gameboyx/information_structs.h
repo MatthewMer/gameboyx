@@ -4,21 +4,21 @@
 #include <string>
 
 #include "defs.h"
-
-#define TIME_DELTA_THERSHOLD			1000000000		// ns
+#include "ScrollableTable.h"
+#include "imguigameboyx_config.h"
 
 struct machine_information {
 	// debug isntructions
 	bool instruction_debug_enabled = false;
-	// index, pc location, raw data, resolved data
-	std::vector<std::vector<std::tuple<int, int, std::string, std::string>>> program_buffer = std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>();
-	std::vector<std::pair<std::string, std::string>> register_values = std::vector<std::pair<std::string, std::string>>();
-	bool instruction_logging = true;
+	// index, address, raw data, resolved data
+	ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_ELEMENTS);
+	std::vector<debug_instr_data> register_values = std::vector<debug_instr_data>();
+	bool instruction_logging = false;
 	bool pause_execution = true;
 	int current_pc = 0;
-	int last_pc = -1;
 	int rom_bank_size = 0;
 	int current_rom_bank = 0;
+	std::string current_instruction = "";
 
 	// current hardware state
 	bool track_hardware_info = false;
@@ -32,7 +32,29 @@ struct machine_information {
 	int vram_bank_selected = 0;
 	int vram_bank_num = 0;
 
+	// memory access	-> <memory type, name>, number, size, base address, reference to memory
+	std::vector<std::tuple<std::pair<int, std::string>, int, int, int, u8**>> debug_memory = std::vector<std::tuple<std::pair<int, std::string>, int, int, int, u8**>>();
 
+	void reset_machine_information() {
+		ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_ELEMENTS);
+		std::vector<debug_instr_data> register_values = std::vector<debug_instr_data>();
+		bool instruction_logging = false;
+		bool pause_execution = true;
+		int current_pc = 0;
+		int rom_bank_size = 0;
+		int current_rom_bank = 0;
+		std::string current_instruction = "";
+
+		float current_frequency = .0f;
+		int wram_bank_selected = 0;
+		int wram_bank_num = 0;
+		int ram_bank_selected = 0;
+		int ram_bank_num = 0;
+		int rom_bank_selected = 0;
+		int rom_bank_num = 0;
+		int vram_bank_selected = 0;
+		int vram_bank_num = 0;
+	}
 };
 
 struct game_status {
@@ -42,23 +64,3 @@ struct game_status {
 	int game_to_start = 0;
 	bool request_reset = false;
 };
-
-static void reset_message_buffer(machine_information& _machine_info) {
-	//_machine_info.instruction_buffer = "";
-	_machine_info.pause_execution = true;
-	_machine_info.current_frequency = .0f;
-	_machine_info.wram_bank_selected = 0;
-	_machine_info.wram_bank_num = 0;
-	_machine_info.ram_bank_selected = 0;
-	_machine_info.ram_bank_num = 0;
-	_machine_info.rom_bank_selected = 0;
-	_machine_info.rom_bank_num = 0;
-	_machine_info.vram_bank_selected = 0;
-	_machine_info.vram_bank_num = 0;
-	_machine_info.program_buffer = std::vector<std::vector<std::tuple<int, int, std::string, std::string>>>();
-	_machine_info.register_values = std::vector<std::pair<std::string, std::string>>();
-	_machine_info.current_pc = 0;
-	_machine_info.last_pc = -1;
-	_machine_info.rom_bank_size = 0;
-	_machine_info.current_rom_bank = 0;
-}

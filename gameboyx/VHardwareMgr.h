@@ -28,7 +28,7 @@ public:
 
 private:
 	// constructor
-	explicit VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info);
+	VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info);
 	static VHardwareMgr* instance;
 	~VHardwareMgr() = default;
 
@@ -40,17 +40,18 @@ private:
 	// execution time
 	u32 timePerFrame = 0;
 	u32 currentTimePerFrame = 0;
-	steady_clock::time_point prev;
-	steady_clock::time_point cur;
+	steady_clock::time_point timeFramePrev;
+	steady_clock::time_point timeFrameCur;
 	void SimulateDelay();
-	void GetCurrentCoreFrequency();
+
 	void InitTime();
 
 	// timestamps for core frequency calculation
-	const int nsPerSecond = 1000000;
-	steady_clock::time_point timePointPrev;
-	steady_clock::time_point timePointCur;
+	const int msPerSecondThreshold = 999999;					// constant to measure 1 second
+	steady_clock::time_point timeSecondPrev;
+	steady_clock::time_point timeSecondCur;
 	u32 accumulatedTime = 0;
+	void CheckCoreFrequency();
 
 	// message fifo
 	machine_information& machineInfo;

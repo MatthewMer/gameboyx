@@ -33,7 +33,7 @@ const std::vector<std::pair<u8, std::string>> CART_TYPE_MAP{
     { 0xFF,"HuC1+RAM+BATTERY"}
 };
 
-const std::vector<std::pair<std::string, std::string>> NEW_LIC_MAP{           // only when old is set to 0x33
+const std::vector<debug_instr_data> NEW_LIC_MAP{           // only when old is set to 0x33
     {"00", "None"},
     {"01", "Nintendo R&D1"},
     {"08", "Capcom"},

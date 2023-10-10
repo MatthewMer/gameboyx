@@ -28,38 +28,18 @@
 #define ROM_BASE_SIZE               0x8000              // 32 KiB
 #define RAM_BASE_SIZE               0x2000              // 8 KiB 
 
-// CPU DEFINES *****
-
-// initial register values (CGB in CGB and DMG mode)
-#define CGB_AF                      0x1180
-#define CGB_BC                      0x0000
-#define CGB_SP                      0xFFFE
-#define CGB_PC                      0x0100
-
-#define CGB_CGB_DE                  0xFF56
-#define CGB_CGB_HL                  0x000D
-
-#define CGB_DMG_DE                  0x0008
-#define CGB_DMG_HL                  0x007C
-
-// initial memory states
-#define CGB_LCDC                    0x91
-#define CGB_STAT                    0x81
-#define CGB_IE                      0x00
-#define CGB_IF                      0xE1
-
 // SM83 MEMORY MAPPING *****
-#define ROM_BANK_0_OFFSET           0x0000
-#define ROM_BANK_0_SIZE             0x4000
+#define ROM_0_OFFSET                0x0000
+#define ROM_0_SIZE                  0x4000
 
-#define ROM_BANK_N_OFFSET           0x4000
-#define ROM_BANK_N_SIZE             0x4000
+#define ROM_N_OFFSET                0x4000
+#define ROM_N_SIZE                  0x4000
 
 #define VRAM_N_OFFSET               0x8000              // CGB mode: switchable (0-1)
 #define VRAM_N_SIZE                 0x2000
 
-#define RAM_BANK_N_OFFSET           0xA000              // external (Cartridge)
-#define RAM_BANK_N_SIZE             0x2000
+#define RAM_N_OFFSET                0xA000              // external (Cartridge)
+#define RAM_N_SIZE                  0x2000
 
 #define WRAM_0_OFFSET               0xC000
 #define WRAM_0_SIZE                 0x1000
@@ -281,3 +261,36 @@
 #define PPU_SCREEN_X                160
 #define PPU_SCREEN_Y                144
 #define PPU_TILEMAP_SIZE_1D         256
+
+/* ***********************************************************************************************************
+    REGISTERS INITIAL STATES
+*********************************************************************************************************** */
+// initial register values (CGB in CGB and DMG mode)
+#define INIT_CGB_AF                     0x1180
+#define INIT_CGB_BC                     0x0000
+#define INIT_CGB_SP                     0xFFFE
+#define INIT_CGB_PC                     0x0100
+
+#define INIT_CGB_CGB_DE                 0xFF56
+#define INIT_CGB_CGB_HL                 0x000D
+
+#define INIT_CGB_DMG_DE                 0x0008
+#define INIT_CGB_DMG_HL                 0x007C
+
+// misc registers (IO)
+// ISR
+#define INIT_CGB_IE                     0x00
+#define INIT_CGB_IF                     0xE1
+
+// graphics
+#define INIT_BGP                        0xFC
+#define INIT_OBP0                       0xFF
+#define INIT_OBP1                       0xFF
+
+// bank selects
+#define INIT_WRAM_BANK                  0x01
+#define INIT_VRAM_BANK                  0x00
+
+// initial memory states
+#define INIT_CGB_LCDC                   0x91
+#define INIT_CGB_STAT                   0x81
