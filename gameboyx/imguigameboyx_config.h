@@ -50,25 +50,25 @@ inline const std::vector<float> HW_INFO_COLUMNS = {
     1 / 2.f
 };
 
-inline const ImVec2 debug_mem_win_size(600.f, 0.f);
+inline const ImVec2 debug_mem_win_size(500.f, 0.f);
 inline const std::vector<std::pair<std::string, float>> DEBUG_MEM_COLUMNS{
     {"", 2 / 18.f},
-    {"0", 1 / 18.f},
-    {"1", 1 / 18.f},
-    {"2", 1 / 18.f},
-    {"3", 1 / 18.f},
-    {"4", 1 / 18.f},
-    {"5", 1 / 18.f},
-    {"6", 1 / 18.f},
-    {"7", 1 / 18.f},
-    {"8", 1 / 18.f},
-    {"9", 1 / 18.f},
-    {"A", 1 / 18.f},
-    {"B", 1 / 18.f},
-    {"C", 1 / 18.f},
-    {"D", 1 / 18.f},
-    {"E", 1 / 18.f},
-    {"F", 1 / 18.f},
+    {"00", 1 / 18.f},
+    {"01", 1 / 18.f},
+    {"02", 1 / 18.f},
+    {"03", 1 / 18.f},
+    {"04", 1 / 18.f},
+    {"05", 1 / 18.f},
+    {"06", 1 / 18.f},
+    {"07", 1 / 18.f},
+    {"08", 1 / 18.f},
+    {"09", 1 / 18.f},
+    {"0A", 1 / 18.f},
+    {"0B", 1 / 18.f},
+    {"0C", 1 / 18.f},
+    {"0D", 1 / 18.f},
+    {"0E", 1 / 18.f},
+    {"0F", 1 / 18.f},
 };
 
 inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Color" };
@@ -83,4 +83,4 @@ inline const ImVec4 IMGUI_CLR_COLOR(CLR_COL, CLR_COL, CLR_COL, 1.0f);
 #define DEBUG_MEMORY_LINES          30
 #define DEBUG_MEMORY_ELEM_PER_LINE  0x10
 
-#define DEBUG_INSTR_ELEMENTS        20
+#define DEBUG_INSTR_ELEMENTS        21

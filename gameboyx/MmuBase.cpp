@@ -11,7 +11,7 @@ using namespace std;
 	MAPPER TYPES (GAMEBOY)
 *********************************************************************************************************** */
 enum gameboy_mapper_types {
-	MAPPER_NONE,
+	GB_NONE,
 	ROM,
 	MBC1,
 	MBC2,
@@ -24,7 +24,7 @@ enum gameboy_mapper_types {
 	HuC3
 };
 
-inline const vector<pair<u8, gameboy_mapper_types>> gameboy_mapper_map{
+const static vector<pair<u8, gameboy_mapper_types>> gameboy_mapper_map{
 	{0x00, ROM},
 	{0x01, MBC1},
 	{0x02, MBC1},
@@ -49,17 +49,17 @@ inline const vector<pair<u8, gameboy_mapper_types>> gameboy_mapper_map{
 	{0x1E, MBC5},
 	{0x20, MBC6},
 	{0x22, MBC7},
-	{0xFC, MAPPER_NONE},			// TODO
-	{0xFD, MAPPER_NONE},			// TODO
+	{0xFC, GB_NONE},			// TODO
+	{0xFD, GB_NONE},			// TODO
 	{0xFE, HuC3},
 	{0xFF, HuC1}
 };
 
-inline gameboy_mapper_types gameboy_get_mapper(const u8& _type_code) {
-	for (const auto& n : gameboy_mapper_map) {
-		if (n.first == _type_code) { return n.second; }
+static gameboy_mapper_types gameboy_get_mapper(const u8& mapper_type) {
+	for (const auto& [code, type] : gameboy_mapper_map) {
+		if (code == mapper_type) { return type; }
 	}
-	return MAPPER_NONE;
+	return GB_NONE;
 }
 
 /* ***********************************************************************************************************

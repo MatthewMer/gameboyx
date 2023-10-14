@@ -37,7 +37,7 @@ struct machine_information {
 
 	void reset_machine_information() {
 		ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_ELEMENTS);
-		std::vector<debug_instr_data> register_values = std::vector<debug_instr_data>();
+		std::vector<register_data> register_values = std::vector<register_data>();
 		bool instruction_logging = false;
 		bool pause_execution = true;
 		int current_pc = 0;

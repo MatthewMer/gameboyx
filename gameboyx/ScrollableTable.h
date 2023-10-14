@@ -7,18 +7,16 @@
 #include "logger.h"
 
 // index, address, data (T)
-template <class T> using ScrollableTableEntry = std::tuple<int, int, T>;
+template <class T> using ScrollableTableEntry = std::tuple<int, T>;
 enum entry_content_types {
-    ST_ENTRY_INDEX,
     ST_ENTRY_ADDRESS,
     ST_ENTRY_DATA
 };
 
 // size, offset, vector<entries>
-template <class T> using ScrollableTableBuffer = std::tuple<int ,int, std::vector<ScrollableTableEntry<T>>>;
+template <class T> using ScrollableTableBuffer = std::tuple<int ,std::vector<ScrollableTableEntry<T>>>;
 enum buffer_content_types {
     ST_BUF_SIZE,
-    ST_BUF_OFFSET,
     ST_BUF_BUFFER
 };
 
@@ -28,6 +26,11 @@ public:
 	virtual void ScrollDown(const int& _num) = 0;
 	virtual void ScrollUpPage() = 0;
 	virtual void ScrollDownPage() = 0;
+    virtual void SearchBank(int& _bank) = 0;
+    virtual bank_index GetCurrentIndexCentre() = 0;
+    virtual int& GetAddressByIndex(const bank_index& _index) = 0;
+    virtual bank_index GetIndexByAddress(const int& _address) = 0;
+    virtual void SearchAddress(int& _addr) = 0;
 
 protected:
 	ScrollableTableBase() = default;
@@ -38,8 +41,8 @@ template <class T> class ScrollableTable : public ScrollableTableBase
 {
 public:
 	explicit constexpr ScrollableTable(const int& _elements_to_show) : elementsToShow(_elements_to_show) {
-		endIndex.y = startIndex.y + (elementsToShow - 1);
-        currentIndex = startIndex;
+		endIndex.index = startIndex.index + elementsToShow;
+        indexIterator = startIndex;
 	};
 	constexpr ~ScrollableTable() noexcept {};
 
@@ -49,7 +52,7 @@ public:
 			buffer = std::vector<ScrollableTableBuffer<T>>(_right.buffer);
 			memcpy(&startIndex, &_right.startIndex, sizeof(_right.startIndex));
 			memcpy(&endIndex, &_right.startIndex, sizeof(_right.startIndex));
-			memcpy(&currentIndex, &_right.currentIndex, sizeof(_right.currentIndex));
+			memcpy(&indexIterator, &_right.indexIterator, sizeof(_right.indexIterator));
 			memcpy(&elementsToShow, &_right.elementsToShow, sizeof(_right.elementsToShow));
 			memcpy(&bufferSize, &_right.bufferSize, sizeof(_right.bufferSize));
 			return *this;
@@ -65,22 +68,25 @@ public:
 	void ScrollDown(const int& _num) override;
 	void ScrollUpPage() override;
 	void ScrollDownPage() override;
+    void SearchBank(int& _bank) override;
+    void SearchAddress(int& _addr) override;
 
 	bool GetNextEntry(T& _entry);
-	Vec2 GetCurrentIndex();
-	bool CompareIndex(const Vec2& _index) const;
-	void SwitchBank(int& _bank);
-    void ScrollToAddress(Vec2& _index, const int& _addr);
+    T& GetEntry(bank_index& _instr_index);
 
-	void SearchAddress(int& _addr);
+    bank_index& GetCurrentIndex();
+    bank_index GetCurrentIndexCentre() override;
+    int& GetAddressByIndex(const bank_index& _index) override;
+    bank_index GetIndexByAddress(const int& _address) override;
 
 private:
 
 	// size, offset <index, address,  template type T>
 	std::vector<ScrollableTableBuffer<T>> buffer = std::vector<ScrollableTableBuffer<T>>();
-	Vec2 startIndex = Vec2(0, 0);
-	Vec2 endIndex = Vec2(0, 0);
-	Vec2 currentIndex = Vec2(0, 0);
+	bank_index startIndex = bank_index(0, 0);
+	bank_index endIndex = bank_index(0, 0);
+	bank_index indexIterator = bank_index(0, 0);
+    bank_index currentIndex = bank_index(0, 0);
 	int bufferSize = 0;
 	int elementsToShow;
 };
@@ -88,60 +94,67 @@ private:
 template <class T> void ScrollableTable<T>::ScrollUp(const int& _num) {
     static bool full_scroll = true;
 
-    if (startIndex.x > 0 || startIndex.y > 0) {
-        startIndex.y -= _num;
-        if (startIndex.y < 0) {
-            if (startIndex.x == 0) {
-                startIndex.y = 0;
+    if (startIndex.bank > 0 || startIndex.index > 0) {
+        startIndex.index -= _num;
+        if (startIndex.index < 0) {
+            if (startIndex.bank == 0) {
+                startIndex.index = 0;
                 full_scroll = false;
             }
             else {
-                startIndex.x--;
-                startIndex.y += get<ST_BUF_SIZE>(buffer[startIndex.x]);
+                startIndex.bank--;
+                startIndex.index += get<ST_BUF_SIZE>(buffer[startIndex.bank]);
             }
         }
 
         if (full_scroll) {
-            endIndex.y -= _num;
-            if (endIndex.y < 0) {
-                endIndex.x--;
-                endIndex.y += get<ST_BUF_SIZE>(buffer[endIndex.x]);
+            endIndex.index -= _num;
+            if (endIndex.index < 1) {
+                endIndex.bank--;
+                endIndex.index += get<ST_BUF_SIZE>(buffer[endIndex.bank]);
             }
         }
         else {
-            endIndex.y = startIndex.y + elementsToShow - 1;
+            endIndex.index = startIndex.index + elementsToShow;
         }
     }
+
+    indexIterator = startIndex;
 }
 
 template <class T> void ScrollableTable<T>::ScrollDown(const int& _num) {
     static bool full_scroll = true;
+    int current_buf_size_end = get<ST_BUF_SIZE>(buffer[endIndex.bank]);
 
-    if (endIndex.x < bufferSize - 1 || endIndex.y < get<ST_BUF_SIZE>(buffer[endIndex.x]) - 1) {
-        endIndex.y += _num;
-        if (endIndex.y >= get<ST_BUF_SIZE>(buffer[endIndex.x])) {
-            if (endIndex.x == bufferSize - 1) {
-                endIndex.y = get<ST_BUF_SIZE>(buffer[endIndex.x]) - 1;
+    if (endIndex.bank < bufferSize - 1 || endIndex.index < current_buf_size_end) {
+        endIndex.index += _num;
+        if (endIndex.index > get<ST_BUF_SIZE>(buffer[endIndex.bank])) {
+            if (endIndex.bank == bufferSize - 1) {
+                endIndex.index = get<ST_BUF_SIZE>(buffer[endIndex.bank]);
                 full_scroll = false;
             }
             else {
-                endIndex.y -= get<ST_BUF_SIZE>(buffer[endIndex.x]);
-                endIndex.x++;
+                endIndex.index -= get<ST_BUF_SIZE>(buffer[endIndex.bank]);
+                endIndex.bank++;
             }
         }
 
 
         if (full_scroll) {
-            startIndex.y += _num;
-            if (startIndex.y >= get<ST_BUF_SIZE>(buffer[startIndex.x])) {
-                startIndex.y -= get<ST_BUF_SIZE>(buffer[startIndex.x]);
-                startIndex.x++;
+            int current_buf_size_start = get<ST_BUF_SIZE>(buffer[startIndex.bank]);
+
+            startIndex.index += _num;
+            if (startIndex.index >= current_buf_size_start) {
+                startIndex.index -= current_buf_size_start;
+                startIndex.bank++;
             }
         }
         else {
-            startIndex.y = endIndex.y - (elementsToShow - 1);
+            startIndex.index = endIndex.index - elementsToShow;
         }
     }
+
+    indexIterator = startIndex;
 }
 
 template <class T> void ScrollableTable<T>::ScrollUpPage() {
@@ -152,82 +165,109 @@ template <class T> void ScrollableTable<T>::ScrollDownPage() {
     ScrollDown(elementsToShow);
 }
 
-template <class T> void ScrollableTable<T>::SwitchBank(int& _bank) {
-    return;
+template <class T> void ScrollableTable<T>::SearchBank(int& _bank) {
+    if (_bank < 0) { _bank = 0; }
+    else if (_bank > bufferSize - 1) { _bank = bufferSize - 1; }
+
+    startIndex = bank_index(_bank, 0);
+    endIndex = bank_index(_bank, elementsToShow);
+
+    ScrollUp(elementsToShow / 2);
 }
 
 template <class T> void ScrollableTable<T>::SearchAddress(int& _addr) {
-    // limit given address to address space of current bank
-    ScrollableTableBuffer<T>& current_bank = buffer[startIndex.x];
+    ScrollableTableBuffer<T>& current_bank = buffer[startIndex.bank];
     std::vector<ScrollableTableEntry<T>>& entries = get<ST_BUF_BUFFER>(current_bank);
 
     int first_address = get<ST_ENTRY_ADDRESS>(entries.front());
     int last_address = get<ST_ENTRY_ADDRESS>(entries.back());
 
     if (_addr < first_address) { _addr = first_address; }
-    if (_addr > last_address) { _addr = last_address; }
+    else if (_addr > last_address) { _addr = last_address; }
 
-    int index;
-    int prev_addr;
-    int next_addr;
-    int bank_size = get<ST_BUF_SIZE>(current_bank);
-    ScrollableTableEntry<T> current_entry, next_entry;
-
-    for (index = 0; index < bank_size - 1; index++) {
-        current_entry = entries[index];
-        prev_addr = get<ST_ENTRY_ADDRESS>(current_entry);
-
-        if (index + 1 == bank_size) { next_addr = bank_size; }
-        else {
-            next_entry = entries[index + 1];
-            next_addr = get<ST_ENTRY_ADDRESS>(next_entry);
-        }
-
-        if (prev_addr <= _addr &&
-            next_addr > _addr)
+    int i;
+    for (i = 0; i < get<ST_BUF_SIZE>(current_bank) - 1; i++) {
+        if (get<ST_ENTRY_ADDRESS>(entries[i]) <= _addr &&
+            get<ST_ENTRY_ADDRESS>(entries[i + 1]) > _addr) 
         {
             break;
         }
     }
 
-    if (index > startIndex.y) {
-        ScrollUp(index - startIndex.y);
-    }
-    else if (index < startIndex.y) {
-        ScrollDown(startIndex.y - index);
-    }
+    int index = i - elementsToShow / 2;
+    if (index < startIndex.index) { ScrollUp(startIndex.index - index); }
+    else if (index > startIndex.index) { ScrollDown(index - startIndex.index); }
 
-    _addr = startIndex.y;
-}
-
-template <class T> void ScrollableTable<T>::ScrollToAddress(Vec2& _index, const int& _addr) {
-
-}
-
-template <class T> bool ScrollableTable<T>::CompareIndex(const Vec2& _index) const {
-    return currentIndex == _index;
+    indexIterator = startIndex;
 }
 
 template <class T> bool ScrollableTable<T>::GetNextEntry(T& _entry) {
-
-    if (currentIndex > endIndex) { 
-        currentIndex = startIndex; 
+    if (indexIterator == endIndex) {
+        indexIterator = startIndex;
         return false;
     }
+    else if (indexIterator.index == get<ST_BUF_SIZE>(buffer[indexIterator.bank])) {
+        indexIterator.bank++;
+        indexIterator.index = 0;
+    }
 
-    ScrollableTableBuffer<T>& current_bank = buffer[currentIndex.x];
-    ScrollableTableEntry<T>& current_entry = get<ST_BUF_BUFFER>(current_bank)[currentIndex.y];
+    ScrollableTableBuffer<T>& current_bank = buffer[indexIterator.bank];
+    ScrollableTableEntry<T>& current_entry = get<ST_BUF_BUFFER>(current_bank)[indexIterator.index];
     _entry = get<ST_ENTRY_DATA>(current_entry);
     
-    currentIndex.y++;
-    if (currentIndex.y > get<ST_BUF_SIZE>(current_bank) - 1) {
-        currentIndex.y = 0;
-        currentIndex.x++;
-    }
+    currentIndex = indexIterator;
+    indexIterator.index++;
 
     return true;
 }
 
-template <class T> Vec2 ScrollableTable<T>::GetCurrentIndex() {
+template <class T> T& ScrollableTable<T>::GetEntry(bank_index& _instr_index) {
+    ScrollableTableBuffer<T>& current_bank = buffer[_instr_index.bank];
+    ScrollableTableEntry<T>& current_entry = get<ST_BUF_BUFFER>(current_bank)[_instr_index.index];
+    return get<ST_ENTRY_DATA>(current_entry);
+}
+
+template <class T> bank_index& ScrollableTable<T>::GetCurrentIndex() {
     return currentIndex;
+}
+
+template <class T> bank_index ScrollableTable<T>::GetCurrentIndexCentre() {
+    bank_index index = startIndex;
+    index.index += elementsToShow / 2;
+
+    int current_bank_size = get<ST_BUF_SIZE>(buffer[index.bank]);
+
+    if (index.index >= current_bank_size) {
+        index.index -= current_bank_size;
+        index.bank++;
+    }
+
+    return index;
+}
+
+template <class T> int& ScrollableTable<T>::GetAddressByIndex(const bank_index& _index) {
+    return get<ST_ENTRY_ADDRESS>(get<ST_BUF_BUFFER>(buffer[_index.bank])[_index.index]);
+}
+
+template <class T> bank_index ScrollableTable<T>::GetIndexByAddress(const int& _address) {
+    ScrollableTableBuffer<T>& current_bank = buffer[startIndex.bank];
+    std::vector<ScrollableTableEntry<T>>& entries = get<ST_BUF_BUFFER>(current_bank);
+
+    int first_address = get<ST_ENTRY_ADDRESS>(entries.front());
+    int last_address = get<ST_ENTRY_ADDRESS>(entries.back());
+    int addr = _address;
+
+    if (addr < first_address) { addr = first_address; }
+    else if (addr > last_address) { addr = last_address; }
+
+    int i;
+    for (i = 0; i < get<ST_BUF_SIZE>(current_bank) - 1; i++) {
+        if (get<ST_ENTRY_ADDRESS>(entries[i]) <= addr &&
+            get<ST_ENTRY_ADDRESS>(entries[i + 1]) > addr)
+        {
+            break;
+        }
+    }
+
+    return bank_index(startIndex.bank, i);
 }

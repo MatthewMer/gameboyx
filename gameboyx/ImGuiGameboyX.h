@@ -55,15 +55,14 @@ private:
 	bool deleteGames = false;
 
 	// debug instructions
-	Vec2 debugInstrIndex = Vec2(0, 0);					// bank, index
-
-	int debugAddrToSearch = 0;
-	int debugBankToSearch = 0;
+	bank_index debugInstrIndex = bank_index(0, 0);					// bank, index
+	int debugInstrBank = 0;
+	int debugInstrAddress = 0;
 
 	bool debugScrollDown = false;
 	bool debugScrollUp = false;
 
-	Vec2 debugCurrentBreakpoint = Vec2(0, 0);
+	bank_index debugCurrentBreakpoint = bank_index(0, 0);
 	bool debugCurrentBreakpointSet = false;
 
 	bool debugAutoRun = false;
@@ -71,7 +70,7 @@ private:
 	int debugLastProgramCounter = -1;
 
 	// vector per memory type <start index, end index>
-	std::vector<std::pair<int, std::vector<std::pair<Vec2, Vec2>>>> debugMemoryIndex = std::vector<std::pair<int, std::vector<std::pair<Vec2, Vec2>>>>();
+	std::vector<std::pair<int, std::vector<std::pair<bank_index, bank_index>>>> debugMemoryIndex = std::vector<std::pair<int, std::vector<std::pair<bank_index, bank_index>>>>();
 
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;
@@ -99,8 +98,8 @@ private:
 	void ActionEndGame();
 	void ActionRequestReset();
 
-	void ActionBankSwitch();
-	void ActionDebugInstrJumpToAddr();
+	void ActionBankSwitch(ScrollableTableBase& _table_obj, int& _bank);
+	void ActionSearchAddress(ScrollableTableBase& _table_obj, int& _address);
 
 	// helpers
 	void AddGameGuiCtx(const game_info& _game_ctx);
@@ -109,14 +108,14 @@ private:
 	void SetupMemInspectorIndex();
 	void ResetDebugInstr(); 
 	void ResetMemInspector();
-	void DebugSearchAddrSet();
-	void BankScrollAddrSet(const int& _bank, const int& _index);
-	void CurrentPCAutoScroll();
+	bool CheckCurrentPCAutoScroll();
 	bool CheckBreakPoint();
-	void SetBreakPoint(const Vec2& _current_index);
+	void SetBreakPoint(const bank_index& _current_index);
 	void WriteInstructionLog();
+	void ResetEventMouseWheel();
+	void SetBankAndAddress(ScrollableTableBase& _tyble_obj, int& _bank, int& _address);
 
-	void DebugCheckScroll(ScrollableTableBase& _table_obj);
+	bool CheckScroll(ScrollableTableBase& _table_obj);
 
 	void ProcessMainMenuKeys();
 

@@ -428,7 +428,42 @@ void CoreSM83::GetCurrentHardwareState() const {
     machineInfo.wram_bank_selected = machine_ctx->wram_bank_selected + 1;
 }
 
-void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const int& _bank, const int& _base_ptr, const int& _size, const u8* _rom_bank) {
+void CoreSM83::GetCurrentRegisterValues() const {
+    machineInfo.register_values.clear();
+
+    machineInfo.register_values.emplace_back(get_register_name(A), format("{:x}", Regs.A));
+    machineInfo.register_values.emplace_back(get_register_name(F), format("{:x}", Regs.F));
+    machineInfo.register_values.emplace_back(get_register_name(BC), format("{:x}", Regs.BC));
+    machineInfo.register_values.emplace_back(get_register_name(DE), format("{:x}", Regs.DE));
+    machineInfo.register_values.emplace_back(get_register_name(HL), format("{:x}", Regs.HL));
+    machineInfo.register_values.emplace_back(get_register_name(SP), format("{:x}", Regs.SP));
+    machineInfo.register_values.emplace_back(get_register_name(PC), format("{:x}", Regs.PC));
+}
+
+void CoreSM83::GetCurrentInstruction() const {
+    machineInfo.current_instruction =
+        get_register_name(A) + get_register_name(F) + format("({:x})", (((u16)Regs.A) << 8) | Regs.F) +
+        get_register_name(BC) + format("({:x}) ", Regs.BC) +
+        get_register_name(DE) + format("({:x}) ", Regs.DE) +
+        get_register_name(HL) + format("({:x}) ", Regs.HL) +
+        get_register_name(SP) + format("({:x}) ", Regs.SP);
+
+    machineInfo.current_instruction += " -> ";
+
+    machineInfo.current_instruction += get_register_name(PC) + format("({:x}): ", machineInfo.current_pc) +
+        get<3>(*instrPtr) + format("({:x}) ", opcode);
+
+    string arg = get_arg_name(get<4>(*instrPtr));
+    if (arg.compare("") != 0) { machineInfo.current_instruction += " " + arg; }
+
+    arg = get_arg_name(get<5>(*instrPtr));
+    if (arg.compare("") != 0) { machineInfo.current_instruction += ", " + arg; }
+}
+
+/* ***********************************************************************************************************
+    PREPARE DEBUG DATA (DISASSEMBLED INSTRUCTIONS)
+*********************************************************************************************************** */
+inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const int& _bank, const int& _base_ptr, const int& _size, const u8* _rom_bank) {
     u16 data = 0;
     bool cb = false;
 
@@ -441,13 +476,13 @@ void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _pr
 
         // print rom header info
         if (addr == ROM_HEAD_LOGO && _bank == 0) {
-            current_entry = ScrollableTableEntry<debug_instr_data>(i, addr, debug_instr_data("ROM" + to_string(_bank) + ": " + format("{:x}  ", addr), "- HEADER INFO -"));
+            current_entry = ScrollableTableEntry<debug_instr_data>(addr, debug_instr_data("ROM" + to_string(_bank) + ": " + format("{:x}  ", addr), "- HEADER INFO -"));
             addr = ROM_HEAD_END + 1;
             buffer.emplace_back(current_entry);
         }
         else {
             u8 opcode = _rom_bank[addr];
-            current_entry = ScrollableTableEntry<debug_instr_data>(i, addr + _base_ptr, debug_instr_data("", ""));
+            current_entry = ScrollableTableEntry<debug_instr_data>(addr + _base_ptr, debug_instr_data("", ""));
 
             instr_tuple* instr_ptr;
 
@@ -484,7 +519,6 @@ void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _pr
     }
 
     get<ST_BUF_SIZE>(_program_buffer) = get<ST_BUF_BUFFER>(_program_buffer).size();
-    get<ST_BUF_OFFSET>(_program_buffer) = _base_ptr;
 }
 
 void CoreSM83::InitMessageBufferProgram() {
@@ -503,38 +537,6 @@ void CoreSM83::InitMessageBufferProgram() {
             }
         }
     }
-}
-
-void CoreSM83::GetCurrentRegisterValues() const {
-    machineInfo.register_values.clear();
-
-    machineInfo.register_values.emplace_back(get_register_name(A), format("{:x}", Regs.A));
-    machineInfo.register_values.emplace_back(get_register_name(F), format("{:x}", Regs.F));
-    machineInfo.register_values.emplace_back(get_register_name(BC), format("{:x}", Regs.BC));
-    machineInfo.register_values.emplace_back(get_register_name(DE), format("{:x}", Regs.DE));
-    machineInfo.register_values.emplace_back(get_register_name(HL), format("{:x}", Regs.HL));
-    machineInfo.register_values.emplace_back(get_register_name(SP), format("{:x}", Regs.SP));
-    machineInfo.register_values.emplace_back(get_register_name(PC), format("{:x}", Regs.PC));
-}
-
-void CoreSM83::GetCurrentInstruction() const {
-    machineInfo.current_instruction =
-        get_register_name(A) + get_register_name(F) + format("({:x})", (((u16)Regs.A) << 8) | Regs.F) +
-        get_register_name(BC) + format("({:x}) ", Regs.BC) +
-        get_register_name(DE) + format("({:x}) ", Regs.DE) +
-        get_register_name(HL) + format("({:x}) ", Regs.HL) +
-        get_register_name(SP) + format("({:x}) ", Regs.SP);
-
-    machineInfo.current_instruction += " -> ";
-
-    machineInfo.current_instruction += get_register_name(PC) + format("({:x}): ", Regs.PC) +
-        get<3>(*instrPtr) + format("({:x}) ", opcode);
-
-    string arg = get_arg_name(get<4>(*instrPtr));
-    if (arg.compare("") != 0) { machineInfo.current_instruction += " " + arg; }
-
-    arg = get_arg_name(get<5>(*instrPtr));
-    if (arg.compare("") != 0) { machineInfo.current_instruction += ", " + arg; }
 }
 
 /* ***********************************************************************************************************

@@ -14,21 +14,15 @@ using i32 = int32_t;
 using i64 = int64_t;
 
 using debug_instr_data = std::pair<std::string, std::string>;
+using register_data = std::pair<std::string, std::string>;
 
-struct Vec2 {
-    int x;
-    int y;
+struct bank_index {
+    int bank;
+    int index;
 
-    Vec2(int _x, int _y) : x(_x), y(_y) {};
+    bank_index(int _bank, int _index) : bank(_bank), index(_index) {};
 
-    bool operator==(const Vec2& n) const {
-        return (n.x == x) && (n.y == y);
-    }
-
-    bool operator>(const Vec2& n) {
-        return (x >= n.x) && (y > n.y);
-    }
-    bool operator<(const Vec2& n) {
-        return (x < n.x) && (y < n.y);
+    constexpr bool operator==(const bank_index& n) const {
+        return (n.bank == bank) && (n.index == index);
     }
 };
