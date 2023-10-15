@@ -451,12 +451,12 @@ void CoreSM83::GetCurrentInstruction() const {
     machineInfo.current_instruction += " -> ";
 
     machineInfo.current_instruction += get_register_name(PC) + format("({:x}): ", machineInfo.current_pc) +
-        get<3>(*instrPtr) + format("({:x}) ", opcode);
+        get<INSTR_MNEMONIC>(*instrPtr) + format("({:x}) ", opcode);
 
-    string arg = get_arg_name(get<4>(*instrPtr));
+    string arg = get_arg_name(get<INSTR_ARG_1>(*instrPtr));
     if (arg.compare("") != 0) { machineInfo.current_instruction += " " + arg; }
 
-    arg = get_arg_name(get<5>(*instrPtr));
+    arg = get_arg_name(get<INSTR_ARG_2>(*instrPtr));
     if (arg.compare("") != 0) { machineInfo.current_instruction += ", " + arg; }
 }
 
@@ -486,12 +486,8 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
 
             instr_tuple* instr_ptr;
 
-            if (cb) {
-                instr_ptr = &instrMapCB[opcode];
-            }
-            else {
-                instr_ptr = &instrMap[opcode];
-            }
+            if (cb) { instr_ptr = &instrMapCB[opcode]; }
+            else { instr_ptr = &instrMap[opcode]; }
             cb = opcode == 0xCB;
 
             string raw_data;
@@ -523,17 +519,15 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
 
 void CoreSM83::InitMessageBufferProgram() {
     int bank_num = 0;
-    for (const auto& [type, num, size, base_ptr, ref] : machineInfo.debug_memory) {
-        if (type.first == ENUM_ROM_N) {
+    for (const auto& [type, num, size, base_ptr, ref] : machineInfo.memory_access) {
+        if (type == ENUM_ROM_N) {
             for (int i = 0; i < num; i++) {
-
-                // index, address, raw data, resolved data
                 auto next_bank_table = ScrollableTableBuffer<debug_instr_data>();
 
                 DecodeRomBankContent(next_bank_table, bank_num, base_ptr, size, ref[i]);
-                bank_num++;
-
+                
                 machineInfo.program_buffer.AddMemoryArea(next_bank_table);
+                bank_num++;
             }
         }
     }

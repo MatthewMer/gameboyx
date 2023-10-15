@@ -7,12 +7,18 @@
 #include "ScrollableTable.h"
 #include "imguigameboyx_config.h"
 
+template <class T> using MemoryBufferEntry = std::pair<std::string, std::vector<T>>;			// memory buffer: type, vector<Table>
+template <class T> using MemoryBuffer = std::vector<MemoryBufferEntry<T>>;				// memory buffer: type, vector<Table>
+
+using DirectMemoryAccessEntry = std::tuple<int, int, int, int, u8**>;					// memory access: type, num, size, base_ptr, ref
+using DirectMemoryAccess = std::vector<DirectMemoryAccessEntry>;						// memory access: type, num, size, base_ptr, ref
+
 struct machine_information {
 	// debug isntructions
 	bool instruction_debug_enabled = false;
 	// index, address, raw data, resolved data
-	ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_ELEMENTS);
-	std::vector<debug_instr_data> register_values = std::vector<debug_instr_data>();
+	ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+	std::vector<register_data> register_values = std::vector<register_data>();
 	bool instruction_logging = false;
 	bool pause_execution = true;
 	int current_pc = 0;
@@ -32,11 +38,11 @@ struct machine_information {
 	int vram_bank_selected = 0;
 	int vram_bank_num = 0;
 
-	// memory access	-> <memory type, name>, number, size, base address, reference to memory
-	std::vector<std::tuple<std::pair<int, std::string>, int, int, int, u8**>> debug_memory = std::vector<std::tuple<std::pair<int, std::string>, int, int, int, u8**>>();
+	DirectMemoryAccess memory_access = DirectMemoryAccess();
+	MemoryBuffer<ScrollableTable<memory_data>> memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
 
 	void reset_machine_information() {
-		ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_ELEMENTS);
+		ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 		std::vector<register_data> register_values = std::vector<register_data>();
 		bool instruction_logging = false;
 		bool pause_execution = true;
@@ -54,6 +60,9 @@ struct machine_information {
 		int rom_bank_num = 0;
 		int vram_bank_selected = 0;
 		int vram_bank_num = 0;
+
+		DirectMemoryAccess memory_access = DirectMemoryAccess();
+		MemoryBuffer<ScrollableTable<memory_data>> memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
 	}
 };
 

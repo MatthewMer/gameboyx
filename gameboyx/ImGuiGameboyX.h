@@ -48,29 +48,29 @@ private:
 	bool sdlScrollDown = false;
 	bool sdlScrollUp = false;
 
-	// variables
+	// MAIN WINDOW GAME SELECT
 	std::vector<game_info> games = std::vector<game_info>();
 	std::vector<bool> gamesSelected = std::vector<bool>();
 	int gameSelectedIndex = 0;
 	bool deleteGames = false;
+	int mainColNum = GAMES_COLUMNS.size();
 
 	// debug instructions
-	bank_index debugInstrIndex = bank_index(0, 0);					// bank, index
-	int debugInstrBank = 0;
-	int debugInstrAddress = 0;
-
-	bool debugScrollDown = false;
-	bool debugScrollUp = false;
-
-	bank_index debugCurrentBreakpoint = bank_index(0, 0);
-	bool debugCurrentBreakpointSet = false;
-
-	bool debugAutoRun = false;
-
-	int debugLastProgramCounter = -1;
+	bank_index dbgInstrInstructionIndex = bank_index(0, 0);					// bank, index
+	int dbgInstrBank = 0;
+	int dbgInstrAddress = 0;
+	bank_index dbgInstrCurrentBreakpoint = bank_index(0, 0);
+	bool dbgInstrBreakpointSet = false;
+	bool dbgInstrAutorun = false;
+	int dbgInstrLastPC = -1;
+	debug_instr_data dbgInstrCurrentEntry;
+	int dbgInstrColNum = DEBUG_INSTR_COLUMNS.size();
+	int dbgInstrColNumRegs = DEBUG_REGISTER_COLUMNS.size();
 
 	// vector per memory type <start index, end index>
-	std::vector<std::pair<int, std::vector<std::pair<bank_index, bank_index>>>> debugMemoryIndex = std::vector<std::pair<int, std::vector<std::pair<bank_index, bank_index>>>>();
+	std::vector<int> dbgMemBankIndex = std::vector<int>();
+	memory_data dbgMemCurrentEntry;
+	int dbgMemColNum = DEBUG_MEM_COLUMNS.size();
 
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;
@@ -90,14 +90,10 @@ private:
 	// actions
 	void ActionDeleteGames();
 	bool ActionAddGame(const std::string& _path_to_rom);
-
 	void ActionScrollToCurrentPC();
-
-	// game run state
 	void ActionStartGame(int _index);
 	void ActionEndGame();
 	void ActionRequestReset();
-
 	void ActionBankSwitch(ScrollableTableBase& _table_obj, int& _bank);
 	void ActionSearchAddress(ScrollableTableBase& _table_obj, int& _address);
 
@@ -105,7 +101,6 @@ private:
 	void AddGameGuiCtx(const game_info& _game_ctx);
 	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
 	void InitGamesGuiCtx();
-	void SetupMemInspectorIndex();
 	void ResetDebugInstr(); 
 	void ResetMemInspector();
 	bool CheckCurrentPCAutoScroll();
@@ -114,6 +109,7 @@ private:
 	void WriteInstructionLog();
 	void ResetEventMouseWheel();
 	void SetBankAndAddress(ScrollableTableBase& _tyble_obj, int& _bank, int& _address);
+	void SetupMemInspectorIndex();
 
 	bool CheckScroll(ScrollableTableBase& _table_obj);
 
@@ -125,4 +121,7 @@ private:
 
 	// game status variables
 	game_status& gameState;
+
+	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
+	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();
 };

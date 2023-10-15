@@ -15,6 +15,7 @@ using i64 = int64_t;
 
 using debug_instr_data = std::pair<std::string, std::string>;
 using register_data = std::pair<std::string, std::string>;
+using memory_data = std::tuple<std::string, int, u8*>;
 
 struct bank_index {
     int bank;

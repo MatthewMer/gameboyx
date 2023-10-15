@@ -13,7 +13,7 @@ enum entry_content_types {
     ST_ENTRY_DATA
 };
 
-// size, offset, vector<entries>
+// size, vector<entries>
 template <class T> using ScrollableTableBuffer = std::tuple<int ,std::vector<ScrollableTableEntry<T>>>;
 enum buffer_content_types {
     ST_BUF_SIZE,
@@ -46,15 +46,16 @@ public:
 	};
 	constexpr ~ScrollableTable() noexcept {};
 
-	constexpr ScrollableTable& operator=(ScrollableTable&& _right) noexcept {
+	constexpr ScrollableTable& operator=(const ScrollableTable& _right) noexcept {
 		if (this == addressof(_right)) { return *this; }
 		else {
 			buffer = std::vector<ScrollableTableBuffer<T>>(_right.buffer);
-			memcpy(&startIndex, &_right.startIndex, sizeof(_right.startIndex));
-			memcpy(&endIndex, &_right.startIndex, sizeof(_right.startIndex));
-			memcpy(&indexIterator, &_right.indexIterator, sizeof(_right.indexIterator));
-			memcpy(&elementsToShow, &_right.elementsToShow, sizeof(_right.elementsToShow));
-			memcpy(&bufferSize, &_right.bufferSize, sizeof(_right.bufferSize));
+			startIndex = _right.startIndex;
+			endIndex = _right.startIndex;
+			indexIterator = _right.indexIterator;
+			elementsToShow = _right.elementsToShow;
+			bufferSize = _right.bufferSize;
+            currentIndex = _right.currentIndex;
 			return *this;
 		}
 	}

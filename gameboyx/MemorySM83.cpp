@@ -9,6 +9,11 @@
 using namespace std;
 
 /* ***********************************************************************************************************
+    DEFINES
+*********************************************************************************************************** */
+#define LINE_NUM(x)     ((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE)
+
+/* ***********************************************************************************************************
     MISC LOOKUPS
 *********************************************************************************************************** */
 const vector<pair<memory_areas, string>> memory_area_map{
@@ -136,26 +141,71 @@ bool MemorySM83::CopyRom(const vector<u8>& _vec_rom) {
 }
 
 void MemorySM83::SetupDebugMemoryAccess() {
-    machineInfo.debug_memory.clear();
-    
-    // memory access	-> <memory type, name>, number, size, base address, reference to memory
-    machineInfo.debug_memory.emplace_back(pair(ENUM_ROM_N, get_memory_name(ENUM_ROM_N) + " 0"), 1, ROM_0_SIZE, ROM_0_OFFSET, &ROM_0);
-    machineInfo.debug_memory.emplace_back(pair(ENUM_ROM_N, get_memory_name(ENUM_ROM_N) + " N"), machine_ctx->rom_bank_num - 1, ROM_N_SIZE, ROM_N_OFFSET, ROM_N);
+    // references to memory areas
+    machineInfo.memory_access.clear();
 
-    machineInfo.debug_memory.emplace_back(pair(ENUM_VRAM_N, get_memory_name(ENUM_VRAM_N) + " N"), graphics_ctx->vram_bank_num, VRAM_N_SIZE, VRAM_N_OFFSET, graphics_ctx->VRAM_N);
+    machineInfo.memory_access.emplace_back(ENUM_ROM_N, 1, ROM_0_SIZE, ROM_0_OFFSET, &ROM_0);
+    machineInfo.memory_access.emplace_back(ENUM_ROM_N, machine_ctx->rom_bank_num - 1, ROM_N_SIZE, ROM_N_OFFSET, ROM_N);
+
+    machineInfo.memory_access.emplace_back(ENUM_VRAM_N, graphics_ctx->vram_bank_num, VRAM_N_SIZE, VRAM_N_OFFSET, graphics_ctx->VRAM_N);
 
     if (machine_ctx->ram_bank_num > 0) {
-        machineInfo.debug_memory.emplace_back(pair(ENUM_RAM_N, get_memory_name(ENUM_RAM_N) + " N"), machine_ctx->ram_bank_num, RAM_N_SIZE, RAM_N_OFFSET, RAM_N);
+        machineInfo.memory_access.emplace_back(ENUM_RAM_N, machine_ctx->ram_bank_num, RAM_N_SIZE, RAM_N_OFFSET, RAM_N);
     }
 
-    machineInfo.debug_memory.emplace_back(pair(ENUM_WRAM_N, get_memory_name(ENUM_WRAM_N) + " 0"), 1, WRAM_0_SIZE, WRAM_0_OFFSET, &WRAM_0);
-    machineInfo.debug_memory.emplace_back(pair(ENUM_WRAM_N, get_memory_name(ENUM_WRAM_N) + " N"), machine_ctx->wram_bank_num - 1, WRAM_N_SIZE, WRAM_N_OFFSET, WRAM_N);
+    machineInfo.memory_access.emplace_back(ENUM_WRAM_N, 1, WRAM_0_SIZE, WRAM_0_OFFSET, &WRAM_0);
+    machineInfo.memory_access.emplace_back(ENUM_WRAM_N, machine_ctx->wram_bank_num - 1, WRAM_N_SIZE, WRAM_N_OFFSET, WRAM_N);
 
-    machineInfo.debug_memory.emplace_back(pair(ENUM_OAM, get_memory_name(ENUM_OAM)), 1, OAM_SIZE, OAM_OFFSET, &graphics_ctx->OAM);
+    machineInfo.memory_access.emplace_back(ENUM_OAM, 1, OAM_SIZE, OAM_OFFSET, &graphics_ctx->OAM);
 
-    machineInfo.debug_memory.emplace_back(pair(ENUM_IO, get_memory_name(ENUM_IO)), 1, IO_REGISTERS_SIZE, IO_REGISTERS_OFFSET, &IO);
+    machineInfo.memory_access.emplace_back(ENUM_IO, 1, IO_REGISTERS_SIZE, IO_REGISTERS_OFFSET, &IO);
 
-    machineInfo.debug_memory.emplace_back(pair(ENUM_HRAM, get_memory_name(ENUM_HRAM)), 1, HRAM_SIZE, HRAM_OFFSET, &HRAM);
+    machineInfo.memory_access.emplace_back(ENUM_HRAM, 1, HRAM_SIZE, HRAM_OFFSET, &HRAM);
+
+    // access for memory inspector
+    machineInfo.memory_buffer.clear();
+
+    int line_num;
+    bool entry_found;
+    for (int i = 0, mem_type = 0; mem_type < machineInfo.memory_access.size(); mem_type++) {
+        MemoryBufferEntry<ScrollableTable<memory_data>> entry = MemoryBufferEntry<ScrollableTable<memory_data>>();
+        entry.first = get_memory_name(static_cast<memory_areas>(mem_type));
+
+        entry_found = false;
+        for (auto& [type, num, size, offset, ref] : machineInfo.memory_access) {
+            if (mem_type == type) {
+                for (int j = 0; j < num; j++) {
+                    line_num = LINE_NUM(size);
+                    ScrollableTable<memory_data> table = ScrollableTable<memory_data>(line_num < DEBUG_MEM_ELEM_PER_LINE ? line_num : DEBUG_MEM_ELEM_PER_LINE);
+                    auto table_buffer = ScrollableTableBuffer<memory_data>();
+                    get<ST_BUF_SIZE>(table_buffer) = line_num;
+
+                    int index;
+                    for (int k = 0; k < line_num; k++) {
+                        ScrollableTableEntry<memory_data> buffer_entry = ScrollableTableEntry<memory_data>();
+
+                        index = k * DEBUG_MEM_ELEM_PER_LINE;
+                        get<ST_ENTRY_ADDRESS>(buffer_entry) = offset + index;
+
+                        get<0>(get<ST_ENTRY_DATA>(buffer_entry)) = format("{:x}", offset + index);
+                        get<1>(get<ST_ENTRY_DATA>(buffer_entry)) = 
+                            size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
+                        get<2>(get<ST_ENTRY_DATA>(buffer_entry)) = &ref[j][index];
+
+                        get<ST_BUF_BUFFER>(table_buffer).emplace_back(buffer_entry);
+                    }
+
+                    table.AddMemoryArea(table_buffer);
+                    entry.second.emplace_back(table);
+                }
+
+                entry_found = true;
+                i++;
+            }
+        }
+
+        if (entry_found) { machineInfo.memory_buffer.emplace_back(entry); }
+    }
 }
 
 

@@ -33,42 +33,42 @@ inline const std::vector<std::pair<std::string, float>> GAMES_COLUMNS = {
 
 inline const ImVec2 debug_instr_win_size(500.f, 0.f);
 inline const std::vector<float> DEBUG_INSTR_COLUMNS = {
-    1 / 15.f,
-    7 / 15.f,
-    7 / 15.f
+    1.f,
+    7.f,
+    7.f
 };
 inline const std::vector<float> DEBUG_REGISTER_COLUMNS = {
-    1 / 16.f,
-    7 / 16.f,
-    1 / 16.f,
-    7 / 16.f
+    1.f,
+    7.f,
+    1.f,
+    7.f
 };
 
 inline const ImVec2 hw_info_win_size(250.f, 0.f);
 inline const std::vector<float> HW_INFO_COLUMNS = {
-    1 / 2.f,
-    1 / 2.f
+    1.f,
+    1.f
 };
 
-inline const ImVec2 debug_mem_win_size(500.f, 0.f);
+inline const ImVec2 debug_mem_win_size(550.f, 0.f);
 inline const std::vector<std::pair<std::string, float>> DEBUG_MEM_COLUMNS{
-    {"", 2 / 18.f},
-    {"00", 1 / 18.f},
-    {"01", 1 / 18.f},
-    {"02", 1 / 18.f},
-    {"03", 1 / 18.f},
-    {"04", 1 / 18.f},
-    {"05", 1 / 18.f},
-    {"06", 1 / 18.f},
-    {"07", 1 / 18.f},
-    {"08", 1 / 18.f},
-    {"09", 1 / 18.f},
-    {"0A", 1 / 18.f},
-    {"0B", 1 / 18.f},
-    {"0C", 1 / 18.f},
-    {"0D", 1 / 18.f},
-    {"0E", 1 / 18.f},
-    {"0F", 1 / 18.f},
+    {"", 2.f},
+    {"00", 1.f},
+    {"01", 1.f},
+    {"02", 1.f},
+    {"03", 1.f},
+    {"04", 1.f},
+    {"05", 1.f},
+    {"06", 1.f},
+    {"07", 1.f},
+    {"08", 1.f},
+    {"09", 1.f},
+    {"0A", 1.f},
+    {"0B", 1.f},
+    {"0C", 1.f},
+    {"0D", 1.f},
+    {"0E", 1.f},
+    {"0F", 1.f},
 };
 
 inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Color" };
@@ -78,9 +78,45 @@ inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Col
 inline const ImVec4 IMGUI_BG_COLOR(BG_COL, BG_COL, BG_COL, 1.0f);
 inline const ImVec4 IMGUI_CLR_COLOR(CLR_COL, CLR_COL, CLR_COL, 1.0f);
 
-//inline const std::vector<std::string> popup_items = {"Test1", "Test2"};
+#define DEBUG_INSTR_LINES           21
+#define DEBUG_MEM_LINES             21
+#define DEBUG_MEM_ELEM_PER_LINE     0x10
 
-#define DEBUG_MEMORY_LINES          30
-#define DEBUG_MEMORY_ELEM_PER_LINE  0x10
+inline const ImGuiWindowFlags MAIN_WIN_FLAGS =
+    ImGuiWindowFlags_NoTitleBar |
+    ImGuiWindowFlags_NoMove |
+    ImGuiWindowFlags_NoResize |
+    ImGuiWindowFlags_NoCollapse |
+    ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-#define DEBUG_INSTR_ELEMENTS        21
+inline const ImGuiTableFlags MAIN_TABLE_FLAGS =
+    ImGuiTableFlags_ScrollY |
+    ImGuiTableFlags_BordersInnerV;
+
+inline const ImGuiWindowFlags WIN_CHILD_FLAGS =
+    ImGuiWindowFlags_NoScrollbar |
+    ImGuiWindowFlags_NoResize |
+    ImGuiWindowFlags_NoCollapse |
+    ImGuiWindowFlags_AlwaysAutoResize;
+
+inline const ImGuiTableFlags TABLE_FLAGS =
+    ImGuiTableFlags_BordersInnerV |
+    ImGuiTableFlags_BordersOuterH;
+
+inline const ImGuiTableFlags TABLE_FLAGS_NO_BORDER_OUTER_H = ImGuiTableFlags_BordersInnerV;
+
+inline const ImGuiTableColumnFlags TABLE_COLUMN_FLAGS_NO_HEADER =
+    ImGuiTableColumnFlags_NoHeaderLabel |
+    ImGuiTableColumnFlags_NoResize |
+    ImGuiTableColumnFlags_WidthStretch;
+
+inline const ImGuiTableColumnFlags TABLE_COLUMN_FLAGS =
+    ImGuiTableColumnFlags_NoResize |
+    ImGuiTableColumnFlags_WidthStretch;
+
+inline const ImGuiInputTextFlags INPUT_INT_HEX_FLAGS =
+    ImGuiInputTextFlags_CharsHexadecimal |
+    ImGuiInputTextFlags_CharsUppercase |
+    ImGuiInputTextFlags_EnterReturnsTrue;
+
+inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumns;
