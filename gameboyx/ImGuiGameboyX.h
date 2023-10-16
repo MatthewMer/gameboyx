@@ -108,7 +108,7 @@ private:
 	void SetBreakPoint(const bank_index& _current_index);
 	void WriteInstructionLog();
 	void ResetEventMouseWheel();
-	void SetBankAndAddress(ScrollableTableBase& _tyble_obj, int& _bank, int& _address);
+	void SetBankAndAddressScrollableTable(ScrollableTableBase& _tyble_obj, int& _bank, int& _address);
 	void SetupMemInspectorIndex();
 
 	bool CheckScroll(ScrollableTableBase& _table_obj);
@@ -124,4 +124,5 @@ private:
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();
+	const ImVec4& HIGHLIGHT_COLOR = GUI_STYLE.Colors[ImGuiCol_TabActive];
 };

@@ -146,7 +146,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         if (gameState.game_running) {
             if (CheckCurrentPCAutoScroll() || CheckScroll(machineInfo.program_buffer))
             { 
-                SetBankAndAddress(machineInfo.program_buffer, dbgInstrBank, dbgInstrAddress);
+                SetBankAndAddressScrollableTable(machineInfo.program_buffer, dbgInstrBank, dbgInstrAddress);
             }
         }
 
@@ -182,13 +182,12 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         ImGui::Checkbox("Send to *_instructions.log", &machineInfo.instruction_logging);
 
         ImGui::Separator();
-        ImGui::TextColored(GUI_STYLE.Colors[ImGuiCol_TabActive], "Instructions:");
+        ImGui::TextColored(HIGHLIGHT_COLOR, "Instructions:");
         if (ImGui::BeginTable("instruction_debug", dbgInstrColNum, TABLE_FLAGS)) {
 
             for (int i = 0; i < dbgInstrColNum; i++) {
                 ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER, DEBUG_INSTR_COLUMNS[i]);
             }
-            ImGui::TableHeadersRow();
 
             if (gameState.game_running) {
 
@@ -243,7 +242,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         }
 
         ImGui::Separator();
-        ImGui::TextColored(GUI_STYLE.Colors[ImGuiCol_TabActive], "Registers:");
+        ImGui::TextColored(HIGHLIGHT_COLOR, "Registers:");
         if (!machineInfo.register_values.empty()) {
             if (ImGui::BeginTable("registers_debug", dbgInstrColNumRegs, TABLE_FLAGS)) {
                 for (int i = 0; i < dbgInstrColNumRegs; i++) {
@@ -273,33 +272,34 @@ void ImGuiGameboyX::ShowDebugMemoryInspector() {
     if (ImGui::Begin("Memory Inspector", &showMemoryInspector, WIN_CHILD_FLAGS)) {
         if (ImGui::BeginTabBar("memory_inspector_tabs", 0)) {
 
-            if (int i = 0;  gameState.game_running) {
+            if (int i = 0; gameState.game_running) {
                 for (auto& [name, tables] : machineInfo.memory_buffer) {
                     if (ImGui::BeginTabItem(name.c_str())) {
-                        ImGui::InputInt("Memory Bank", &dbgMemBankIndex[i]);
+                        if (ImGui::InputInt("Memory Bank", &dbgMemBankIndex[i])) {
+                            if (dbgMemBankIndex[i] < 0) { dbgMemBankIndex[i] = 0; }
+                            else if (dbgMemBankIndex[i] >= tables.size()) { dbgMemBankIndex[i] = tables.size() - 1; }
+                        }
 
                         ScrollableTable<memory_data>& table = tables[dbgMemBankIndex[i]];
-                        int i;
+                        if (CheckScroll(table)) {}
 
                         if (ImGui::BeginTable(name.c_str(), dbgMemColNum, TABLE_FLAGS)) {
-                            for (int i = 0; i < dbgMemColNum; i++) {
-                                ImGui::TableSetupColumn(DEBUG_MEM_COLUMNS[i].first.c_str(), TABLE_COLUMN_FLAGS, DEBUG_MEM_COLUMNS[i].second);
+                            ImGui::PushStyleColor(ImGuiCol_Text, HIGHLIGHT_COLOR);
+                            for (int j = 0; j < dbgMemColNum; j++) {
+                                ImGui::TableSetupColumn(DEBUG_MEM_COLUMNS[j].first.c_str(), TABLE_COLUMN_FLAGS, DEBUG_MEM_COLUMNS[j].second);
                             }
                             ImGui::TableHeadersRow();
+                            ImGui::PopStyleColor();
 
                             while (table.GetNextEntry(dbgMemCurrentEntry)) {
                                 ImGui::TableNextColumn();
 
-                                ImGui::TextColored(GUI_STYLE.Colors[ImGuiCol_HeaderHovered], get<0>(dbgMemCurrentEntry).c_str());
+                                ImGui::TextColored(HIGHLIGHT_COLOR, get<MEM_ENTRY_ADDR>(dbgMemCurrentEntry).c_str());
                                 ImGui::TableNextColumn();
 
-                                u8* ref = get<2>(dbgMemCurrentEntry);
-                                for (i = 0; i < get<1>(dbgMemCurrentEntry); i++) {
+                                u8* ref = get<MEM_ENTRY_REF>(dbgMemCurrentEntry);
+                                for (i = 0; i < get<MEM_ENTRY_LEN>(dbgMemCurrentEntry); i++) {
                                     ImGui::TextUnformatted(format("{:x}", ref[i]).c_str());
-                                    ImGui::TableNextColumn();
-                                }
-                                for (; i < DEBUG_MEM_ELEM_PER_LINE; i++) {
-                                    ImGui::TextUnformatted("");
                                     ImGui::TableNextColumn();
                                 }
 
@@ -310,8 +310,8 @@ void ImGuiGameboyX::ShowDebugMemoryInspector() {
                         }
 
                         ImGui::EndTabItem();
-                        i++;
                     }
+                    i++;
                 }
             }
             else {
@@ -326,8 +326,8 @@ void ImGuiGameboyX::ShowDebugMemoryInspector() {
 
             ImGui::EndTabBar();
         }
+        ImGui::End();
     }
-    ImGui::End();
 }
 
 void ImGuiGameboyX::ShowHardwareInfo() {
@@ -705,7 +705,7 @@ void ImGuiGameboyX::SetBreakPoint(const bank_index& _current_index) {
     }
 }
 
-void ImGuiGameboyX::SetBankAndAddress(ScrollableTableBase& _tyble_obj, int& _bank, int& _address){
+void ImGuiGameboyX::SetBankAndAddressScrollableTable(ScrollableTableBase& _tyble_obj, int& _bank, int& _address){
     bank_index centre = _tyble_obj.GetCurrentIndexCentre();
     _bank = centre.bank;
     _address = _tyble_obj.GetAddressByIndex(centre);

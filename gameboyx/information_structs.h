@@ -7,7 +7,7 @@
 #include "ScrollableTable.h"
 #include "imguigameboyx_config.h"
 
-template <class T> using MemoryBufferEntry = std::pair<std::string, std::vector<T>>;			// memory buffer: type, vector<Table>
+template <class T> using MemoryBufferEntry = std::pair<std::string, std::vector<T>>;	// memory buffer: type, vector<Table>
 template <class T> using MemoryBuffer = std::vector<MemoryBufferEntry<T>>;				// memory buffer: type, vector<Table>
 
 using DirectMemoryAccessEntry = std::tuple<int, int, int, int, u8**>;					// memory access: type, num, size, base_ptr, ref

@@ -187,10 +187,10 @@ void MemorySM83::SetupDebugMemoryAccess() {
                         index = k * DEBUG_MEM_ELEM_PER_LINE;
                         get<ST_ENTRY_ADDRESS>(buffer_entry) = offset + index;
 
-                        get<0>(get<ST_ENTRY_DATA>(buffer_entry)) = format("{:x}", offset + index);
-                        get<1>(get<ST_ENTRY_DATA>(buffer_entry)) = 
+                        get<MEM_ENTRY_ADDR>(get<ST_ENTRY_DATA>(buffer_entry)) = format("{:x}", offset + index);
+                        get<MEM_ENTRY_LEN>(get<ST_ENTRY_DATA>(buffer_entry)) = 
                             size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
-                        get<2>(get<ST_ENTRY_DATA>(buffer_entry)) = &ref[j][index];
+                        get<MEM_ENTRY_REF>(get<ST_ENTRY_DATA>(buffer_entry)) = &ref[j][index];
 
                         get<ST_BUF_BUFFER>(table_buffer).emplace_back(buffer_entry);
                     }

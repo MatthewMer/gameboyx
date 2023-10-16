@@ -63,12 +63,12 @@ inline const std::vector<std::pair<std::string, float>> DEBUG_MEM_COLUMNS{
     {"07", 1.f},
     {"08", 1.f},
     {"09", 1.f},
-    {"0A", 1.f},
-    {"0B", 1.f},
-    {"0C", 1.f},
-    {"0D", 1.f},
-    {"0E", 1.f},
-    {"0F", 1.f},
+    {"0a", 1.f},
+    {"0b", 1.f},
+    {"0c", 1.f},
+    {"0d", 1.f},
+    {"0e", 1.f},
+    {"0f", 1.f},
 };
 
 inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Color" };
