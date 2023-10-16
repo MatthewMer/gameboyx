@@ -77,9 +77,10 @@ inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Col
 #define CLR_COL 0.0f
 inline const ImVec4 IMGUI_BG_COLOR(BG_COL, BG_COL, BG_COL, 1.0f);
 inline const ImVec4 IMGUI_CLR_COLOR(CLR_COL, CLR_COL, CLR_COL, 1.0f);
+inline const ImVec4 IMGUI_BREAKPOINT_COL(1.0f, .0f, .0f, 1.0f);
 
 #define DEBUG_INSTR_LINES           21
-#define DEBUG_MEM_LINES             21
+#define DEBUG_MEM_LINES             32
 #define DEBUG_MEM_ELEM_PER_LINE     0x10
 
 inline const ImGuiWindowFlags MAIN_WIN_FLAGS =

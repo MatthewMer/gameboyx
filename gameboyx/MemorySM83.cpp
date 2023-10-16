@@ -215,38 +215,48 @@ void MemorySM83::SetupDebugMemoryAccess() {
 *********************************************************************************************************** */
 void MemorySM83::AllocateMemory() {
     ROM_0 = new u8[ROM_0_SIZE];
+    memset(ROM_0, 0, ROM_0_SIZE);
     ROM_N = new u8 * [machine_ctx->rom_bank_num - 1];
     for (int i = 0; i < machine_ctx->rom_bank_num - 1; i++) {
-
         ROM_N[i] = new u8[ROM_N_SIZE];
+        memset(ROM_N[i], 0, ROM_N_SIZE);
     }
 
     graphics_ctx->VRAM_N = new u8 * [graphics_ctx->vram_bank_num];
     for (int i = 0; i < graphics_ctx->vram_bank_num; i++) {
         graphics_ctx->VRAM_N[i] = new u8[VRAM_N_SIZE];
+        memset(graphics_ctx->VRAM_N[i], 0, VRAM_N_SIZE);
     }
 
-    RAM_N = new u8 * [machine_ctx->ram_bank_num];
-    for (int i = 0; i < machine_ctx->ram_bank_num; i++) {
-        RAM_N[i] = new u8[RAM_N_SIZE];
+    if (machine_ctx->ram_bank_num > 0) {
+        RAM_N = new u8 * [machine_ctx->ram_bank_num];
+        for (int i = 0; i < machine_ctx->ram_bank_num; i++) {
+            RAM_N[i] = new u8[RAM_N_SIZE];
+            memset(RAM_N[i], 0, RAM_N_SIZE);
+        }
     }
 
     WRAM_0 = new u8[WRAM_0_SIZE];
+    memset(WRAM_0, 0, WRAM_0_SIZE);
     WRAM_N = new u8 * [machine_ctx->wram_bank_num - 1];
     for (int i = 0; i < machine_ctx->wram_bank_num - 1; i++) {
         WRAM_N[i] = new u8[WRAM_N_SIZE];
+        memset(WRAM_N[i], 0, WRAM_N_SIZE);
     }
 
     graphics_ctx->OAM = new u8[OAM_SIZE];
+    memset(graphics_ctx->OAM, 0, OAM_SIZE);
+
+    IO = new u8[IO_REGISTERS_SIZE];
+    memset(IO, 0, IO_REGISTERS_SIZE);
 
     HRAM = new u8[HRAM_SIZE];
+    memset(HRAM, 0, HRAM_SIZE);
 
     SetIOReferences();
 }
 
 void MemorySM83::SetIOReferences() {
-    IO = new u8[IO_REGISTERS_SIZE];
-
     // joypad
     joyp_ctx->JOYP_P1 = &IO[JOYP_ADDR - IO_REGISTERS_OFFSET];
 

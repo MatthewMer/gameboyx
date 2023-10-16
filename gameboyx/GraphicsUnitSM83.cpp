@@ -37,7 +37,7 @@ void GraphicsUnitSM83::NextFrame() {
 		if (graphics_ctx->obj_enable) {
 			DrawObjectTiles();
 		}
-
+		/*
 		// everything from here just pretends to have processed the scanlines (horizontal lines) of the LCD *****
 		// request mode 0 to 2 interrupts (STAT)
 		if (*graphics_ctx->STAT & (PPU_STAT_MODE0_EN | PPU_STAT_MODE1_EN | PPU_STAT_MODE2_EN)) {
@@ -55,7 +55,7 @@ void GraphicsUnitSM83::NextFrame() {
 			*graphics_ctx->STAT &= ~PPU_STAT_LYC_FLAG;
 		}
 
-		mem_instance->RequestInterrupts(isrFlags | ISR_VBLANK);
+		mem_instance->RequestInterrupts(isrFlags | ISR_VBLANK);*/
 		*graphics_ctx->LY = LCD_VBLANK_THRESHOLD;
 	}
 }

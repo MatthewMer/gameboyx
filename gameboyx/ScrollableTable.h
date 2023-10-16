@@ -173,7 +173,8 @@ template <class T> void ScrollableTable<T>::SearchBank(int& _bank) {
     startIndex = bank_index(_bank, 0);
     endIndex = bank_index(_bank, elementsToShow);
 
-    ScrollUp(elementsToShow / 2);
+    //ScrollUp(elementsToShow / 2);
+    indexIterator = startIndex;
 }
 
 template <class T> void ScrollableTable<T>::SearchAddress(int& _addr) {

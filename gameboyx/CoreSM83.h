@@ -57,7 +57,7 @@ public:
 	bool CheckNextFrame() override;
 	void GetCurrentCoreFrequency() override;
 
-	void GetCurrentMemoryLocation() const override;
+	void GetCurrentProgramCounter() const override;
 	void InitMessageBufferProgram() override;
 	void GetCurrentRegisterValues() const  override;
 

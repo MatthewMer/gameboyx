@@ -71,6 +71,9 @@ private:
 	std::vector<int> dbgMemBankIndex = std::vector<int>();
 	memory_data dbgMemCurrentEntry;
 	int dbgMemColNum = DEBUG_MEM_COLUMNS.size();
+	Vec2 dbgMemCursorPos = Vec2(-1, -1);
+	bool dbgMemCellHovered = false;
+	bool dbgMemCellAnyHovered = false;
 
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;

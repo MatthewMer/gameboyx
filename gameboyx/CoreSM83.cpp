@@ -270,7 +270,7 @@ void CoreSM83::RunCycles() {
             else {
                 RunCpu();
                 machineInfo.pause_execution = true;
-                GetCurrentInstruction();
+                if (machineInfo.instruction_logging) { GetCurrentInstruction(); }
             }
         }
         else {
@@ -405,7 +405,7 @@ void CoreSM83::GetCurrentCoreFrequency() {
     machineInfo.current_frequency = (float)result / pow(10, 6);
 }
 
-void CoreSM83::GetCurrentMemoryLocation() const {
+void CoreSM83::GetCurrentProgramCounter() const {
     machineInfo.current_pc = (int)Regs.PC;
     machineInfo.current_rom_bank = (Regs.PC < ROM_N_OFFSET ? 0 : machine_ctx->rom_bank_selected + 1);
 }
