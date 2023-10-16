@@ -176,7 +176,7 @@ void MemorySM83::SetupDebugMemoryAccess() {
             if (mem_type == type) {
                 for (int j = 0; j < num; j++) {
                     line_num = LINE_NUM(size);
-                    ScrollableTable<memory_data> table = ScrollableTable<memory_data>(line_num < DEBUG_MEM_ELEM_PER_LINE ? line_num : DEBUG_MEM_ELEM_PER_LINE);
+                    ScrollableTable<memory_data> table = ScrollableTable<memory_data>(line_num < DEBUG_MEM_LINES ? line_num : DEBUG_MEM_LINES);
                     auto table_buffer = ScrollableTableBuffer<memory_data>();
                     get<ST_BUF_SIZE>(table_buffer) = line_num;
 

@@ -227,7 +227,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         ImGui::EndTable();
 
         if (gameState.game_running) {
-            if (ImGui::InputInt("ROM Bank", &dbgInstrBank)) {
+            if (ImGui::InputInt("ROM Bank", &dbgInstrBank, 1, 100, INPUT_INT_FLAGS)) {
                 ActionBankSwitch(machineInfo.program_buffer, dbgInstrBank);
             }
             if (ImGui::InputInt("ROM Address", &dbgInstrAddress, 1, 100, INPUT_INT_HEX_FLAGS)) {
@@ -237,7 +237,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         else {
             ImGui::BeginDisabled();
             ImGui::InputInt("ROM Bank", &dbgInstrBank);
-            ImGui::InputInt("ROM Address", &dbgInstrAddress, 1, 100, 0);
+            ImGui::InputInt("ROM Address", &dbgInstrAddress);
             ImGui::EndDisabled();
         }
 
@@ -275,15 +275,24 @@ void ImGuiGameboyX::ShowDebugMemoryInspector() {
             if (int i = 0; gameState.game_running) {
                 for (auto& [name, tables] : machineInfo.memory_buffer) {
                     if (ImGui::BeginTabItem(name.c_str())) {
-                        if (ImGui::InputInt("Memory Bank", &dbgMemBankIndex[i])) {
-                            if (dbgMemBankIndex[i] < 0) { dbgMemBankIndex[i] = 0; }
-                            else if (dbgMemBankIndex[i] >= tables.size()) { dbgMemBankIndex[i] = tables.size() - 1; }
+                        int tables_num = tables.size() - 1;
+
+                        if (tables_num > 0) {
+                            if (ImGui::InputInt("Memory Bank", &dbgMemBankIndex[i], 1, 100, INPUT_INT_FLAGS)) {
+                                if (dbgMemBankIndex[i] < 0) { dbgMemBankIndex[i] = 0; }
+                                else if (dbgMemBankIndex[i] > tables_num) { dbgMemBankIndex[i] = tables_num; }
+                            }
+                        }
+                        else {
+                            ImGui::BeginDisabled();
+                            ImGui::InputInt("Memory Bank", &dbgMemBankIndex[i], INPUT_INT_FLAGS);
+                            ImGui::EndDisabled();
                         }
 
                         ScrollableTable<memory_data>& table = tables[dbgMemBankIndex[i]];
-                        if (CheckScroll(table)) {}
+                        CheckScroll(table);
 
-                        if (ImGui::BeginTable(name.c_str(), dbgMemColNum, TABLE_FLAGS)) {
+                        if (ImGui::BeginTable(name.c_str(), dbgMemColNum, TABLE_FLAGS_BORDER_INNER_H)) {
                             ImGui::PushStyleColor(ImGuiCol_Text, HIGHLIGHT_COLOR);
                             for (int j = 0; j < dbgMemColNum; j++) {
                                 ImGui::TableSetupColumn(DEBUG_MEM_COLUMNS[j].first.c_str(), TABLE_COLUMN_FLAGS, DEBUG_MEM_COLUMNS[j].second);
@@ -291,18 +300,24 @@ void ImGuiGameboyX::ShowDebugMemoryInspector() {
                             ImGui::TableHeadersRow();
                             ImGui::PopStyleColor();
 
+                            int lines = 0;
                             while (table.GetNextEntry(dbgMemCurrentEntry)) {
                                 ImGui::TableNextColumn();
 
                                 ImGui::TextColored(HIGHLIGHT_COLOR, get<MEM_ENTRY_ADDR>(dbgMemCurrentEntry).c_str());
-                                ImGui::TableNextColumn();
 
                                 u8* ref = get<MEM_ENTRY_REF>(dbgMemCurrentEntry);
                                 for (i = 0; i < get<MEM_ENTRY_LEN>(dbgMemCurrentEntry); i++) {
-                                    ImGui::TextUnformatted(format("{:x}", ref[i]).c_str());
                                     ImGui::TableNextColumn();
+                                    ImGui::TextUnformatted(format("{:x}", ref[i]).c_str());
                                 }
 
+                                ImGui::TableNextRow();
+                                lines++;
+                            }
+                            for (; lines < DEBUG_MEM_LINES; lines++) {
+                                ImGui::TableNextColumn();
+                                ImGui::TextColored(HIGHLIGHT_COLOR, "-");
                                 ImGui::TableNextRow();
                             }
 
@@ -319,6 +334,23 @@ void ImGuiGameboyX::ShowDebugMemoryInspector() {
                     ImGui::BeginDisabled();
                     ImGui::InputInt("Bank", &i);
                     ImGui::EndDisabled();
+
+                    if (ImGui::BeginTable("no_memory", dbgMemColNum, TABLE_FLAGS_BORDER_INNER_H)) {
+                        ImGui::PushStyleColor(ImGuiCol_Text, HIGHLIGHT_COLOR);
+                        for (int j = 0; j < dbgMemColNum; j++) {
+                            ImGui::TableSetupColumn(DEBUG_MEM_COLUMNS[j].first.c_str(), TABLE_COLUMN_FLAGS, DEBUG_MEM_COLUMNS[j].second);
+                        }
+                        ImGui::TableHeadersRow();
+                        ImGui::PopStyleColor();
+
+                        for (int lines = 0; lines < DEBUG_MEM_LINES; lines++) {
+                            ImGui::TableNextColumn();
+                            ImGui::TextColored(HIGHLIGHT_COLOR, "-");
+                            ImGui::TableNextRow();
+                        }
+
+                        ImGui::EndTable();
+                    }
 
                     ImGui::EndTabItem();
                 }

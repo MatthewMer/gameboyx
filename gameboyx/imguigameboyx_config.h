@@ -103,6 +103,11 @@ inline const ImGuiTableFlags TABLE_FLAGS =
     ImGuiTableFlags_BordersInnerV |
     ImGuiTableFlags_BordersOuterH;
 
+inline const ImGuiTableFlags TABLE_FLAGS_BORDER_INNER_H =
+    ImGuiTableFlags_BordersInnerV |
+    ImGuiTableFlags_BordersOuterH |
+    ImGuiTableFlags_BordersInnerH;
+
 inline const ImGuiTableFlags TABLE_FLAGS_NO_BORDER_OUTER_H = ImGuiTableFlags_BordersInnerV;
 
 inline const ImGuiTableColumnFlags TABLE_COLUMN_FLAGS_NO_HEADER =
@@ -118,5 +123,7 @@ inline const ImGuiInputTextFlags INPUT_INT_HEX_FLAGS =
     ImGuiInputTextFlags_CharsHexadecimal |
     ImGuiInputTextFlags_CharsUppercase |
     ImGuiInputTextFlags_EnterReturnsTrue;
+
+inline const ImGuiInputTextFlags INPUT_INT_FLAGS = ImGuiInputTextFlags_EnterReturnsTrue;
 
 inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumns;
