@@ -34,6 +34,8 @@ enum cgb_data_types {
 	E,
 	H,
 	L,
+	IE,
+	IF,
 	d8,
 	d16,
 	a8,
@@ -41,6 +43,19 @@ enum cgb_data_types {
 	a16,
 	a16_ref,
 	r8
+};
+
+enum cgb_flag_types {
+	FLAG_Z,
+	FLAG_N,
+	FLAG_C,
+	FLAG_H,
+	FLAG_IME,
+	INT_VBLANK,
+	INT_STAT,
+	INT_TIMER,
+	INT_SERIAL,
+	INT_JOYPAD
 };
 
 /* ***********************************************************************************************************
@@ -60,6 +75,7 @@ public:
 	void GetCurrentProgramCounter() const override;
 	void InitMessageBufferProgram() override;
 	void GetCurrentRegisterValues() const  override;
+	void GetCurrentFlagsAndISR() const override;
 
 private:
 	// constructor

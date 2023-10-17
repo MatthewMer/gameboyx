@@ -66,6 +66,7 @@ private:
 	debug_instr_data dbgInstrCurrentEntry;
 	int dbgInstrColNum = DEBUG_INSTR_COLUMNS.size();
 	int dbgInstrColNumRegs = DEBUG_REGISTER_COLUMNS.size();
+	int dbgInstrColNumFlags = DEBUG_FLAG_COLUMNS.size();
 
 	// vector per memory type <start index, end index>
 	std::vector<int> dbgMemBankIndex = std::vector<int>();

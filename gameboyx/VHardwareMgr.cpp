@@ -42,6 +42,7 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
 
     core_instance->GetStartupHardwareInfo();
     core_instance->GetCurrentRegisterValues();
+    core_instance->GetCurrentFlagsAndISR();
     core_instance->GetCurrentProgramCounter();
 
     core_instance->InitMessageBufferProgram();
@@ -69,6 +70,7 @@ void VHardwareMgr::ProcessNext() {
 
     if (machineInfo.instruction_debug_enabled) {
         core_instance->GetCurrentRegisterValues();
+        core_instance->GetCurrentFlagsAndISR();
         core_instance->GetCurrentProgramCounter();
     }
 }

@@ -116,7 +116,7 @@ void ImGuiGameboyX::ShowMainMenuBar() {
         }
         if (ImGui::BeginMenu("Debug")) {
             ImGui::MenuItem("Hardware Info", nullptr, &machineInfo.track_hardware_info);
-            ImGui::MenuItem("Debug Instructions", nullptr, &machineInfo.instruction_debug_enabled);
+            ImGui::MenuItem("Instruction Debugger", nullptr, &machineInfo.instruction_debug_enabled);
             ImGui::MenuItem("Memory Inspector", nullptr, &showMemoryInspector);
             ImGui::EndMenu();
         }
@@ -142,7 +142,7 @@ void ImGuiGameboyX::ShowWindowAbout() {
 void ImGuiGameboyX::ShowDebugInstructions() {
     ImGui::SetNextWindowSize(debug_instr_win_size);
 
-    if (ImGui::Begin("Debug Instructions", &machineInfo.instruction_debug_enabled, WIN_CHILD_FLAGS)) {
+    if (ImGui::Begin("Instruction Debugger", &machineInfo.instruction_debug_enabled, WIN_CHILD_FLAGS)) {
         if (gameState.game_running) {
             if (CheckCurrentPCAutoScroll() || CheckScroll(machineInfo.program_buffer))
             { 
@@ -248,6 +248,27 @@ void ImGuiGameboyX::ShowDebugInstructions() {
 
                 ImGui::TableNextColumn();
                 for (int i = 0; const auto & n : machineInfo.register_values) {
+                    ImGui::TextUnformatted(n.first.c_str());
+                    ImGui::TableNextColumn();
+
+                    ImGui::TextUnformatted(n.second.c_str());
+
+                    if (i++ % 2) { ImGui::TableNextRow(); }
+                    ImGui::TableNextColumn();
+                }
+            }
+            ImGui::EndTable();
+        }
+        ImGui::Separator();
+        ImGui::TextColored(HIGHLIGHT_COLOR, "Flags and ISR:");
+        if (!machineInfo.flag_values.empty()) {
+            if (ImGui::BeginTable("flags_debug", dbgInstrColNumFlags, TABLE_FLAGS)) {
+                for (int i = 0; i < dbgInstrColNumFlags; i++) {
+                    ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER, DEBUG_FLAG_COLUMNS[i]);
+                }
+
+                ImGui::TableNextColumn();
+                for (int i = 0; const auto & n : machineInfo.flag_values) {
                     ImGui::TextUnformatted(n.first.c_str());
                     ImGui::TableNextColumn();
 

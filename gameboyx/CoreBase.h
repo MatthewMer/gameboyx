@@ -33,6 +33,7 @@ public:
 	virtual void GetCurrentProgramCounter() const = 0;
 	virtual void InitMessageBufferProgram() = 0;
 	virtual void GetCurrentRegisterValues() const = 0;
+	virtual void GetCurrentFlagsAndISR() const = 0;
 
 protected:
 	// constructor

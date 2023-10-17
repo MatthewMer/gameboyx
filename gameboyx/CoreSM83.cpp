@@ -23,6 +23,27 @@ enum instr_lookup_enums {
     INSTR_ARG_2
 };
 
+const vector<pair<cgb_flag_types, string>> flag_names{
+    {FLAG_Z, "ZERO"},
+    {FLAG_N, "SUB"},
+    {FLAG_H, "HALFCARRY"},
+    {FLAG_C, "CARRY"},
+    {FLAG_IME, "IME"},
+    {INT_VBLANK, "VBLANK"},
+    {INT_STAT, "STAT"},
+    {INT_TIMER, "TIMER"},
+    {INT_SERIAL, "SERIAL"},
+    {INT_JOYPAD, "JOYPAD"}
+};
+
+inline string get_flag_and_isr_name(const cgb_flag_types& _type) {
+    for (const auto& [type, val] : flag_names) {
+        if (type == _type) { return val; }
+    }
+
+    return "";
+}
+
 const vector<pair<cgb_data_types, string>> register_names{
     {A, "A"},
     {F, "F"},
@@ -36,7 +57,9 @@ const vector<pair<cgb_data_types, string>> register_names{
     {H, "H"},
     {L, "L"},
     {SP, "SP"},
-    {PC, "PC"}
+    {PC, "PC"},
+    {IE, "IE"},
+    {IF, "IF"}
 };
 
 inline string get_register_name(const cgb_data_types& _type) {
@@ -431,13 +454,30 @@ void CoreSM83::GetCurrentHardwareState() const {
 void CoreSM83::GetCurrentRegisterValues() const {
     machineInfo.register_values.clear();
 
-    machineInfo.register_values.emplace_back(get_register_name(A), format("{:x}", Regs.A));
-    machineInfo.register_values.emplace_back(get_register_name(F), format("{:x}", Regs.F));
+    machineInfo.register_values.emplace_back(get_register_name(A) + get_register_name(F), format("A:{:x} F:{:x}", Regs.A, Regs.F));
     machineInfo.register_values.emplace_back(get_register_name(BC), format("{:x}", Regs.BC));
     machineInfo.register_values.emplace_back(get_register_name(DE), format("{:x}", Regs.DE));
     machineInfo.register_values.emplace_back(get_register_name(HL), format("{:x}", Regs.HL));
     machineInfo.register_values.emplace_back(get_register_name(SP), format("{:x}", Regs.SP));
     machineInfo.register_values.emplace_back(get_register_name(PC), format("{:x}", Regs.PC));
+    machineInfo.register_values.emplace_back(get_register_name(IE), format("{:x}", machine_ctx->IE));
+    machineInfo.register_values.emplace_back(get_register_name(IF), format("{:x}", *machine_ctx->IF));
+}
+
+void CoreSM83::GetCurrentFlagsAndISR() const {
+    machineInfo.flag_values.clear();
+
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_C), format("{:x}", Regs.F & FLAG_CARRY ? 1 : 0));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_H), format("{:x}", Regs.F & FLAG_HCARRY ? 1 : 0));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_N), format("{:x}", Regs.F & FLAG_SUB ? 1 : 0));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_Z), format("{:x}", Regs.F & FLAG_ZERO ? 1 : 0));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_IME), format("{:x}", ime ? 1 : 0));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_VBLANK), format("{:x}", *machine_ctx->IF & ISR_VBLANK));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_STAT), format("{:x}", *machine_ctx->IF & ISR_LCD_STAT));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_TIMER), format("{:x}", *machine_ctx->IF & ISR_TIMER));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_SERIAL), format("{:x}", *machine_ctx->IF & ISR_SERIAL));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_JOYPAD), format("{:x}", *machine_ctx->IF & ISR_JOYPAD));
+    
 }
 
 void CoreSM83::GetCurrentInstruction() const {

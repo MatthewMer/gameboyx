@@ -39,9 +39,15 @@ inline const std::vector<float> DEBUG_INSTR_COLUMNS = {
 };
 inline const std::vector<float> DEBUG_REGISTER_COLUMNS = {
     1.f,
-    7.f,
+    2.f,
     1.f,
-    7.f
+    2.f
+};
+inline const std::vector<float> DEBUG_FLAG_COLUMNS = {
+    1.f,
+    2.f,
+    1.f,
+    2.f
 };
 
 inline const ImVec2 hw_info_win_size(250.f, 0.f);
