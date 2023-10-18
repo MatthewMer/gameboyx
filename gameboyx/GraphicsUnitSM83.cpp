@@ -56,7 +56,10 @@ void GraphicsUnitSM83::NextFrame() {
 		}
 
 		mem_instance->RequestInterrupts(isrFlags | ISR_VBLANK);*/
-		*graphics_ctx->LY = LCD_VBLANK_THRESHOLD;
+
+		// TODO: let cpu run for machine cycles per scan line, render frame after last scanline, set LY to 0x90 after first 17500 machine cycles (via increment)
+		// currently directly set to 0x90 only for testing with blargg's instruction tests
+		*graphics_ctx->LY = 0x90;//LCD_VBLANK_THRESHOLD;
 	}
 }
 

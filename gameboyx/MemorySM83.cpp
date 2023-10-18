@@ -88,10 +88,11 @@ void MemorySM83::InitMemory() {
 
     const auto& vec_rom = cart_obj->GetRomVector();
 
-    machine_ctx->isCgb = cart_obj->GetIsCgb();
-    machine_ctx->wram_bank_num = (machine_ctx->isCgb ? 8 : 2);
-    graphics_ctx->isCgb = cart_obj->GetIsCgb();
-    graphics_ctx->vram_bank_num = (graphics_ctx->isCgb ? 2 : 1);
+    isCgb = cart_obj->GetIsCgb();
+    machine_ctx->isCgb = isCgb;
+    machine_ctx->wram_bank_num = (isCgb ? 8 : 2);
+    graphics_ctx->isCgb = isCgb;
+    graphics_ctx->vram_bank_num = (isCgb ? 2 : 1);
 
     if (!ReadRomHeaderInfo(vec_rom)) { 
         LOG_ERROR("Couldn't acquire memory information");
@@ -400,6 +401,7 @@ void MemorySM83::InitMemoryState() {
 
     SetLCDCValues(INIT_CGB_LCDC);
     *graphics_ctx->STAT = INIT_CGB_STAT;
+    *graphics_ctx->LY = INIT_CGB_LY;
 }
 
 /* ***********************************************************************************************************
@@ -531,10 +533,99 @@ void MemorySM83::WriteIE(const u8& _data) {
     IO PROCESSING
 *********************************************************************************************************** */
 u8 MemorySM83::GetIOValue(const u16& _addr) {
+    // TODO: take registers with mixed access into account and further reading on return values when reading from specific locations
     switch (_addr) {
-    default:
-        return IO[_addr - IO_REGISTERS_OFFSET];
+    case 0xFF03:
+    case 0xFF08:
+    case 0xFF09:
+    case 0xFF0A:
+    case 0xFF0B:
+    case 0xFF0C:
+    case 0xFF0D:
+    case 0xFF0E:
+    case 0xFF15:
+    case 0xFF1F:
+    case 0xFF27:
+    case 0xFF28:
+    case 0xFF29:
+    case 0xFF2A:
+    case 0xFF2B:
+    case 0xFF2C:
+    case 0xFF2D:
+    case 0xFF2E:
+    case 0xFF2F:
+    case 0xFF4C:
+    case 0xFF4E:
+    case 0xFF50:
+    case 0xFF57:
+    case 0xFF58:
+    case 0xFF59:
+    case 0xFF5A:
+    case 0xFF5B:
+    case 0xFF5C:
+    case 0xFF5D:
+    case 0xFF5E:
+    case 0xFF5F:
+    case 0xFF60:
+    case 0xFF61:
+    case 0xFF62:
+    case 0xFF63:
+    case 0xFF64:
+    case 0xFF65:
+    case 0xFF66:
+    case 0xFF67:
+    case 0xFF6D:
+    case 0xFF6E:
+    case 0xFF6F:
+    case 0xFF71:
+    case 0xFF72:
+    case 0xFF73:
+    case 0xFF74:
+    case 0xFF75:
+        return 0xFF;
         break;
+    default:
+        if (_addr > 0xFF77) {
+            return 0xFF;
+        }
+        else if(isCgb){
+            switch (_addr) {
+            case 0xFF47:
+            case 0xFF48:
+            case 0xFF49:
+                return 0xFF;
+                break;
+            default:
+                return IO[_addr - IO_REGISTERS_OFFSET];
+                break;
+            }
+        }
+        else {
+            switch (_addr) {
+            case CGB_SPEED_SWITCH_ADDR:
+            case CGB_VRAM_SELECT_ADDR:
+            case CGB_HDMA1_ADDR:
+            case CGB_HDMA2_ADDR:
+            case CGB_HDMA3_ADDR:
+            case CGB_HDMA4_ADDR:
+            case CGB_HDMA5_ADDR:
+            case CGB_IR_ADDR:
+            case BCPS_BGPI_ADDR:
+            case BCPD_BGPD_ADDR:
+            case OCPS_OBPI_ADDR:
+            case OCPD_OBPD_ADDR:
+            case CGB_OBJ_PRIO_ADDR:
+            case CGB_WRAM_SELECT_ADDR:
+            case PCM12_ADDR:
+            case PCM34_ADDR:
+                LOG_WARN("Read ", format("{:x}", _addr), " as FF");
+                return 0xFF;
+                break;
+            default:
+                return IO[_addr - IO_REGISTERS_OFFSET];
+                break;
+            }
+        }
     }
 }
 
@@ -545,9 +636,6 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
         break;
     case TAC_ADDR:
         *machine_ctx->TAC = _data & 0x07;
-        break;
-    case IF_ADDR:
-        *machine_ctx->IF = _data & 0x1F;
         break;
     case CGB_VRAM_SELECT_ADDR:
         SetVRAMBank(_data);
@@ -587,6 +675,10 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
         break;
     default:
         IO[_addr - IO_REGISTERS_OFFSET] = _data;
+        // TODO: remove, only for testing with blargg's instruction test rom
+        if (_addr == SERIAL_DATA) {
+            printf("%c", (char)IO[_addr - IO_REGISTERS_OFFSET]);
+        }
         break;
     }
 }
@@ -597,7 +689,7 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
 void MemorySM83::VRAM_DMA(const u8& _data) {
     // u8 mode = HDMA5 & DMA_MODE_BIT;
     *HDMA5 = _data;
-    if (machine_ctx->isCgb) {
+    if (isCgb) {
         *HDMA5 |= 0x80;
         u16 length = ((*HDMA5 & 0x7F) + 1) * 0x10;
 
@@ -689,24 +781,10 @@ void MemorySM83::ProcessTAC() {
     SPEED SWITCH
 *********************************************************************************************************** */
 void MemorySM83::SwitchSpeed(const u8& _data) {
-    if (machine_ctx->isCgb) {
+    if (isCgb) {
         if (_data & PREPARE_SPEED_SWITCH) {
-            if ((_data & 0x80) ^ *SPEEDSWITCH) {
-                switch (_data & SPEED) {
-                case NORMAL_SPEED:
-                    *SPEEDSWITCH |= DOUBLE_SPEED;
-                    machine_ctx->currentSpeed = 2;
-                    break;
-                case DOUBLE_SPEED:
-                    *SPEEDSWITCH &= ~DOUBLE_SPEED;
-                    machine_ctx->currentSpeed = 1;
-                    break;
-                }
-
-                machine_ctx->IE = 0x00;
-                *joyp_ctx->JOYP_P1 = 0x30;
-                // TODO: STOP
-            }
+            *SPEEDSWITCH ^= SET_SPEED;
+            machine_ctx->speed_switch_requested = true;
         }
     }
 }
@@ -816,7 +894,7 @@ void MemorySM83::SetVRAMBank(const u8& _data) {
 void MemorySM83::SetWRAMBank(const u8& _data) {
     *WRAM_BANK = _data & 0x07;
     if (*WRAM_BANK == 0) *WRAM_BANK = 1;
-    if (machine_ctx->isCgb) {
+    if (isCgb) {
         machine_ctx->wram_bank_selected = *WRAM_BANK - 1;
     }
 }

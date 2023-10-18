@@ -61,6 +61,7 @@ private:
 	int dbgInstrAddress = 0;
 	bank_index dbgInstrCurrentBreakpoint = bank_index(0, 0);
 	bool dbgInstrBreakpointSet = false;
+	bool dbgInstrPCoutOfRange = false;
 	bool dbgInstrAutorun = false;
 	int dbgInstrLastPC = -1;
 	debug_instr_data dbgInstrCurrentEntry;

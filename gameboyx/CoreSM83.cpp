@@ -430,7 +430,16 @@ void CoreSM83::GetCurrentCoreFrequency() {
 
 void CoreSM83::GetCurrentProgramCounter() const {
     machineInfo.current_pc = (int)Regs.PC;
-    machineInfo.current_rom_bank = (Regs.PC < ROM_N_OFFSET ? 0 : machine_ctx->rom_bank_selected + 1);
+
+    if (Regs.PC < ROM_N_OFFSET) {
+        machineInfo.current_rom_bank = 0;
+    }
+    else if (Regs.PC < VRAM_N_OFFSET) {
+        machineInfo.current_rom_bank = machine_ctx->rom_bank_selected + 1;
+    }
+    else {
+        machineInfo.current_rom_bank = -1;
+    }
 }
 
 /* ***********************************************************************************************************
@@ -893,16 +902,64 @@ void CoreSM83::NOP() {
 
 // halted
 void CoreSM83::STOP() {
-    data = mmu_instance->Read8Bit(Regs.PC);
-    Regs.PC++;
+    u8 joyp = mmu_instance->Read8Bit(JOYP_ADDR) & JOYP_BUTTONS_MASK;
+    bool two_byte = false;
+    bool div_reset = false;
 
-    if (data != 0x00) {
-        LOG_ERROR("Wrong usage of STOP instruction");
-        return;
+    if (joyp) {
+        if (machine_ctx->IE & *machine_ctx->IF) {
+            return;
+        }
+        else {
+            two_byte = true;
+            halted = true;
+        }
+    }
+    else {
+        if (machine_ctx->speed_switch_requested) {
+            if (machine_ctx->IE & *machine_ctx->IF) {
+                if (ime) {
+                    LOG_ERROR("STOP Glitch encountered");
+                    halted = true;
+                    // set IE to 0x00 (this case is undefined behaviour, simply prevent cpu from execution)
+                    machine_ctx->IE = 0x00;
+                }
+                else {
+                    div_reset = true;
+                }
+            }
+            else {
+                // skipping halted, not necessary
+                two_byte = true;
+                div_reset = true;
+            }
+        }
+        else {
+            two_byte = machine_ctx->IE & *machine_ctx->IF ? false : true;
+            halted = true;
+            div_reset = true;
+        }
     }
 
-    mmu_instance->Write8Bit(0x00, DIV_ADDR);
-    halted = true;
+
+    if (two_byte) {
+        data = mmu_instance->Read8Bit(Regs.PC);
+        Regs.PC++;
+
+        if (data) {
+            LOG_ERROR("Wrong usage of STOP instruction at: ", format("{:x}", Regs.PC - 1));
+            return;
+        }
+    }
+
+    if (div_reset) {
+        mmu_instance->Write8Bit(0x00, DIV_ADDR);
+    }
+
+    if (machine_ctx->speed_switch_requested) {
+        machine_ctx->currentSpeed ^= 3;
+        machine_ctx->speed_switch_requested = false;
+    }
 }
 
 // set halted state
@@ -1048,10 +1105,10 @@ void CoreSM83::LDH() {
 
     switch (opcode) {
     case 0xE0:
-        mmu_instance->Write8Bit(Regs.A, (data & 0xFF) | 0xFF00);
+        mmu_instance->Write8Bit(Regs.A, data | 0xFF00);
         break;
     case 0xF0:
-        Regs.A = mmu_instance->Read8Bit((data & 0xFF) | 0xFF00);
+        Regs.A = mmu_instance->Read8Bit(data | 0xFF00);
         break;
     }
 }

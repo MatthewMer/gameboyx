@@ -180,6 +180,10 @@ void ImGuiGameboyX::ShowDebugInstructions() {
 
         ImGui::Separator();
         ImGui::TextColored(HIGHLIGHT_COLOR, "Instructions:");
+        if (dbgInstrPCoutOfRange) {
+            ImGui::SameLine();
+            ImGui::TextColored(IMGUI_RED_COL, "PC out of range");
+        }
         if (ImGui::BeginTable("instruction_debug", dbgInstrColNum, TABLE_FLAGS)) {
 
             for (int i = 0; i < dbgInstrColNum; i++) {
@@ -193,7 +197,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
                     ImGui::TableNextColumn();
 
                     if (dbgInstrBreakpointSet && current_index == dbgInstrCurrentBreakpoint) {
-                        ImGui::TextColored(IMGUI_BREAKPOINT_COL, ">>>");
+                        ImGui::TextColored(IMGUI_RED_COL, ">>>");
                     }
                     ImGui::TableNextColumn();
 
@@ -722,15 +726,20 @@ bool ImGuiGameboyX::CheckScroll(ScrollableTableBase& _table_obj) {
 // ***** program counter auto scroll *****
 bool ImGuiGameboyX::CheckCurrentPCAutoScroll() {
     if (machineInfo.current_pc != dbgInstrLastPC) {
+        if (machineInfo.current_rom_bank >= 0) {
+            dbgInstrLastPC = machineInfo.current_pc;
+            dbgInstrInstructionIndex.bank = machineInfo.current_rom_bank;
+            dbgInstrPCoutOfRange = false;
 
-        dbgInstrLastPC = machineInfo.current_pc;
-        dbgInstrInstructionIndex.bank = machineInfo.current_rom_bank;
+            ActionScrollToCurrentPC();
 
-        ActionScrollToCurrentPC();
-
-        dbgInstrInstructionIndex.index = machineInfo.program_buffer.GetIndexByAddress(dbgInstrLastPC).index;
-
-        return true;
+            dbgInstrInstructionIndex.index = machineInfo.program_buffer.GetIndexByAddress(dbgInstrLastPC).index;
+            return true;
+        }
+        else {
+            dbgInstrPCoutOfRange = true;
+            return false;
+        }
     }
 
     return false;
@@ -738,7 +747,7 @@ bool ImGuiGameboyX::CheckCurrentPCAutoScroll() {
 
 // ***** DEBUG INSTRUCTION PROCESS BREAKPOINT *****
 bool ImGuiGameboyX::CheckBreakPoint() {
-    if (dbgInstrBreakpointSet) {
+    if (dbgInstrBreakpointSet && !dbgInstrPCoutOfRange) {
         return dbgInstrInstructionIndex == dbgInstrCurrentBreakpoint;
     }
     else {

@@ -69,6 +69,7 @@
 *********************************************************************************************************** */
 // joypad
 #define JOYP_ADDR                   0xFF00              // Mixed
+#define JOYP_BUTTONS_MASK           0x0F
 
 // serial
 #define SERIAL_DATA                 0xFF01
@@ -153,7 +154,7 @@
 #define CGB_SPEED_SWITCH_ADDR       0xFF4D              // Mixed, affects: CPU 1MHz -> 2.1MHz, timer/divider, OAM DMA(not needed)
 #define SPEED                       0x80
 #define NORMAL_SPEED                0x00
-#define DOUBLE_SPEED                0x80
+#define SET_SPEED                0x80
 #define PREPARE_SPEED_SWITCH        0x01
 
 // VRAM BANK SELECT
@@ -168,6 +169,8 @@
 #define DMA_MODE_BIT                0x80
 #define DMA_MODE_GENERAL            0x00
 #define DMA_MODE_HBLANK             0x80
+
+#define CGB_IR_ADDR                 0xFF56
 
 // BG/OBJ PALETTES SPECS
 #define BCPS_BGPI_ADDR              0xFF68              // RW
@@ -294,3 +297,4 @@
 // initial memory states
 #define INIT_CGB_LCDC                   0x91
 #define INIT_CGB_STAT                   0x81
+#define INIT_CGB_LY                     0x90

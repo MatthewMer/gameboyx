@@ -38,6 +38,7 @@ struct machine_information {
 	int rom_bank_num = 0;
 	int vram_bank_selected = 0;
 	int vram_bank_num = 0;
+	int current_speed = 1;
 
 	DirectMemoryAccess memory_access = DirectMemoryAccess();
 	MemoryBuffer<ScrollableTable<memory_data>> memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();

@@ -24,6 +24,7 @@ struct machine_state_context {
 
 	// speed switch
 	int currentSpeed = 1;
+	bool speed_switch_requested = false;
 
 	// bank selects
 	int wram_bank_selected = 0;
@@ -189,6 +190,8 @@ private:
 	static MemorySM83* instance;
 	// destructor
 	~MemorySM83() = default;
+
+	bool isCgb = false;
 
 	// members
 	void InitMemory() override;
