@@ -516,8 +516,7 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
     u16 data = 0;
     bool cb = false;
 
-    auto& buffer = get<ST_BUF_BUFFER>(_program_buffer);
-    buffer.clear();
+    _program_buffer.clear();
 
     for (u16 addr = 0, i = 0; addr < _size; i++) {
 
@@ -527,7 +526,7 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
         if (addr == ROM_HEAD_LOGO && _bank == 0) {
             current_entry = ScrollableTableEntry<debug_instr_data>(addr, debug_instr_data("ROM" + to_string(_bank) + ": " + format("{:x}  ", addr), "- HEADER INFO -"));
             addr = ROM_HEAD_END + 1;
-            buffer.emplace_back(current_entry);
+            _program_buffer.emplace_back(current_entry);
         }
         else {
             u8 opcode = _rom_bank[addr];
@@ -559,11 +558,9 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
                 get<ST_ENTRY_DATA>(current_entry).second += " " + args;
             }
 
-            buffer.emplace_back(current_entry);
+            _program_buffer.emplace_back(current_entry);
         }
     }
-
-    get<ST_BUF_SIZE>(_program_buffer) = get<ST_BUF_BUFFER>(_program_buffer).size();
 }
 
 void CoreSM83::InitMessageBufferProgram() {

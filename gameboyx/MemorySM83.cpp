@@ -179,7 +179,6 @@ void MemorySM83::SetupDebugMemoryAccess() {
                     line_num = LINE_NUM(size);
                     ScrollableTable<memory_data> table = ScrollableTable<memory_data>(line_num < DEBUG_MEM_LINES ? line_num : DEBUG_MEM_LINES);
                     auto table_buffer = ScrollableTableBuffer<memory_data>();
-                    get<ST_BUF_SIZE>(table_buffer) = line_num;
 
                     int index;
                     for (int k = 0; k < line_num; k++) {
@@ -193,7 +192,7 @@ void MemorySM83::SetupDebugMemoryAccess() {
                             size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
                         get<MEM_ENTRY_REF>(get<ST_ENTRY_DATA>(buffer_entry)) = &ref[j][index];
 
-                        get<ST_BUF_BUFFER>(table_buffer).emplace_back(buffer_entry);
+                        table_buffer.emplace_back(buffer_entry);
                     }
 
                     table.AddMemoryArea(table_buffer);
