@@ -463,18 +463,19 @@ void ImGuiGameboyX::ShowNewGameDialog() {
     string current_path = get_current_path();
     string s_path_rom_folder = current_path + ROM_FOLDER;
 
-    auto filter_items = new nfdfilteritem_t[sizeof(nfdfilteritem_t) * FILE_EXTS.size()];
+    auto filter_items = new nfdfilteritem_t[FILE_EXTS.size()];
     for (int i = 0; i < FILE_EXTS.size(); i++) {
         filter_items[i] = { FILE_EXTS[i][0].c_str(), FILE_EXTS[i][1].c_str() };
     }
 
     nfdchar_t* out_path = nullptr;
-    const auto result = NFD_OpenDialog(&out_path, filter_items, 2, s_path_rom_folder.c_str());
+    const auto result = NFD_OpenDialog(&out_path, filter_items, FILE_EXTS.size(), s_path_rom_folder.c_str());
     delete[] filter_items;
 
     if (result == NFD_OKAY) {
         if (out_path != nullptr) {
             string path_to_rom(out_path);
+            NFD_FreePath(out_path);
             if (!ActionAddGame(path_to_rom)) { return; }
         }
         else {
