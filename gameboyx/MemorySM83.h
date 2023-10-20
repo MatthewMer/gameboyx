@@ -54,8 +54,8 @@ struct graphics_context {
 	bool isCgb = false;
 
 	// VRAM/OAM
-	u8** VRAM_N;
-	u8* OAM;
+	std::vector<std::vector<u8>> VRAM_N;
+	std::vector<u8> OAM;
 
 	// VRAM BANK SELECT
 	u8* VRAM_BANK;
@@ -176,9 +176,9 @@ public:
 	void WriteHRAM(const u8& _data, const u16& _addr);
 	void WriteIE(const u8& _data);
 
-	machine_state_context* GetMachineContext() const;
-	graphics_context* GetGraphicsContext() const;
-	sound_context* GetSoundContext() const;
+	machine_state_context* GetMachineContext();
+	graphics_context* GetGraphicsContext();
+	sound_context* GetSoundContext();
 
 	void RequestInterrupts(const u8& isr_flags) override;
 
@@ -206,16 +206,15 @@ private:
 	void ProcessTAC();
 
 	void AllocateMemory() override;
-	void CleanupMemory() override;
 
 	// actual memory
-	u8* ROM_0;
-	u8** ROM_N;
-	u8** RAM_N;
-	u8* WRAM_0;
-	u8** WRAM_N;
-	u8* HRAM;
-	u8* IO;
+	std::vector<u8> ROM_0;
+	std::vector<std::vector<u8>> ROM_N;
+	std::vector<std::vector<u8>> RAM_N;
+	std::vector<u8> WRAM_0;
+	std::vector<std::vector<u8>> WRAM_N;
+	std::vector<u8> HRAM;
+	std::vector<u8> IO;
 
 	// IO *****************
 	u8 GetIOValue(const u16& _addr);
@@ -254,9 +253,9 @@ private:
 	void SetWRAMBank(const u8& _data);
 
 	// memory cpu context
-	machine_state_context* machine_ctx = new machine_state_context();
-	graphics_context* graphics_ctx = new graphics_context();
-	sound_context* sound_ctx = new sound_context();
-	joypad_context* joyp_ctx = new joypad_context();
-	serial_context* serial_ctx = new serial_context();
+	machine_state_context machine_ctx = machine_state_context();
+	graphics_context graphics_ctx = graphics_context();
+	sound_context sound_ctx = sound_context();
+	joypad_context joyp_ctx = joypad_context();
+	serial_context serial_ctx = serial_context();
 };

@@ -17,7 +17,6 @@ protected:
 	virtual void SetupDebugMemoryAccess() = 0;
 
 	virtual void AllocateMemory() = 0;
-	virtual void CleanupMemory() = 0;
 
 	virtual void RequestInterrupts(const u8& isr_flags) = 0;
 
