@@ -45,6 +45,7 @@ MemorySM83* MemorySM83::instance = nullptr;
 MemorySM83* MemorySM83::getInstance(machine_information& _machine_info) {
     if (instance == nullptr) {
         instance = new MemorySM83(_machine_info);
+        instance->InitMemory();
     }
     return instance;
 }
@@ -99,11 +100,12 @@ void MemorySM83::InitMemory() {
     }
 
     AllocateMemory();
+    SetIOReferences();
+
     if (!CopyRom(vec_rom)) {
         LOG_ERROR("Couldn't copy ROM data");
         return;
     }
-
     InitMemoryState();
 
     SetupDebugMemoryAccess();
@@ -205,8 +207,6 @@ void MemorySM83::AllocateMemory() {
     IO = vector<u8>(IO_REGISTERS_SIZE, 0);
 
     HRAM = vector<u8>(HRAM_SIZE, 0);
-
-    SetIOReferences();
 }
 
 void MemorySM83::SetIOReferences() {

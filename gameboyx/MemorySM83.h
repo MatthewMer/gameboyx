@@ -184,9 +184,7 @@ public:
 
 private:
 	// constructor
-	explicit MemorySM83(machine_information& _machine_info) : MemoryBase(_machine_info) {
-		InitMemory();
-	};
+	explicit MemorySM83(machine_information& _machine_info) : MemoryBase(_machine_info) {};
 	static MemorySM83* instance;
 	// destructor
 	~MemorySM83() = default;

@@ -86,7 +86,7 @@ void MmuBase::resetInstance() {
 }
 
 MmuBase* MmuBase::getNewMmuInstance(machine_information& _machine_info) {
-	vector<u8> vec_rom = Cartridge::getInstance()->GetRomVector();
+	const vector<u8>& vec_rom = Cartridge::getInstance()->GetRomVector();
 
 	switch (gameboy_get_mapper(vec_rom[ROM_HEAD_HW_TYPE])) {
 	case MBC1:

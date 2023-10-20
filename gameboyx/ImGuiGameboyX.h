@@ -82,6 +82,7 @@ private:
 	bool showNewGameDialog = false;
 	bool showGameSelect = true;
 	bool showMemoryInspector = false;
+	bool showImGuiDebug = false;
 
 	// gui functions
 	void ShowMainMenuBar();

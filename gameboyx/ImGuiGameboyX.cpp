@@ -63,6 +63,7 @@ void ImGuiGameboyX::ProcessGUI() {
     if (showWinAbout) { ShowWindowAbout(); }
     if (machineInfo.track_hardware_info) { ShowHardwareInfo(); }
     if (showMemoryInspector) { ShowDebugMemoryInspector(); }
+    if (showImGuiDebug) { ImGui::ShowDebugLogWindow(); }
 
     if (gameState.game_running) {
         if (machineInfo.instruction_debug_enabled) {
@@ -118,6 +119,7 @@ void ImGuiGameboyX::ShowMainMenuBar() {
             ImGui::MenuItem("Hardware Info", nullptr, &machineInfo.track_hardware_info);
             ImGui::MenuItem("Instruction Debugger", nullptr, &machineInfo.instruction_debug_enabled);
             ImGui::MenuItem("Memory Inspector", nullptr, &showMemoryInspector);
+            ImGui::MenuItem("ImGui Debug", nullptr, &showImGuiDebug);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {

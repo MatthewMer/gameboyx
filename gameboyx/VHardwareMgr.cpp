@@ -59,7 +59,7 @@ void VHardwareMgr::ProcessNext() {
     // if machine cycles per frame passed -> render frame
     if (core_instance->CheckNextFrame()) {
         SimulateDelay();
-        graphics_instance->NextFrame();
+        //graphics_instance->NextFrame();
     }
 
     // get current hardware state
