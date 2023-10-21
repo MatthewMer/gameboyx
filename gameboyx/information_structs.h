@@ -10,9 +10,6 @@
 template <class T> using MemoryBufferEntry = std::pair<std::string, std::vector<T>>;	// memory buffer: type, vector<Table>
 template <class T> using MemoryBuffer = std::vector<MemoryBufferEntry<T>>;				// memory buffer: type, vector<Table>
 
-using DirectMemoryAccessEntry = std::tuple<int, int, int, int, u8**>;					// memory access: type, num, size, base_ptr, ref
-using DirectMemoryAccess = std::vector<DirectMemoryAccessEntry>;						// memory access: type, num, size, base_ptr, ref
-
 struct machine_information {
 	// debug isntructions
 	bool instruction_debug_enabled = false;
@@ -23,7 +20,6 @@ struct machine_information {
 	bool instruction_logging = false;
 	bool pause_execution = true;
 	int current_pc = 0;
-	int rom_bank_size = 0;
 	int current_rom_bank = 0;
 	std::string current_instruction = "";
 
@@ -40,7 +36,6 @@ struct machine_information {
 	int vram_bank_num = 0;
 	int current_speed = 1;
 
-	DirectMemoryAccess memory_access = DirectMemoryAccess();
 	MemoryBuffer<ScrollableTable<memory_data>> memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
 
 	void reset_machine_information() {
@@ -49,7 +44,6 @@ struct machine_information {
 		bool instruction_logging = false;
 		bool pause_execution = true;
 		int current_pc = 0;
-		int rom_bank_size = 0;
 		int current_rom_bank = 0;
 		std::string current_instruction = "";
 
@@ -63,7 +57,6 @@ struct machine_information {
 		int vram_bank_selected = 0;
 		int vram_bank_num = 0;
 
-		DirectMemoryAccess memory_access = DirectMemoryAccess();
 		MemoryBuffer<ScrollableTable<memory_data>> memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
 	}
 };

@@ -126,49 +126,172 @@ bool MemorySM83::CopyRom(const vector<u8>& _vec_rom) {
     return true;
 }
 
+inline void setup_bank_access(ScrollableTableBuffer<memory_data>& _table_buffer, vector<u8>& _bank, const int& _offset) {
+    auto data = memory_data();
+
+    int size = _bank.size();
+    int line_num = LINE_NUM(size);
+    int index;
+
+    for (int i = 0; i < line_num; i++) {
+        auto table_entry = ScrollableTableEntry<memory_data>();
+
+        index = i * DEBUG_MEM_ELEM_PER_LINE;
+        get<ST_ENTRY_ADDRESS>(table_entry) = _offset + index;
+
+        data = memory_data();
+        get<MEM_ENTRY_ADDR>(data) = format("{:x}", _offset + index);
+        get<MEM_ENTRY_LEN>(data) = size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
+        get<MEM_ENTRY_REF>(data) = &_bank[index];
+
+        get<ST_ENTRY_DATA>(table_entry) = data;
+
+        _table_buffer.emplace_back(table_entry);
+    }
+}
+
 void MemorySM83::SetupDebugMemoryAccess() {
     // access for memory inspector
     machineInfo.memory_buffer.clear();
 
-    int line_num;
-    bool entry_found;
-    for (int i = 0, mem_type = 0; mem_type < machineInfo.memory_access.size(); mem_type++) {
-        MemoryBufferEntry<ScrollableTable<memory_data>> entry = MemoryBufferEntry<ScrollableTable<memory_data>>();
-        entry.first = get_memory_name(static_cast<memory_areas>(mem_type));
+    auto mem_type_table_buffer = MemoryBufferEntry<ScrollableTable<memory_data>>();
+    auto table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+    auto table_buffer = ScrollableTableBuffer<memory_data>();
+    
+    // ROM
+    {
+        mem_type_table_buffer = MemoryBufferEntry<ScrollableTable<memory_data>>();
+        mem_type_table_buffer.first = "ROM";
+        
+        table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+        table_buffer = ScrollableTableBuffer<memory_data>();
+        
+        setup_bank_access(table_buffer, ROM_0, ROM_0_OFFSET);
 
-        entry_found = false;
-        for (auto& [type, num, size, offset, ref] : machineInfo.memory_access) {
-            if (mem_type == type) {
-                for (int j = 0; j < num; j++) {
-                    line_num = LINE_NUM(size);
-                    ScrollableTable<memory_data> table = ScrollableTable<memory_data>(line_num < DEBUG_MEM_LINES ? line_num : DEBUG_MEM_LINES);
-                    auto table_buffer = ScrollableTableBuffer<memory_data>();
+        table.AddMemoryArea(table_buffer);
+        mem_type_table_buffer.second.emplace_back(table);
 
-                    int index;
-                    for (int k = 0; k < line_num; k++) {
-                        ScrollableTableEntry<memory_data> buffer_entry = ScrollableTableEntry<memory_data>();
+        for (auto& n : ROM_N) {
+            table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+            table_buffer = ScrollableTableBuffer<memory_data>();
 
-                        index = k * DEBUG_MEM_ELEM_PER_LINE;
-                        get<ST_ENTRY_ADDRESS>(buffer_entry) = offset + index;
+            setup_bank_access(table_buffer, n, ROM_N_OFFSET);
 
-                        get<MEM_ENTRY_ADDR>(get<ST_ENTRY_DATA>(buffer_entry)) = format("{:x}", offset + index);
-                        get<MEM_ENTRY_LEN>(get<ST_ENTRY_DATA>(buffer_entry)) = 
-                            size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
-                        get<MEM_ENTRY_REF>(get<ST_ENTRY_DATA>(buffer_entry)) = &ref[j][index];
-
-                        table_buffer.emplace_back(buffer_entry);
-                    }
-
-                    table.AddMemoryArea(table_buffer);
-                    entry.second.emplace_back(table);
-                }
-
-                entry_found = true;
-                i++;
-            }
+            table.AddMemoryArea(table_buffer);
+            mem_type_table_buffer.second.emplace_back(table);
         }
 
-        if (entry_found) { machineInfo.memory_buffer.emplace_back(entry); }
+        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+    }
+    
+    // VRAM
+    {
+        mem_type_table_buffer = MemoryBufferEntry<ScrollableTable<memory_data>>();
+        mem_type_table_buffer.first = "VRAM";
+
+        for (auto& n : graphics_ctx.VRAM_N) {
+            table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+            table_buffer = ScrollableTableBuffer<memory_data>();
+
+            setup_bank_access(table_buffer, n, VRAM_N_OFFSET);
+
+            table.AddMemoryArea(table_buffer);
+            mem_type_table_buffer.second.emplace_back(table);
+        }
+
+        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+    }
+
+    // RAM
+    if (machine_ctx.ram_bank_num > 0) {
+        mem_type_table_buffer = MemoryBufferEntry<ScrollableTable<memory_data>>();
+        mem_type_table_buffer.first = "RAM";
+
+        for (auto& n : RAM_N) {
+            table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+            table_buffer = ScrollableTableBuffer<memory_data>();
+
+            setup_bank_access(table_buffer, n, RAM_N_OFFSET);
+
+            table.AddMemoryArea(table_buffer);
+            mem_type_table_buffer.second.emplace_back(table);
+        }
+
+        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+    }
+
+    // WRAM
+    {
+        mem_type_table_buffer = MemoryBufferEntry<ScrollableTable<memory_data>>();
+        mem_type_table_buffer.first = "WRAM";
+
+        table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+        table_buffer = ScrollableTableBuffer<memory_data>();
+
+        setup_bank_access(table_buffer, WRAM_0, WRAM_0_OFFSET);
+
+        table.AddMemoryArea(table_buffer);
+        mem_type_table_buffer.second.emplace_back(table);
+
+        for (auto& n : WRAM_N) {
+            table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+            table_buffer = ScrollableTableBuffer<memory_data>();
+
+            setup_bank_access(table_buffer, n, WRAM_N_OFFSET);
+
+            table.AddMemoryArea(table_buffer);
+            mem_type_table_buffer.second.emplace_back(table);
+        }
+
+        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+    }
+
+    // OAM
+    {
+        mem_type_table_buffer = MemoryBufferEntry<ScrollableTable<memory_data>>();
+        mem_type_table_buffer.first = "OAM";
+
+        table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+        table_buffer = ScrollableTableBuffer<memory_data>();
+
+        setup_bank_access(table_buffer, graphics_ctx.OAM, OAM_OFFSET);
+
+        table.AddMemoryArea(table_buffer);
+        mem_type_table_buffer.second.emplace_back(table);
+
+        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+    }
+
+    // IO
+    {
+        mem_type_table_buffer = MemoryBufferEntry<ScrollableTable<memory_data>>();
+        mem_type_table_buffer.first = "IO";
+
+        table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+        table_buffer = ScrollableTableBuffer<memory_data>();
+
+        setup_bank_access(table_buffer, IO, IO_REGISTERS_OFFSET);
+
+        table.AddMemoryArea(table_buffer);
+        mem_type_table_buffer.second.emplace_back(table);
+
+        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+    }
+
+    // HRAM
+    {
+        mem_type_table_buffer = MemoryBufferEntry<ScrollableTable<memory_data>>();
+        mem_type_table_buffer.first = "HRAM";
+
+        table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
+        table_buffer = ScrollableTableBuffer<memory_data>();
+
+        setup_bank_access(table_buffer, HRAM, HRAM_OFFSET);
+
+        table.AddMemoryArea(table_buffer);
+        mem_type_table_buffer.second.emplace_back(table);
+
+        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
     }
 }
 
@@ -191,7 +314,7 @@ void MemorySM83::AllocateMemory() {
 
     if (machine_ctx.ram_bank_num > 0) {
         RAM_N = vector<vector<u8>>(machine_ctx.ram_bank_num);
-        for (int i = 0; i < graphics_ctx.vram_bank_num; i++) {
+        for (int i = 0; i < machine_ctx.ram_bank_num; i++) {
             RAM_N[i] = vector<u8>(RAM_N_SIZE, 0);
         }
     }

@@ -36,11 +36,17 @@ protected:
 template <class T> class ScrollableTable : public ScrollableTableBase
 {
 public:
-	explicit constexpr ScrollableTable(const int& _elements_to_show) : elementsToShow(_elements_to_show) {
-		endIndex.index = startIndex.index + elementsToShow;
-        indexIterator = startIndex;
+	explicit constexpr ScrollableTable(const int& _elements_to_show) : maxSize(_elements_to_show) {
+        elementsToShow = 0;
+        SetElementsToShow();
 	};
 	constexpr ~ScrollableTable() noexcept {};
+
+    constexpr void SetElementsToShow() {
+        startIndex = bank_index(0, 0);
+        endIndex = bank_index(0, startIndex.index + elementsToShow);
+        indexIterator = startIndex;
+    }
 
 	constexpr ScrollableTable& operator=(const ScrollableTable& _right) noexcept {
 		if (this == addressof(_right)) { return *this; }
@@ -52,6 +58,8 @@ public:
 			elementsToShow = _right.elementsToShow;
 			bufferSize = _right.bufferSize;
             currentIndex = _right.currentIndex;
+            maxSizeSet = _right.maxSizeSet;
+            maxSize = _right.maxSize;
 			return *this;
 		}
 	}
@@ -59,6 +67,22 @@ public:
 	void AddMemoryArea(ScrollableTableBuffer<T> _buffer) {
 		buffer.emplace_back(_buffer);
 		bufferSize++;
+
+        if(!maxSizeSet){
+            int elements = 0;
+
+            for (const auto& n : buffer) {
+                elements += n.size();
+                if (elements >= maxSize) {
+                    elementsToShow = maxSize;
+                    maxSizeSet = true;
+                    break;
+                }
+            }
+
+            if (!maxSizeSet) { elementsToShow = elements; }
+            SetElementsToShow();
+        }
 	}
 
 	void ScrollUp(const int& _num) override;
@@ -86,6 +110,8 @@ private:
     bank_index currentIndex = bank_index(0, 0);
 	int bufferSize = 0;
 	int elementsToShow;
+    bool maxSizeSet = false;
+    int maxSize;
 };
 
 template <class T> void ScrollableTable<T>::ScrollUp(const int& _num) {

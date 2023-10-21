@@ -96,8 +96,8 @@ private:
 
 	// internals
 	gbc_registers Regs = gbc_registers();
-	void InitCpu() override;
 	void InitRegisterStates() override;
+	void InitCpu() override;
 
 	// cpu states and checks
 	bool halted = false;

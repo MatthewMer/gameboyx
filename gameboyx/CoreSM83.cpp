@@ -240,8 +240,8 @@ inline void data_enums_to_string(const int& _bank, u16 _addr, const u16& _data, 
 *********************************************************************************************************** */
 CoreSM83::CoreSM83(machine_information& _machine_info) : CoreBase(_machine_info) {
     machine_ctx = MemorySM83::getInstance()->GetMachineContext();
-
     InitCpu();
+
     setupLookupTable();
     setupLookupTableCB();
 }
@@ -450,7 +450,6 @@ void CoreSM83::GetStartupHardwareInfo() const {
     machineInfo.rom_bank_num = machine_ctx->rom_bank_num;
     machineInfo.ram_bank_num = machine_ctx->ram_bank_num;
     machineInfo.wram_bank_num = machine_ctx->wram_bank_num;
-    machineInfo.rom_bank_size = ROM_N_SIZE;
 }
 
 // get current hardware status (currently mapped memory banks)
@@ -565,6 +564,7 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
 
 void CoreSM83::InitMessageBufferProgram() {
     int bank_num = 0;
+    /*
     for (const auto& [type, num, size, base_ptr, ref] : machineInfo.memory_access) {
         if (type == ENUM_ROM_N) {
             for (int i = 0; i < num; i++) {
@@ -576,7 +576,7 @@ void CoreSM83::InitMessageBufferProgram() {
                 bank_num++;
             }
         }
-    }
+    }*/
 }
 
 /* ***********************************************************************************************************
