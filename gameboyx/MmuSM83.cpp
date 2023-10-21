@@ -105,7 +105,7 @@ void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 		mem_instance->WriteOAM(_data, _addr);
 	}
 	// NOT USED
-	else if (_addr < IO_REGISTERS_OFFSET) {
+	else if (_addr < IO_OFFSET) {
 		return;
 	}
 	// IO REGISTERS
@@ -167,7 +167,7 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 		return mem_instance->ReadOAM(_addr);
 	}
 	// NOT USED
-	else if (_addr < IO_REGISTERS_OFFSET) {
+	else if (_addr < IO_OFFSET) {
 		return 0x00;
 	}
 	// IO REGISTERS
@@ -289,7 +289,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		mem_instance->WriteOAM(_data, _addr);
 	}
 	// NOT USED
-	else if (_addr < IO_REGISTERS_OFFSET) {
+	else if (_addr < IO_OFFSET) {
 		return;
 	}
 	// IO REGISTERS
@@ -354,7 +354,7 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 		return mem_instance->ReadOAM(_addr);
 	}
 	// NOT USED
-	else if (_addr < IO_REGISTERS_OFFSET) {
+	else if (_addr < IO_OFFSET) {
 		return 0x00;
 	}
 	// IO REGISTERS

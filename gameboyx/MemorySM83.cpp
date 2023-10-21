@@ -11,31 +11,7 @@ using namespace std;
 /* ***********************************************************************************************************
     DEFINES
 *********************************************************************************************************** */
-#define LINE_NUM(x)     ((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE)
-
-/* ***********************************************************************************************************
-    MISC LOOKUPS
-*********************************************************************************************************** */
-const vector<pair<memory_areas, string>> memory_area_map{
-    {ENUM_ROM_N, "ROM"},
-    {ENUM_VRAM_N, "VRAM"},
-    {ENUM_RAM_N, "RAM"},
-    {ENUM_WRAM_N, "WRAM"},
-    {ENUM_OAM, "OAM"},
-    {ENUM_IO, "IO"},
-    {ENUM_HRAM, "HRAM"},
-    {ENUM_IE, "IE"}
-};
-
-inline string get_memory_name(const memory_areas& _type) {
-    for (const auto& [type,name] : memory_area_map) {
-        if (type == _type) {
-            return name;
-        }
-    }
-
-    return "";
-}
+#define LINE_NUM(x)     (int)((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE)
 
 /* ***********************************************************************************************************
     CONSTRUCTOR AND (DE)INIT
@@ -52,6 +28,7 @@ MemorySM83* MemorySM83::getInstance(machine_information& _machine_info) {
 
 MemorySM83* MemorySM83::getInstance() {
     if (instance != nullptr) { return instance; }
+    else { LOG_ERROR("Couldn't access memory instance"); }
 }
 
 void MemorySM83::resetInstance() {
@@ -72,12 +49,8 @@ graphics_context* MemorySM83::GetGraphicsContext() {
     return &graphics_ctx;
 }
 
-sound_context* MemorySM83::GetSoundContext() {
-    return &sound_ctx;
-}
-
 void MemorySM83::RequestInterrupts(const u8& isr_flags) {
-    *machine_ctx.IF |= isr_flags;
+    IO[IF_ADDR - IO_OFFSET] |= isr_flags;
 }
 
 /* ***********************************************************************************************************
@@ -100,7 +73,6 @@ void MemorySM83::InitMemory() {
     }
 
     AllocateMemory();
-    SetIOReferences();
 
     if (!CopyRom(vec_rom)) {
         LOG_ERROR("Couldn't copy ROM data");
@@ -270,7 +242,7 @@ void MemorySM83::SetupDebugMemoryAccess() {
         table = ScrollableTable<memory_data>(DEBUG_MEM_LINES);
         table_buffer = ScrollableTableBuffer<memory_data>();
 
-        setup_bank_access(table_buffer, IO, IO_REGISTERS_OFFSET);
+        setup_bank_access(table_buffer, IO, IO_OFFSET);
 
         table.AddMemoryArea(table_buffer);
         mem_type_table_buffer.second.emplace_back(table);
@@ -327,92 +299,9 @@ void MemorySM83::AllocateMemory() {
 
     graphics_ctx.OAM = vector<u8>(OAM_SIZE, 0);
 
-    IO = vector<u8>(IO_REGISTERS_SIZE, 0);
+    IO = vector<u8>(IO_SIZE, 0);
 
     HRAM = vector<u8>(HRAM_SIZE, 0);
-}
-
-void MemorySM83::SetIOReferences() {
-    // joypad
-    joyp_ctx.JOYP_P1 = &IO[JOYP_ADDR - IO_REGISTERS_OFFSET];
-
-    // serial IO
-    serial_ctx.SB = &IO[SERIAL_DATA - IO_REGISTERS_OFFSET];
-    serial_ctx.SC = &IO[SERIAL_CTRL - IO_REGISTERS_OFFSET];
-
-    // timer/divider
-    machine_ctx.DIV = &IO[DIV_ADDR - IO_REGISTERS_OFFSET];
-    machine_ctx.TIMA = &IO[TIMA_ADDR - IO_REGISTERS_OFFSET];
-    machine_ctx.TMA = &IO[TMA_ADDR - IO_REGISTERS_OFFSET];
-    machine_ctx.TAC = &IO[TAC_ADDR - IO_REGISTERS_OFFSET];
-
-    // interrupt request
-    machine_ctx.IF = &IO[IF_ADDR - IO_REGISTERS_OFFSET];
-
-    // sound
-    sound_ctx.NR10 = &IO[NR10_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR11 = &IO[NR11_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR12 = &IO[NR12_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR13 = &IO[NR13_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR14 = &IO[NR14_ADDR - IO_REGISTERS_OFFSET];
-
-    sound_ctx.NR21 = &IO[NR21_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR22 = &IO[NR22_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR23 = &IO[NR23_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR24 = &IO[NR24_ADDR - IO_REGISTERS_OFFSET];
-
-    sound_ctx.NR30 = &IO[NR30_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR31 = &IO[NR31_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR32 = &IO[NR32_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR33 = &IO[NR33_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR34 = &IO[NR34_ADDR - IO_REGISTERS_OFFSET];
-
-    sound_ctx.NR41 = &IO[NR41_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR42 = &IO[NR42_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR43 = &IO[NR43_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR44 = &IO[NR44_ADDR - IO_REGISTERS_OFFSET];
-
-    sound_ctx.NR50 = &IO[NR50_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR51 = &IO[NR51_ADDR - IO_REGISTERS_OFFSET];
-    sound_ctx.NR52 = &IO[NR52_ADDR - IO_REGISTERS_OFFSET];
-
-    sound_ctx.WAVE_RAM = &IO[WAVE_RAM_ADDR - IO_REGISTERS_OFFSET];
-
-    // graphics
-    graphics_ctx.LCDC = &IO[LCDC_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.STAT = &IO[STAT_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.SCY = &IO[SCY_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.SCX = &IO[SCX_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.LY = &IO[LY_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.LYC = &IO[LYC_ADDR - IO_REGISTERS_OFFSET];
-
-    OAM_DMA_REG = &IO[OAM_DMA_ADDR - IO_REGISTERS_OFFSET];
-
-    graphics_ctx.BGP = &IO[BGP_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.OBP0 = &IO[OBP0_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.OBP1 = &IO[OBP1_ADDR - IO_REGISTERS_OFFSET];
-
-    graphics_ctx.WY = &IO[WY_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.WX = &IO[WX_ADDR - IO_REGISTERS_OFFSET];
-
-    // speed switch
-    SPEEDSWITCH = &IO[CGB_SPEED_SWITCH_ADDR - IO_REGISTERS_OFFSET];
-
-    // vram
-    graphics_ctx.VRAM_BANK = &IO[CGB_VRAM_SELECT_ADDR - IO_REGISTERS_OFFSET];
-    HDMA1 = &IO[CGB_HDMA1_ADDR - IO_REGISTERS_OFFSET];
-    HDMA2 = &IO[CGB_HDMA2_ADDR - IO_REGISTERS_OFFSET];
-    HDMA3 = &IO[CGB_HDMA3_ADDR - IO_REGISTERS_OFFSET];
-    HDMA4 = &IO[CGB_HDMA4_ADDR - IO_REGISTERS_OFFSET];
-    HDMA5 = &IO[CGB_HDMA5_ADDR - IO_REGISTERS_OFFSET];
-
-    graphics_ctx.BCPS_BGPI = &IO[BCPS_BGPI_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.BCPD_BGPD = &IO[BCPD_BGPD_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.OCPS_OBPI = &IO[OCPS_OBPI_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.OCPD_OBPD = &IO[OCPD_OBPD_ADDR - IO_REGISTERS_OFFSET];
-    graphics_ctx.OBJ_PRIO = &IO[CGB_OBJ_PRIO_ADDR - IO_REGISTERS_OFFSET];
-
-    WRAM_BANK = &IO[CGB_WRAM_SELECT_ADDR - IO_REGISTERS_OFFSET];
 }
 
 /* ***********************************************************************************************************
@@ -422,18 +311,18 @@ void MemorySM83::InitMemoryState() {
     InitTimers();
     
     machine_ctx.IE = INIT_CGB_IE;
-    *machine_ctx.IF = INIT_CGB_IF;
+    IO[IF_ADDR - IO_OFFSET] = INIT_CGB_IF;
 
-    *graphics_ctx.BGP = INIT_BGP;
-    *graphics_ctx.OBP0 = INIT_OBP0;
-    *graphics_ctx.OBP1 = INIT_OBP1;
+    IO[BGP_ADDR - IO_OFFSET] = INIT_BGP;
+    IO[OBP0_ADDR - IO_OFFSET] = INIT_OBP0;
+    IO[OBP1_ADDR - IO_OFFSET] = INIT_OBP1;
 
     SetVRAMBank(INIT_VRAM_BANK);
     SetWRAMBank(INIT_WRAM_BANK);
 
     SetLCDCValues(INIT_CGB_LCDC);
-    *graphics_ctx.STAT = INIT_CGB_STAT;
-    *graphics_ctx.LY = INIT_CGB_LY;
+    IO[STAT_ADDR - IO_OFFSET] = INIT_CGB_STAT;
+    IO[LY_ADDR - IO_OFFSET] = INIT_CGB_LY;
 }
 
 /* ***********************************************************************************************************
@@ -497,7 +386,7 @@ u8 MemorySM83::ReadROM_N(const u16& _addr) {
 }
 
 u8 MemorySM83::ReadVRAM_N(const u16& _addr) {
-    return graphics_ctx.VRAM_N[*graphics_ctx.VRAM_BANK][_addr - VRAM_N_OFFSET];
+    return graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][_addr - VRAM_N_OFFSET];
 }
 
 u8 MemorySM83::ReadRAM_N(const u16& _addr) {
@@ -530,7 +419,7 @@ u8 MemorySM83::ReadIE() {
 
 // write *****
 void MemorySM83::WriteVRAM_N(const u8& _data, const u16& _addr) {
-    graphics_ctx.VRAM_N[*graphics_ctx.VRAM_BANK][_addr - VRAM_N_OFFSET] = _data;
+    graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][_addr - VRAM_N_OFFSET] = _data;
 }
 
 void MemorySM83::WriteRAM_N(const u8& _data, const u16& _addr) {
@@ -564,7 +453,7 @@ void MemorySM83::WriteIE(const u8& _data) {
 /* ***********************************************************************************************************
     IO PROCESSING
 *********************************************************************************************************** */
-u8 MemorySM83::GetIOValue(const u16& _addr) {
+u8 MemorySM83::GetIORegister(const u16& _addr) {
     // TODO: take registers with mixed access into account and further reading on return values when reading from specific locations
     switch (_addr) {
     case 0xFF03:
@@ -628,7 +517,7 @@ u8 MemorySM83::GetIOValue(const u16& _addr) {
                 return 0xFF;
                 break;
             default:
-                return IO[_addr - IO_REGISTERS_OFFSET];
+                return IO[_addr - IO_OFFSET];
                 break;
             }
         }
@@ -654,20 +543,20 @@ u8 MemorySM83::GetIOValue(const u16& _addr) {
                 return 0xFF;
                 break;
             default:
-                return IO[_addr - IO_REGISTERS_OFFSET];
+                return IO[_addr - IO_OFFSET];
                 break;
             }
         }
     }
 }
 
-void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
+void MemorySM83::SetIORegister(const u8& _data, const u16& _addr) {
     switch (_addr) {
     case DIV_ADDR:
-        *machine_ctx.DIV = 0x00;
+        IO[DIV_ADDR - IO_OFFSET] = 0x00;
         break;
     case TAC_ADDR:
-        *machine_ctx.TAC = _data & 0x07;
+        IO[TAC_ADDR - IO_OFFSET] = _data & 0x07;
         break;
     case CGB_VRAM_SELECT_ADDR:
         SetVRAMBank(_data);
@@ -678,22 +567,22 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
         SetLCDCValues(_data);
         break;
     case STAT_ADDR:
-        *graphics_ctx.STAT = (*graphics_ctx.STAT & (PPU_STAT_MODE | PPU_STAT_LYC_FLAG)) | (_data & ~(PPU_STAT_MODE | PPU_STAT_LYC_FLAG));
+        IO[STAT_ADDR - IO_OFFSET] = (IO[STAT_ADDR - IO_OFFSET] & (PPU_STAT_MODE | PPU_STAT_LYC_FLAG)) | (_data & ~(PPU_STAT_MODE | PPU_STAT_LYC_FLAG));
         break;
     case OAM_DMA_ADDR:
-        *OAM_DMA_REG = _data;
+        IO[OAM_DMA_ADDR - IO_OFFSET] = _data;
         OAM_DMA();
         break;
     case CGB_HDMA2_ADDR:
-        *HDMA2 = _data & 0xF0;
+        IO[CGB_HDMA2_ADDR - IO_OFFSET] = _data & 0xF0;
         break;
         // dest high
     case CGB_HDMA3_ADDR:
-        *HDMA3 = _data & 0x1F;
+        IO[CGB_HDMA3_ADDR - IO_OFFSET] = _data & 0x1F;
         break;
         // dest low
     case CGB_HDMA4_ADDR:
-        *HDMA4 = _data & 0xF0;
+        IO[CGB_HDMA4_ADDR - IO_OFFSET] = _data & 0xF0;
         break;
         // mode
     case CGB_HDMA5_ADDR:
@@ -706,13 +595,21 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
         SetWRAMBank(_data);
         break;
     default:
-        IO[_addr - IO_REGISTERS_OFFSET] = _data;
+        IO[_addr - IO_OFFSET] = _data;
         // TODO: remove, only for testing with blargg's instruction test rom
         if (_addr == SERIAL_DATA) {
-            printf("%c", (char)IO[_addr - IO_REGISTERS_OFFSET]);
+            printf("%c", (char)IO[_addr - IO_OFFSET]);
         }
         break;
     }
+}
+
+void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
+    IO[_addr - IO_OFFSET] = _data;
+}
+
+u8 MemorySM83::GetIOValue(const u16& _addr) {
+    return IO[_addr - IO_OFFSET];
 }
 
 /* ***********************************************************************************************************
@@ -720,44 +617,44 @@ void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
 *********************************************************************************************************** */
 void MemorySM83::VRAM_DMA(const u8& _data) {
     // u8 mode = HDMA5 & DMA_MODE_BIT;
-    *HDMA5 = _data;
+    IO[CGB_HDMA5_ADDR - IO_OFFSET] = _data;
     if (isCgb) {
-        *HDMA5 |= 0x80;
-        u16 length = ((*HDMA5 & 0x7F) + 1) * 0x10;
+        IO[CGB_HDMA5_ADDR - IO_OFFSET] |= 0x80;
+        u16 length = ((IO[CGB_HDMA5_ADDR - IO_OFFSET] & 0x7F) + 1) * 0x10;
 
-        u16 source_addr = ((u16)*HDMA1 << 8) | *HDMA2;
-        u16 dest_addr = ((u16)*HDMA3 << 8) | *HDMA4;
+        u16 source_addr = ((u16)IO[CGB_HDMA1_ADDR - IO_OFFSET] << 8) | IO[CGB_HDMA2_ADDR - IO_OFFSET];
+        u16 dest_addr = ((u16)IO[CGB_HDMA3_ADDR - IO_OFFSET] << 8) | IO[CGB_HDMA4_ADDR - IO_OFFSET];
 
         if (source_addr < ROM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[*graphics_ctx.VRAM_BANK][dest_addr - VRAM_N_OFFSET], &ROM_0[source_addr], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &ROM_0[source_addr], length);
         }
         else if (source_addr < VRAM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[*graphics_ctx.VRAM_BANK][dest_addr - VRAM_N_OFFSET], &ROM_N[machine_ctx.rom_bank_selected][source_addr - ROM_N_OFFSET], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &ROM_N[machine_ctx.rom_bank_selected][source_addr - ROM_N_OFFSET], length);
         }
         else if (source_addr < WRAM_0_OFFSET && source_addr >= RAM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[*graphics_ctx.VRAM_BANK][dest_addr - VRAM_N_OFFSET], &RAM_N[machine_ctx.ram_bank_selected][source_addr - RAM_N_OFFSET], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &RAM_N[machine_ctx.ram_bank_selected][source_addr - RAM_N_OFFSET], length);
         }
         else if (source_addr < WRAM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[*graphics_ctx.VRAM_BANK][dest_addr - VRAM_N_OFFSET], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
         }
         else if (source_addr < MIRROR_WRAM_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[*graphics_ctx.VRAM_BANK][dest_addr - VRAM_N_OFFSET], &WRAM_N[machine_ctx.wram_bank_selected][source_addr - WRAM_N_OFFSET], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &WRAM_N[machine_ctx.wram_bank_selected][source_addr - WRAM_N_OFFSET], length);
         }
         else {
             return;
         }
 
-        *HDMA5 = 0xFF;
+        IO[CGB_HDMA5_ADDR - IO_OFFSET] = 0xFF;
     }
 }
 
 void MemorySM83::OAM_DMA() {
     u16 source_address;
-    if (*OAM_DMA_REG > OAM_DMA_SOURCE_MAX) {
+    if (IO[OAM_DMA_ADDR - IO_OFFSET] > OAM_DMA_SOURCE_MAX) {
         source_address = OAM_DMA_SOURCE_MAX * 0x100;
     }
     else {
-        source_address = *OAM_DMA_REG * 0x100;
+        source_address = IO[OAM_DMA_ADDR - IO_OFFSET] * 0x100;
     }
 
     if (source_address < ROM_N_OFFSET) {
@@ -767,7 +664,7 @@ void MemorySM83::OAM_DMA() {
         memcpy(&graphics_ctx.OAM[0], &ROM_N[machine_ctx.rom_bank_selected][source_address], OAM_DMA_LENGTH);
     }
     else if (source_address < RAM_N_OFFSET) {
-        memcpy(&graphics_ctx.OAM[0], &graphics_ctx.VRAM_N[*graphics_ctx.VRAM_BANK][source_address], OAM_DMA_LENGTH);
+        memcpy(&graphics_ctx.OAM[0], &graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][source_address], OAM_DMA_LENGTH);
     }
     else if (source_address < WRAM_0_OFFSET) {
         memcpy(&graphics_ctx.OAM[0], &RAM_N[machine_ctx.ram_bank_selected][source_address], OAM_DMA_LENGTH);
@@ -791,7 +688,7 @@ void MemorySM83::InitTimers() {
 
 void MemorySM83::ProcessTAC() {
     int divisor;
-    switch (*machine_ctx.TAC & TAC_CLOCK_SELECT) {
+    switch (IO[TAC_ADDR - IO_OFFSET] & TAC_CLOCK_SELECT) {
     case 0x00:
         divisor = 1024;
         break;
@@ -815,7 +712,7 @@ void MemorySM83::ProcessTAC() {
 void MemorySM83::SwitchSpeed(const u8& _data) {
     if (isCgb) {
         if (_data & PREPARE_SPEED_SWITCH) {
-            *SPEEDSWITCH ^= SET_SPEED;
+            IO[CGB_SPEED_SWITCH_ADDR - IO_OFFSET] ^= SET_SPEED;
             machine_ctx.speed_switch_requested = true;
         }
     }
@@ -827,10 +724,10 @@ void MemorySM83::SwitchSpeed(const u8& _data) {
 void MemorySM83::SetObjPrio(const u8& _data) {
     switch (_data & PRIO_MODE) {
     case PRIO_OAM:
-        *graphics_ctx.OBJ_PRIO &= ~PRIO_COORD;
+        IO[CGB_OBJ_PRIO_ADDR - IO_OFFSET] &= ~PRIO_COORD;
         break;
     case PRIO_COORD:
-        *graphics_ctx.OBJ_PRIO |= PRIO_COORD;
+        IO[CGB_OBJ_PRIO_ADDR - IO_OFFSET] |= PRIO_COORD;
         break;
     }
 }
@@ -908,7 +805,7 @@ void MemorySM83::SetLCDCValues(const u8& _data) {
         break;
     }
 
-    *graphics_ctx.LCDC = _data;
+    IO[LCDC_ADDR - IO_OFFSET] = _data;
 }
 
 /* ***********************************************************************************************************
@@ -916,17 +813,17 @@ void MemorySM83::SetLCDCValues(const u8& _data) {
 *********************************************************************************************************** */
 void MemorySM83::SetVRAMBank(const u8& _data) {
     if (graphics_ctx.isCgb) {
-        *graphics_ctx.VRAM_BANK = _data & 0x01;
+        IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x01;
     }
     else {
-        *graphics_ctx.VRAM_BANK = 0x00;
+        IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET] = 0x00;
     }
 }
 
 void MemorySM83::SetWRAMBank(const u8& _data) {
-    *WRAM_BANK = _data & 0x07;
-    if (*WRAM_BANK == 0) *WRAM_BANK = 1;
+    IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x07;
+    if (IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] == 0) IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = 1;
     if (isCgb) {
-        machine_ctx.wram_bank_selected = *WRAM_BANK - 1;
+        machine_ctx.wram_bank_selected = IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] - 1;
     }
 }

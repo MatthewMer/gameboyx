@@ -239,7 +239,9 @@ inline void data_enums_to_string(const int& _bank, u16 _addr, const u16& _data, 
     CONSTRUCTOR
 *********************************************************************************************************** */
 CoreSM83::CoreSM83(machine_information& _machine_info) : CoreBase(_machine_info) {
-    machine_ctx = MemorySM83::getInstance()->GetMachineContext();
+    mem_instance = MemorySM83::getInstance();
+    machine_ctx = mem_instance->GetMachineContext();
+
     InitCpu();
 
     setupLookupTable();
@@ -283,7 +285,7 @@ void CoreSM83::InitRegisterStates() {
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
     if (halted) {
-        halted = (machine_ctx->IE & *machine_ctx->IF) == 0x00;
+        halted = (machine_ctx->IE & mem_instance->GetIOValue(IF_ADDR)) == 0x00;
     }
     else {
         if (machineInfo.instruction_debug_enabled) {
@@ -332,42 +334,43 @@ void CoreSM83::ExecuteInstruction() {
 
 void CoreSM83::ExecuteInterrupts() {
     if (ime) {
-        if (*machine_ctx->IF & ISR_VBLANK) {
+        u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
+        if (isr_requested & ISR_VBLANK) {
             if (machine_ctx->IE & ISR_VBLANK) {
                 ime = false;
 
                 isr_push(ISR_VBLANK_HANDLER);
-                *machine_ctx->IF &= ~ISR_VBLANK;
+                isr_requested &= ~ISR_VBLANK;
             }
         }
-        if (*machine_ctx->IF & ISR_LCD_STAT) {
+        if (isr_requested & ISR_LCD_STAT) {
             if (machine_ctx->IE & ISR_LCD_STAT) {
                 ime = false;
 
                 isr_push(ISR_LCD_STAT_HANDLER);
-                *machine_ctx->IF &= ~ISR_LCD_STAT;
+                isr_requested &= ~ISR_LCD_STAT;
             }
         }
-        if (*machine_ctx->IF & ISR_TIMER) {
+        if (isr_requested & ISR_TIMER) {
             if (machine_ctx->IE & ISR_TIMER) {
                 ime = false;
 
                 isr_push(ISR_TIMER_HANDLER);
-                *machine_ctx->IF &= ~ISR_TIMER;
+                isr_requested &= ~ISR_TIMER;
             }
         }
         /*if (machine_ctx->IF & ISR_SERIAL) {
             // not implemented
         }*/
-        if (*machine_ctx->IF & ISR_JOYPAD) {
+        if (isr_requested & ISR_JOYPAD) {
             if (machine_ctx->IE & ISR_JOYPAD) {
                 ime = false;
 
                 isr_push(ISR_JOYPAD_HANDLER);
-                *machine_ctx->IF &= ~ISR_JOYPAD;
+                isr_requested &= ~ISR_JOYPAD;
             }
-
         }
+        mem_instance->SetIOValue(isr_requested, IF_ADDR);
     }
 }
 
@@ -376,28 +379,32 @@ void CoreSM83::ExecuteMachineCycles() {
     if (machine_ctx->machineCyclesDIVCounter > machine_ctx->machineCyclesPerDIVIncrement) {
         machine_ctx->machineCyclesDIVCounter -= machine_ctx->machineCyclesPerDIVIncrement;
 
-        if (*machine_ctx->DIV == 0xFF) {
-            *machine_ctx->DIV = 0x00;
+        u8 div = mem_instance->GetIOValue(DIV_ADDR);
+        if (div == 0xFF) {
+            div = 0x00;
             // TODO: interrupt or whatever
         }
         else {
-            *machine_ctx->DIV++;
+            div++;
         }
+        mem_instance->SetIOValue(div, DIV_ADDR);
     }
 
-    if (*machine_ctx->TAC & TAC_CLOCK_ENABLE) {
+    if (mem_instance->GetIOValue(TAC_ADDR) & TAC_CLOCK_ENABLE) {
         machine_ctx->machineCyclesTIMACounter += currentMachineCycles;
         if (machine_ctx->machineCyclesTIMACounter > machine_ctx->machineCyclesPerTIMAIncrement) {
             machine_ctx->machineCyclesTIMACounter -= machine_ctx->machineCyclesPerTIMAIncrement;
 
-            if (*machine_ctx->TIMA == 0xFF) {
-                *machine_ctx->TIMA = *machine_ctx->TMA;
+            u8 tima = mem_instance->GetIOValue(TIMA_ADDR);
+            if (tima == 0xFF) {
+                tima = mem_instance->GetIOValue(TMA_ADDR);
                 // request interrupt
-                *machine_ctx->IF |= ISR_TIMER;
+                mem_instance->RequestInterrupts(ISR_TIMER);
             }
             else {
-                *machine_ctx->TIMA++;
+                tima++;
             }
+            mem_instance->SetIOValue(tima, TIMA_ADDR);
         }
     }
 }
@@ -469,22 +476,23 @@ void CoreSM83::GetCurrentRegisterValues() const {
     machineInfo.register_values.emplace_back(get_register_name(SP), format("{:x}", Regs.SP));
     machineInfo.register_values.emplace_back(get_register_name(PC), format("{:x}", Regs.PC));
     machineInfo.register_values.emplace_back(get_register_name(IE), format("{:x}", machine_ctx->IE));
-    machineInfo.register_values.emplace_back(get_register_name(IF), format("{:x}", *machine_ctx->IF));
+    machineInfo.register_values.emplace_back(get_register_name(IF), format("{:x}", mem_instance->GetIOValue(IF_ADDR)));
 }
 
 void CoreSM83::GetCurrentFlagsAndISR() const {
     machineInfo.flag_values.clear();
 
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_C), format("{:x}", Regs.F & FLAG_CARRY ? 1 : 0));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_H), format("{:x}", Regs.F & FLAG_HCARRY ? 1 : 0));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_N), format("{:x}", Regs.F & FLAG_SUB ? 1 : 0));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_Z), format("{:x}", Regs.F & FLAG_ZERO ? 1 : 0));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_C), format("{:x}", (Regs.F & FLAG_CARRY) >> 4));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_H), format("{:x}", (Regs.F & FLAG_HCARRY) >> 5));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_N), format("{:x}", (Regs.F & FLAG_SUB) >> 6));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_Z), format("{:x}", (Regs.F & FLAG_ZERO) >> 7));
     machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_IME), format("{:x}", ime ? 1 : 0));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_VBLANK), format("{:x}", *machine_ctx->IF & ISR_VBLANK));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_STAT), format("{:x}", *machine_ctx->IF & ISR_LCD_STAT));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_TIMER), format("{:x}", *machine_ctx->IF & ISR_TIMER));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_SERIAL), format("{:x}", *machine_ctx->IF & ISR_SERIAL));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_JOYPAD), format("{:x}", *machine_ctx->IF & ISR_JOYPAD));
+    u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_VBLANK), format("{:x}", (isr_requested & ISR_VBLANK)));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_STAT), format("{:x}", (isr_requested & ISR_LCD_STAT) >> 1));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_TIMER), format("{:x}", (isr_requested & ISR_TIMER) >> 2));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_SERIAL), format("{:x}", (isr_requested & ISR_SERIAL) >> 3));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_JOYPAD), format("{:x}", (isr_requested & ISR_JOYPAD) >> 4));
     
 }
 
@@ -903,8 +911,10 @@ void CoreSM83::STOP() {
     bool two_byte = false;
     bool div_reset = false;
 
+    u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
+
     if (joyp) {
-        if (machine_ctx->IE & *machine_ctx->IF) {
+        if (machine_ctx->IE & isr_requested) {
             return;
         }
         else {
@@ -914,7 +924,7 @@ void CoreSM83::STOP() {
     }
     else {
         if (machine_ctx->speed_switch_requested) {
-            if (machine_ctx->IE & *machine_ctx->IF) {
+            if (machine_ctx->IE & isr_requested) {
                 if (ime) {
                     LOG_ERROR("STOP Glitch encountered");
                     halted = true;
@@ -932,7 +942,7 @@ void CoreSM83::STOP() {
             }
         }
         else {
-            two_byte = machine_ctx->IE & *machine_ctx->IF ? false : true;
+            two_byte = machine_ctx->IE & isr_requested ? false : true;
             halted = true;
             div_reset = true;
         }

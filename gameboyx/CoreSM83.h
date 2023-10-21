@@ -123,6 +123,7 @@ private:
 	void DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const int& _bank, const int& _base_ptr, const int& _size, const u8* _rom_bank);
 
 	machine_state_context* machine_ctx;
+	MemorySM83* mem_instance;
 
 	// basic instructions
 	std::vector<instr_tuple> instrMap;

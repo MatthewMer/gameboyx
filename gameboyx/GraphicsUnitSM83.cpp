@@ -59,14 +59,14 @@ void GraphicsUnitSM83::NextFrame() {
 
 		// TODO: let cpu run for machine cycles per scan line, render frame after last scanline, set LY to 0x90 after first 17500 machine cycles (via increment)
 		// currently directly set to 0x90 only for testing with blargg's instruction tests
-		*graphics_ctx->LY = 0x90;//LCD_VBLANK_THRESHOLD;
+		mem_instance->SetIOValue(0x90, LY_ADDR);//LCD_VBLANK_THRESHOLD;
 	}
 }
 
 // draw tilemaps BG and WIN
 void GraphicsUnitSM83::DrawTileMapBackground() {
-	int scx = *graphics_ctx->SCX;
-	int scy = *graphics_ctx->SCY;
+	int scx = mem_instance->GetIOValue(SCX_ADDR);
+	int scy = mem_instance->GetIOValue(SCY_ADDR);
 
 	for (int x = 0; x < PPU_SCREEN_X; x+= PPU_PIXELS_TILE_X) {
 		for (int y = 0; y < PPU_SCREEN_Y; y+= PPU_PIXELS_TILE_Y) {
@@ -110,8 +110,8 @@ void GraphicsUnitSM83::DrawTileBackground(const int& _pos_x, const int& _pos_y) 
 // draw window (window pos at top left corner is (WX-7/WY) !)
 void GraphicsUnitSM83::DrawTileMapWindow() {
 	u8 win_offset = graphics_ctx->win_tilemap_offset;
-	int wx = (int)*graphics_ctx->WX - 7;
-	int wy = *graphics_ctx->WY;
+	int wx = (int)mem_instance->GetIOValue(WX_ADDR) - 7;
+	int wy = mem_instance->GetIOValue(WY_ADDR);
 
 	for (int x = 0; x < PPU_TILES_HORIZONTAL - wx; x+=PPU_PIXELS_TILE_X) {
 		for (int y = 0; y < PPU_TILES_VERTICAL - wy; y+=PPU_PIXELS_TILE_Y) {

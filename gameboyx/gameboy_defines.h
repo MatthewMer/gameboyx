@@ -56,8 +56,8 @@
 #define NOT_USED_MEMORY_OFFSET      0xFEA0              // prohibited
 #define NOT_USED_MEMORY_SIZE        0x0060
 
-#define IO_REGISTERS_OFFSET         0xFF00              // peripherals
-#define IO_REGISTERS_SIZE           0x0080
+#define IO_OFFSET         0xFF00              // peripherals
+#define IO_SIZE           0x0080
 
 #define HRAM_OFFSET                 0xFF80              // stack, etc.
 #define HRAM_SIZE                   0x007F
