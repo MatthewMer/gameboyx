@@ -3,7 +3,7 @@
 This is a Gameboy (Color) emulator utilising [ImGui](https://github.com/ocornut/imgui) with [SDL2](https://github.com/libsdl-org/SDL/releases/tag/release-2.28.2) and [Vulkan](https://vulkan.lunarg.com/) graphics API.
 
 ### How do I get set up? ###
-
+* install latest [Vulkan SDK](https://vulkan.lunarg.com/)
 * clone repository with following command (to clone the required submodules):
 ```
 git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
