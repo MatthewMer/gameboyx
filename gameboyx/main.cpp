@@ -233,14 +233,13 @@ int main(int, char**)
                 case SDLK_ESCAPE:
                     game_stat.pending_game_stop = true;
                     break;
+                case SDLK_F3:
                 case SDLK_F10:
+                case SDLK_LSHIFT:
                     gbx_gui->EventKeyUp(key);
                     break;
                 case SDLK_F11:
                     sdl_toggle_full_screen(window);
-                    break;
-                case SDLK_LSHIFT:
-                    gbx_gui->EventKeyUp(key);
                     break;
                 default:
                     if (game_stat.game_running) {
@@ -262,6 +261,8 @@ int main(int, char**)
 
         // game start/stop
         if (game_stat.pending_game_start || game_stat.request_reset) {
+            machine_info.reset_machine_information();
+
             VHardwareMgr::resetInstance();
             vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), machine_info);
 
@@ -504,7 +505,7 @@ static void setup_vulkan(ImVector<const char*> instance_extensions)
     {
         uint32_t count;
         vkGetPhysicalDeviceQueueFamilyProperties(g_PhysicalDevice, &count, nullptr);
-        VkQueueFamilyProperties* queues = new VkQueueFamilyProperties[sizeof(VkQueueFamilyProperties) * count];
+        VkQueueFamilyProperties* queues = new VkQueueFamilyProperties[count];
         vkGetPhysicalDeviceQueueFamilyProperties(g_PhysicalDevice, &count, queues);
         for (uint32_t i = 0; i < count; i++)
             if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)

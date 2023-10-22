@@ -105,6 +105,8 @@ inline void setup_bank_access(ScrollableTableBuffer<memory_data>& _table_buffer,
     int line_num = LINE_NUM(size);
     int index;
 
+    _table_buffer = ScrollableTableBuffer<memory_data>(line_num);
+
     for (int i = 0; i < line_num; i++) {
         auto table_entry = ScrollableTableEntry<memory_data>();
 
@@ -118,7 +120,7 @@ inline void setup_bank_access(ScrollableTableBuffer<memory_data>& _table_buffer,
 
         get<ST_ENTRY_DATA>(table_entry) = data;
 
-        _table_buffer.emplace_back(table_entry);
+        _table_buffer[i] = table_entry;
     }
 }
 

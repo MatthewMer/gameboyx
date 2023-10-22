@@ -950,6 +950,9 @@ void ImGuiGameboyX::EventKeyUp(const SDL_Keycode& _key) {
     case SDLK_DELETE:
         sdlkDelDown = false;
         break;
+    case SDLK_F3:
+        ActionRequestReset();
+        break;
     default:
         break;
     }
