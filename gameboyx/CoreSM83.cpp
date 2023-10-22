@@ -9,6 +9,9 @@
 #include "MemorySM83.h"
 #include "ScrollableTable.h"
 
+
+#include <iostream>
+
 using namespace std;
 
 /* ***********************************************************************************************************
@@ -165,7 +168,7 @@ inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, c
     return result;
 }
 
-inline void instruction_args_to_string(u16& _addr, const u8* _bank, u16& _data, string& _raw_data, const cgb_data_types& _type) {
+inline void instruction_args_to_string(u16& _addr, const vector<u8>& _bank, u16& _data, string& _raw_data, const cgb_data_types& _type) {
     switch (_type) {
     case d8:
     case a8:
@@ -318,11 +321,11 @@ void CoreSM83::ExecuteInstruction() {
     Regs.PC++;
 
     if (opcodeCB) {
-        instrPtr = &instrMapCB[opcode];
+        instrPtr = &(instrMapCB[opcode]);
         opcodeCB = false;
     }
     else {
-        instrPtr = &instrMap[opcode];
+        instrPtr = &(instrMap[opcode]);
     }
 
     functionPtr = get<INSTR_FUNC>(*instrPtr);
@@ -519,46 +522,53 @@ void CoreSM83::GetCurrentInstruction() const {
 /* ***********************************************************************************************************
     PREPARE DEBUG DATA (DISASSEMBLED INSTRUCTIONS)
 *********************************************************************************************************** */
-inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const int& _bank, const int& _base_ptr, const int& _size, const u8* _rom_bank) {
+inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num) {
     u16 data = 0;
     bool cb = false;
 
     _program_buffer.clear();
 
-    for (u16 addr = 0, i = 0; addr < _size; i++) {
+    const auto& base_ptr = _bank_data.first;
+    const auto& rom_bank = _bank_data.second;
 
-        ScrollableTableEntry<debug_instr_data> current_entry;
+    auto current_entry = ScrollableTableEntry<debug_instr_data>();
+
+    for (u16 addr = 0, i = 0; addr < rom_bank.size(); i++) {
+
+        current_entry = ScrollableTableEntry<debug_instr_data>();
 
         // print rom header info
-        if (addr == ROM_HEAD_LOGO && _bank == 0) {
-            current_entry = ScrollableTableEntry<debug_instr_data>(addr, debug_instr_data("ROM" + to_string(_bank) + ": " + format("{:x}  ", addr), "- HEADER INFO -"));
+        if (addr == ROM_HEAD_LOGO && _bank_num == 0) {
+            get<ST_ENTRY_ADDRESS>(current_entry) = addr;
+            get<ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:x}  ", addr);
+            get<ST_ENTRY_DATA>(current_entry).second = "- HEADER INFO -";
             addr = ROM_HEAD_END + 1;
             _program_buffer.emplace_back(current_entry);
         }
         else {
-            u8 opcode = _rom_bank[addr];
-            current_entry = ScrollableTableEntry<debug_instr_data>(addr + _base_ptr, debug_instr_data("", ""));
+            u8 opcode = rom_bank[addr];
+            get<ST_ENTRY_ADDRESS>(current_entry) = addr + base_ptr;
 
             instr_tuple* instr_ptr;
 
-            if (cb) { instr_ptr = &instrMapCB[opcode]; }
-            else { instr_ptr = &instrMap[opcode]; }
+            if (cb) { instr_ptr = &(instrMapCB[opcode]); }
+            else { instr_ptr = &(instrMap[opcode]); }
             cb = opcode == 0xCB;
 
             string raw_data;
-            raw_data = "ROM" + to_string(_bank) + ": " + format("{:x}  ", addr + _base_ptr);
+            raw_data = "ROM" + to_string(_bank_num) + ": " + format("{:x}  ", addr + base_ptr);
             addr++;
 
             raw_data += format("{:x} ", opcode);
 
             // arguments
-            instruction_args_to_string(addr, _rom_bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
-            instruction_args_to_string(addr, _rom_bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
+            instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
+            instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
             get<ST_ENTRY_DATA>(current_entry).first = raw_data;
 
             // instruction to assembly
             string args;
-            data_enums_to_string(_bank, addr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
+            data_enums_to_string(_bank_num, addr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
 
             get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
             if (args.compare("") != 0) {
@@ -571,20 +581,17 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
 }
 
 void CoreSM83::InitMessageBufferProgram() {
-    int bank_num = 0;
-    /*
-    for (const auto& [type, num, size, base_ptr, ref] : machineInfo.memory_access) {
-        if (type == ENUM_ROM_N) {
-            for (int i = 0; i < num; i++) {
-                auto next_bank_table = ScrollableTableBuffer<debug_instr_data>();
+    const auto rom_data = mem_instance->GetProgramData();
 
-                DecodeRomBankContent(next_bank_table, bank_num, base_ptr, size, ref[i]);
-                
-                machineInfo.program_buffer.AddMemoryArea(next_bank_table);
-                bank_num++;
-            }
-        }
-    }*/
+    auto next_bank_table = ScrollableTableBuffer<debug_instr_data>();
+
+    for (int bank_num = 0; const auto & bank_data : rom_data) {
+        next_bank_table = ScrollableTableBuffer<debug_instr_data>();
+
+        DecodeRomBankContent(next_bank_table, bank_data, bank_num++);
+
+        machineInfo.program_buffer.AddMemoryArea(next_bank_table);
+    }
 }
 
 /* ***********************************************************************************************************

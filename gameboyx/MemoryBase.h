@@ -20,5 +20,7 @@ protected:
 
 	virtual void RequestInterrupts(const u8& isr_flags) = 0;
 
+	virtual std::vector<std::pair<int, std::vector<u8>>> GetProgramData() const = 0;
+
 	machine_information& machineInfo;
 };

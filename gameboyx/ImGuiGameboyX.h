@@ -3,6 +3,8 @@
 #include <SDL.h>
 #include <imgui.h>
 #include <vector>
+#include <array>
+#include <queue>
 #include "game_info.h"
 #include "information_structs.h"
 #include "helper_functions.h"
@@ -68,6 +70,7 @@ private:
 	int dbgInstrColNum = DEBUG_INSTR_COLUMNS.size();
 	int dbgInstrColNumRegs = DEBUG_REGISTER_COLUMNS.size();
 	int dbgInstrColNumFlags = DEBUG_FLAG_COLUMNS.size();
+	bool dbgInstrWasEnabled = false;
 
 	// vector per memory type <start index, end index>
 	std::vector<int> dbgMemBankIndex = std::vector<int>();
@@ -77,12 +80,22 @@ private:
 	bool dbgMemCellHovered = false;
 	bool dbgMemCellAnyHovered = false;
 
+	bool graphicsShowOverlay = false;
+	int graphicsOverlayCorner = 0;
+	float graphicsFPSsamples[FPS_SAMPLES_NUM];
+	std::queue<float> graphicsFPSfifo = std::queue<float>();
+	std::queue<float> graphicsFPSfifoCopy = std::queue<float>();
+	float graphicsFPSavg = .0f;
+	int graphicsFPScount = 0;
+	float graphicsFPScur = .0f;
+
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;
 	bool showNewGameDialog = false;
 	bool showGameSelect = true;
 	bool showMemoryInspector = false;
 	bool showImGuiDebug = false;
+	bool showGraphicsInfo = false;
 
 	// gui functions
 	void ShowMainMenuBar();
@@ -92,6 +105,8 @@ private:
 	void ShowDebugInstructions();
 	void ShowDebugMemoryInspector();
 	void ShowHardwareInfo();
+	void ShowGraphicsInfo();
+	void ShowGraphicsOverlay();
 
 	// actions
 	void ActionDeleteGames();
@@ -130,5 +145,6 @@ private:
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();
+	const ImGuiIO& GIO_IO = ImGui::GetIO();
 	const ImVec4& HIGHLIGHT_COLOR = GUI_STYLE.Colors[ImGuiCol_TabActive];
 };

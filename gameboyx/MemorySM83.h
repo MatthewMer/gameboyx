@@ -100,6 +100,8 @@ public:
 	u8 GetIOValue(const u16& _addr);
 	void SetIOValue(const u8& _data, const u16& _addr);
 
+	std::vector<std::pair<int, std::vector<u8>>> GetProgramData() const override;
+
 private:
 	// constructor
 	explicit MemorySM83(machine_information& _machine_info) : MemoryBase(_machine_info) {};

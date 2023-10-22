@@ -120,7 +120,7 @@ private:
 	int currentMachineCycles = 0;
 	int GetDelayTime() override;
 	void GetCurrentInstruction() const override;
-	void DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const int& _bank, const int& _base_ptr, const int& _size, const u8* _rom_bank);
+	void DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num);
 
 	machine_state_context* machine_ctx;
 	MemorySM83* mem_instance;

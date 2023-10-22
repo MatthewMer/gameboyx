@@ -50,6 +50,11 @@ ImGuiGameboyX::ImGuiGameboyX(machine_information& _machine_info, game_status& _g
     if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
         InitGamesGuiCtx();
     }
+    graphicsFPSavg = GIO_IO.Framerate;
+    graphicsFPScount = 1;
+    for (int i = 0; i < FPS_SAMPLES_NUM; i++) {
+        graphicsFPSfifo.push(.0f);
+    }
 }
 
 /* ***********************************************************************************************************
@@ -63,7 +68,9 @@ void ImGuiGameboyX::ProcessGUI() {
     if (showWinAbout) { ShowWindowAbout(); }
     if (machineInfo.track_hardware_info) { ShowHardwareInfo(); }
     if (showMemoryInspector) { ShowDebugMemoryInspector(); }
-    if (showImGuiDebug) { ImGui::ShowDebugLogWindow(); }
+    if (showImGuiDebug) { ImGui::ShowDebugLogWindow(&showImGuiDebug); }
+    if (showGraphicsInfo) { ShowGraphicsInfo(); }
+    if (graphicsShowOverlay) { ShowGraphicsOverlay(); }
 
     if (gameState.game_running) {
         if (machineInfo.instruction_debug_enabled) {
@@ -112,7 +119,7 @@ void ImGuiGameboyX::ShowMainMenuBar() {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Graphics")) {
-
+            ImGui::MenuItem("Graphics Overlay", nullptr, &graphicsShowOverlay);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
@@ -574,6 +581,72 @@ void ImGuiGameboyX::ShowGameSelect() {
         ImGui::End();
     }
     ImGui::PopStyleColor();
+}
+
+void ImGuiGameboyX::ShowGraphicsInfo() {
+    if (ImGui::Begin("Graphics Info", &showGraphicsInfo)) {
+
+        ImGui::End();
+    }
+}
+
+void ImGuiGameboyX::ShowGraphicsOverlay() {
+    ImVec2 window_pos = ImVec2((graphicsOverlayCorner & 1) ? GIO_IO.DisplaySize.x - OVERLAY_DISTANCE : OVERLAY_DISTANCE, (graphicsOverlayCorner & 2) ? GIO_IO.DisplaySize.y - OVERLAY_DISTANCE : OVERLAY_DISTANCE);
+    ImVec2 window_pos_pivot = ImVec2((graphicsOverlayCorner & 1) ? 1.0f : 0.0f, (graphicsOverlayCorner & 2) ? 1.0f : 0.0f);
+    ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+
+    ImGui::SetNextWindowBgAlpha(0.35f);
+
+    float graphicsFPSmax = .0f;
+
+    float fps = GIO_IO.Framerate;
+    graphicsFPSavg += fps;
+    graphicsFPSavg /= 2;
+    graphicsFPScount++;
+
+    graphicsFPSfifo.pop();
+    graphicsFPSfifo.push(fps);
+    
+    // stablize output (roughly once per second)
+    if (graphicsFPScount >= graphicsFPSavg) {
+        graphicsFPScur = fps;
+        graphicsFPScount = 0;
+    }
+
+    graphicsFPSfifoCopy = graphicsFPSfifo;
+    for (int i = 0; i < FPS_SAMPLES_NUM; i++) {
+        graphicsFPSsamples[i] = graphicsFPSfifoCopy.front();
+        graphicsFPSfifoCopy.pop();
+
+        if (graphicsFPSsamples[i] > graphicsFPSmax) { graphicsFPSmax = graphicsFPSsamples[i]; }
+    }
+
+    if (ImGui::Begin("Example: Simple overlay", &graphicsShowOverlay, WIN_OVERLAY_FLAGS))
+    {
+        if (ImGui::IsWindowHovered()) {
+            if (ImGui::BeginTooltip()) {
+                ImGui::Text("right-click to change position");
+                ImGui::EndTooltip();
+            }
+        }
+        ImGui::TextUnformatted(to_string(graphicsFPScur).c_str());
+        ImGui::SameLine();
+        ImGui::TextUnformatted(" FPS");
+
+        ImGui::PlotLines("", graphicsFPSsamples, IM_ARRAYSIZE(graphicsFPSsamples), 0, nullptr, .0f, graphicsFPSmax, ImVec2(0, 80.0f));
+        
+        if (ImGui::BeginPopupContextWindow())
+        {
+            if (ImGui::MenuItem("Top-left", nullptr, graphicsOverlayCorner == 0)) graphicsOverlayCorner = 0;
+            if (ImGui::MenuItem("Top-right", nullptr, graphicsOverlayCorner == 1)) graphicsOverlayCorner = 1;
+            if (ImGui::MenuItem("Bottom-left", nullptr, graphicsOverlayCorner == 2)) graphicsOverlayCorner = 2;
+            if (ImGui::MenuItem("Bottom-right", nullptr, graphicsOverlayCorner == 3)) graphicsOverlayCorner = 3;
+            if (graphicsShowOverlay && ImGui::MenuItem("Close")) graphicsShowOverlay = false;
+            ImGui::EndPopup();
+        }
+
+        ImGui::End();
+    }
 }
 
 /* ***********************************************************************************************************

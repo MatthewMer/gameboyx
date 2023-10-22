@@ -83,7 +83,13 @@ inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Col
 #define CLR_COL 0.0f
 inline const ImVec4 IMGUI_BG_COLOR(BG_COL, BG_COL, BG_COL, 1.0f);
 inline const ImVec4 IMGUI_CLR_COLOR(CLR_COL, CLR_COL, CLR_COL, 1.0f);
+
 inline const ImVec4 IMGUI_RED_COL(1.0f, .0f, .0f, 1.0f);
+inline const ImVec4 IMGUI_GREEN_COL(.0f, 1.0f, .0f, 1.0f);
+
+inline const float OVERLAY_DISTANCE = 10.0f;
+
+#define FPS_SAMPLES_NUM             100
 
 #define DEBUG_INSTR_LINES           21
 #define DEBUG_MEM_LINES             32
@@ -105,6 +111,13 @@ inline const ImGuiWindowFlags WIN_CHILD_FLAGS =
     ImGuiWindowFlags_NoResize |
     ImGuiWindowFlags_NoCollapse |
     ImGuiWindowFlags_AlwaysAutoResize;
+
+inline const ImGuiWindowFlags WIN_OVERLAY_FLAGS = 
+    ImGuiWindowFlags_NoDecoration | 
+    ImGuiWindowFlags_AlwaysAutoResize | 
+    ImGuiWindowFlags_NoFocusOnAppearing | 
+    ImGuiWindowFlags_NoNav |
+    ImGuiWindowFlags_NoMove;
 
 inline const ImGuiTableFlags TABLE_FLAGS =
     ImGuiTableFlags_BordersInnerV |

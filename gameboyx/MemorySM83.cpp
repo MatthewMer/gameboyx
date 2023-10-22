@@ -267,7 +267,16 @@ void MemorySM83::SetupDebugMemoryAccess() {
     }
 }
 
+std::vector<std::pair<int, std::vector<u8>>> MemorySM83::GetProgramData() const {
+    auto rom_data = vector<pair<int, vector<u8>>>(machine_ctx.rom_bank_num);
 
+    rom_data[0] = pair(ROM_0_OFFSET, ROM_0);
+    for (int i = 1; const auto & bank : ROM_N) {
+        rom_data[i++] = pair(ROM_N_OFFSET, bank);
+    }
+
+    return rom_data;
+}
 
 /* ***********************************************************************************************************
     MANAGE ALLOCATED MEMORY
@@ -406,7 +415,7 @@ u8 MemorySM83::ReadOAM(const u16& _addr) {
 }
 
 u8 MemorySM83::ReadIO(const u16& _addr) {
-    return GetIOValue(_addr);
+    return GetIORegister(_addr);
 }
 
 u8 MemorySM83::ReadHRAM(const u16& _addr) {
@@ -439,7 +448,7 @@ void MemorySM83::WriteOAM(const u8& _data, const u16& _addr) {
 }
 
 void MemorySM83::WriteIO(const u8& _data, const u16& _addr) {
-    SetIOValue(_data, _addr);
+    SetIORegister(_data, _addr);
 }
 
 void MemorySM83::WriteHRAM(const u8& _data, const u16& _addr) {
