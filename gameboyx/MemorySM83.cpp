@@ -318,9 +318,7 @@ void MemorySM83::AllocateMemory() {
 /* ***********************************************************************************************************
     INIT MEMORY STATE
 *********************************************************************************************************** */
-void MemorySM83::InitMemoryState() {
-    InitTimers();
-    
+void MemorySM83::InitMemoryState() {   
     machine_ctx.IE = INIT_CGB_IE;
     IO[IF_ADDR - IO_OFFSET] = INIT_CGB_IF;
 
@@ -335,12 +333,10 @@ void MemorySM83::InitMemoryState() {
     IO[STAT_ADDR - IO_OFFSET] = INIT_CGB_STAT;
     IO[LY_ADDR - IO_OFFSET] = INIT_CGB_LY;
 
-    if (isCgb) {
-        IO[DIV_ADDR - IO_OFFSET] = CGB_INIT_DIV >> 8;
-    }
-    else {
-        IO[DIV_ADDR - IO_OFFSET] = INIT_DIV >> 8;
-    }
+    if (isCgb) { IO[DIV_ADDR - IO_OFFSET] = CGB_INIT_DIV >> 8; }
+    else { IO[DIV_ADDR - IO_OFFSET] = INIT_DIV >> 8; }
+
+    InitTimers();
 }
 
 /* ***********************************************************************************************************
@@ -572,6 +568,8 @@ void MemorySM83::SetIORegister(const u8& _data, const u16& _addr) {
     switch (_addr) {
     case DIV_ADDR:
         IO[DIV_ADDR - IO_OFFSET] = 0x00;
+        machine_ctx.divSub = 0x00;
+        machine_ctx.clockCyclesDivCounter = 0;
         break;
     case TAC_ADDR:
         IO[TAC_ADDR - IO_OFFSET] = _data;
@@ -700,26 +698,25 @@ void MemorySM83::OAM_DMA() {
     TIMERS
 *********************************************************************************************************** */
 void MemorySM83::InitTimers() {
-    machine_ctx.machineCyclesPerDIVIncrement = (((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DIV_FREQUENCY) - .5f;
-
     ProcessTAC();
 }
 
 void MemorySM83::ProcessTAC() {
     switch (IO[TAC_ADDR - IO_OFFSET] & TAC_CLOCK_SELECT) {
     case 0x00:
-        machine_ctx.machineCyclesPerTIMAIncrement = (1024 / 4) - 1;
+        machine_ctx.timaDivMask = TIMA_DIV_BIT_9;
         break;
     case 0x01:
-        machine_ctx.machineCyclesPerTIMAIncrement = (16 / 4) - 1;
+        machine_ctx.timaDivMask = TIMA_DIV_BIT_3;
         break;
     case 0x02:
-        machine_ctx.machineCyclesPerTIMAIncrement = (64 / 4) - 1;
+        machine_ctx.timaDivMask = TIMA_DIV_BIT_5;
         break;
     case 0x03:
-        machine_ctx.machineCyclesPerTIMAIncrement = (256 / 4) - 1;
+        machine_ctx.timaDivMask = TIMA_DIV_BIT_7;
         break;
     }
+    LOG_WARN(format("Mask: {:b}", machine_ctx.timaDivMask));
 }
 
 /* ***********************************************************************************************************

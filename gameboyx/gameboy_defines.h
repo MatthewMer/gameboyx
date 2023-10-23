@@ -302,3 +302,8 @@
 // timer/divider
 #define INIT_DIV                        0x267C
 #define CGB_INIT_DIV                    0x1EA0
+
+#define TIMA_DIV_BIT_9                  0x0200
+#define TIMA_DIV_BIT_3                  0x0008
+#define TIMA_DIV_BIT_5                  0x0020
+#define TIMA_DIV_BIT_7                  0x0080

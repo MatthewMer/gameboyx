@@ -310,9 +310,9 @@ void CoreSM83::RunCycles() {
 }
 
 void CoreSM83::RunCpu() {
-    ExecuteInterrupts();
     ExecuteInstruction();
-    ExecuteMachineCycles();
+    ProcessTimers();
+    ExecuteInterrupts();
 }
 
 void CoreSM83::ExecuteInstruction() {
@@ -377,39 +377,52 @@ void CoreSM83::ExecuteInterrupts() {
     }
 }
 
-void CoreSM83::ExecuteMachineCycles() {
-    machine_ctx->machineCyclesDIVCounter += currentMachineCycles;
-    if (machine_ctx->machineCyclesDIVCounter > machine_ctx->machineCyclesPerDIVIncrement) {
-        machine_ctx->machineCyclesDIVCounter -= machine_ctx->machineCyclesPerDIVIncrement;
+void CoreSM83::ProcessTimers() {
+    machine_ctx->clockCyclesDivCounter += currentMachineCycles * 4;
+    bool low_byte = machine_ctx->timaDivMask < 0x100;
+    u8 div = mem_instance->GetIOValue(DIV_ADDR);
+    bool tima_div_and_cur = mem_instance->GetIOValue(TAC_ADDR) & TAC_CLOCK_ENABLE;
 
-        u8 div = mem_instance->GetIOValue(DIV_ADDR);
-        if (div == 0xFF) {
-            div = 0x00;
-            // TODO: interrupt or whatever
-        }
-        else {
-            div++;
-        }
-        mem_instance->SetIOValue(div, DIV_ADDR);
-    }
+    while (machine_ctx->clockCyclesDivCounter > 0) {
+        if (machine_ctx->divSub == 0xFF) {
+            machine_ctx->divSub = 0x00;
 
-    if (mem_instance->GetIOValue(TAC_ADDR) & TAC_CLOCK_ENABLE) {
-        machine_ctx->machineCyclesTIMACounter += currentMachineCycles;
-        if (machine_ctx->machineCyclesTIMACounter > machine_ctx->machineCyclesPerTIMAIncrement) {
-            machine_ctx->machineCyclesTIMACounter -= machine_ctx->machineCyclesPerTIMAIncrement;
-
-            u8 tima = mem_instance->GetIOValue(TIMA_ADDR);
-            if (tima == 0xFF) {
-                tima = mem_instance->GetIOValue(TMA_ADDR);
-                // request interrupt
-                mem_instance->RequestInterrupts(ISR_TIMER);
+            if (div == 0xFF) {
+                div = 0x00;
             }
             else {
-                tima++;
+                div++;
             }
-            mem_instance->SetIOValue(tima, TIMA_ADDR);
+            mem_instance->SetIOValue(div, DIV_ADDR);
         }
+        else {
+            machine_ctx->divSub++;
+        }
+
+        if (low_byte) {
+            tima_div_and_cur &= (machine_ctx->divSub & machine_ctx->timaDivMask);
+        }
+        else {
+            tima_div_and_cur &= (div & (machine_ctx->timaDivMask >> 8));
+        }
+
+        if (!tima_div_and_cur && machine_ctx->timaDivANDPrev) { IncrementTIMA(); }
+
+        machine_ctx->clockCyclesDivCounter--;
     }
+}
+
+void CoreSM83::IncrementTIMA() {
+    u8 tima = mem_instance->GetIOValue(TIMA_ADDR);
+    if (tima == 0xFF) {
+        tima = mem_instance->GetIOValue(TMA_ADDR);
+        // request interrupt
+        mem_instance->RequestInterrupts(ISR_TIMER);
+    }
+    else {
+        tima++;
+    }
+    mem_instance->SetIOValue(tima, TIMA_ADDR);
 }
 
 /* ***********************************************************************************************************
@@ -623,7 +636,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x0f, &CoreSM83::RRCA, 1, "RRCA", A, NO_DATA);
 
     // 0x10
-    instrMap.emplace_back(0x10, &CoreSM83::STOP, 0, "STOP", d8, NO_DATA);
+    instrMap.emplace_back(0x10, &CoreSM83::STOP, 1, "STOP", d8, NO_DATA);
     instrMap.emplace_back(0x11, &CoreSM83::LDd16, 3, "LD", DE, d16);
     instrMap.emplace_back(0x12, &CoreSM83::LDfromAtoRef, 2, "LD", DE_ref, A);
     instrMap.emplace_back(0x13, &CoreSM83::INC16, 2, "INC", DE, NO_DATA);
@@ -737,7 +750,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x73, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, E);
     instrMap.emplace_back(0x74, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, H);
     instrMap.emplace_back(0x75, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, L);
-    instrMap.emplace_back(0x76, &CoreSM83::HALT, 0, "HALT", NO_DATA, NO_DATA);
+    instrMap.emplace_back(0x76, &CoreSM83::HALT, 1, "HALT", NO_DATA, NO_DATA);
     instrMap.emplace_back(0x77, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, A);
     instrMap.emplace_back(0x78, &CoreSM83::LDtoA, 1, "LD", A, B);
     instrMap.emplace_back(0x79, &CoreSM83::LDtoA, 1, "LD", A, C);

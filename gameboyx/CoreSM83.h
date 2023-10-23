@@ -90,7 +90,8 @@ private:
 	void RunCpu() override;
 	void ExecuteInstruction() override;
 	void ExecuteInterrupts() override;
-	void ExecuteMachineCycles() override;
+	void ProcessTimers();
+	void IncrementTIMA();
 
 	u16 curPC;
 

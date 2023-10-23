@@ -51,7 +51,6 @@ protected:
 
 	virtual void ExecuteInstruction() = 0;
 	virtual void ExecuteInterrupts() = 0;
-	virtual void ExecuteMachineCycles() = 0;
 
 	virtual void InitCpu() = 0;
 	virtual void InitRegisterStates() = 0;

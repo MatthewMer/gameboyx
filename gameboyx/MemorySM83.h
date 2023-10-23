@@ -23,10 +23,10 @@ struct machine_state_context {
 	bool isCgb = false;
 
 	// timers
-	int machineCyclesPerDIVIncrement = 0;
-	int machineCyclesDIVCounter = 0;
-	int machineCyclesPerTIMAIncrement = 0;
-	int machineCyclesTIMACounter = 0;
+	int clockCyclesDivCounter = 0;
+	u8 divSub = 0x00;
+	u16 timaDivMask = 0x0000;
+	bool timaDivANDPrev = false;
 
 	int rom_bank_num = 0;
 	int ram_bank_num = 0;
