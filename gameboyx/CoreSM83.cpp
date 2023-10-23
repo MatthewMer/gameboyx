@@ -402,9 +402,7 @@ void CoreSM83::ExecuteMachineCycles() {
             if (tima == 0xFF) {
                 tima = mem_instance->GetIOValue(TMA_ADDR);
                 // request interrupt
-                if ((machine_ctx->IE & ISR_TIMER) && ime) {
-                    mem_instance->RequestInterrupts(ISR_TIMER);
-                }
+                mem_instance->RequestInterrupts(ISR_TIMER);
             }
             else {
                 tima++;
