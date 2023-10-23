@@ -298,3 +298,7 @@
 #define INIT_CGB_LCDC                   0x91
 #define INIT_CGB_STAT                   0x81
 #define INIT_CGB_LY                     0x90
+
+// timer/divider
+#define INIT_DIV                        0x267C
+#define CGB_INIT_DIV                    0x1EA0

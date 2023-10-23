@@ -402,7 +402,9 @@ void CoreSM83::ExecuteMachineCycles() {
             if (tima == 0xFF) {
                 tima = mem_instance->GetIOValue(TMA_ADDR);
                 // request interrupt
-                mem_instance->RequestInterrupts(ISR_TIMER);
+                if ((machine_ctx->IE & ISR_TIMER) && ime) {
+                    mem_instance->RequestInterrupts(ISR_TIMER);
+                }
             }
             else {
                 tima++;
@@ -623,7 +625,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x0f, &CoreSM83::RRCA, 1, "RRCA", A, NO_DATA);
 
     // 0x10
-    instrMap.emplace_back(0x10, &CoreSM83::STOP, 1, "STOP", d8, NO_DATA);
+    instrMap.emplace_back(0x10, &CoreSM83::STOP, 0, "STOP", d8, NO_DATA);
     instrMap.emplace_back(0x11, &CoreSM83::LDd16, 3, "LD", DE, d16);
     instrMap.emplace_back(0x12, &CoreSM83::LDfromAtoRef, 2, "LD", DE_ref, A);
     instrMap.emplace_back(0x13, &CoreSM83::INC16, 2, "INC", DE, NO_DATA);
@@ -737,7 +739,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x73, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, E);
     instrMap.emplace_back(0x74, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, H);
     instrMap.emplace_back(0x75, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, L);
-    instrMap.emplace_back(0x76, &CoreSM83::HALT, 1, "HALT", NO_DATA, NO_DATA);
+    instrMap.emplace_back(0x76, &CoreSM83::HALT, 0, "HALT", NO_DATA, NO_DATA);
     instrMap.emplace_back(0x77, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, A);
     instrMap.emplace_back(0x78, &CoreSM83::LDtoA, 1, "LD", A, B);
     instrMap.emplace_back(0x79, &CoreSM83::LDtoA, 1, "LD", A, C);

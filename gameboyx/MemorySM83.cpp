@@ -334,6 +334,13 @@ void MemorySM83::InitMemoryState() {
     SetLCDCValues(INIT_CGB_LCDC);
     IO[STAT_ADDR - IO_OFFSET] = INIT_CGB_STAT;
     IO[LY_ADDR - IO_OFFSET] = INIT_CGB_LY;
+
+    if (isCgb) {
+        IO[DIV_ADDR - IO_OFFSET] = CGB_INIT_DIV >> 8;
+    }
+    else {
+        IO[DIV_ADDR - IO_OFFSET] = INIT_DIV >> 8;
+    }
 }
 
 /* ***********************************************************************************************************
@@ -567,7 +574,8 @@ void MemorySM83::SetIORegister(const u8& _data, const u16& _addr) {
         IO[DIV_ADDR - IO_OFFSET] = 0x00;
         break;
     case TAC_ADDR:
-        IO[TAC_ADDR - IO_OFFSET] = _data & 0x07;
+        IO[TAC_ADDR - IO_OFFSET] = _data;
+        ProcessTAC();
         break;
     case CGB_VRAM_SELECT_ADDR:
         SetVRAMBank(_data);
@@ -692,29 +700,26 @@ void MemorySM83::OAM_DMA() {
     TIMERS
 *********************************************************************************************************** */
 void MemorySM83::InitTimers() {
-    machine_ctx.machineCyclesPerDIVIncrement = ((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DIV_FREQUENCY;
+    machine_ctx.machineCyclesPerDIVIncrement = (((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DIV_FREQUENCY) - .5f;
 
     ProcessTAC();
 }
 
 void MemorySM83::ProcessTAC() {
-    int divisor;
     switch (IO[TAC_ADDR - IO_OFFSET] & TAC_CLOCK_SELECT) {
     case 0x00:
-        divisor = 1024;
+        machine_ctx.machineCyclesPerTIMAIncrement = (1024 / 4) - 1;
         break;
     case 0x01:
-        divisor = 16;
+        machine_ctx.machineCyclesPerTIMAIncrement = (16 / 4) - 1;
         break;
     case 0x02:
-        divisor = 64;
+        machine_ctx.machineCyclesPerTIMAIncrement = (64 / 4) - 1;
         break;
     case 0x03:
-        divisor = 256;
+        machine_ctx.machineCyclesPerTIMAIncrement = (256 / 4) - 1;
         break;
     }
-
-    machine_ctx.machineCyclesPerTIMAIncrement = BASE_CLOCK_CPU * pow(10, 6) / divisor;
 }
 
 /* ***********************************************************************************************************
