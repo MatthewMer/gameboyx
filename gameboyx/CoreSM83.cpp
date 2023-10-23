@@ -407,6 +407,7 @@ void CoreSM83::ProcessTimers() {
         }
 
         if (!tima_div_and_cur && machine_ctx->timaDivANDPrev) { IncrementTIMA(); }
+        machine_ctx->timaDivANDPrev = tima_div_and_cur;
 
         machine_ctx->clockCyclesDivCounter--;
     }
@@ -636,7 +637,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x0f, &CoreSM83::RRCA, 1, "RRCA", A, NO_DATA);
 
     // 0x10
-    instrMap.emplace_back(0x10, &CoreSM83::STOP, 1, "STOP", d8, NO_DATA);
+    instrMap.emplace_back(0x10, &CoreSM83::STOP, 0, "STOP", d8, NO_DATA);
     instrMap.emplace_back(0x11, &CoreSM83::LDd16, 3, "LD", DE, d16);
     instrMap.emplace_back(0x12, &CoreSM83::LDfromAtoRef, 2, "LD", DE_ref, A);
     instrMap.emplace_back(0x13, &CoreSM83::INC16, 2, "INC", DE, NO_DATA);
@@ -750,7 +751,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0x73, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, E);
     instrMap.emplace_back(0x74, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, H);
     instrMap.emplace_back(0x75, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, L);
-    instrMap.emplace_back(0x76, &CoreSM83::HALT, 1, "HALT", NO_DATA, NO_DATA);
+    instrMap.emplace_back(0x76, &CoreSM83::HALT, 0, "HALT", NO_DATA, NO_DATA);
     instrMap.emplace_back(0x77, &CoreSM83::LDtoHLref, 2, "LD", HL_ref, A);
     instrMap.emplace_back(0x78, &CoreSM83::LDtoA, 1, "LD", A, B);
     instrMap.emplace_back(0x79, &CoreSM83::LDtoA, 1, "LD", A, C);
@@ -845,7 +846,7 @@ void CoreSM83::setupLookupTable() {
     instrMap.emplace_back(0xc8, &CoreSM83::RET, 0, "RET Z", NO_DATA, NO_DATA);
     instrMap.emplace_back(0xc9, &CoreSM83::RET, 4, "RET", NO_DATA, NO_DATA);
     instrMap.emplace_back(0xca, &CoreSM83::JP, 0, "JP Z", a16, NO_DATA);
-    instrMap.emplace_back(0xcb, &CoreSM83::CB, 1, "CB", NO_DATA, NO_DATA);
+    instrMap.emplace_back(0xcb, &CoreSM83::CB, 0, "CB", NO_DATA, NO_DATA);
     instrMap.emplace_back(0xcc, &CoreSM83::CALL, 0, "CALL Z", a16, NO_DATA);
     instrMap.emplace_back(0xcd, &CoreSM83::CALL, 6, "CALL", a16, NO_DATA);
     instrMap.emplace_back(0xce, &CoreSM83::ADC, 2, "ADC", A, d8);
