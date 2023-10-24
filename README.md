@@ -14,6 +14,13 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 
 ![Blargg's Instruction Tests](./img/blarggs_instruction_tests.png)
 
+### Ressources ###
+
+* [Pan Docs](https://gbdev.io/pandocs/About.html)
+* [GB Dev Guide](https://github.com/Hacktix/GBEDG/tree/master) (more accurate)
+* [Opcode Table](https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html)
+* [docs](./docs/)
+
 ### Who do I talk to? ###
 
 * Repo owner

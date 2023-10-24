@@ -313,8 +313,8 @@ void CoreSM83::RunCycles() {
 
 void CoreSM83::RunCpu() {
     ExecuteInstruction();
-    ProcessTimers();
     ExecuteInterrupts();
+    ProcessTimers();
 }
 
 void CoreSM83::ExecuteInstruction() {
@@ -346,33 +346,41 @@ void CoreSM83::ExecuteInterrupts() {
 
                 isr_push(ISR_VBLANK_HANDLER);
                 isr_requested &= ~ISR_VBLANK;
+
+                currentMachineCycles += 4;
             }
         }
-        if (isr_requested & ISR_LCD_STAT) {
+        else if (isr_requested & ISR_LCD_STAT) {
             if (machine_ctx->IE & ISR_LCD_STAT) {
                 ime = false;
 
                 isr_push(ISR_LCD_STAT_HANDLER);
                 isr_requested &= ~ISR_LCD_STAT;
+
+                currentMachineCycles += 4;
             }
         }
-        if (isr_requested & ISR_TIMER) {
+        else if (isr_requested & ISR_TIMER) {
             if (machine_ctx->IE & ISR_TIMER) {
                 ime = false;
 
                 isr_push(ISR_TIMER_HANDLER);
                 isr_requested &= ~ISR_TIMER;
+
+                currentMachineCycles += 4;
             }
         }
         /*if (machine_ctx->IF & ISR_SERIAL) {
             // not implemented
         }*/
-        if (isr_requested & ISR_JOYPAD) {
+        else if (isr_requested & ISR_JOYPAD) {
             if (machine_ctx->IE & ISR_JOYPAD) {
                 ime = false;
 
                 isr_push(ISR_JOYPAD_HANDLER);
                 isr_requested &= ~ISR_JOYPAD;
+
+                currentMachineCycles += 4;
             }
         }
         mem_instance->SetIOValue(isr_requested, IF_ADDR);
