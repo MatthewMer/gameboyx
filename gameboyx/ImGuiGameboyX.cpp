@@ -342,7 +342,7 @@ void ImGuiGameboyX::ShowDebugMemoryInspector() {
                                 u8* ref = get<MEM_ENTRY_REF>(dbgMemCurrentEntry);
                                 for (i = 0; i < get<MEM_ENTRY_LEN>(dbgMemCurrentEntry); i++) {
                                     ImGui::TableNextColumn();
-                                    ImGui::Selectable(format("{:x}", ref[i]).c_str(), dbgMemCellHovered ? i == dbgMemCursorPos.x || line == dbgMemCursorPos.y : false);
+                                    ImGui::Selectable(format("{:02x}", ref[i]).c_str(), dbgMemCellHovered ? i == dbgMemCursorPos.x || line == dbgMemCursorPos.y : false);
                                     if (ImGui::IsItemHovered()) {
                                         dbgMemCursorPos = Vec2(i, line);
                                         dbgMemCellAnyHovered |= true;

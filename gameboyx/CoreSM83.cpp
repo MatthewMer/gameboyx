@@ -135,25 +135,25 @@ inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, c
         break;
     case d8:
     case a8:
-        result = format("{:x}", (u8)(_data & 0xFF));
+        result = format("{:02x}", (u8)(_data & 0xFF));
         break;
     case d16:
     case a16:
-        result = format("{:x}", _data);
+        result = format("{:02x}", _data);
         break;
     case r8:
         data = (u8)(_data & 0xFF);
-        result = format("{:x}", _addr + *(i8*)&data);
+        result = format("{:02x}", _addr + *(i8*)&data);
         break;
     case a8_ref:
-        result = format("({:x} + $FF00)", (u8)(_data & 0xFF));
+        result = format("({:02x} + $FF00)", (u8)(_data & 0xFF));
         break;
     case a16_ref:
-        result = format("({:x})", _data);
+        result = format("({:02x})", _data);
         break;
     case SP_r8:
         data = (u8)(_data & 0xFF);
-        result = format("SP+{:x}", *(i8*)&data);
+        result = format("SP+{:02x}", *(i8*)&data);
         break;
     case BC_ref:
     case DE_ref:
@@ -175,15 +175,15 @@ inline void instruction_args_to_string(u16& _addr, const vector<u8>& _bank, u16&
     case a8_ref:
     case r8:
         _data = _bank[_addr++];
-        _raw_data += format("{:x} ", (u8)_data);
+        _raw_data += format("{:02x} ", (u8)_data);
         break;
     case d16:
     case a16:
     case a16_ref:
         _data = _bank[_addr++];
         _data |= ((u16)_bank[_addr++]) << 8;
-        _raw_data += format("{:x} ", (u8)(_data & 0xFF));
-        _raw_data += format("{:x} ", (u8)((_data & 0xFF00) >> 8));
+        _raw_data += format("{:02x} ", (u8)(_data & 0xFF));
+        _raw_data += format("{:02x} ", (u8)((_data & 0xFF00) >> 8));
         break;
     default:
         break;
@@ -492,45 +492,45 @@ void CoreSM83::GetCurrentHardwareState() const {
 void CoreSM83::GetCurrentRegisterValues() const {
     machineInfo.register_values.clear();
 
-    machineInfo.register_values.emplace_back(get_register_name(A) + get_register_name(F), format("A:{:x} F:{:x}", Regs.A, Regs.F));
-    machineInfo.register_values.emplace_back(get_register_name(BC), format("{:x}", Regs.BC));
-    machineInfo.register_values.emplace_back(get_register_name(DE), format("{:x}", Regs.DE));
-    machineInfo.register_values.emplace_back(get_register_name(HL), format("{:x}", Regs.HL));
-    machineInfo.register_values.emplace_back(get_register_name(SP), format("{:x}", Regs.SP));
-    machineInfo.register_values.emplace_back(get_register_name(PC), format("{:x}", Regs.PC));
-    machineInfo.register_values.emplace_back(get_register_name(IE), format("{:x}", machine_ctx->IE));
-    machineInfo.register_values.emplace_back(get_register_name(IF), format("{:x}", mem_instance->GetIOValue(IF_ADDR)));
+    machineInfo.register_values.emplace_back(get_register_name(A) + get_register_name(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
+    machineInfo.register_values.emplace_back(get_register_name(BC), format("{:04x}", Regs.BC));
+    machineInfo.register_values.emplace_back(get_register_name(DE), format("{:04x}", Regs.DE));
+    machineInfo.register_values.emplace_back(get_register_name(HL), format("{:04x}", Regs.HL));
+    machineInfo.register_values.emplace_back(get_register_name(SP), format("{:04x}", Regs.SP));
+    machineInfo.register_values.emplace_back(get_register_name(PC), format("{:04x}", Regs.PC));
+    machineInfo.register_values.emplace_back(get_register_name(IE), format("{:02x}", machine_ctx->IE));
+    machineInfo.register_values.emplace_back(get_register_name(IF), format("{:02x}", mem_instance->GetIOValue(IF_ADDR)));
 }
 
 void CoreSM83::GetCurrentFlagsAndISR() const {
     machineInfo.flag_values.clear();
 
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_C), format("{:x}", (Regs.F & FLAG_CARRY) >> 4));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_H), format("{:x}", (Regs.F & FLAG_HCARRY) >> 5));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_N), format("{:x}", (Regs.F & FLAG_SUB) >> 6));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_Z), format("{:x}", (Regs.F & FLAG_ZERO) >> 7));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_IME), format("{:x}", ime ? 1 : 0));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_H), format("{:01b}", (Regs.F & FLAG_HCARRY) >> 5));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_IME), format("{:01b}", ime ? 1 : 0));
     u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_VBLANK), format("{:x}", (isr_requested & ISR_VBLANK)));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_STAT), format("{:x}", (isr_requested & ISR_LCD_STAT) >> 1));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_TIMER), format("{:x}", (isr_requested & ISR_TIMER) >> 2));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_SERIAL), format("{:x}", (isr_requested & ISR_SERIAL) >> 3));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_JOYPAD), format("{:x}", (isr_requested & ISR_JOYPAD) >> 4));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_VBLANK), format("{:01b}", (isr_requested & ISR_VBLANK)));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_STAT), format("{:01b}", (isr_requested & ISR_LCD_STAT) >> 1));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_TIMER), format("{:01b}", (isr_requested & ISR_TIMER) >> 2));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_SERIAL), format("{:01b}", (isr_requested & ISR_SERIAL) >> 3));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_JOYPAD), format("{:01b}", (isr_requested & ISR_JOYPAD) >> 4));
     
 }
 
 void CoreSM83::GetCurrentInstruction() const {
     machineInfo.current_instruction =
-        get_register_name(A) + get_register_name(F) + format("({:x})", (((u16)Regs.A) << 8) | Regs.F) +
-        get_register_name(BC) + format("({:x}) ", Regs.BC) +
-        get_register_name(DE) + format("({:x}) ", Regs.DE) +
-        get_register_name(HL) + format("({:x}) ", Regs.HL) +
-        get_register_name(SP) + format("({:x}) ", Regs.SP);
+        get_register_name(A) + get_register_name(F) + format("({:04x})", (((u16)Regs.A) << 8) | Regs.F) +
+        get_register_name(BC) + format("({:04x}) ", Regs.BC) +
+        get_register_name(DE) + format("({:04x}) ", Regs.DE) +
+        get_register_name(HL) + format("({:04x}) ", Regs.HL) +
+        get_register_name(SP) + format("({:04x}) ", Regs.SP);
 
     machineInfo.current_instruction += " -> ";
 
-    machineInfo.current_instruction += get_register_name(PC) + format("({:x}): ", machineInfo.current_pc) +
-        get<INSTR_MNEMONIC>(*instrPtr) + format("({:x}) ", opcode);
+    machineInfo.current_instruction += get_register_name(PC) + format("({:04x}): ", machineInfo.current_pc) +
+        get<INSTR_MNEMONIC>(*instrPtr) + format("({:02x}) ", opcode);
 
     string arg = get_arg_name(get<INSTR_ARG_1>(*instrPtr));
     if (arg.compare("") != 0) { machineInfo.current_instruction += " " + arg; }
@@ -560,7 +560,7 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
         // print rom header info
         if (addr == ROM_HEAD_LOGO && _bank_num == 0) {
             get<ST_ENTRY_ADDRESS>(current_entry) = addr;
-            get<ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:x}  ", addr);
+            get<ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr);
             get<ST_ENTRY_DATA>(current_entry).second = "- HEADER INFO -";
             addr = ROM_HEAD_END + 1;
             _program_buffer.emplace_back(current_entry);
@@ -576,10 +576,10 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
             cb = opcode == 0xCB;
 
             string raw_data;
-            raw_data = "ROM" + to_string(_bank_num) + ": " + format("{:x}  ", addr + base_ptr);
+            raw_data = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr + base_ptr);
             addr++;
 
-            raw_data += format("{:x} ", opcode);
+            raw_data += format("{:02x} ", opcode);
 
             // arguments
             instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));

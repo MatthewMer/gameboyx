@@ -114,7 +114,7 @@ inline void setup_bank_access(ScrollableTableBuffer<memory_data>& _table_buffer,
         get<ST_ENTRY_ADDRESS>(table_entry) = _offset + index;
 
         data = memory_data();
-        get<MEM_ENTRY_ADDR>(data) = format("{:x}", _offset + index);
+        get<MEM_ENTRY_ADDR>(data) = format("{:04x}", _offset + index);
         get<MEM_ENTRY_LEN>(data) = size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
         get<MEM_ENTRY_REF>(data) = &_bank[index];
 
