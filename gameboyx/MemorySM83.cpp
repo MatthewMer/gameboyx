@@ -716,7 +716,6 @@ void MemorySM83::ProcessTAC() {
         machine_ctx.timaDivMask = TIMA_DIV_BIT_7;
         break;
     }
-    LOG_WARN(format("Mask: {:x}", machine_ctx.timaDivMask));
 }
 
 /* ***********************************************************************************************************

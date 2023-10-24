@@ -288,6 +288,8 @@ void CoreSM83::InitRegisterStates() {
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
     if (halted) {
+        currentMachineCycles = machineCyclesPerFrame;
+        ProcessTimers();
         halted = (machine_ctx->IE & mem_instance->GetIOValue(IF_ADDR)) == 0x00;
     }
     else {
@@ -381,7 +383,8 @@ void CoreSM83::ProcessTimers() {
     machine_ctx->clockCyclesDivCounter += currentMachineCycles * 4;
     bool low_byte = machine_ctx->timaDivMask < 0x100;
     u8 div = mem_instance->GetIOValue(DIV_ADDR);
-    bool tima_div_and_cur = mem_instance->GetIOValue(TAC_ADDR) & TAC_CLOCK_ENABLE;
+    bool tima_enabled = mem_instance->GetIOValue(TAC_ADDR) & TAC_CLOCK_ENABLE;
+    bool tima_div_and_cur = false;
 
     while (machine_ctx->clockCyclesDivCounter > 0) {
         if (machine_ctx->divSub == 0xFF) {
@@ -400,10 +403,10 @@ void CoreSM83::ProcessTimers() {
         }
 
         if (low_byte) {
-            tima_div_and_cur &= (machine_ctx->divSub & machine_ctx->timaDivMask);
+            tima_div_and_cur = tima_enabled && (machine_ctx->divSub & machine_ctx->timaDivMask ? true : false);
         }
         else {
-            tima_div_and_cur &= (div & (machine_ctx->timaDivMask >> 8));
+            tima_div_and_cur = tima_enabled && (div & (machine_ctx->timaDivMask >> 8) ? true : false);
         }
 
         if (!tima_div_and_cur && machine_ctx->timaDivANDPrev) { IncrementTIMA(); }
