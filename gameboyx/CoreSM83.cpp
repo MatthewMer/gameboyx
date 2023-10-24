@@ -287,8 +287,10 @@ void CoreSM83::InitRegisterStates() {
     RUN CPU
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
+    currentMachineCycles = 0;
+
     if (halted) {
-        currentMachineCycles = machineCyclesPerFrame;
+        currentMachineCycles += machineCyclesPerFrame;
         ProcessTimers();
         halted = (machine_ctx->IE & mem_instance->GetIOValue(IF_ADDR)) == 0x00;
     }
@@ -312,9 +314,12 @@ void CoreSM83::RunCycles() {
 }
 
 void CoreSM83::RunCpu() {
+    CheckInterrupts();
     ExecuteInstruction();
-    ExecuteInterrupts();
     ProcessTimers();
+
+    machineCycles += currentMachineCycles;
+    machineCycleCounterClock += currentMachineCycles;
 }
 
 void CoreSM83::ExecuteInstruction() {
@@ -331,57 +336,47 @@ void CoreSM83::ExecuteInstruction() {
     }
 
     functionPtr = get<INSTR_FUNC>(*instrPtr);
-    currentMachineCycles = get<INSTR_MC>(*instrPtr);
+    currentMachineCycles += get<INSTR_MC>(*instrPtr);
     (this->*functionPtr)();
-    machineCycles += currentMachineCycles;
-    machineCycleCounterClock += currentMachineCycles;
 }
 
-void CoreSM83::ExecuteInterrupts() {
+void CoreSM83::CheckInterrupts() {
     if (ime) {
         u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
-        if (isr_requested & ISR_VBLANK) {
-            if (machine_ctx->IE & ISR_VBLANK) {
-                ime = false;
+        if (isr_requested & ISR_VBLANK && machine_ctx->IE & ISR_VBLANK) {
+            ime = false;
 
-                isr_push(ISR_VBLANK_HANDLER);
-                isr_requested &= ~ISR_VBLANK;
+            isr_push(ISR_VBLANK_HANDLER);
+            isr_requested &= ~ISR_VBLANK;
 
-                currentMachineCycles += 4;
-            }
+            currentMachineCycles += 4;
         }
-        else if (isr_requested & ISR_LCD_STAT) {
-            if (machine_ctx->IE & ISR_LCD_STAT) {
-                ime = false;
+        else if (isr_requested & ISR_LCD_STAT && machine_ctx->IE & ISR_LCD_STAT) {
+            ime = false;
 
-                isr_push(ISR_LCD_STAT_HANDLER);
-                isr_requested &= ~ISR_LCD_STAT;
+            isr_push(ISR_LCD_STAT_HANDLER);
+            isr_requested &= ~ISR_LCD_STAT;
 
-                currentMachineCycles += 4;
-            }
+            currentMachineCycles += 4;
         }
-        else if (isr_requested & ISR_TIMER) {
-            if (machine_ctx->IE & ISR_TIMER) {
-                ime = false;
+        else if (isr_requested & ISR_TIMER && machine_ctx->IE & ISR_TIMER) {
+            ime = false;
 
-                isr_push(ISR_TIMER_HANDLER);
-                isr_requested &= ~ISR_TIMER;
+            isr_push(ISR_TIMER_HANDLER);
+            isr_requested &= ~ISR_TIMER;
 
-                currentMachineCycles += 4;
-            }
+            currentMachineCycles += 4;
         }
         /*if (machine_ctx->IF & ISR_SERIAL) {
             // not implemented
         }*/
-        else if (isr_requested & ISR_JOYPAD) {
-            if (machine_ctx->IE & ISR_JOYPAD) {
-                ime = false;
+        else if (isr_requested & ISR_JOYPAD && machine_ctx->IE & ISR_JOYPAD) {
+            ime = false;
 
-                isr_push(ISR_JOYPAD_HANDLER);
-                isr_requested &= ~ISR_JOYPAD;
+            isr_push(ISR_JOYPAD_HANDLER);
+            isr_requested &= ~ISR_JOYPAD;
 
-                currentMachineCycles += 4;
-            }
+            currentMachineCycles += 4;
         }
         mem_instance->SetIOValue(isr_requested, IF_ADDR);
     }

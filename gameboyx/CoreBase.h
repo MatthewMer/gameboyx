@@ -50,7 +50,7 @@ protected:
 	int machineCycleCounterClock = 0;				// counter
 
 	virtual void ExecuteInstruction() = 0;
-	virtual void ExecuteInterrupts() = 0;
+	virtual void CheckInterrupts() = 0;
 
 	virtual void InitCpu() = 0;
 	virtual void InitRegisterStates() = 0;

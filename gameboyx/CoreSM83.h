@@ -89,7 +89,7 @@ private:
 
 	void RunCpu() override;
 	void ExecuteInstruction() override;
-	void ExecuteInterrupts() override;
+	void CheckInterrupts() override;
 	void ProcessTimers();
 	void IncrementTIMA();
 
