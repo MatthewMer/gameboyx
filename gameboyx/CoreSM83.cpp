@@ -1,4 +1,4 @@
-#include "CoreSM83.h"
+##include "CoreSM83.h"
 
 /* ***********************************************************************************************************
     INCLUDES
@@ -315,8 +315,8 @@ void CoreSM83::RunCycles() {
 }
 
 void CoreSM83::RunCpu() {
-    ExecuteInstruction();
     CheckInterrupts();
+    ExecuteInstruction();
 }
 
 void CoreSM83::ExecuteInstruction() {
