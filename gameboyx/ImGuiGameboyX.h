@@ -63,6 +63,8 @@ private:
 	int dbgInstrAddress = 0;
 	bank_index dbgInstrCurrentBreakpoint = bank_index(0, 0);
 	bool dbgInstrBreakpointSet = false;
+	bank_index dbgInstrCurrentBreakpointTmp = bank_index(0, 0);
+	bool dbgInstrBreakpointTmpSet = false;
 	bool dbgInstrPCoutOfRange = false;
 	bool dbgInstrAutorun = false;
 	int dbgInstrLastPC = -1;
@@ -72,7 +74,7 @@ private:
 	int dbgInstrColNumFlags = DEBUG_FLAG_COLUMNS.size();
 	bool dbgInstrWasEnabled = false;
 
-	// vector per memory type <start index, end index>
+	// memory inspector
 	std::vector<int> dbgMemBankIndex = std::vector<int>();
 	memory_data dbgMemCurrentEntry;
 	int dbgMemColNum = DEBUG_MEM_COLUMNS.size();
@@ -111,7 +113,7 @@ private:
 	// actions
 	void ActionDeleteGames();
 	bool ActionAddGame(const std::string& _path_to_rom);
-	void ActionScrollToCurrentPC();
+	void ActionScrollToCurrentPC(ScrollableTableBase& _table_obj);
 	void ActionStartGame(int _index);
 	void ActionEndGame();
 	void ActionRequestReset();
@@ -127,6 +129,8 @@ private:
 	bool CheckCurrentPCAutoScroll();
 	bool CheckBreakPoint();
 	void SetBreakPoint(const bank_index& _current_index);
+	bool CheckBreakPointTmp();
+	void SetBreakPointTmp(const bank_index& _current_index);
 	void WriteInstructionLog();
 	void ResetEventMouseWheel();
 	void SetBankAndAddressScrollableTable(ScrollableTableBase& _tyble_obj, int& _bank, int& _address);

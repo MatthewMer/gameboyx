@@ -11,7 +11,7 @@ using namespace std;
 /* ***********************************************************************************************************
     DEFINES
 *********************************************************************************************************** */
-#define LINE_NUM(x)     (int)((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE)
+#define LINE_NUM(x)     ((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE)
 
 /* ***********************************************************************************************************
     CONSTRUCTOR AND (DE)INIT
@@ -331,7 +331,7 @@ void MemorySM83::InitMemoryState() {
 
     SetLCDCValues(INIT_CGB_LCDC);
     IO[STAT_ADDR - IO_OFFSET] = INIT_CGB_STAT;
-    IO[LY_ADDR - IO_OFFSET] = INIT_CGB_LY;
+    IO[LY_ADDR - IO_OFFSET] = 0x91;//INIT_CGB_LY;
 
     if (isCgb) { IO[DIV_ADDR - IO_OFFSET] = CGB_INIT_DIV >> 8; }
     else { IO[DIV_ADDR - IO_OFFSET] = INIT_DIV >> 8; }
@@ -517,6 +517,10 @@ u8 MemorySM83::GetIORegister(const u16& _addr) {
     case 0xFF73:
     case 0xFF74:
     case 0xFF75:
+    case CGB_HDMA1_ADDR:
+    case CGB_HDMA2_ADDR:
+    case CGB_HDMA3_ADDR:
+    case CGB_HDMA4_ADDR:
         return 0xFF;
         break;
     default:
@@ -568,8 +572,7 @@ void MemorySM83::SetIORegister(const u8& _data, const u16& _addr) {
     switch (_addr) {
     case DIV_ADDR:
         IO[DIV_ADDR - IO_OFFSET] = 0x00;
-        machine_ctx.divSub = 0x00;
-        machine_ctx.clockCyclesDivCounter = 0;
+        machine_ctx.div_low_byte = 0x00;
         break;
     case TAC_ADDR:
         IO[TAC_ADDR - IO_OFFSET] = _data;
@@ -589,17 +592,6 @@ void MemorySM83::SetIORegister(const u8& _data, const u16& _addr) {
     case OAM_DMA_ADDR:
         IO[OAM_DMA_ADDR - IO_OFFSET] = _data;
         OAM_DMA();
-        break;
-    case CGB_HDMA2_ADDR:
-        IO[CGB_HDMA2_ADDR - IO_OFFSET] = _data & 0xF0;
-        break;
-        // dest high
-    case CGB_HDMA3_ADDR:
-        IO[CGB_HDMA3_ADDR - IO_OFFSET] = _data & 0x1F;
-        break;
-        // dest low
-    case CGB_HDMA4_ADDR:
-        IO[CGB_HDMA4_ADDR - IO_OFFSET] = _data & 0xF0;
         break;
         // mode
     case CGB_HDMA5_ADDR:
@@ -639,23 +631,23 @@ void MemorySM83::VRAM_DMA(const u8& _data) {
         IO[CGB_HDMA5_ADDR - IO_OFFSET] |= 0x80;
         u16 length = ((IO[CGB_HDMA5_ADDR - IO_OFFSET] & 0x7F) + 1) * 0x10;
 
-        u16 source_addr = ((u16)IO[CGB_HDMA1_ADDR - IO_OFFSET] << 8) | IO[CGB_HDMA2_ADDR - IO_OFFSET];
-        u16 dest_addr = ((u16)IO[CGB_HDMA3_ADDR - IO_OFFSET] << 8) | IO[CGB_HDMA4_ADDR - IO_OFFSET];
+        u16 source_addr = ((u16)IO[CGB_HDMA1_ADDR - IO_OFFSET] << 8) | (IO[CGB_HDMA2_ADDR - IO_OFFSET] & 0xF0);
+        u16 dest_addr = (((u16)(IO[CGB_HDMA3_ADDR - IO_OFFSET] & 0x1F)) << 8) | (IO[CGB_HDMA4_ADDR - IO_OFFSET] & 0xF0);
 
         if (source_addr < ROM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &ROM_0[source_addr], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr], &ROM_0[source_addr], length);
         }
         else if (source_addr < VRAM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &ROM_N[machine_ctx.rom_bank_selected][source_addr - ROM_N_OFFSET], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr], &ROM_N[machine_ctx.rom_bank_selected][source_addr - ROM_N_OFFSET], length);
         }
         else if (source_addr < WRAM_0_OFFSET && source_addr >= RAM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &RAM_N[machine_ctx.ram_bank_selected][source_addr - RAM_N_OFFSET], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr], &RAM_N[machine_ctx.ram_bank_selected][source_addr - RAM_N_OFFSET], length);
         }
         else if (source_addr < WRAM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
         }
         else if (source_addr < MIRROR_WRAM_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr - VRAM_N_OFFSET], &WRAM_N[machine_ctx.wram_bank_selected][source_addr - WRAM_N_OFFSET], length);
+            memcpy(&graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][dest_addr], &WRAM_N[machine_ctx.wram_bank_selected][source_addr - WRAM_N_OFFSET], length);
         }
         else {
             return;

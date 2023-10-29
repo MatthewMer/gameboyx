@@ -72,8 +72,9 @@ public:
 	bool CheckNextFrame() override;
 	void GetCurrentCoreFrequency() override;
 
-	void GetCurrentProgramCounter() const override;
+	void GetCurrentProgramCounter() override;
 	void InitMessageBufferProgram() override;
+	void InitMessageBufferProgramTmp() override;
 	void GetCurrentRegisterValues() const  override;
 	void GetCurrentFlagsAndISR() const override;
 
@@ -90,7 +91,7 @@ private:
 	void RunCpu() override;
 	void ExecuteInstruction() override;
 	void CheckInterrupts() override;
-	void ProcessTimers();
+	void TickTimers();
 	void IncrementTIMA();
 
 	u16 curPC;
@@ -102,11 +103,17 @@ private:
 
 	// cpu states and checks
 	bool halted = false;
+	bool stopped = false;
 	bool ime = false;
 	bool opcodeCB = false;
 
+	bool timaEnAndDivOverflowPrev = false;
+	bool timaEnAndDivOverflowCur = false;
+	bool timaTick = false;
+	bool timaOverflow = false;
+
 	// ISR
-	void isr_push(const u8& _isr_handler);
+	void isr_push(const u16& _isr_handler);
 
 	// instruction members ****************
 	// lookup table
@@ -122,6 +129,7 @@ private:
 	int GetDelayTime() override;
 	void GetCurrentInstruction() const override;
 	void DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num);
+	void DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num, const std::string& _bank_name);
 
 	machine_state_context* machine_ctx;
 	MemorySM83* mem_instance;

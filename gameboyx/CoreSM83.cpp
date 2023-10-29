@@ -87,7 +87,7 @@ const vector<pair<cgb_data_types, string>> data_names{
     {HL_INC_ref, "(HL+)"},
     {HL_DEC_ref, "(HL-)"},
     {SP_r8, "SP r8"},
-    {C_ref, "(C + $FF00)"},
+    {C_ref, "(FF00+C)"},
 };
 
 inline string get_data_name(const cgb_data_types& _type) {
@@ -146,7 +146,7 @@ inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, c
         result = format("{:02x}", _addr + *(i8*)&data);
         break;
     case a8_ref:
-        result = format("({:02x} + $FF00)", (u8)(_data & 0xFF));
+        result = format("(FF00+{:02x})", (u8)(_data & 0xFF));
         break;
     case a16_ref:
         result = format("({:02x})", _data);
@@ -236,7 +236,7 @@ inline void data_enums_to_string(const int& _bank, u16 _addr, const u16& _data, 
 #define SBC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((d & 0xFF) < (((u16)s & 0xFF) + c) ? FLAG_CARRY : 0);}
 #define SBC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= ((d & 0xF) < ((s & 0xF) + c) ? FLAG_HCARRY : 0);}
 
-#define ZERO_FLAG(x, f) {f &= ~FLAG_ZERO; f |= (x == 0 ? FLAG_ZERO : 0);}
+#define ZERO_FLAG(x, f) {f &= ~FLAG_ZERO; f |= ((x) == 0 ? FLAG_ZERO : 0x00);}
 
 /* ***********************************************************************************************************
     CONSTRUCTOR
@@ -287,12 +287,13 @@ void CoreSM83::InitRegisterStates() {
     RUN CPU
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
-    currentMachineCycles = 0;
-
-    if (halted) {
-        currentMachineCycles += machineCyclesPerFrame;
-        ProcessTimers();
+    if (stopped) {
+        stopped = mem_instance->GetIOValue(IF_ADDR) == 0x00 ? true : false;
+    }
+    else if (halted) {
+        TickTimers();
         halted = (machine_ctx->IE & mem_instance->GetIOValue(IF_ADDR)) == 0x00;
+        if (!halted) { CheckInterrupts(); }
     }
     else {
         if (machineInfo.instruction_debug_enabled) {
@@ -314,18 +315,17 @@ void CoreSM83::RunCycles() {
 }
 
 void CoreSM83::RunCpu() {
-    CheckInterrupts();
     ExecuteInstruction();
-    ProcessTimers();
-
-    machineCycles += currentMachineCycles;
-    machineCycleCounterClock += currentMachineCycles;
+    CheckInterrupts();
 }
 
 void CoreSM83::ExecuteInstruction() {
+    currentMachineCycles = 0;
+
     opcode = mmu_instance->Read8Bit(Regs.PC);
     curPC = Regs.PC;
     Regs.PC++;
+    TickTimers();
 
     if (opcodeCB) {
         instrPtr = &(instrMapCB[opcode]);
@@ -338,6 +338,13 @@ void CoreSM83::ExecuteInstruction() {
     functionPtr = get<INSTR_FUNC>(*instrPtr);
     currentMachineCycles += get<INSTR_MC>(*instrPtr);
     (this->*functionPtr)();
+
+    for (int i = 1; i < currentMachineCycles; i++) {
+        TickTimers();
+    }
+
+    machineCycles += currentMachineCycles;
+    machineCycleCounterClock += currentMachineCycles;
 }
 
 void CoreSM83::CheckInterrupts() {
@@ -349,7 +356,10 @@ void CoreSM83::CheckInterrupts() {
             isr_push(ISR_VBLANK_HANDLER);
             isr_requested &= ~ISR_VBLANK;
 
-            currentMachineCycles += 4;
+            machineCycles += 5;
+            for (int i = 0; i < 5; i++) {
+                TickTimers();
+            }
         }
         else if (isr_requested & ISR_LCD_STAT && machine_ctx->IE & ISR_LCD_STAT) {
             ime = false;
@@ -357,7 +367,10 @@ void CoreSM83::CheckInterrupts() {
             isr_push(ISR_LCD_STAT_HANDLER);
             isr_requested &= ~ISR_LCD_STAT;
 
-            currentMachineCycles += 4;
+            machineCycles += 5;
+            for (int i = 0; i < 5; i++) {
+                TickTimers();
+            }
         }
         else if (isr_requested & ISR_TIMER && machine_ctx->IE & ISR_TIMER) {
             ime = false;
@@ -365,7 +378,10 @@ void CoreSM83::CheckInterrupts() {
             isr_push(ISR_TIMER_HANDLER);
             isr_requested &= ~ISR_TIMER;
 
-            currentMachineCycles += 4;
+            machineCycles += 5;
+            for (int i = 0; i < 5; i++) {
+                TickTimers();
+            }
         }
         /*if (machine_ctx->IF & ISR_SERIAL) {
             // not implemented
@@ -376,22 +392,29 @@ void CoreSM83::CheckInterrupts() {
             isr_push(ISR_JOYPAD_HANDLER);
             isr_requested &= ~ISR_JOYPAD;
 
-            currentMachineCycles += 4;
+            machineCycles += 5;
+            for (int i = 0; i < 5; i++) {
+                TickTimers();
+            }
         }
         mem_instance->SetIOValue(isr_requested, IF_ADDR);
     }
 }
 
-void CoreSM83::ProcessTimers() {
-    machine_ctx->clockCyclesDivCounter += currentMachineCycles * 4;
-    bool low_byte = machine_ctx->timaDivMask < 0x100;
+void CoreSM83::TickTimers() {
+    bool div_low_byte_selected = machine_ctx->timaDivMask < 0x100;
     u8 div = mem_instance->GetIOValue(DIV_ADDR);
     bool tima_enabled = mem_instance->GetIOValue(TAC_ADDR) & TAC_CLOCK_ENABLE;
-    bool tima_div_and_cur = false;
 
-    while (machine_ctx->clockCyclesDivCounter > 0) {
-        if (machine_ctx->divSub == 0xFF) {
-            machine_ctx->divSub = 0x00;
+    if (timaOverflow) {
+        mem_instance->SetIOValue(mem_instance->GetIOValue(TMA_ADDR), TIMA_ADDR);
+        mem_instance->RequestInterrupts(ISR_TIMER);
+        timaOverflow = false;
+    }
+
+    for (int i = 0; i < 4; i++) {
+        if (machine_ctx->div_low_byte == 0xFF) {
+            machine_ctx->div_low_byte = 0x00;
 
             if (div == 0xFF) {
                 div = 0x00;
@@ -402,29 +425,28 @@ void CoreSM83::ProcessTimers() {
             mem_instance->SetIOValue(div, DIV_ADDR);
         }
         else {
-            machine_ctx->divSub++;
+            machine_ctx->div_low_byte++;
         }
 
-        if (low_byte) {
-            tima_div_and_cur = tima_enabled && (machine_ctx->divSub & machine_ctx->timaDivMask ? true : false);
+        if (div_low_byte_selected) {
+            timaEnAndDivOverflowCur = tima_enabled && (machine_ctx->div_low_byte & machine_ctx->timaDivMask ? true : false);
         }
         else {
-            tima_div_and_cur = tima_enabled && (div & (machine_ctx->timaDivMask >> 8) ? true : false);
+            timaEnAndDivOverflowCur = tima_enabled && (div & (machine_ctx->timaDivMask >> 8) ? true : false);
         }
 
-        if (!tima_div_and_cur && machine_ctx->timaDivANDPrev) { IncrementTIMA(); }
-        machine_ctx->timaDivANDPrev = tima_div_and_cur;
-
-        machine_ctx->clockCyclesDivCounter--;
+        if (!timaEnAndDivOverflowCur && timaEnAndDivOverflowPrev) {
+            IncrementTIMA();
+        }
+        timaEnAndDivOverflowPrev = timaEnAndDivOverflowCur;
     }
 }
 
 void CoreSM83::IncrementTIMA() {
     u8 tima = mem_instance->GetIOValue(TIMA_ADDR);
     if (tima == 0xFF) {
-        tima = mem_instance->GetIOValue(TMA_ADDR);
-        // request interrupt
-        mem_instance->RequestInterrupts(ISR_TIMER);
+        tima = 0x00;
+        timaOverflow = true;
     }
     else {
         tima++;
@@ -458,7 +480,7 @@ void CoreSM83::GetCurrentCoreFrequency() {
     machineInfo.current_frequency = (float)result / pow(10, 6);
 }
 
-void CoreSM83::GetCurrentProgramCounter() const {
+void CoreSM83::GetCurrentProgramCounter() {
     machineInfo.current_pc = (int)Regs.PC;
 
     if (Regs.PC < ROM_N_OFFSET) {
@@ -468,7 +490,7 @@ void CoreSM83::GetCurrentProgramCounter() const {
         machineInfo.current_rom_bank = machine_ctx->rom_bank_selected + 1;
     }
     else {
-        machineInfo.current_rom_bank = -1;
+        InitMessageBufferProgramTmp();
     }
 }
 
@@ -602,6 +624,7 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
 
 void CoreSM83::InitMessageBufferProgram() {
     const auto rom_data = mem_instance->GetProgramData();
+    machineInfo.program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 
     auto next_bank_table = ScrollableTableBuffer<debug_instr_data>();
 
@@ -611,6 +634,119 @@ void CoreSM83::InitMessageBufferProgram() {
         DecodeRomBankContent(next_bank_table, bank_data, bank_num++);
 
         machineInfo.program_buffer.AddMemoryArea(next_bank_table);
+    }
+}
+
+inline void CoreSM83::DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num, const string& _bank_name) {
+    u16 data = 0;
+    bool cb = false;
+
+    _program_buffer.clear();
+
+    const auto& base_ptr = _bank_data.first;
+    const auto& rom_bank = _bank_data.second;
+
+    auto current_entry = ScrollableTableEntry<debug_instr_data>();
+
+    for (u16 addr = 0, i = 0; addr < rom_bank.size(); i++) {
+
+        current_entry = ScrollableTableEntry<debug_instr_data>();
+
+        u8 opcode = rom_bank[addr];
+        get<ST_ENTRY_ADDRESS>(current_entry) = addr + base_ptr;
+
+        instr_tuple* instr_ptr;
+
+        if (cb) { instr_ptr = &(instrMapCB[opcode]); }
+        else { instr_ptr = &(instrMap[opcode]); }
+        cb = opcode == 0xCB;
+
+        string raw_data;
+        raw_data = _bank_name + to_string(_bank_num) + ": " + format("{:04x}  ", addr + base_ptr);
+        addr++;
+
+        raw_data += format("{:02x} ", opcode);
+
+        // arguments
+        instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
+        instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
+        get<ST_ENTRY_DATA>(current_entry).first = raw_data;
+
+        // instruction to assembly
+        string args;
+        data_enums_to_string(_bank_num, addr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
+
+        get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
+        if (args.compare("") != 0) {
+            get<ST_ENTRY_DATA>(current_entry).second += " " + args;
+        }
+
+        _program_buffer.emplace_back(current_entry);
+    }
+}
+
+void CoreSM83::InitMessageBufferProgramTmp() {
+    auto bank_table = ScrollableTableBuffer<debug_instr_data>();
+    int bank_num;
+
+    if (Regs.PC >= VRAM_N_OFFSET && Regs.PC < RAM_N_OFFSET) {
+        if (machineInfo.current_rom_bank != -1) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            graphics_context* graphics_ctx = mem_instance->GetGraphicsContext();
+            bank_num = mem_instance->GetIOValue(CGB_VRAM_SELECT_ADDR);
+            DecodeBankContent(bank_table, pair(VRAM_N_OFFSET, graphics_ctx->VRAM_N[bank_num]), bank_num, "VRAM");
+            machineInfo.current_rom_bank = -1;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    }
+    else if (Regs.PC >= RAM_N_OFFSET && Regs.PC < WRAM_0_OFFSET) {
+        if (machineInfo.current_rom_bank != -2) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            bank_num = machine_ctx->ram_bank_selected;
+            DecodeBankContent(bank_table, pair(RAM_N_OFFSET, mem_instance->RAM_N[bank_num]), bank_num, "RAM");
+            machineInfo.current_rom_bank = -2;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    }
+    else if (Regs.PC >= WRAM_0_OFFSET && Regs.PC < WRAM_N_OFFSET) {
+        if (machineInfo.current_rom_bank != -3) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            bank_num = 0;
+            DecodeBankContent(bank_table, pair(WRAM_0_OFFSET, mem_instance->WRAM_0), bank_num, "WRAM");
+            machineInfo.current_rom_bank = -3;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    }
+    else if (Regs.PC >= WRAM_N_OFFSET && Regs.PC < MIRROR_WRAM_OFFSET) {
+        if (machineInfo.current_rom_bank != -4) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            bank_num = machine_ctx->wram_bank_selected;
+            DecodeBankContent(bank_table, pair(WRAM_N_OFFSET, mem_instance->WRAM_N[bank_num]), bank_num + 1, "WRAM");
+            machineInfo.current_rom_bank = -4;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    }
+    else if (Regs.PC >= HRAM_OFFSET && Regs.PC < IE_OFFSET) {
+        if (machineInfo.current_rom_bank != -5) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            bank_num = 0;
+            DecodeBankContent(bank_table, pair(HRAM_OFFSET, mem_instance->HRAM), bank_num, "HRAM");
+            machineInfo.current_rom_bank = -5;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    }
+    else {
+        // TODO
     }
 }
 
@@ -932,7 +1068,7 @@ void CoreSM83::NOP() {
     return;
 }
 
-// halted
+// stopped
 void CoreSM83::STOP() {
     u8 joyp = mmu_instance->Read8Bit(JOYP_ADDR) & JOYP_BUTTONS_MASK;
     bool two_byte = false;
@@ -970,7 +1106,7 @@ void CoreSM83::STOP() {
         }
         else {
             two_byte = machine_ctx->IE & isr_requested ? false : true;
-            halted = true;
+            stopped = true;
             div_reset = true;
         }
     }
@@ -996,7 +1132,7 @@ void CoreSM83::STOP() {
     }
 }
 
-// set halted state
+// halted
 void CoreSM83::HALT() {
     halted = true;
 }
@@ -1433,7 +1569,7 @@ void CoreSM83::PUSH() {
     }
 }
 
-void CoreSM83::isr_push(const u8& _isr_handler) {
+void CoreSM83::isr_push(const u16& _isr_handler) {
     Regs.SP -= 2;
     mmu_instance->Write16Bit(Regs.PC, Regs.SP);
     Regs.PC = _isr_handler;
@@ -1967,7 +2103,7 @@ void CoreSM83::CP() {
     }
 
     SUB_8_FLAGS(Regs.A, data, Regs.F);
-    ZERO_FLAG(Regs.A ^ data, Regs.F);
+    ZERO_FLAG(Regs.A ^ (u8)data, Regs.F);
 }
 
 // 1's complement of A

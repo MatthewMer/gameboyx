@@ -233,6 +233,7 @@ int main(int, char**)
                 case SDLK_ESCAPE:
                     game_stat.pending_game_stop = true;
                     break;
+                case SDLK_F1:
                 case SDLK_F3:
                 case SDLK_F10:
                 case SDLK_LSHIFT:

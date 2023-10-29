@@ -30,8 +30,9 @@ public:
 	virtual void GetCurrentCoreFrequency() = 0;
 	virtual bool CheckNextFrame() = 0;
 
-	virtual void GetCurrentProgramCounter() const = 0;
+	virtual void GetCurrentProgramCounter() = 0;
 	virtual void InitMessageBufferProgram() = 0;
+	virtual void InitMessageBufferProgramTmp() = 0;
 	virtual void GetCurrentRegisterValues() const = 0;
 	virtual void GetCurrentFlagsAndISR() const = 0;
 

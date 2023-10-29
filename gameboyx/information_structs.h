@@ -15,6 +15,7 @@ struct machine_information {
 	bool instruction_debug_enabled = false;
 	// index, address, raw data, resolved data
 	ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+	ScrollableTable<debug_instr_data> program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 	std::vector<register_data> register_values = std::vector<register_data>();
 	std::vector<register_data> flag_values = std::vector<register_data>();
 	bool instruction_logging = false;
@@ -40,6 +41,7 @@ struct machine_information {
 
 	void reset_machine_information() {
 		ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+		program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 		std::vector<register_data> register_values = std::vector<register_data>();
 		bool instruction_logging = false;
 		bool pause_execution = true;

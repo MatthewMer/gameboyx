@@ -153,8 +153,20 @@ void ImGuiGameboyX::ShowDebugInstructions() {
 
     if (ImGui::Begin("Instruction Debugger", &machineInfo.instruction_debug_enabled, WIN_CHILD_FLAGS)) {
         if (gameState.game_running) {
-            if (CheckCurrentPCAutoScroll() || CheckScroll(machineInfo.program_buffer))
+            if (CheckCurrentPCAutoScroll())
             { 
+                if (dbgInstrPCoutOfRange) {
+                    SetBankAndAddressScrollableTable(machineInfo.program_buffer_tmp, dbgInstrBank, dbgInstrAddress);
+                }
+                else {
+                    SetBankAndAddressScrollableTable(machineInfo.program_buffer, dbgInstrBank, dbgInstrAddress);
+                }
+            }
+
+            if (dbgInstrPCoutOfRange && CheckScroll(machineInfo.program_buffer_tmp)){
+                SetBankAndAddressScrollableTable(machineInfo.program_buffer_tmp, dbgInstrBank, dbgInstrAddress);
+            }
+            else if(CheckScroll(machineInfo.program_buffer)){
                 SetBankAndAddressScrollableTable(machineInfo.program_buffer, dbgInstrBank, dbgInstrAddress);
             }
         }
@@ -162,7 +174,10 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         if (gameState.game_running) {
             if (ImGui::Button("Next Instruction")) { machineInfo.pause_execution = false; }
             ImGui::SameLine();
-            if (ImGui::Button("Jump to PC")) { ActionScrollToCurrentPC(); }
+            if (ImGui::Button("Jump to PC")) {
+                if (dbgInstrPCoutOfRange) { ActionScrollToCurrentPC(machineInfo.program_buffer_tmp); }
+                else { ActionScrollToCurrentPC(machineInfo.program_buffer); }
+            }
             ImGui::SameLine();
             if (ImGui::Button("Reset")) { ActionRequestReset(); }
         }
@@ -181,7 +196,12 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         ImGui::Checkbox("Auto run", &dbgInstrAutorun);
         if (dbgInstrAutorun) {
             if (machineInfo.pause_execution) {
-                machineInfo.pause_execution = CheckBreakPoint();
+                if (dbgInstrPCoutOfRange) {
+                    machineInfo.pause_execution = CheckBreakPointTmp();
+                }
+                else {
+                    machineInfo.pause_execution = CheckBreakPoint();
+                }
             }
         }
         ImGui::SameLine();
@@ -191,7 +211,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         ImGui::TextColored(HIGHLIGHT_COLOR, "Instructions:");
         if (dbgInstrPCoutOfRange) {
             ImGui::SameLine();
-            ImGui::TextColored(IMGUI_RED_COL, "PC out of range");
+            ImGui::TextColored(IMGUI_RED_COL, "PC set to RAM");
         }
         if (ImGui::BeginTable("instruction_debug", dbgInstrColNum, TABLE_FLAGS)) {
 
@@ -201,23 +221,45 @@ void ImGuiGameboyX::ShowDebugInstructions() {
 
             if (gameState.game_running) {
 
-                bank_index& current_index = machineInfo.program_buffer.GetCurrentIndex();
-                while (machineInfo.program_buffer.GetNextEntry(dbgInstrCurrentEntry)) {
-                    ImGui::TableNextColumn();
+                if (dbgInstrPCoutOfRange) {
+                    bank_index& current_index = machineInfo.program_buffer_tmp.GetCurrentIndex();
+                    while (machineInfo.program_buffer_tmp.GetNextEntry(dbgInstrCurrentEntry)) {
+                        ImGui::TableNextColumn();
 
-                    if (dbgInstrBreakpointSet && current_index == dbgInstrCurrentBreakpoint) {
-                        ImGui::TextColored(IMGUI_RED_COL, ">>>");
+                        if (dbgInstrBreakpointTmpSet && current_index == dbgInstrCurrentBreakpointTmp) {
+                            ImGui::TextColored(IMGUI_RED_COL, ">>>");
+                        }
+                        ImGui::TableNextColumn();
+
+                        ImGui::Selectable(dbgInstrCurrentEntry.first.c_str(), current_index == dbgInstrInstructionIndex, SEL_FLAGS);
+                        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
+                            SetBreakPointTmp(current_index);
+                        }
+                        ImGui::TableNextColumn();
+
+                        ImGui::TextUnformatted(dbgInstrCurrentEntry.second.c_str());
+                        ImGui::TableNextRow();
                     }
-                    ImGui::TableNextColumn();
+                }
+                else {
+                    bank_index& current_index = machineInfo.program_buffer.GetCurrentIndex();
+                    while (machineInfo.program_buffer.GetNextEntry(dbgInstrCurrentEntry)) {
+                        ImGui::TableNextColumn();
 
-                    ImGui::Selectable(dbgInstrCurrentEntry.first.c_str(), current_index == dbgInstrInstructionIndex, SEL_FLAGS);
-                    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
-                        SetBreakPoint(current_index);
+                        if (dbgInstrBreakpointSet && current_index == dbgInstrCurrentBreakpoint) {
+                            ImGui::TextColored(IMGUI_RED_COL, ">>>");
+                        }
+                        ImGui::TableNextColumn();
+
+                        ImGui::Selectable(dbgInstrCurrentEntry.first.c_str(), current_index == dbgInstrInstructionIndex, SEL_FLAGS);
+                        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
+                            SetBreakPoint(current_index);
+                        }
+                        ImGui::TableNextColumn();
+
+                        ImGui::TextUnformatted(dbgInstrCurrentEntry.second.c_str());
+                        ImGui::TableNextRow();
                     }
-                    ImGui::TableNextColumn();
-
-                    ImGui::TextUnformatted(dbgInstrCurrentEntry.second.c_str());
-                    ImGui::TableNextRow();
                 }
             }
             else {
@@ -732,9 +774,9 @@ void ImGuiGameboyX::ActionSearchAddress(ScrollableTableBase& _table_obj, int& _a
     _table_obj.SearchAddress(_address);
 }
 
-void ImGuiGameboyX::ActionScrollToCurrentPC() {
-    machineInfo.program_buffer.SearchBank(dbgInstrInstructionIndex.bank);
-    machineInfo.program_buffer.SearchAddress(dbgInstrLastPC);
+void ImGuiGameboyX::ActionScrollToCurrentPC(ScrollableTableBase& _table_obj) {
+    _table_obj.SearchBank(dbgInstrInstructionIndex.bank);
+    _table_obj.SearchAddress(dbgInstrLastPC);
 }
 
 // ***** ACTIONS FOR MEMORY INSPECTOR WINDOW *****
@@ -807,14 +849,21 @@ bool ImGuiGameboyX::CheckCurrentPCAutoScroll() {
             dbgInstrInstructionIndex.bank = machineInfo.current_rom_bank;
             dbgInstrPCoutOfRange = false;
 
-            ActionScrollToCurrentPC();
+            ActionScrollToCurrentPC(machineInfo.program_buffer);
 
             dbgInstrInstructionIndex.index = machineInfo.program_buffer.GetIndexByAddress(dbgInstrLastPC).index;
             return true;
         }
         else {
+            dbgInstrLastPC = machineInfo.current_pc;
+            dbgInstrInstructionIndex.bank = 0;
             dbgInstrPCoutOfRange = true;
-            return false;
+
+            ActionScrollToCurrentPC(machineInfo.program_buffer_tmp);
+
+            dbgInstrInstructionIndex.index = machineInfo.program_buffer_tmp.GetIndexByAddress(dbgInstrLastPC).index;
+
+            return true;
         }
     }
 
@@ -823,8 +872,17 @@ bool ImGuiGameboyX::CheckCurrentPCAutoScroll() {
 
 // ***** DEBUG INSTRUCTION PROCESS BREAKPOINT *****
 bool ImGuiGameboyX::CheckBreakPoint() {
-    if (dbgInstrBreakpointSet && !dbgInstrPCoutOfRange) {
+    if (dbgInstrBreakpointSet) {
         return dbgInstrInstructionIndex == dbgInstrCurrentBreakpoint;
+    }
+    else {
+        return false;
+    }
+}
+
+bool ImGuiGameboyX::CheckBreakPointTmp() {
+    if (dbgInstrBreakpointTmpSet) {
+        return dbgInstrInstructionIndex == dbgInstrCurrentBreakpointTmp;
     }
     else {
         return false;
@@ -843,6 +901,21 @@ void ImGuiGameboyX::SetBreakPoint(const bank_index& _current_index) {
     else {
         dbgInstrCurrentBreakpoint = _current_index;
         dbgInstrBreakpointSet = true;
+    }
+}
+
+void ImGuiGameboyX::SetBreakPointTmp(const bank_index& _current_index) {
+    if (dbgInstrBreakpointTmpSet) {
+        if (dbgInstrCurrentBreakpointTmp == _current_index) {
+            dbgInstrBreakpointTmpSet = false;
+        }
+        else {
+            dbgInstrCurrentBreakpointTmp = _current_index;
+        }
+    }
+    else {
+        dbgInstrCurrentBreakpointTmp = _current_index;
+        dbgInstrBreakpointTmpSet = true;
     }
 }
 
@@ -950,8 +1023,11 @@ void ImGuiGameboyX::EventKeyUp(const SDL_Keycode& _key) {
     case SDLK_DELETE:
         sdlkDelDown = false;
         break;
-    case SDLK_F3:
+    case SDLK_F1:
         ActionRequestReset();
+        break;
+    case SDLK_F3:
+        machineInfo.pause_execution = false;
         break;
     default:
         break;

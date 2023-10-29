@@ -23,10 +23,8 @@ struct machine_state_context {
 	bool isCgb = false;
 
 	// timers
-	int clockCyclesDivCounter = 0;
-	u8 divSub = 0x00;
+	u8 div_low_byte = 0x00;
 	u16 timaDivMask = 0x0000;
-	bool timaDivANDPrev = false;
 
 	int rom_bank_num = 0;
 	int ram_bank_num = 0;
@@ -102,6 +100,15 @@ public:
 
 	std::vector<std::pair<int, std::vector<u8>>> GetProgramData() const override;
 
+	// actual memory
+	std::vector<u8> ROM_0;
+	std::vector<std::vector<u8>> ROM_N;
+	std::vector<std::vector<u8>> RAM_N;
+	std::vector<u8> WRAM_0;
+	std::vector<std::vector<u8>> WRAM_N;
+	std::vector<u8> HRAM;
+	std::vector<u8> IO;
+
 private:
 	// constructor
 	explicit MemorySM83(machine_information& _machine_info) : MemoryBase(_machine_info) {};
@@ -122,15 +129,6 @@ private:
 	void ProcessTAC();
 
 	void AllocateMemory() override;
-
-	// actual memory
-	std::vector<u8> ROM_0;
-	std::vector<std::vector<u8>> ROM_N;
-	std::vector<std::vector<u8>> RAM_N;
-	std::vector<u8> WRAM_0;
-	std::vector<std::vector<u8>> WRAM_N;
-	std::vector<u8> HRAM;
-	std::vector<u8> IO;
 
 	// IO *****************
 	void SetIORegister(const u8& _data, const u16& _addr);
