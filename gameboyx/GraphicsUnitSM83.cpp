@@ -41,21 +41,21 @@ void GraphicsUnitSM83::NextFrame() {
 		// everything from here just pretends to have processed the scanlines (horizontal lines) of the LCD *****
 		// request mode 0 to 2 interrupts (STAT)
 		if (*graphics_ctx->STAT & (PPU_STAT_MODE0_EN | PPU_STAT_MODE1_EN | PPU_STAT_MODE2_EN)) {
-			isrFlags |= ISR_LCD_STAT;
+			isrFlags |= IRQ_LCD_STAT;
 		}
 
 		// request ly compare interrupt (STAT) and set flag
-		if (*graphics_ctx->LYC <= LCD_SCANLINES_VBLANK) {
+		if (*graphics_ctx->LYC <= LCD_SCANLINES_TOTAL) {
 			*graphics_ctx->STAT |= PPU_STAT_LYC_FLAG;
 			if (*graphics_ctx->STAT & PPU_STAT_LYC_SOURCE) {
-				isrFlags |= ISR_LCD_STAT;
+				isrFlags |= IRQ_LCD_STAT;
 			}
 		}
 		else {
 			*graphics_ctx->STAT &= ~PPU_STAT_LYC_FLAG;
 		}
 
-		mem_instance->RequestInterrupts(isrFlags | ISR_VBLANK);*/
+		mem_instance->RequestInterrupts(isrFlags | IRQ_VBLANK);*/
 
 		// TODO: let cpu run for machine cycles per scan line, render frame after last scanline, set LY to 0x90 after first 17500 machine cycles (via increment)
 		// currently directly set to 0x90 only for testing with blargg's instruction tests

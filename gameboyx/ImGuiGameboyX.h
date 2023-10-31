@@ -55,7 +55,7 @@ private:
 	std::vector<bool> gamesSelected = std::vector<bool>();
 	int gameSelectedIndex = 0;
 	bool deleteGames = false;
-	int mainColNum = GAMES_COLUMNS.size();
+	const int mainColNum = GAMES_COLUMNS.size();
 
 	// debug instructions
 	bank_index dbgInstrInstructionIndex = bank_index(0, 0);					// bank, index
@@ -69,9 +69,9 @@ private:
 	bool dbgInstrAutorun = false;
 	int dbgInstrLastPC = -1;
 	debug_instr_data dbgInstrCurrentEntry;
-	int dbgInstrColNum = DEBUG_INSTR_COLUMNS.size();
-	int dbgInstrColNumRegs = DEBUG_REGISTER_COLUMNS.size();
-	int dbgInstrColNumFlags = DEBUG_FLAG_COLUMNS.size();
+	const int dbgInstrColNum = DEBUG_INSTR_COLUMNS.size();
+	const int dbgInstrColNumRegs = DEBUG_REGISTER_COLUMNS.size();
+	const int dbgInstrColNumFlags = DEBUG_FLAG_COLUMNS.size();
 	bool dbgInstrWasEnabled = false;
 
 	// memory inspector
@@ -90,6 +90,8 @@ private:
 	float graphicsFPSavg = .0f;
 	int graphicsFPScount = 0;
 	float graphicsFPScur = .0f;
+
+	const int hwInfoColNum = HW_INFO_COLUMNS.size();
 
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;

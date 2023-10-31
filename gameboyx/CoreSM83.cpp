@@ -48,6 +48,7 @@ inline string get_flag_and_isr_name(const cgb_flag_types& _type) {
 }
 
 const vector<pair<cgb_data_types, string>> register_names{
+    {AF, "AF"},
     {A, "A"},
     {F, "F"},
     {BC, "BC"},
@@ -118,6 +119,7 @@ inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, c
     u8 data;
 
     switch (_type) {
+    case AF:
     case A:
     case F:
     case BC:
@@ -139,17 +141,17 @@ inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, c
         break;
     case d16:
     case a16:
-        result = format("{:02x}", _data);
+        result = format("{:04x}", _data);
         break;
     case r8:
         data = (u8)(_data & 0xFF);
-        result = format("{:02x}", _addr + *(i8*)&data);
+        result = format("{:04x}", _addr + *(i8*)&data);
         break;
     case a8_ref:
         result = format("(FF00+{:02x})", (u8)(_data & 0xFF));
         break;
     case a16_ref:
-        result = format("({:02x})", _data);
+        result = format("({:04x})", _data);
         break;
     case SP_r8:
         data = (u8)(_data & 0xFF);
@@ -173,9 +175,12 @@ inline void instruction_args_to_string(u16& _addr, const vector<u8>& _bank, u16&
     case d8:
     case a8:
     case a8_ref:
+        _data = _bank[_addr++];
+        _raw_data += format("{:02x} ", (u8)_data); 
+        break;
     case r8:
         _data = _bank[_addr++];
-        _raw_data += format("{:02x} ", (u8)_data);
+        _raw_data += format("{:02x} ", (u8)_data + 0xFF00);
         break;
     case d16:
     case a16:
@@ -190,8 +195,8 @@ inline void instruction_args_to_string(u16& _addr, const vector<u8>& _bank, u16&
     }
 }
 
-inline void data_enums_to_string(const int& _bank, u16 _addr, const u16& _data, string& _args, const cgb_data_types& _type_1, const cgb_data_types& _type_2) {
-    if (_bank > 0) { _addr += ROM_N_OFFSET; }
+inline void data_enums_to_string(const int& _bank, u16 _addr, const u16& _base_ptr, const u16& _data, string& _args, const cgb_data_types& _type_1, const cgb_data_types& _type_2) {
+    _addr += _base_ptr;
 
     _args = "";
     if (_type_1 != NO_DATA) {
@@ -220,23 +225,23 @@ inline void data_enums_to_string(const int& _bank, u16 _addr, const u16& _data, 
 #define SET_FLAGS(flags, f) {f |= (flags);}
 #define RESET_ALL_FLAGS(f) {f = 0x00;}
 
-#define ADD_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= ((u16)(d & 0xFF) + (s & 0xFF) > 0xFF ? FLAG_CARRY : 0); f |= ((d & 0xF) + (s & 0xF) > 0xF ? FLAG_HCARRY : 0);}
-#define ADD_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= ((u16)(d & 0xFF) + (s & 0xFF) > 0xFF ? FLAG_CARRY : 0);}
-#define ADD_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f |= ((d & 0xF) + (s & 0xF) > 0xF ? FLAG_HCARRY : 0);}
+#define ADD_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= (((u16)(d & 0xFF) + (s & 0xFF)) > 0xFF ? FLAG_CARRY : 0); f |= (((d & 0xF) + (s & 0xF)) > 0xF ? FLAG_HCARRY : 0);}
+#define ADD_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= (((u16)(d & 0xFF) + (s & 0xFF)) > 0xFF ? FLAG_CARRY : 0);}
+#define ADD_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f |= (((d & 0xF) + (s & 0xF)) > 0xF ? FLAG_HCARRY : 0);}
 
-#define ADC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((u16)(d & 0xFF) + (u16)(s & 0xFF) + c > 0xFF ? FLAG_CARRY : 0);}
-#define ADC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= ((d & 0xF) + (s & 0xF) + c > 0xF ? FLAG_HCARRY : 0);}
+#define ADC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((((u16)(d & 0xFF)) + ((u16)(s & 0xFF)) + c) > 0xFF ? FLAG_CARRY : 0);}
+#define ADC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= (((d & 0xF) + (s & 0xF) + c) > 0xF ? FLAG_HCARRY : 0);}
 
-#define ADD_16_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= ((u32)(d & 0xFFFF) + (s & 0xFFFF) > 0xFFFF ? FLAG_CARRY : 0); f |= ((u16)(d & 0xFFF) + (s & 0xFFF) > 0xFFF ? FLAG_HCARRY : 0);}
+#define ADD_16_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= ((((u32)(d & 0xFFFF)) + (s & 0xFFFF)) > 0xFFFF ? FLAG_CARRY : 0); f |= ((((u16)(d & 0xFFF)) + (s & 0xFFF)) > 0xFFF ? FLAG_HCARRY : 0);}
 
-#define SUB_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= ((d & 0xFF) < (s & 0xFF) ? FLAG_CARRY : 0); f |= ((d & 0xF) < (s & 0xF) ? FLAG_HCARRY : 0);}
-#define SUB_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= ((d & 0xFF) < (s & 0xFF) ? FLAG_CARRY : 0);}
-#define SUB_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f|= ((d & 0xF) < (s & 0xF) ? FLAG_HCARRY : 0);}
+#define SUB_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= (((d & 0xFF) < (s & 0xFF)) ? FLAG_CARRY : 0); f |= (((d & 0xF) < (s & 0xF)) ? FLAG_HCARRY : 0);}
+#define SUB_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= (((d & 0xFF) < (s & 0xFF)) ? FLAG_CARRY : 0);}
+#define SUB_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f|= (((d & 0xF) < (s & 0xF)) ? FLAG_HCARRY : 0);}
 
-#define SBC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((d & 0xFF) < (((u16)s & 0xFF) + c) ? FLAG_CARRY : 0);}
-#define SBC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= ((d & 0xF) < ((s & 0xF) + c) ? FLAG_HCARRY : 0);}
+#define SBC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((((u16)(d & 0xFF)) < (((u16)s & 0xFF) + c)) ? FLAG_CARRY : 0);}
+#define SBC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= (((d & 0xF) < ((s & 0xF) + c)) ? FLAG_HCARRY : 0);}
 
-#define ZERO_FLAG(x, f) {f &= ~FLAG_ZERO; f |= ((x) == 0 ? FLAG_ZERO : 0x00);}
+#define ZERO_FLAG(x, f) {f &= ~FLAG_ZERO; f |= (((x) == 0) ? FLAG_ZERO : 0x00);}
 
 /* ***********************************************************************************************************
     CONSTRUCTOR
@@ -288,12 +293,18 @@ void CoreSM83::InitRegisterStates() {
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
     if (stopped) {
-        stopped = mem_instance->GetIOValue(IF_ADDR) == 0x00 ? true : false;
+        // check button press
+        if (mem_instance->GetIOValue(IF_ADDR) & IRQ_JOYPAD) {
+            stopped = false;
+        }
     }
     else if (halted) {
         TickTimers();
-        halted = (machine_ctx->IE & mem_instance->GetIOValue(IF_ADDR)) == 0x00;
-        if (!halted) { CheckInterrupts(); }
+        // check pending and enabled interrupts
+        if (machine_ctx->IE & mem_instance->GetIOValue(IF_ADDR)) {
+            halted = false;
+            CheckInterrupts();
+        }
     }
     else {
         if (machineInfo.instruction_debug_enabled) {
@@ -307,7 +318,7 @@ void CoreSM83::RunCycles() {
             }
         }
         else {
-            while (machineCycles < machineCyclesPerFrame * machine_ctx->currentSpeed && !halted) {
+            while (machineCycles < (machineCyclesPerFrame * machine_ctx->currentSpeed) && !halted && !stopped) {
                 RunCpu();
             }
         }
@@ -350,47 +361,47 @@ void CoreSM83::ExecuteInstruction() {
 void CoreSM83::CheckInterrupts() {
     if (ime) {
         u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
-        if (isr_requested & ISR_VBLANK && machine_ctx->IE & ISR_VBLANK) {
+        if (isr_requested & IRQ_VBLANK && machine_ctx->IE & IRQ_VBLANK) {
             ime = false;
 
-            isr_push(ISR_VBLANK_HANDLER);
-            isr_requested &= ~ISR_VBLANK;
+            isr_push(ISR_VBLANK_HANDLER_ADDR);
+            isr_requested &= ~IRQ_VBLANK;
 
             machineCycles += 5;
             for (int i = 0; i < 5; i++) {
                 TickTimers();
             }
         }
-        else if (isr_requested & ISR_LCD_STAT && machine_ctx->IE & ISR_LCD_STAT) {
+        else if (isr_requested & IRQ_LCD_STAT && machine_ctx->IE & IRQ_LCD_STAT) {
             ime = false;
 
-            isr_push(ISR_LCD_STAT_HANDLER);
-            isr_requested &= ~ISR_LCD_STAT;
+            isr_push(ISR_LCD_STAT_HANDLER_ADDR);
+            isr_requested &= ~IRQ_LCD_STAT;
 
             machineCycles += 5;
             for (int i = 0; i < 5; i++) {
                 TickTimers();
             }
         }
-        else if (isr_requested & ISR_TIMER && machine_ctx->IE & ISR_TIMER) {
+        else if (isr_requested & IRQ_TIMER && machine_ctx->IE & IRQ_TIMER) {
             ime = false;
 
-            isr_push(ISR_TIMER_HANDLER);
-            isr_requested &= ~ISR_TIMER;
+            isr_push(ISR_TIMER_HANDLER_ADDR);
+            isr_requested &= ~IRQ_TIMER;
 
             machineCycles += 5;
             for (int i = 0; i < 5; i++) {
                 TickTimers();
             }
         }
-        /*if (machine_ctx->IF & ISR_SERIAL) {
+        /*if (machine_ctx->IF & IRQ_SERIAL) {
             // not implemented
         }*/
-        else if (isr_requested & ISR_JOYPAD && machine_ctx->IE & ISR_JOYPAD) {
+        else if (isr_requested & IRQ_JOYPAD && machine_ctx->IE & IRQ_JOYPAD) {
             ime = false;
 
-            isr_push(ISR_JOYPAD_HANDLER);
-            isr_requested &= ~ISR_JOYPAD;
+            isr_push(ISR_JOYPAD_HANDLER_ADDR);
+            isr_requested &= ~IRQ_JOYPAD;
 
             machineCycles += 5;
             for (int i = 0; i < 5; i++) {
@@ -408,7 +419,7 @@ void CoreSM83::TickTimers() {
 
     if (timaOverflow) {
         mem_instance->SetIOValue(mem_instance->GetIOValue(TMA_ADDR), TIMA_ADDR);
-        mem_instance->RequestInterrupts(ISR_TIMER);
+        mem_instance->RequestInterrupts(IRQ_TIMER);
         timaOverflow = false;
     }
 
@@ -533,11 +544,11 @@ void CoreSM83::GetCurrentFlagsAndISR() const {
     machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
     machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_IME), format("{:01b}", ime ? 1 : 0));
     u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_VBLANK), format("{:01b}", (isr_requested & ISR_VBLANK)));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_STAT), format("{:01b}", (isr_requested & ISR_LCD_STAT) >> 1));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_TIMER), format("{:01b}", (isr_requested & ISR_TIMER) >> 2));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_SERIAL), format("{:01b}", (isr_requested & ISR_SERIAL) >> 3));
-    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_JOYPAD), format("{:01b}", (isr_requested & ISR_JOYPAD) >> 4));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_SERIAL), format("{:01b}", (isr_requested & IRQ_SERIAL) >> 3));
+    machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
     
 }
 
@@ -610,7 +621,7 @@ inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_dat
 
             // instruction to assembly
             string args;
-            data_enums_to_string(_bank_num, addr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
+            data_enums_to_string(_bank_num, addr, base_ptr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
 
             get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
             if (args.compare("") != 0) {
@@ -644,15 +655,15 @@ inline void CoreSM83::DecodeBankContent(ScrollableTableBuffer<debug_instr_data>&
     _program_buffer.clear();
 
     const auto& base_ptr = _bank_data.first;
-    const auto& rom_bank = _bank_data.second;
+    const auto& bank = _bank_data.second;
 
     auto current_entry = ScrollableTableEntry<debug_instr_data>();
 
-    for (u16 addr = 0, i = 0; addr < rom_bank.size(); i++) {
+    for (u16 addr = 0, i = 0; addr < bank.size(); i++) {
 
         current_entry = ScrollableTableEntry<debug_instr_data>();
 
-        u8 opcode = rom_bank[addr];
+        u8 opcode = bank[addr];
         get<ST_ENTRY_ADDRESS>(current_entry) = addr + base_ptr;
 
         instr_tuple* instr_ptr;
@@ -668,13 +679,13 @@ inline void CoreSM83::DecodeBankContent(ScrollableTableBuffer<debug_instr_data>&
         raw_data += format("{:02x} ", opcode);
 
         // arguments
-        instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
-        instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
+        instruction_args_to_string(addr, bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
+        instruction_args_to_string(addr, bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
         get<ST_ENTRY_DATA>(current_entry).first = raw_data;
 
         // instruction to assembly
         string args;
-        data_enums_to_string(_bank_num, addr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
+        data_enums_to_string(_bank_num, addr, base_ptr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
 
         get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
         if (args.compare("") != 0) {
@@ -1070,11 +1081,11 @@ void CoreSM83::NOP() {
 
 // stopped
 void CoreSM83::STOP() {
-    u8 joyp = mmu_instance->Read8Bit(JOYP_ADDR) & JOYP_BUTTONS_MASK;
+    u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
+
+    bool joyp = (isr_requested & IRQ_JOYPAD);
     bool two_byte = false;
     bool div_reset = false;
-
-    u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
 
     if (joyp) {
         if (machine_ctx->IE & isr_requested) {
@@ -1181,8 +1192,8 @@ void CoreSM83::LDfromAtoRef() {
         Regs.HL++;
         break;
     case 0x32:
-        Regs.HL--;
         mmu_instance->Write8Bit(Regs.A, Regs.HL);
+        Regs.HL--;
         break;
     }
 }
@@ -1200,8 +1211,8 @@ void CoreSM83::LDtoAfromRef() {
         Regs.HL++;
         break;
     case 0x3A:
-        Regs.HL--;
         Regs.A = mmu_instance->Read8Bit(Regs.HL);
+        Regs.HL--;
         break;
     }
 }
@@ -1590,7 +1601,7 @@ void CoreSM83::POP() {
     case 0xf1:
         data = mmu_instance->Read16Bit(Regs.SP);
         Regs.A = (data & 0xFF00) >> 8;
-        Regs.F = data & 0xFF;
+        Regs.F = data & 0xF0;
         break;
     }
 
@@ -1638,7 +1649,7 @@ void CoreSM83::INC8() {
     case 0x34:
         data = mmu_instance->Read8Bit(Regs.HL);
         ADD_8_HC(data, 1, Regs.F);
-        data += 1;
+        data = ((data + 1) & 0xFF);
         ZERO_FLAG(data, Regs.F);
         mmu_instance->Write8Bit(data, Regs.HL);
         break;
@@ -2133,7 +2144,7 @@ void CoreSM83::RRCA() {
 
 // rotate A left through carry
 void CoreSM83::RLA() {
-    static bool carry = Regs.F & FLAG_CARRY;
+    bool carry = Regs.F & FLAG_CARRY;
     RESET_ALL_FLAGS(Regs.F);
     Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
     Regs.A <<= 1;
@@ -2142,7 +2153,7 @@ void CoreSM83::RLA() {
 
 // rotate A right through carry
 void CoreSM83::RRA() {
-    static bool carry = Regs.F & FLAG_CARRY;
+    bool carry = Regs.F & FLAG_CARRY;
     RESET_ALL_FLAGS(Regs.F);
     Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
     Regs.A >>= 1;
@@ -2160,8 +2171,8 @@ void CoreSM83::JP() {
         return;
     }
 
-    static bool carry;
-    static bool zero;
+    bool carry;
+    bool zero;
 
     data = mmu_instance->Read16Bit(Regs.PC);
     Regs.PC += 2;
@@ -2209,8 +2220,8 @@ void CoreSM83::JP() {
 
 // jump relative to memory lecation
 void CoreSM83::JR() {
-    static bool carry;
-    static bool zero;
+    bool carry;
+    bool zero;
 
     data = mmu_instance->Read8Bit(Regs.PC);
     Regs.PC += 1;
@@ -2265,8 +2276,8 @@ void CoreSM83::jump_jr() {
 
 // call routine at memory location
 void CoreSM83::CALL() {
-    static bool carry;
-    static bool zero;
+    bool carry;
+    bool zero;
 
     data = mmu_instance->Read16Bit(Regs.PC);
     Regs.PC += 2;
@@ -2352,8 +2363,8 @@ void CoreSM83::call() {
 
 // return from routine
 void CoreSM83::RET() {
-    static bool carry;
-    static bool zero;
+    bool carry;
+    bool zero;
 
     switch (opcode) {
     case 0xC8:
@@ -2813,7 +2824,7 @@ void CoreSM83::RRC() {
 
 // rotate left through carry
 void CoreSM83::RL() {
-    static bool carry = Regs.F & FLAG_CARRY;
+    bool carry = Regs.F & FLAG_CARRY;
     RESET_ALL_FLAGS(Regs.F);
 
     switch (opcode & 0x07) {
@@ -2872,7 +2883,7 @@ void CoreSM83::RL() {
 
 // rotate right through carry
 void CoreSM83::RR() {
-    static bool carry = Regs.F & FLAG_CARRY;
+    bool carry = Regs.F & FLAG_CARRY;
     RESET_ALL_FLAGS(Regs.F);
 
     switch (opcode & 0x07) {
@@ -2982,57 +2993,65 @@ void CoreSM83::SLA() {
 // shift right arithmetic
 void CoreSM83::SRA() {
     RESET_ALL_FLAGS(Regs.F);
-    static bool msb;
+    u8 msb;
 
     switch (opcode & 0x07) {
     case 0x00:
         msb = (Regs.BC_.B & MSB);
+        Regs.F |= (Regs.BC_.B & LSB ? FLAG_CARRY : 0x00);
         Regs.BC_.B >>= 1;
-        Regs.BC_.B |= (msb ? MSB : 0x00);
+        Regs.BC_.B |= msb;
         ZERO_FLAG(Regs.BC_.B, Regs.F);
         break;
     case 0x01:
         msb = (Regs.BC_.C & MSB);
+        Regs.F |= (Regs.BC_.C & LSB ? FLAG_CARRY : 0x00);
         Regs.BC_.C >>= 1;
-        Regs.BC_.C |= (msb ? MSB : 0x00);
+        Regs.BC_.C |= msb;
         ZERO_FLAG(Regs.BC_.C, Regs.F);
         break;
     case 0x02:
         msb = (Regs.DE_.D & MSB);
+        Regs.F |= (Regs.DE_.D & LSB ? FLAG_CARRY : 0x00);
         Regs.DE_.D >>= 1;
-        Regs.DE_.D |= (msb ? MSB : 0x00);
+        Regs.DE_.D |= msb;
         ZERO_FLAG(Regs.DE_.D, Regs.F);
         break;
     case 0x03:
         msb = (Regs.DE_.E & MSB);
+        Regs.F |= (Regs.DE_.E & LSB ? FLAG_CARRY : 0x00);
         Regs.DE_.E >>= 1;
-        Regs.DE_.E |= (msb ? MSB : 0x00);
+        Regs.DE_.E |= msb;
         ZERO_FLAG(Regs.DE_.E, Regs.F);
         break;
     case 0x04:
         msb = (Regs.HL_.H & MSB);
+        Regs.F |= (Regs.HL_.H & LSB ? FLAG_CARRY : 0x00);
         Regs.HL_.H >>= 1;
-        Regs.HL_.H |= (msb ? MSB : 0x00);
+        Regs.HL_.H |= msb;
         ZERO_FLAG(Regs.HL_.H, Regs.F);
         break;
     case 0x05:
         msb = (Regs.HL_.L & MSB);
+        Regs.F |= (Regs.HL_.L & LSB ? FLAG_CARRY : 0x00);
         Regs.HL_.L >>= 1;
-        Regs.HL_.L |= (msb ? MSB : 0x00);
+        Regs.HL_.L |= msb;
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x06:
         data = mmu_instance->Read8Bit(Regs.HL);
         msb = (data & MSB);
-        data = (data >> 1) & 0xFF;
-        data |= (msb ? MSB : 0x00);
+        Regs.F |= (data & LSB ? FLAG_CARRY : 0x00);
+        data >>= 1;
+        data |= msb;
         ZERO_FLAG(data, Regs.F);
         mmu_instance->Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         msb = (Regs.A & MSB);
+        Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
         Regs.A >>= 1;
-        Regs.A |= (msb ? MSB : 0x00);
+        Regs.A |= msb;
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }

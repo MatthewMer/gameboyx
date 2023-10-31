@@ -86,17 +86,17 @@
 // interrupt flags
 #define IF_ADDR                     0xFF0F              // RW
 
-#define ISR_VBLANK                  0x01
-#define ISR_LCD_STAT                0x02
-#define ISR_TIMER                   0x04
-#define ISR_SERIAL                  0x08
-#define ISR_JOYPAD                  0x10
+#define IRQ_VBLANK                  0x01
+#define IRQ_LCD_STAT                0x02
+#define IRQ_TIMER                   0x04
+#define IRQ_SERIAL                  0x08
+#define IRQ_JOYPAD                  0x10
 
-#define ISR_VBLANK_HANDLER          0x40
-#define ISR_LCD_STAT_HANDLER        0x48
-#define ISR_TIMER_HANDLER           0x50
-#define ISR_SERIAL_HANDLER          0x58
-#define ISR_JOYPAD_HANDLER          0x60
+#define ISR_VBLANK_HANDLER_ADDR          0x40
+#define ISR_LCD_STAT_HANDLER_ADDR        0x48
+#define ISR_TIMER_HANDLER_ADDR           0x50
+#define ISR_SERIAL_HANDLER_ADDR          0x58
+#define ISR_JOYPAD_HANDLER_ADDR          0x60
 
 // sound
 #define NR10_ADDR                   0xFF10              // RW
@@ -227,8 +227,8 @@
 #define PPU_STAT_LYC_SOURCE         0x40
 
 // lcd
-#define LCD_SCANLINES               144
-#define LCD_SCANLINES_VBLANK        153
+#define LCD_SCANLINES_VBLANK        144
+#define LCD_SCANLINES_TOTAL         154
 
 // VRAM Tile data
 #define PPU_VRAM_TILE_SIZE          16                  // Bytes

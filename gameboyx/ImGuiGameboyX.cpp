@@ -280,10 +280,20 @@ void ImGuiGameboyX::ShowDebugInstructions() {
 
         if (gameState.game_running) {
             if (ImGui::InputInt("ROM Bank", &dbgInstrBank, 1, 100, INPUT_INT_FLAGS)) {
-                ActionBankSwitch(machineInfo.program_buffer, dbgInstrBank);
+                if (dbgInstrPCoutOfRange) {
+                    ActionBankSwitch(machineInfo.program_buffer_tmp, dbgInstrBank);
+                }
+                else {
+                    ActionBankSwitch(machineInfo.program_buffer, dbgInstrBank);
+                }
             }
             if (ImGui::InputInt("ROM Address", &dbgInstrAddress, 1, 100, INPUT_INT_HEX_FLAGS)) {
-                ActionSearchAddress(machineInfo.program_buffer, dbgInstrAddress);
+                if (dbgInstrPCoutOfRange) {
+                    ActionSearchAddress(machineInfo.program_buffer_tmp, dbgInstrAddress);
+                }
+                else {
+                    ActionSearchAddress(machineInfo.program_buffer, dbgInstrAddress);
+                }
             }
         }
         else {
@@ -447,9 +457,8 @@ void ImGuiGameboyX::ShowHardwareInfo() {
 
     if (ImGui::Begin("Hardware Info", &machineInfo.track_hardware_info, WIN_CHILD_FLAGS)) {
         if (ImGui::BeginTable("hardware_info", 2, TABLE_FLAGS_NO_BORDER_OUTER_H)) {
-            static const int column_num = HW_INFO_COLUMNS.size();
 
-            for (int i = 0; i < column_num; i++) {
+            for (int i = 0; i < hwInfoColNum; i++) {
                 ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER, HW_INFO_COLUMNS[i]);
             }
 
