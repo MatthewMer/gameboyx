@@ -13,6 +13,7 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ### Images ###
 
 ![Blargg's Instruction Tests](./img/blarggs_instruction_tests.png)
+![Blargg's Instruction Timing](./img/blarggs_instruction_timing.png)
 
 ### Ressources ###
 

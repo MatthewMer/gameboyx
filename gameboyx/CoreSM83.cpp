@@ -330,6 +330,9 @@ void CoreSM83::RunCpu() {
 
     CheckInterrupts();
     ExecuteInstruction();
+
+    machineCycles += currentMachineCycles;
+    machineCycleCounterClock += currentMachineCycles;
 }
 
 void CoreSM83::ExecuteInstruction() {
@@ -346,9 +349,6 @@ void CoreSM83::ExecuteInstruction() {
 
     functionPtr = get<INSTR_FUNC>(*instrPtr);
     (this->*functionPtr)();
-
-    machineCycles += currentMachineCycles;
-    machineCycleCounterClock += currentMachineCycles;
 }
 
 void CoreSM83::CheckInterrupts() {
@@ -3199,7 +3199,6 @@ void CoreSM83::BIT0() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x01, Regs.F);
-        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x01, Regs.F);
@@ -3234,7 +3233,6 @@ void CoreSM83::BIT1() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x02, Regs.F);
-        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x02, Regs.F);
@@ -3269,7 +3267,6 @@ void CoreSM83::BIT2() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x04, Regs.F);
-        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x04, Regs.F);
@@ -3304,7 +3301,6 @@ void CoreSM83::BIT3() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x08, Regs.F);
-        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x08, Regs.F);
@@ -3339,7 +3335,6 @@ void CoreSM83::BIT4() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x10, Regs.F);
-        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x10, Regs.F);
@@ -3374,7 +3369,6 @@ void CoreSM83::BIT5() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x20, Regs.F);
-        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x20, Regs.F);
@@ -3409,7 +3403,6 @@ void CoreSM83::BIT6() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x40, Regs.F);
-        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x40, Regs.F);
@@ -3444,7 +3437,6 @@ void CoreSM83::BIT7() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x80, Regs.F);
-        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x80, Regs.F);
