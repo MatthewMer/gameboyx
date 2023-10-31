@@ -117,8 +117,6 @@ private:
 
 	bool timaEnAndDivOverflowPrev = false;
 	bool timaEnAndDivOverflowCur = false;
-	bool timaTick = false;
-	bool timaOverflow = false;
 
 	// ISR
 	void isr_push(const u16& _isr_handler);

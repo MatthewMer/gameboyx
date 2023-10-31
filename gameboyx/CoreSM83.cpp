@@ -326,13 +326,13 @@ void CoreSM83::RunCycles() {
 }
 
 void CoreSM83::RunCpu() {
+    currentMachineCycles = 0;
+
     CheckInterrupts();
     ExecuteInstruction();
 }
 
 void CoreSM83::ExecuteInstruction() {
-    currentMachineCycles = 0;
-
     curPC = Regs.PC;
     FetchOpCode();
 
@@ -360,11 +360,6 @@ void CoreSM83::CheckInterrupts() {
             isr_push(ISR_VBLANK_HANDLER_ADDR);
             isr_requested &= ~IRQ_VBLANK;
 
-            machineCycles += 5;
-            for (int i = 0; i < 5; i++) {
-                TickTimers();
-            }
-
             mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
         else if (isr_requested & IRQ_LCD_STAT && machine_ctx->IE & IRQ_LCD_STAT) {
@@ -373,11 +368,6 @@ void CoreSM83::CheckInterrupts() {
             isr_push(ISR_LCD_STAT_HANDLER_ADDR);
             isr_requested &= ~IRQ_LCD_STAT;
 
-            machineCycles += 5;
-            for (int i = 0; i < 5; i++) {
-                TickTimers();
-            }
-
             mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
         else if (isr_requested & IRQ_TIMER && machine_ctx->IE & IRQ_TIMER) {
@@ -385,11 +375,6 @@ void CoreSM83::CheckInterrupts() {
 
             isr_push(ISR_TIMER_HANDLER_ADDR);
             isr_requested &= ~IRQ_TIMER;
-
-            machineCycles += 5;
-            for (int i = 0; i < 5; i++) {
-                TickTimers();
-            }
 
             mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
@@ -402,11 +387,6 @@ void CoreSM83::CheckInterrupts() {
             isr_push(ISR_JOYPAD_HANDLER_ADDR);
             isr_requested &= ~IRQ_JOYPAD;
 
-            machineCycles += 5;
-            for (int i = 0; i < 5; i++) {
-                TickTimers();
-            }
-
             mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
     }
@@ -417,10 +397,19 @@ void CoreSM83::TickTimers() {
     u8 div = mem_instance->GetIOValue(DIV_ADDR);
     bool tima_enabled = mem_instance->GetIOValue(TAC_ADDR) & TAC_CLOCK_ENABLE;
 
-    if (timaOverflow) {
+    if (machine_ctx->tima_reload_cycle) {
         mem_instance->SetIOValue(mem_instance->GetIOValue(TMA_ADDR), TIMA_ADDR);
-        mem_instance->RequestInterrupts(IRQ_TIMER);
-        timaOverflow = false;
+        if (!machine_ctx->tima_reload_if_write) {
+            mem_instance->RequestInterrupts(IRQ_TIMER);
+        }
+        else {
+            machine_ctx->tima_reload_if_write = false;
+        }
+        machine_ctx->tima_reload_cycle = false;
+    }
+    else if (machine_ctx->tima_overflow_cycle) {
+        machine_ctx->tima_reload_cycle = true;
+        machine_ctx->tima_overflow_cycle = false;
     }
 
     for (int i = 0; i < 4; i++) {
@@ -459,7 +448,7 @@ void CoreSM83::IncrementTIMA() {
     u8 tima = mem_instance->GetIOValue(TIMA_ADDR);
     if (tima == 0xFF) {
         tima = 0x00;
-        timaOverflow = true;
+        machine_ctx->tima_overflow_cycle = true;
     }
     else {
         tima++;
@@ -495,9 +484,9 @@ void CoreSM83::Write8Bit(const u8& _data, const u16& _addr) {
 }
 
 void CoreSM83::Write16Bit(const u16& _data, const u16& _addr) {
-    mmu_instance->Write8Bit(_data & 0xFF, _addr);
-    TickTimers();
     mmu_instance->Write8Bit((_data >> 8) & 0xFF, _addr + 1);
+    TickTimers();
+    mmu_instance->Write8Bit(_data & 0xFF, _addr);
     TickTimers();
 }
 
@@ -1641,8 +1630,11 @@ void CoreSM83::stack_push(const u16& _data) {
 }
 
 void CoreSM83::isr_push(const u16& _isr_handler) {
-    Regs.SP -= 2;
-    mmu_instance->Write16Bit(Regs.PC, Regs.SP);
+    // simulate 2 NOPs
+    TickTimers();
+    TickTimers();
+
+    stack_push(Regs.PC);
     Regs.PC = _isr_handler;
 }
 
@@ -1740,6 +1732,7 @@ void CoreSM83::INC16() {
         Regs.SP += 1;
         break;
     }
+    TickTimers();
 }
 
 // decrement 8/16 bit
@@ -1808,6 +1801,7 @@ void CoreSM83::DEC16() {
         Regs.SP -= 1;
         break;
     }
+    TickTimers();
 }
 
 // add with carry + halfcarry
@@ -1869,6 +1863,8 @@ void CoreSM83::ADDHL() {
 
     ADD_16_FLAGS(Regs.HL, data, Regs.F);
     Regs.HL += data;
+
+    TickTimers();
 }
 
 // add for SP + signed immediate data r8
@@ -2264,6 +2260,11 @@ void CoreSM83::JP() {
     }
 }
 
+void CoreSM83::jump_jp() {
+    Regs.PC = data;
+    if (opcode != 0xe9) { TickTimers(); }
+}
+
 // jump relative to memory lecation
 void CoreSM83::JR() {
     bool carry;
@@ -2304,11 +2305,6 @@ void CoreSM83::JR() {
         jump_jr();
         break;
     }
-}
-
-void CoreSM83::jump_jp() {
-    Regs.PC = data;
-    if (opcode != 0xe9) { TickTimers(); }
 }
 
 void CoreSM83::jump_jr() {
@@ -2789,7 +2785,6 @@ void CoreSM83::RLC() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // rotate right
@@ -2848,7 +2843,6 @@ void CoreSM83::RRC() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // rotate left through carry
@@ -2908,7 +2902,6 @@ void CoreSM83::RL() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // rotate right through carry
@@ -2968,7 +2961,6 @@ void CoreSM83::RR() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // shift left arithmetic (multiply by 2)
@@ -3019,7 +3011,6 @@ void CoreSM83::SLA() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // shift right arithmetic
@@ -3087,7 +3078,6 @@ void CoreSM83::SRA() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // swap lo<->hi nibble
@@ -3130,7 +3120,6 @@ void CoreSM83::SWAP() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // shift right logical
@@ -3181,7 +3170,6 @@ void CoreSM83::SRL() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // test bit 0
@@ -3217,7 +3205,6 @@ void CoreSM83::BIT0() {
         ZERO_FLAG(Regs.A & 0x01, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // test bit 1
@@ -3253,7 +3240,6 @@ void CoreSM83::BIT1() {
         ZERO_FLAG(Regs.A & 0x02, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // test bit 2
@@ -3289,7 +3275,6 @@ void CoreSM83::BIT2() {
         ZERO_FLAG(Regs.A & 0x04, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // test bit 3
@@ -3325,7 +3310,6 @@ void CoreSM83::BIT3() {
         ZERO_FLAG(Regs.A & 0x08, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // test bit 4
@@ -3361,7 +3345,6 @@ void CoreSM83::BIT4() {
         ZERO_FLAG(Regs.A & 0x10, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // test bit 5
@@ -3397,7 +3380,6 @@ void CoreSM83::BIT5() {
         ZERO_FLAG(Regs.A & 0x20, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // test bit 6
@@ -3433,7 +3415,6 @@ void CoreSM83::BIT6() {
         ZERO_FLAG(Regs.A & 0x40, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // test bit 7
@@ -3469,7 +3450,6 @@ void CoreSM83::BIT7() {
         ZERO_FLAG(Regs.A & 0x80, Regs.F);
         break;
     }
-    TickTimers();
 }
 
 // reset bit 0
@@ -3502,7 +3482,6 @@ void CoreSM83::RES0() {
         Regs.A &= ~0x01;
         break;
     }
-    TickTimers();
 }
 
 // reset bit 1
@@ -3535,7 +3514,6 @@ void CoreSM83::RES1() {
         Regs.A &= ~0x02;
         break;
     }
-    TickTimers();
 }
 
 // reset bit 2
@@ -3568,7 +3546,6 @@ void CoreSM83::RES2() {
         Regs.A &= ~0x04;
         break;
     }
-    TickTimers();
 }
 
 // reset bit 3
@@ -3601,7 +3578,6 @@ void CoreSM83::RES3() {
         Regs.A &= ~0x08;
         break;
     }
-    TickTimers();
 }
 
 // reset bit 4
@@ -3634,7 +3610,6 @@ void CoreSM83::RES4() {
         Regs.A &= ~0x10;
         break;
     }
-    TickTimers();
 }
 
 // reset bit 5
@@ -3667,7 +3642,6 @@ void CoreSM83::RES5() {
         Regs.A &= ~0x20;
         break;
     }
-    TickTimers();
 }
 
 // reset bit 6
@@ -3700,7 +3674,6 @@ void CoreSM83::RES6() {
         Regs.A &= ~0x40;
         break;
     }
-    TickTimers();
 }
 
 // reset bit 7
@@ -3733,7 +3706,6 @@ void CoreSM83::RES7() {
         Regs.A &= ~0x80;
         break;
     }
-    TickTimers();
 }
 
 // set bit 0
@@ -3766,7 +3738,6 @@ void CoreSM83::SET0() {
         Regs.A |= 0x01;
         break;
     }
-    TickTimers();
 }
 
 // set bit 1
@@ -3799,7 +3770,6 @@ void CoreSM83::SET1() {
         Regs.A |= 0x02;
         break;
     }
-    TickTimers();
 }
 
 // set bit 2
@@ -3832,7 +3802,6 @@ void CoreSM83::SET2() {
         Regs.A |= 0x04;
         break;
     }
-    TickTimers();
 }
 
 // set bit 3
@@ -3865,7 +3834,6 @@ void CoreSM83::SET3() {
         Regs.A |= 0x08;
         break;
     }
-    TickTimers();
 }
 
 // set bit 4
@@ -3898,7 +3866,6 @@ void CoreSM83::SET4() {
         Regs.A |= 0x10;
         break;
     }
-    TickTimers();
 }
 
 // set bit 5
@@ -3931,7 +3898,6 @@ void CoreSM83::SET5() {
         Regs.A |= 0x20;
         break;
     }
-    TickTimers();
 }
 
 // set bit 6
@@ -3964,7 +3930,6 @@ void CoreSM83::SET6() {
         Regs.A |= 0x40;
         break;
     }
-    TickTimers();
 }
 
 // set bit 7
@@ -3997,7 +3962,6 @@ void CoreSM83::SET7() {
         Regs.A |= 0x80;
         break;
     }
-    TickTimers();
 }
 
 /* ***********************************************************************************************************

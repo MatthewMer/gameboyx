@@ -25,6 +25,9 @@ struct machine_state_context {
 	// timers
 	u8 div_low_byte = 0x00;
 	u16 timaDivMask = 0x0000;
+	bool tima_reload_cycle = false;
+	bool tima_overflow_cycle = false;
+	bool tima_reload_if_write = false;
 
 	int rom_bank_num = 0;
 	int ram_bank_num = 0;
@@ -131,8 +134,8 @@ private:
 	void AllocateMemory() override;
 
 	// IO *****************
-	void SetIORegister(const u8& _data, const u16& _addr);
-	u8 GetIORegister(const u16& _addr);
+	void WriteIORegister(const u8& _data, const u16& _addr);
+	u8 ReadIORegister(const u16& _addr);
 	void VRAM_DMA(const u8& _data);
 	void OAM_DMA();
 

@@ -429,7 +429,7 @@ u8 MemorySM83::ReadOAM(const u16& _addr) {
 }
 
 u8 MemorySM83::ReadIO(const u16& _addr) {
-    return GetIORegister(_addr);
+    return ReadIORegister(_addr);
 }
 
 u8 MemorySM83::ReadHRAM(const u16& _addr) {
@@ -462,7 +462,7 @@ void MemorySM83::WriteOAM(const u8& _data, const u16& _addr) {
 }
 
 void MemorySM83::WriteIO(const u8& _data, const u16& _addr) {
-    SetIORegister(_data, _addr);
+    WriteIORegister(_data, _addr);
 }
 
 void MemorySM83::WriteHRAM(const u8& _data, const u16& _addr) {
@@ -476,7 +476,7 @@ void MemorySM83::WriteIE(const u8& _data) {
 /* ***********************************************************************************************************
     IO PROCESSING
 *********************************************************************************************************** */
-u8 MemorySM83::GetIORegister(const u16& _addr) {
+u8 MemorySM83::ReadIORegister(const u16& _addr) {
     // TODO: take registers with mixed access into account and further reading on return values when reading from specific locations
     switch (_addr) {
     case 0xFF03:
@@ -566,7 +566,6 @@ u8 MemorySM83::GetIORegister(const u16& _addr) {
             case CGB_WRAM_SELECT_ADDR:
             case PCM12_ADDR:
             case PCM34_ADDR:
-                LOG_WARN("Read ", format("{:x}", _addr), " as FF");
                 return 0xFF;
                 break;
             default:
@@ -577,7 +576,7 @@ u8 MemorySM83::GetIORegister(const u16& _addr) {
     }
 }
 
-void MemorySM83::SetIORegister(const u8& _data, const u16& _addr) {
+void MemorySM83::WriteIORegister(const u8& _data, const u16& _addr) {
     switch (_addr) {
     case DIV_ADDR:
         IO[DIV_ADDR - IO_OFFSET] = 0x00;
@@ -586,6 +585,16 @@ void MemorySM83::SetIORegister(const u8& _data, const u16& _addr) {
     case TAC_ADDR:
         IO[TAC_ADDR - IO_OFFSET] = _data;
         ProcessTAC();
+        break;
+    case TIMA_ADDR:
+        if (!machine_ctx.tima_reload_cycle) {
+            IO[TIMA_ADDR - IO_OFFSET] = _data;
+            machine_ctx.tima_overflow_cycle = false;
+        }
+        break;
+    case IF_ADDR:
+        machine_ctx.tima_reload_if_write = machine_ctx.tima_reload_cycle;
+        IO[IF_ADDR - IO_OFFSET] = _data;
         break;
     case CGB_VRAM_SELECT_ADDR:
         SetVRAMBank(_data);
