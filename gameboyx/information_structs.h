@@ -40,7 +40,7 @@ struct machine_information {
 	MemoryBuffer<ScrollableTable<memory_data>> memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
 
 	void reset_machine_information() {
-		ScrollableTable<debug_instr_data> program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+		program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 		program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 		std::vector<register_data> register_values = std::vector<register_data>();
 		bool instruction_logging = false;
@@ -59,7 +59,7 @@ struct machine_information {
 		int vram_bank_selected = 0;
 		int vram_bank_num = 0;
 
-		MemoryBuffer<ScrollableTable<memory_data>> memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
+		memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
 	}
 };
 

@@ -333,26 +333,19 @@ void CoreSM83::RunCpu() {
 void CoreSM83::ExecuteInstruction() {
     currentMachineCycles = 0;
 
-    opcode = mmu_instance->Read8Bit(Regs.PC);
     curPC = Regs.PC;
-    Regs.PC++;
-    TickTimers();
+    FetchOpCode();
 
-    if (opcodeCB) {
-        instrPtr = &(instrMapCB[opcode]);
-        opcodeCB = false;
+    if (opcode == 0xCB) {
+        FetchOpCode();
+        instrPtr = &instrMapCB[opcode];
     }
     else {
-        instrPtr = &(instrMap[opcode]);
+        instrPtr = &instrMap[opcode];
     }
 
     functionPtr = get<INSTR_FUNC>(*instrPtr);
-    currentMachineCycles += get<INSTR_MC>(*instrPtr);
     (this->*functionPtr)();
-
-    for (int i = 1; i < currentMachineCycles; i++) {
-        TickTimers();
-    }
 
     machineCycles += currentMachineCycles;
     machineCycleCounterClock += currentMachineCycles;
@@ -371,6 +364,8 @@ void CoreSM83::CheckInterrupts() {
             for (int i = 0; i < 5; i++) {
                 TickTimers();
             }
+
+            mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
         else if (isr_requested & IRQ_LCD_STAT && machine_ctx->IE & IRQ_LCD_STAT) {
             ime = false;
@@ -382,6 +377,8 @@ void CoreSM83::CheckInterrupts() {
             for (int i = 0; i < 5; i++) {
                 TickTimers();
             }
+
+            mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
         else if (isr_requested & IRQ_TIMER && machine_ctx->IE & IRQ_TIMER) {
             ime = false;
@@ -393,6 +390,8 @@ void CoreSM83::CheckInterrupts() {
             for (int i = 0; i < 5; i++) {
                 TickTimers();
             }
+
+            mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
         /*if (machine_ctx->IF & IRQ_SERIAL) {
             // not implemented
@@ -407,8 +406,9 @@ void CoreSM83::CheckInterrupts() {
             for (int i = 0; i < 5; i++) {
                 TickTimers();
             }
+
+            mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
-        mem_instance->SetIOValue(isr_requested, IF_ADDR);
     }
 }
 
@@ -451,6 +451,8 @@ void CoreSM83::TickTimers() {
         }
         timaEnAndDivOverflowPrev = timaEnAndDivOverflowCur;
     }
+
+    currentMachineCycles++;
 }
 
 void CoreSM83::IncrementTIMA() {
@@ -463,6 +465,54 @@ void CoreSM83::IncrementTIMA() {
         tima++;
     }
     mem_instance->SetIOValue(tima, TIMA_ADDR);
+}
+
+void CoreSM83::FetchOpCode() {
+    opcode = mmu_instance->Read8Bit(Regs.PC);
+    Regs.PC++;
+    TickTimers();
+}
+
+void CoreSM83::Fetch8Bit() {
+    data = mmu_instance->Read8Bit(Regs.PC);
+    Regs.PC++;
+    TickTimers();
+}
+
+void CoreSM83::Fetch16Bit() {
+    data = mmu_instance->Read8Bit(Regs.PC);
+    Regs.PC++;
+    TickTimers();
+
+    data |= (((u16)mmu_instance->Read8Bit(Regs.PC)) << 8);
+    Regs.PC++;
+    TickTimers();
+}
+
+void CoreSM83::Write8Bit(const u8& _data, const u16& _addr) {
+    mmu_instance->Write8Bit(_data, _addr);
+    TickTimers();
+}
+
+void CoreSM83::Write16Bit(const u16& _data, const u16& _addr) {
+    mmu_instance->Write8Bit(_data & 0xFF, _addr);
+    TickTimers();
+    mmu_instance->Write8Bit((_data >> 8) & 0xFF, _addr + 1);
+    TickTimers();
+}
+
+u8 CoreSM83::Read8Bit(const u16& _addr) {
+    u8 data = mmu_instance->Read8Bit(_addr);
+    TickTimers();
+    return data;
+}
+
+u16 CoreSM83::Read16Bit(const u16& _addr) {
+    u16 data = mmu_instance->Read8Bit(_addr);
+    TickTimers();
+    data |= (((u16)mmu_instance->Read8Bit(_addr + 1)) << 8);
+    TickTimers();
+    return data;
 }
 
 /* ***********************************************************************************************************
@@ -1154,6 +1204,12 @@ void CoreSM83::CCF() {
     Regs.F ^= FLAG_CARRY;
 }
 
+// 1's complement of A
+void CoreSM83::CPL() {
+    SET_FLAGS(FLAG_SUB | FLAG_HCARRY, Regs.F);
+    Regs.A = ~(Regs.A);
+}
+
 // set c
 void CoreSM83::SCF() {
     RESET_FLAGS(FLAG_HCARRY | FLAG_SUB, Regs.F);
@@ -1172,7 +1228,9 @@ void CoreSM83::EI() {
 
 // enable CB sm83_instructions for next opcode
 void CoreSM83::CB() {
-    opcodeCB = true;
+    // TODO: check for problems, the cb prefixed instruction gets actually executed the same cycle it gets fetched
+    //TickTimers();
+    return;
 }
 
 /* ***********************************************************************************************************
@@ -1182,17 +1240,17 @@ void CoreSM83::CB() {
 void CoreSM83::LDfromAtoRef() {
     switch (opcode) {
     case 0x02:
-        mmu_instance->Write8Bit(Regs.A, Regs.BC);
+        Write8Bit(Regs.A, Regs.BC);
         break;
     case 0x12:
-        mmu_instance->Write8Bit(Regs.A, Regs.DE);
+        Write8Bit(Regs.A, Regs.DE);
         break;
     case 0x22:
-        mmu_instance->Write8Bit(Regs.A, Regs.HL);
+        Write8Bit(Regs.A, Regs.HL);
         Regs.HL++;
         break;
     case 0x32:
-        mmu_instance->Write8Bit(Regs.A, Regs.HL);
+        Write8Bit(Regs.A, Regs.HL);
         Regs.HL--;
         break;
     }
@@ -1201,25 +1259,24 @@ void CoreSM83::LDfromAtoRef() {
 void CoreSM83::LDtoAfromRef() {
     switch (opcode) {
     case 0x0A:
-        Regs.A = mmu_instance->Read8Bit(Regs.BC);
+        Regs.A = Read8Bit(Regs.BC);
         break;
     case 0x1A:
-        Regs.A = mmu_instance->Read8Bit(Regs.DE);
+        Regs.A = Read8Bit(Regs.DE);
         break;
     case 0x2A:
-        Regs.A = mmu_instance->Read8Bit(Regs.HL);
+        Regs.A = Read8Bit(Regs.HL);
         Regs.HL++;
         break;
     case 0x3A:
-        Regs.A = mmu_instance->Read8Bit(Regs.HL);
+        Regs.A = Read8Bit(Regs.HL);
         Regs.HL--;
         break;
     }
 }
 
 void CoreSM83::LDd8() {
-    data = mmu_instance->Read8Bit(Regs.PC);
-    Regs.PC++;
+    Fetch8Bit();
 
     switch (opcode) {
     case 0x06:
@@ -1232,7 +1289,7 @@ void CoreSM83::LDd8() {
         Regs.HL_.H = data;
         break;
     case 0x36:
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x0E:
         Regs.BC_.C = data;
@@ -1250,8 +1307,7 @@ void CoreSM83::LDd8() {
 }
 
 void CoreSM83::LDd16() {
-    data = mmu_instance->Read16Bit(Regs.PC);
-    Regs.PC += 2;
+    Fetch16Bit();
 
     switch (opcode) {
     case 0x01:
@@ -1272,47 +1328,43 @@ void CoreSM83::LDd16() {
 void CoreSM83::LDCref() {
     switch (opcode) {
     case 0xE2:
-        mmu_instance->Write8Bit(Regs.A, Regs.BC_.C | 0xFF00);
+        Write8Bit(Regs.A, Regs.BC_.C | 0xFF00);
         break;
     case 0xF2:
-        Regs.A = mmu_instance->Read8Bit(Regs.BC_.C | 0xFF00);
+        Regs.A = Read8Bit(Regs.BC_.C | 0xFF00);
         break;
     }
 }
 
 void CoreSM83::LDH() {
-    data = mmu_instance->Read8Bit(Regs.PC);
-    Regs.PC++;
+    Fetch8Bit();
 
     switch (opcode) {
     case 0xE0:
-        mmu_instance->Write8Bit(Regs.A, data | 0xFF00);
+        Write8Bit(Regs.A, data | 0xFF00);
         break;
     case 0xF0:
-        Regs.A = mmu_instance->Read8Bit(data | 0xFF00);
+        Regs.A = Read8Bit(data | 0xFF00);
         break;
     }
 }
 
 void CoreSM83::LDHa16() {
-    data = mmu_instance->Read16Bit(Regs.PC);
-    Regs.PC += 2;
+    Fetch16Bit();
 
     switch (opcode) {
     case 0xea:
-        mmu_instance->Write8Bit(Regs.A, data);
+        Write8Bit(Regs.A, data);
         break;
     case 0xfa:
-        Regs.A = mmu_instance->Read8Bit(data);
+        Regs.A = Read8Bit(data);
         break;
     }
 }
 
 void CoreSM83::LDSPa16() {
-    data = mmu_instance->Read16Bit(Regs.PC);
-    Regs.PC += 2;
-
-    mmu_instance->Write16Bit(Regs.SP, data);
+    Fetch16Bit();
+    Write16Bit(Regs.SP, data);
 }
 
 void CoreSM83::LDtoB() {
@@ -1336,7 +1388,7 @@ void CoreSM83::LDtoB() {
         Regs.BC_.B = Regs.HL_.L;
         break;
     case 0x06:
-        Regs.BC_.B = mmu_instance->Read8Bit(Regs.HL);
+        Regs.BC_.B = Read8Bit(Regs.HL);
         break;
     case 0x07:
         Regs.BC_.B = Regs.A;
@@ -1365,7 +1417,7 @@ void CoreSM83::LDtoC() {
         Regs.BC_.C = Regs.HL_.L;
         break;
     case 0x06:
-        Regs.BC_.C = mmu_instance->Read8Bit(Regs.HL);
+        Regs.BC_.C = Read8Bit(Regs.HL);
         break;
     case 0x07:
         Regs.BC_.C = Regs.A;
@@ -1394,7 +1446,7 @@ void CoreSM83::LDtoD() {
         Regs.DE_.D = Regs.HL_.L;
         break;
     case 0x06:
-        Regs.DE_.D = mmu_instance->Read8Bit(Regs.HL);
+        Regs.DE_.D = Read8Bit(Regs.HL);
         break;
     case 0x07:
         Regs.DE_.D = Regs.A;
@@ -1423,7 +1475,7 @@ void CoreSM83::LDtoE() {
         Regs.DE_.E = Regs.HL_.L;
         break;
     case 0x06:
-        Regs.DE_.E = mmu_instance->Read8Bit(Regs.HL);
+        Regs.DE_.E = Read8Bit(Regs.HL);
         break;
     case 0x07:
         Regs.DE_.E = Regs.A;
@@ -1452,7 +1504,7 @@ void CoreSM83::LDtoH() {
         Regs.HL_.H = Regs.HL_.L;
         break;
     case 0x06:
-        Regs.HL_.H = mmu_instance->Read8Bit(Regs.HL);
+        Regs.HL_.H = Read8Bit(Regs.HL);
         break;
     case 0x07:
         Regs.HL_.H = Regs.A;
@@ -1481,7 +1533,7 @@ void CoreSM83::LDtoL() {
         Regs.HL_.L = Regs.HL_.L;
         break;
     case 0x06:
-        Regs.HL_.L = mmu_instance->Read8Bit(Regs.HL);
+        Regs.HL_.L = Read8Bit(Regs.HL);
         break;
     case 0x07:
         Regs.HL_.L = Regs.A;
@@ -1492,25 +1544,25 @@ void CoreSM83::LDtoL() {
 void CoreSM83::LDtoHLref() {
     switch (opcode & 0x07) {
     case 0x00:
-        mmu_instance->Write8Bit(Regs.BC_.B, Regs.HL);
+        Write8Bit(Regs.BC_.B, Regs.HL);
         break;
     case 0x01:
-        mmu_instance->Write8Bit(Regs.BC_.C, Regs.HL);
+        Write8Bit(Regs.BC_.C, Regs.HL);
         break;
     case 0x02:
-        mmu_instance->Write8Bit(Regs.DE_.D, Regs.HL);
+        Write8Bit(Regs.DE_.D, Regs.HL);
         break;
     case 0x03:
-        mmu_instance->Write8Bit(Regs.DE_.E, Regs.HL);
+        Write8Bit(Regs.DE_.E, Regs.HL);
         break;
     case 0x04:
-        mmu_instance->Write8Bit(Regs.HL_.H, Regs.HL);
+        Write8Bit(Regs.HL_.H, Regs.HL);
         break;
     case 0x05:
-        mmu_instance->Write8Bit(Regs.HL_.L, Regs.HL);
+        Write8Bit(Regs.HL_.L, Regs.HL);
         break;
     case 0x07:
-        mmu_instance->Write8Bit(Regs.A, Regs.HL);
+        Write8Bit(Regs.A, Regs.HL);
         break;
     }
 }
@@ -1536,7 +1588,7 @@ void CoreSM83::LDtoA() {
         Regs.A = Regs.HL_.L;
         break;
     case 0x06:
-        Regs.A = mmu_instance->Read8Bit(Regs.HL);
+        Regs.A = Read8Bit(Regs.HL);
         break;
     case 0x07:
         Regs.A = Regs.A;
@@ -1546,38 +1598,46 @@ void CoreSM83::LDtoA() {
 
 // ld SP to HL and add signed 8 bit immediate data
 void CoreSM83::LDHLSPr8() {
-    data = mmu_instance->Read8Bit(Regs.PC);
-    Regs.PC++;
+    Fetch8Bit();
 
     Regs.HL = Regs.SP;
     RESET_ALL_FLAGS(Regs.F);
     ADD_8_FLAGS(Regs.HL, data, Regs.F);
     Regs.HL += *(i8*)&data;
+
+    TickTimers();
 }
 
 void CoreSM83::LDSPHL() {
     Regs.SP = Regs.HL;
+    TickTimers();
 }
 
 // push PC to Stack
 void CoreSM83::PUSH() {
-    Regs.SP -= 2;
-
     switch (opcode) {
     case 0xc5:
-        mmu_instance->Write16Bit(Regs.BC, Regs.SP);
+        data = Regs.BC;
         break;
     case 0xd5:
-        mmu_instance->Write16Bit(Regs.DE, Regs.SP);
+        data = Regs.DE;
         break;
     case 0xe5:
-        mmu_instance->Write16Bit(Regs.HL, Regs.SP);
+        data = Regs.HL;
         break;
     case 0xf5:
         data = ((u16)Regs.A << 8) | Regs.F;
-        mmu_instance->Write16Bit(data, Regs.SP);
         break;
     }
+
+    stack_push(data);
+}
+
+void CoreSM83::stack_push(const u16& _data) {
+    Regs.SP -= 2;
+    TickTimers();
+
+    Write16Bit(_data, Regs.SP);
 }
 
 void CoreSM83::isr_push(const u16& _isr_handler) {
@@ -1590,22 +1650,26 @@ void CoreSM83::isr_push(const u16& _isr_handler) {
 void CoreSM83::POP() {
     switch (opcode) {
     case 0xc1:
-        Regs.BC = mmu_instance->Read16Bit(Regs.SP);
+        Regs.BC = stack_pop();
         break;
     case 0xd1:
-        Regs.DE = mmu_instance->Read16Bit(Regs.SP);
+        Regs.DE = stack_pop();
         break;
     case 0xe1:
-        Regs.HL = mmu_instance->Read16Bit(Regs.SP);
+        Regs.HL = stack_pop();
         break;
     case 0xf1:
-        data = mmu_instance->Read16Bit(Regs.SP);
+        data = stack_pop();
         Regs.A = (data & 0xFF00) >> 8;
         Regs.F = data & 0xF0;
         break;
     }
+}
 
+u16 CoreSM83::stack_pop() {
+    u16 data = Read16Bit(Regs.SP);
     Regs.SP += 2;
+    return data;
 }
 
 /* ***********************************************************************************************************
@@ -1647,11 +1711,11 @@ void CoreSM83::INC8() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x34:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         ADD_8_HC(data, 1, Regs.F);
         data = ((data + 1) & 0xFF);
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x3c:
         ADD_8_HC(Regs.A, 1, Regs.F);
@@ -1715,11 +1779,11 @@ void CoreSM83::DEC8() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x35:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         SUB_8_HC(data, 1, Regs.F);
         data -= 1;
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x3d:
         SUB_8_HC(Regs.A, 1, Regs.F);
@@ -1770,14 +1834,13 @@ void CoreSM83::ADD8() {
         data = Regs.HL_.L;
         break;
     case 0x86:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         break;
     case 0x87:
         data = Regs.A;
         break;
     case 0xc6:
-        data = mmu_instance->Read8Bit(Regs.PC);
-        Regs.PC++;
+        Fetch8Bit();
         break;
     }
 
@@ -1810,12 +1873,14 @@ void CoreSM83::ADDHL() {
 
 // add for SP + signed immediate data r8
 void CoreSM83::ADDSPr8() {
-    data = mmu_instance->Read8Bit(Regs.PC);
-    Regs.PC++;
+    Fetch8Bit();
 
     RESET_ALL_FLAGS(Regs.F);
     ADD_8_FLAGS(Regs.SP, data, Regs.F);
     Regs.SP += *(i8*)&data;
+
+    TickTimers();
+    TickTimers();
 }
 
 // adc for A + (register or immediate unsigned data d8) + carry
@@ -1843,14 +1908,13 @@ void CoreSM83::ADC() {
         data = Regs.HL_.L;
         break;
     case 0x8e:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         break;
     case 0x8f:
         data = Regs.A;
         break;
     case 0xce:
-        data = mmu_instance->Read8Bit(Regs.PC);
-        Regs.PC++;
+        Fetch8Bit();
         break;
     }
 
@@ -1884,14 +1948,13 @@ void CoreSM83::SUB() {
         data = Regs.HL_.L;
         break;
     case 0x96:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         break;
     case 0x97:
         data = Regs.A;
         break;
     case 0xd6:
-        data = mmu_instance->Read8Bit(Regs.PC);
-        Regs.PC++;
+        Fetch8Bit();
         break;
     }
 
@@ -1925,14 +1988,13 @@ void CoreSM83::SBC() {
         data = Regs.HL_.L;
         break;
     case 0x9e:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         break;
     case 0x9f:
         data = Regs.A;
         break;
     case 0xde:
-        data = mmu_instance->Read8Bit(Regs.PC);
-        Regs.PC++;
+        Fetch8Bit();
         break;
     }
 
@@ -1985,14 +2047,13 @@ void CoreSM83::AND() {
         data = Regs.HL_.L;
         break;
     case 0xa6:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         break;
     case 0xa7:
         data = Regs.A;
         break;
     case 0xe6:
-        data = mmu_instance->Read8Bit(Regs.PC);
-        Regs.PC++;
+        Fetch8Bit();
         break;
     }
 
@@ -2024,14 +2085,13 @@ void CoreSM83::OR() {
         data = Regs.HL_.L;
         break;
     case 0xb6:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         break;
     case 0xb7:
         data = Regs.A;
         break;
     case 0xf6:
-        data = mmu_instance->Read8Bit(Regs.PC);
-        Regs.PC++;
+        Fetch8Bit();
         break;
     }
 
@@ -2063,14 +2123,13 @@ void CoreSM83::XOR() {
         data = Regs.HL_.L;
         break;
     case 0xae:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         break;
     case 0xaf:
         data = Regs.A;
         break;
     case 0xee:
-        data = mmu_instance->Read8Bit(Regs.PC);
-        Regs.PC++;
+        Fetch8Bit();
         break;
     }
 
@@ -2102,25 +2161,18 @@ void CoreSM83::CP() {
         data = Regs.HL_.L;
         break;
     case 0xbe:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         break;
     case 0xbf:
         data = Regs.A;
         break;
     case 0xfe:
-        data = mmu_instance->Read8Bit(Regs.PC);
-        Regs.PC++;
+        Fetch8Bit();
         break;
     }
 
     SUB_8_FLAGS(Regs.A, data, Regs.F);
     ZERO_FLAG(Regs.A ^ (u8)data, Regs.F);
-}
-
-// 1's complement of A
-void CoreSM83::CPL() {
-    SET_FLAGS(FLAG_SUB | FLAG_HCARRY, Regs.F);
-    Regs.A = ~(Regs.A);
 }
 
 /* ***********************************************************************************************************
@@ -2174,15 +2226,13 @@ void CoreSM83::JP() {
     bool carry;
     bool zero;
 
-    data = mmu_instance->Read16Bit(Regs.PC);
-    Regs.PC += 2;
+    Fetch16Bit();
 
     switch (opcode) {
     case 0xCA:
         zero = Regs.F & FLAG_ZERO;
         if (zero) {
             jump_jp();
-            currentMachineCycles += 4;
             return;
         }
         break;
@@ -2190,7 +2240,6 @@ void CoreSM83::JP() {
         zero = Regs.F & FLAG_ZERO;
         if (!zero) {
             jump_jp();
-            currentMachineCycles += 4;
             return;
         }
         break;
@@ -2198,7 +2247,6 @@ void CoreSM83::JP() {
         carry = Regs.F & FLAG_CARRY;
         if (carry) {
             jump_jp();
-            currentMachineCycles += 4;
             return;
         }
         break;
@@ -2206,7 +2254,6 @@ void CoreSM83::JP() {
         carry = Regs.F & FLAG_CARRY;
         if (!carry) {
             jump_jp();
-            currentMachineCycles += 4;
             return;
         }
         break;
@@ -2215,7 +2262,6 @@ void CoreSM83::JP() {
         return;
         break;
     }
-    currentMachineCycles += 3;
 }
 
 // jump relative to memory lecation
@@ -2223,15 +2269,13 @@ void CoreSM83::JR() {
     bool carry;
     bool zero;
 
-    data = mmu_instance->Read8Bit(Regs.PC);
-    Regs.PC += 1;
+    Fetch8Bit();
 
     switch (opcode) {
     case 0x28:
         zero = Regs.F & FLAG_ZERO;
         if (zero) {
             jump_jr();
-            currentMachineCycles += 3;
             return;
         }
         break;
@@ -2239,7 +2283,6 @@ void CoreSM83::JR() {
         zero = Regs.F & FLAG_ZERO;
         if (!zero) {
             jump_jr();
-            currentMachineCycles += 3;
             return;
         }
         break;
@@ -2247,7 +2290,6 @@ void CoreSM83::JR() {
         carry = Regs.F & FLAG_CARRY;
         if (carry) {
             jump_jr();
-            currentMachineCycles += 3;
             return;
         }
         break;
@@ -2255,7 +2297,6 @@ void CoreSM83::JR() {
         carry = Regs.F & FLAG_CARRY;
         if (!carry) {
             jump_jr();
-            currentMachineCycles += 3;
             return;
         }
         break;
@@ -2263,15 +2304,16 @@ void CoreSM83::JR() {
         jump_jr();
         break;
     }
-    currentMachineCycles += 2;
 }
 
 void CoreSM83::jump_jp() {
     Regs.PC = data;
+    if (opcode != 0xe9) { TickTimers(); }
 }
 
 void CoreSM83::jump_jr() {
     Regs.PC += *(i8*)&data;
+    TickTimers();
 }
 
 // call routine at memory location
@@ -2279,15 +2321,13 @@ void CoreSM83::CALL() {
     bool carry;
     bool zero;
 
-    data = mmu_instance->Read16Bit(Regs.PC);
-    Regs.PC += 2;
+    Fetch16Bit();
 
     switch (opcode) {
     case 0xCC:
         zero = Regs.F & FLAG_ZERO;
         if (zero) {
             call();
-            currentMachineCycles += 6;
             return;
         }
         break;
@@ -2295,7 +2335,6 @@ void CoreSM83::CALL() {
         zero = Regs.F & FLAG_ZERO;
         if (!zero) {
             call();
-            currentMachineCycles += 6;
             return;
         }
         break;
@@ -2303,7 +2342,6 @@ void CoreSM83::CALL() {
         carry = Regs.F & FLAG_CARRY;
         if (carry) {
             call();
-            currentMachineCycles += 6;
             return;
         }
         break;
@@ -2311,20 +2349,17 @@ void CoreSM83::CALL() {
         carry = Regs.F & FLAG_CARRY;
         if (!carry) {
             call();
-            currentMachineCycles += 6;
             return;
         }
         break;
     default:
         call();
-        currentMachineCycles += 6;
         return;
         break;
     }
-    currentMachineCycles += 3;
 }
 
-// call to interrupt vectors
+// call to special addresses
 void CoreSM83::RST() {
     switch (opcode) {
     case 0xc7:
@@ -2356,8 +2391,7 @@ void CoreSM83::RST() {
 }
 
 void CoreSM83::call() {
-    Regs.SP -= 2;
-    mmu_instance->Write16Bit(Regs.PC, Regs.SP);
+    stack_push(Regs.PC);
     Regs.PC = data;
 }
 
@@ -2368,44 +2402,37 @@ void CoreSM83::RET() {
 
     switch (opcode) {
     case 0xC8:
+        TickTimers();
         zero = Regs.F & FLAG_ZERO;
         if (zero) {
             ret();
-            currentMachineCycles += 5;
-            return;
         }
         break;
     case 0xC0:
+        TickTimers();
         zero = Regs.F & FLAG_ZERO;
         if (!zero) {
             ret();
-            currentMachineCycles += 5;
-            return;
         }
         break;
     case 0xD8:
+        TickTimers();
         carry = Regs.F & FLAG_CARRY;
         if (carry) {
             ret();
-            currentMachineCycles += 5;
-            return;
         }
         break;
     case 0xD0:
+        TickTimers();
         carry = Regs.F & FLAG_CARRY;
         if (!carry) {
             ret();
-            currentMachineCycles += 5;
-            return;
         }
         break;
     default:
         ret();
-        currentMachineCycles += 4;
-        return;
         break;
     }
-    currentMachineCycles += 2;
 }
 
 // return and enable interrupts
@@ -2415,8 +2442,8 @@ void CoreSM83::RETI() {
 }
 
 void CoreSM83::ret() {
-    Regs.PC = mmu_instance->Read16Bit(Regs.SP);
-    Regs.SP += 2;
+    Regs.PC = stack_pop();
+    TickTimers();
 }
 
 /* ***********************************************************************************************************
@@ -2748,12 +2775,12 @@ void CoreSM83::RLC() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         Regs.F |= (data & MSB ? FLAG_CARRY : 0x00);
         data = (data << 1) & 0xFF;
         data |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
@@ -2762,6 +2789,7 @@ void CoreSM83::RLC() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // rotate right
@@ -2806,12 +2834,12 @@ void CoreSM83::RRC() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         Regs.F |= (data & LSB ? FLAG_CARRY : 0x00);
         data = (data >> 1) & 0xFF;
         data |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
@@ -2820,6 +2848,7 @@ void CoreSM83::RRC() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // rotate left through carry
@@ -2865,12 +2894,12 @@ void CoreSM83::RL() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         Regs.F |= (data & MSB ? FLAG_CARRY : 0x00);
         data = (data << 1) & 0xFF;
         data |= (carry ? LSB : 0x00);
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
@@ -2879,6 +2908,7 @@ void CoreSM83::RL() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // rotate right through carry
@@ -2924,12 +2954,12 @@ void CoreSM83::RR() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         Regs.F |= (data & LSB ? FLAG_CARRY : 0x00);
         data = (data >> 1) & 0xFF;
         data |= (carry ? MSB : 0x00);
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
@@ -2938,6 +2968,7 @@ void CoreSM83::RR() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // shift left arithmetic (multiply by 2)
@@ -2976,11 +3007,11 @@ void CoreSM83::SLA() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         Regs.F |= (data & MSB ? FLAG_CARRY : 0x00);
         data = (data << 1) & 0xFF;
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
@@ -2988,6 +3019,7 @@ void CoreSM83::SLA() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // shift right arithmetic
@@ -3039,13 +3071,13 @@ void CoreSM83::SRA() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         msb = (data & MSB);
         Regs.F |= (data & LSB ? FLAG_CARRY : 0x00);
         data >>= 1;
         data |= msb;
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         msb = (Regs.A & MSB);
@@ -3055,6 +3087,7 @@ void CoreSM83::SRA() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // swap lo<->hi nibble
@@ -3087,16 +3120,17 @@ void CoreSM83::SWAP() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data = (data >> 4) | ((data << 4) & 0xF0);
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A = (Regs.A >> 4) | (Regs.A << 4);
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // shift right logical
@@ -3135,11 +3169,11 @@ void CoreSM83::SRL() {
         ZERO_FLAG(Regs.HL_.L, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         Regs.F |= (data & LSB ? FLAG_CARRY : 0x00);
         data = (data >> 1) & 0xFF;
         ZERO_FLAG(data, Regs.F);
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
@@ -3147,6 +3181,7 @@ void CoreSM83::SRL() {
         ZERO_FLAG(Regs.A, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // test bit 0
@@ -3174,13 +3209,15 @@ void CoreSM83::BIT0() {
         ZERO_FLAG(Regs.HL_.L & 0x01, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x01, Regs.F);
+        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x01, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // test bit 1
@@ -3208,13 +3245,15 @@ void CoreSM83::BIT1() {
         ZERO_FLAG(Regs.HL_.L & 0x02, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x02, Regs.F);
+        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x02, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // test bit 2
@@ -3242,13 +3281,15 @@ void CoreSM83::BIT2() {
         ZERO_FLAG(Regs.HL_.L & 0x04, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x04, Regs.F);
+        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x04, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // test bit 3
@@ -3276,13 +3317,15 @@ void CoreSM83::BIT3() {
         ZERO_FLAG(Regs.HL_.L & 0x08, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x08, Regs.F);
+        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x08, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // test bit 4
@@ -3310,13 +3353,15 @@ void CoreSM83::BIT4() {
         ZERO_FLAG(Regs.HL_.L & 0x10, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x10, Regs.F);
+        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x10, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // test bit 5
@@ -3344,13 +3389,15 @@ void CoreSM83::BIT5() {
         ZERO_FLAG(Regs.HL_.L & 0x20, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x20, Regs.F);
+        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x20, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // test bit 6
@@ -3378,13 +3425,15 @@ void CoreSM83::BIT6() {
         ZERO_FLAG(Regs.HL_.L & 0x40, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x40, Regs.F);
+        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x40, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // test bit 7
@@ -3412,13 +3461,15 @@ void CoreSM83::BIT7() {
         ZERO_FLAG(Regs.HL_.L & 0x80, Regs.F);
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         ZERO_FLAG(data & 0x80, Regs.F);
+        TickTimers();
         break;
     case 0x07:
         ZERO_FLAG(Regs.A & 0x80, Regs.F);
         break;
     }
+    TickTimers();
 }
 
 // reset bit 0
@@ -3443,14 +3494,15 @@ void CoreSM83::RES0() {
         Regs.HL_.L &= ~0x01;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data &= ~0x01;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x01;
         break;
     }
+    TickTimers();
 }
 
 // reset bit 1
@@ -3475,14 +3527,15 @@ void CoreSM83::RES1() {
         Regs.HL_.L &= ~0x02;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data &= ~0x02;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x02;
         break;
     }
+    TickTimers();
 }
 
 // reset bit 2
@@ -3507,14 +3560,15 @@ void CoreSM83::RES2() {
         Regs.HL_.L &= ~0x04;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data &= ~0x04;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x04;
         break;
     }
+    TickTimers();
 }
 
 // reset bit 3
@@ -3539,14 +3593,15 @@ void CoreSM83::RES3() {
         Regs.HL_.L &= ~0x08;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data &= ~0x08;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x08;
         break;
     }
+    TickTimers();
 }
 
 // reset bit 4
@@ -3571,14 +3626,15 @@ void CoreSM83::RES4() {
         Regs.HL_.L &= ~0x10;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data &= ~0x10;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x10;
         break;
     }
+    TickTimers();
 }
 
 // reset bit 5
@@ -3603,14 +3659,15 @@ void CoreSM83::RES5() {
         Regs.HL_.L &= ~0x20;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data &= ~0x20;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x20;
         break;
     }
+    TickTimers();
 }
 
 // reset bit 6
@@ -3635,14 +3692,15 @@ void CoreSM83::RES6() {
         Regs.HL_.L &= ~0x40;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data &= ~0x40;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x40;
         break;
     }
+    TickTimers();
 }
 
 // reset bit 7
@@ -3667,14 +3725,15 @@ void CoreSM83::RES7() {
         Regs.HL_.L &= ~0x80;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data &= ~0x80;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x80;
         break;
     }
+    TickTimers();
 }
 
 // set bit 0
@@ -3699,14 +3758,15 @@ void CoreSM83::SET0() {
         Regs.HL_.L |= 0x01;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data |= 0x01;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x01;
         break;
     }
+    TickTimers();
 }
 
 // set bit 1
@@ -3731,14 +3791,15 @@ void CoreSM83::SET1() {
         Regs.HL_.L |= 0x02;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data |= 0x02;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x02;
         break;
     }
+    TickTimers();
 }
 
 // set bit 2
@@ -3763,14 +3824,15 @@ void CoreSM83::SET2() {
         Regs.HL_.L |= 0x04;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data |= 0x04;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x04;
         break;
     }
+    TickTimers();
 }
 
 // set bit 3
@@ -3795,14 +3857,15 @@ void CoreSM83::SET3() {
         Regs.HL_.L |= 0x08;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data |= 0x08;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x08;
         break;
     }
+    TickTimers();
 }
 
 // set bit 4
@@ -3827,14 +3890,15 @@ void CoreSM83::SET4() {
         Regs.HL_.L |= 0x10;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data |= 0x10;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x10;
         break;
     }
+    TickTimers();
 }
 
 // set bit 5
@@ -3859,14 +3923,15 @@ void CoreSM83::SET5() {
         Regs.HL_.L |= 0x20;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data |= 0x20;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x20;
         break;
     }
+    TickTimers();
 }
 
 // set bit 6
@@ -3891,14 +3956,15 @@ void CoreSM83::SET6() {
         Regs.HL_.L |= 0x40;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data |= 0x40;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x40;
         break;
     }
+    TickTimers();
 }
 
 // set bit 7
@@ -3923,14 +3989,15 @@ void CoreSM83::SET7() {
         Regs.HL_.L |= 0x80;
         break;
     case 0x06:
-        data = mmu_instance->Read8Bit(Regs.HL);
+        data = Read8Bit(Regs.HL);
         data |= 0x80;
-        mmu_instance->Write8Bit(data, Regs.HL);
+        Write8Bit(data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x80;
         break;
     }
+    TickTimers();
 }
 
 /* ***********************************************************************************************************

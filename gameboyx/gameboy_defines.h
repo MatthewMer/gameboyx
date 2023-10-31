@@ -300,8 +300,12 @@
 #define INIT_CGB_LY                     0x90
 
 // timer/divider
-#define INIT_DIV                        0x267C
-#define CGB_INIT_DIV                    0x1EA0
+#define INIT_DIV                        0xABCC
+#define INIT_CGB_DIV                    0x1EA0
+
+#define INIT_TAC                        0xF8
+#define INIT_TIMA                       0x00
+#define INIT_TMA                        0x00
 
 #define TIMA_DIV_BIT_9                  0x0200
 #define TIMA_DIV_BIT_3                  0x0008

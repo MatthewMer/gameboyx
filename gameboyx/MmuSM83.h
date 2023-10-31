@@ -20,7 +20,7 @@ public:
 	void Write8Bit(const u8& _data, const u16& _addr) override;
 	void Write16Bit(const u16& _data, const u16& _addr) override;
 	u8 Read8Bit(const u16& _addr) override;
-	u16 Read16Bit(const u16& _addr) override;
+	//u16 Read16Bit(const u16& _addr) override;
 
 	// access machine states
 	//int GetCurrentSpeed() const override;
@@ -64,7 +64,7 @@ public:
 	void Write8Bit(const u8& _data, const u16& _addr) override;
 	void Write16Bit(const u16& _data, const u16& _addr) override;
 	u8 Read8Bit(const u16& _addr) override;
-	u16 Read16Bit(const u16& _addr) override;
+	//u16 Read16Bit(const u16& _addr) override;
 
 	// access machine states
 	//int GetCurrentSpeed() const override;

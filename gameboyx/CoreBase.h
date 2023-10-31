@@ -36,6 +36,11 @@ public:
 	virtual void GetCurrentRegisterValues() const = 0;
 	virtual void GetCurrentFlagsAndISR() const = 0;
 
+	virtual void Write8Bit(const u8& _data, const u16& _addr) = 0;
+	virtual void Write16Bit(const u16& _data, const u16& _addr) = 0;
+	virtual u8 Read8Bit(const u16& _addr) = 0;
+	virtual u16 Read16Bit(const u16& _addr) = 0;
+
 protected:
 	// constructor
 	explicit CoreBase(machine_information& _machine_info) : machineInfo(_machine_info) {

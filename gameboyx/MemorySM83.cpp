@@ -333,10 +333,19 @@ void MemorySM83::InitMemoryState() {
     IO[STAT_ADDR - IO_OFFSET] = INIT_CGB_STAT;
     IO[LY_ADDR - IO_OFFSET] = 0x91;//INIT_CGB_LY;
 
-    if (isCgb) { IO[DIV_ADDR - IO_OFFSET] = CGB_INIT_DIV >> 8; }
-    else { IO[DIV_ADDR - IO_OFFSET] = INIT_DIV >> 8; }
+    if (isCgb) { 
+        IO[DIV_ADDR - IO_OFFSET] = INIT_CGB_DIV >> 8; 
+        machine_ctx.div_low_byte = INIT_CGB_DIV & 0xFF;
+    }
+    else { 
+        IO[DIV_ADDR - IO_OFFSET] = INIT_DIV >> 8; 
+        machine_ctx.div_low_byte = INIT_DIV & 0xFF;
+    }
 
-    InitTimers();
+    IO[TIMA_ADDR - IO_OFFSET] = INIT_TIMA;
+    IO[TMA_ADDR - IO_OFFSET] = INIT_TMA;
+    IO[TAC_ADDR - IO_OFFSET] = INIT_TAC;
+    ProcessTAC();
 }
 
 /* ***********************************************************************************************************
@@ -687,12 +696,8 @@ void MemorySM83::OAM_DMA() {
 }
 
 /* ***********************************************************************************************************
-    TIMERS
+    TIMA CONTROL
 *********************************************************************************************************** */
-void MemorySM83::InitTimers() {
-    ProcessTAC();
-}
-
 void MemorySM83::ProcessTAC() {
     switch (IO[TAC_ADDR - IO_OFFSET] & TAC_CLOCK_SELECT) {
     case 0x00:
@@ -706,6 +711,7 @@ void MemorySM83::ProcessTAC() {
         break;
     case 0x03:
         machine_ctx.timaDivMask = TIMA_DIV_BIT_7;
+
         break;
     }
 }

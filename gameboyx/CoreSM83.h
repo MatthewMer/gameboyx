@@ -94,6 +94,15 @@ private:
 	void TickTimers();
 	void IncrementTIMA();
 
+	void FetchOpCode();
+	void Fetch8Bit();
+	void Fetch16Bit();
+
+	void Write8Bit(const u8& _data, const u16& _addr) override;
+	void Write16Bit(const u16& _data, const u16& _addr) override;
+	u8 Read8Bit(const u16& _addr) override;
+	u16 Read16Bit(const u16& _addr) override;
+
 	u16 curPC;
 
 	// internals
@@ -105,7 +114,6 @@ private:
 	bool halted = false;
 	bool stopped = false;
 	bool ime = false;
-	bool opcodeCB = false;
 
 	bool timaEnAndDivOverflowPrev = false;
 	bool timaEnAndDivOverflowCur = false;
@@ -181,6 +189,9 @@ private:
 
 	void PUSH();
 	void POP();
+
+	void stack_push(const u16& _data);
+	u16 stack_pop();
 
 	// arithmetic/logic
 	void INC8();

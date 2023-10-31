@@ -184,13 +184,6 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 	}
 }
 
-// CGB is little endian: low byte first, high byte second
-u16 MmuSM83_MBC1::Read16Bit(const u16& _addr) {
-	dataBuffer = ((u16)Read8Bit(_addr + 1) << 8);
-	dataBuffer |= Read8Bit(_addr);
-	return dataBuffer;
-}
-
 /* ***********************************************************************************************************
 *
 *		MBC3
@@ -369,13 +362,6 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	else {
 		return mem_instance->ReadIE();
 	}
-}
-
-// CGB is little endian: low byte first, high byte second
-u16 MmuSM83_MBC3::Read16Bit(const u16& _addr) {
-	dataBuffer = ((u16)Read8Bit(_addr + 1) << 8);
-	dataBuffer |= Read8Bit(_addr);
-	return dataBuffer;
 }
 
 /* ***********************************************************************************************************
