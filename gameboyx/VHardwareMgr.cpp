@@ -65,23 +65,24 @@ void VHardwareMgr::ProcessNext() {
         }
     }
     else {
-        // due to emulator executing cycles per frame before updating gui, there can be "inaccuracies" in e.g. memory inspector. to avoid this enable instruction debugger
-        for (int i = 0; i < stepsPerFrame; i++) {
-            core_instance->RunCycles();
-            
-            if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
-                graphics_instance->NextFrame();
+        if (CheckDelay()) {
+            // due to emulator executing cycles per frame before updating gui, there can be "inaccuracies" in e.g. memory inspector. to avoid this enable instruction debugger
+            for (int i = 0; i < stepsPerFrame; i++) {
+                core_instance->RunCycles();
+
+                if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
+                    graphics_instance->NextFrame();
+                    frameCounter++;
+                }
             }
         }
-
-        // the entire program throttles to meet the refresh rate of the emulated display
-        SimulateDelay();
     }
+
+    CheckFPSandClock();
 
     // get current hardware state
     if (machineInfo.track_hardware_info) {
         core_instance->GetCurrentHardwareState();
-        CheckCoreFrequency();
     }
 
     if (machineInfo.instruction_debug_enabled) {
@@ -91,24 +92,32 @@ void VHardwareMgr::ProcessNext() {
     }
 }
 
-void VHardwareMgr::SimulateDelay() {
-    while (currentTimePerFrame < timePerFrame) {
-        timeFrameCur = high_resolution_clock::now();
-        currentTimePerFrame = (u32)duration_cast<nanoseconds>(timeFrameCur - timeFramePrev).count();
-    }
-    timeFramePrev = timeFrameCur;
+bool VHardwareMgr::CheckDelay() {
+    timeFrameCur = high_resolution_clock::now();
+    currentTimePerFrame = (u32)duration_cast<nanoseconds>(timeFrameCur - timeFramePrev).count();
 
-    currentTimePerFrame = 0;
+    if (currentTimePerFrame >= timePerFrame) {
+        timeFramePrev = timeFrameCur;
+        currentTimePerFrame = 0;
+
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 // get core frequency once per second to stabilize output
-void VHardwareMgr::CheckCoreFrequency() {
+void VHardwareMgr::CheckFPSandClock() {
     timeSecondCur = high_resolution_clock::now();
     accumulatedTime += duration_cast<nanoseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
     if (accumulatedTime > nsPerSThreshold) {
         core_instance->GetCurrentCoreFrequency();
+
+        machineInfo.current_framerate = frameCounter / (accumulatedTime / pow(10,9));
+        frameCounter = 0;
         accumulatedTime = 0;
     }
 }

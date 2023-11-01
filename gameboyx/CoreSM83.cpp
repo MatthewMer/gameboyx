@@ -599,6 +599,8 @@ void CoreSM83::GetStartupHardwareInfo() const {
     machineInfo.ram_bank_num = machine_ctx->ram_bank_num;
     machineInfo.wram_bank_num = machine_ctx->wram_bank_num;
     machineInfo.vram_bank_num = machine_ctx->vram_bank_num;
+
+    machineInfo.max_framerate = DISPLAY_FREQUENCY;
 }
 
 // get current hardware status (currently mapped memory banks)

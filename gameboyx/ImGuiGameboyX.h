@@ -87,6 +87,9 @@ private:
 	float graphicsFPSsamples[FPS_SAMPLES_NUM];
 	std::queue<float> graphicsFPSfifo = std::queue<float>();
 	std::queue<float> graphicsFPSfifoCopy = std::queue<float>();
+	float graphicsEmuFPSsamples[FPS_SAMPLES_NUM];
+	std::queue<float> graphicsEmuFPSfifo = std::queue<float>();
+	std::queue<float> graphicsEmuFPSfifoCopy = std::queue<float>();
 	float graphicsFPSavg = .0f;
 	int graphicsFPScount = 0;
 	float graphicsFPScur = .0f;
@@ -151,6 +154,6 @@ private:
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();
-	const ImGuiIO& GIO_IO = ImGui::GetIO();
+	const ImGuiIO& GUI_IO = ImGui::GetIO();
 	const ImVec4& HIGHLIGHT_COLOR = GUI_STYLE.Colors[ImGuiCol_TabActive];
 };

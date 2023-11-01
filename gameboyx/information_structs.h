@@ -27,6 +27,8 @@ struct machine_information {
 	// current hardware state
 	bool track_hardware_info = false;
 	float current_frequency = .0f;
+	float current_framerate = .0f;
+	float max_framerate = .0f;
 	int wram_bank_selected = 0;
 	int wram_bank_num = 0;
 	int ram_bank_selected = 0;
@@ -50,6 +52,7 @@ struct machine_information {
 		current_instruction = "";
 
 		current_frequency = .0f;
+		current_framerate = .0f;
 		wram_bank_selected = 0;
 		wram_bank_num = 0;
 		ram_bank_selected = 0;

@@ -42,7 +42,7 @@ private:
 	u32 currentTimePerFrame = 0;
 	steady_clock::time_point timeFramePrev;
 	steady_clock::time_point timeFrameCur;
-	void SimulateDelay();
+	bool CheckDelay();
 
 	void InitTime();
 
@@ -51,9 +51,10 @@ private:
 	steady_clock::time_point timeSecondPrev;
 	steady_clock::time_point timeSecondCur;
 	u32 accumulatedTime = 0;
-	void CheckCoreFrequency();
+	void CheckFPSandClock();
 
 	int stepsPerFrame = 0;
+	int frameCounter = 0;
 
 	// message fifo
 	machine_information& machineInfo;
