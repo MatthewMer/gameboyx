@@ -369,7 +369,7 @@ bool MemorySM83::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
 
     // get ram info
     value = _vec_rom[ROM_HEAD_RAMSIZE];
-
+    LOG_WARN(format("RAM Size: {:x}", value));
     switch (value) {
     case 0x00:
         machine_ctx.ram_bank_num = 0;
@@ -402,6 +402,12 @@ bool MemorySM83::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
 // read *****
 u8 MemorySM83::ReadROM_0(const u16& _addr) {
     return ROM_0[_addr];
+}
+
+// overload for MBC1
+u8 MemorySM83::ReadROM_0(const u16& _addr, const int& _bank) {
+    if (_bank == 0) { return ROM_0[_addr]; }
+    else { return ROM_N[_bank - 1][_addr]; }
 }
 
 u8 MemorySM83::ReadROM_N(const u16& _addr) {

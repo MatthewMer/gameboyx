@@ -10,10 +10,16 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ```
 * compile with Visual Studio 2022 (open ./gameboyx.sln, set to Release and your target platform and start the build process)
 
-### Images ###
+### Blargg's Test Roms ###
 
+* Instruction Test
 ![Blargg's Instruction Tests](./img/blarggs_instruction_tests.png)
+* Instruction Timing
 ![Blargg's Instruction Timing](./img/blarggs_instruction_timing.png)
+* Mem Timing
+![Blargg's Instruction Timing](./img/blarggs_mem_timings.png)
+* Mem Timing 2
+![Blargg's Instruction Timing 2](./img/blarggs_mem_timings_2.png)
 
 ### Ressources ###
 

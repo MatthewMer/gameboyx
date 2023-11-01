@@ -333,6 +333,31 @@ void CoreSM83::RunCpu() {
 
     machineCycles += currentMachineCycles;
     machineCycleCounterClock += currentMachineCycles;
+
+
+    /*
+    * // Output for blarggs mem_timing_2 test, doesn't write to serial port. result written to RAM (see readme of test)
+    int check = 0;
+    if (Regs.PC == 0x2bdd) {
+        for (int i = 0; i < 4; i++) {
+            check |= (mmu_instance->Read8Bit(RAM_N_OFFSET + i) << ((3 - i) * 8));
+        }
+
+        if (check == 0x00deb061) {
+            string result = "";
+
+            char c;
+            for (int i = 0; (c = mmu_instance->Read8Bit(RAM_N_OFFSET + 4 + i)) != 0x00; i++) {
+                result += c;
+            }
+
+            printf(result.c_str());
+        }
+        else {
+            LOG_WARN("Error");
+        }
+    }
+    */
 }
 
 void CoreSM83::ExecuteInstruction() {

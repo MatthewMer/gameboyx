@@ -7,6 +7,8 @@
 
 #include <format>
 
+using namespace std;
+
 /* ***********************************************************************************************************
 *
 *		MBC1
@@ -20,9 +22,10 @@
 #define MBC1_RAM_TIMER_ENABLE			0x0000
 #define MBC1_ROM_BANK_NUMBER_SEL_0_4	0x2000
 #define MBC1_ROM_BANK_NUMBER_SEL_5_6	0x4000
-#define MBC1_BANKING_MODE				0x6000
+#define MBC1_RAM_BANK_NUMBER			0x6000
 
 #define MBC1_RAM_BANK_NUMBER			0x4000
+#define MBC1_BANKING_MODE				0x6000
 
 // masks
 #define MBC1_ROM_BANK_MASK_0_4			0x1f
@@ -36,9 +39,19 @@
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_MBC1::MmuSM83_MBC1(machine_information& _machine_info) : MmuBase(_machine_info) {
+MmuSM83_MBC1::MmuSM83_MBC1(machine_information& _machine_info) 
+	: MmuBase(_machine_info)/*, romBankMask(MBC1_ROM_BANK_MASK_0_4), romBankMaskAdvanced(MBC1_ROM_BANK_MASK_5_6)*/ {
 	mem_instance = MemorySM83::getInstance(_machine_info);
 	machine_ctx = mem_instance->GetMachineContext();
+	/*
+	// bit mask for ROM Bank Number
+	for (int i = machine_ctx->rom_bank_num; i < 32 && i >= 2; i *= 2) {
+		romBankMask >>= 1;
+	}
+	// set mask for upper bits of zero bank
+	if (machine_ctx->rom_bank_num < 64) { romBankMaskAdvanced &= 0x00; }
+	else if(machine_ctx->rom_bank_num < 128) { romBankMaskAdvanced &= 0x20; }
+	*/
 }
 
 /* ***********************************************************************************************************
@@ -127,6 +140,7 @@ void MmuSM83_MBC1::Write16Bit(const u16& _data, const u16& _addr) {
 	Write8Bit(_data & 0xFF, _addr);
 	Write8Bit((_data & 0xFF00) >> 8, _addr + 1);
 }
+
 
 u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 	// ROM Bank 0

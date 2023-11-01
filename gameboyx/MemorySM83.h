@@ -84,6 +84,9 @@ public:
 	u8 ReadHRAM(const u16& _addr);
 	u8 ReadIE();
 
+	// overload for MBC1
+	u8 ReadROM_0(const u16& _addr, const int& _bank);
+
 	void WriteVRAM_N(const u8& _data, const u16& _addr);
 	void WriteRAM_N(const u8& _data, const u16& _addr);
 	void WriteWRAM_0(const u8& _data, const u16& _addr);
