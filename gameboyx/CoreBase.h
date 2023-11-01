@@ -22,13 +22,16 @@ public:
 
 	// public members
 	virtual void RunCycles() = 0;
+	virtual void RunCycle() = 0;
 	virtual void RunCpu() = 0;
 
 	virtual int GetDelayTime() = 0;
+	virtual int GetStepsPerFrame() = 0;
 	virtual void GetCurrentHardwareState() const = 0;
 	virtual void GetStartupHardwareInfo() const = 0;
 	virtual void GetCurrentCoreFrequency() = 0;
-	virtual bool CheckNextFrame() = 0;
+	virtual bool CheckStep() = 0;
+	virtual void ResetStep() = 0;
 
 	virtual void GetCurrentProgramCounter() = 0;
 	virtual void InitMessageBufferProgram() = 0;
@@ -52,8 +55,8 @@ protected:
 	MmuBase* mmu_instance;
 
 	// members
-	int machineCyclesPerFrame = 0;					// threshold
-	int machineCycleCounterClock = 0;				// counter
+	int machineCyclesPerScanline = 0;					// threshold
+	int machineCycleClockCounter = 0;				// counter
 
 	virtual void ExecuteInstruction() = 0;
 	virtual void CheckInterrupts() = 0;

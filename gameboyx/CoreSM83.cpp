@@ -263,7 +263,7 @@ CoreSM83::CoreSM83(machine_information& _machine_info) : CoreBase(_machine_info)
 void CoreSM83::InitCpu() {
     InitRegisterStates();
 
-    machineCyclesPerFrame = ((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DISPLAY_FREQUENCY;
+    machineCyclesPerScanline = (((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DISPLAY_FREQUENCY) / LCD_SCANLINES_TOTAL;
 }
 
 // initial register states
@@ -307,21 +307,34 @@ void CoreSM83::RunCycles() {
         }
     }
     else {
-        if (machineInfo.instruction_debug_enabled) {
-            if (machineInfo.pause_execution) {
-                return;
-            }
-            else {
-                RunCpu();
-                machineInfo.pause_execution = true;
-                if (machineInfo.instruction_logging) { GetCurrentInstruction(); }
-            }
+        while ((machineCycleScanlineCounter < (machineCyclesPerScanline * machine_ctx->currentSpeed)) && !halted && !stopped) {
+            RunCpu();
         }
-        else {
-            while (machineCycles < (machineCyclesPerFrame * machine_ctx->currentSpeed) && !halted && !stopped) {
-                RunCpu();
-            }
+    }
+}
+
+void CoreSM83::RunCycle() {
+    if (machineInfo.pause_execution) {
+        return;
+    }
+    else if (stopped) {
+        // check button press
+        if (mem_instance->GetIOValue(IF_ADDR) & IRQ_JOYPAD) {
+            stopped = false;
         }
+    }
+    else if (halted) {
+        TickTimers();
+        // check pending and enabled interrupts
+        if (machine_ctx->IE & mem_instance->GetIOValue(IF_ADDR)) {
+            halted = false;
+            CheckInterrupts();
+        }
+    }
+    else {
+        RunCpu();
+        machineInfo.pause_execution = true;
+        if (machineInfo.instruction_logging) { GetCurrentInstruction(); }
     }
 }
 
@@ -331,8 +344,8 @@ void CoreSM83::RunCpu() {
     CheckInterrupts();
     ExecuteInstruction();
 
-    machineCycles += currentMachineCycles;
-    machineCycleCounterClock += currentMachineCycles;
+    machineCycleScanlineCounter += currentMachineCycles;
+    machineCycleClockCounter += currentMachineCycles;
 
 
     /*
@@ -537,10 +550,14 @@ int CoreSM83::GetDelayTime() {
     return (1.f / DISPLAY_FREQUENCY) * pow(10, 9);
 }
 
+int CoreSM83::GetStepsPerFrame() {
+    return LCD_SCANLINES_TOTAL;
+}
+
 // check if cpu executed machinecycles per frame
-bool CoreSM83::CheckNextFrame() {
-    if (machineCycles >= machineCyclesPerFrame * machine_ctx->currentSpeed) {
-        machineCycles -= machineCyclesPerFrame * machine_ctx->currentSpeed;
+bool CoreSM83::CheckStep() {
+    if (machineCycleScanlineCounter >= machineCyclesPerScanline * machine_ctx->currentSpeed) {
+        machineCycleScanlineCounter -= machineCyclesPerScanline * machine_ctx->currentSpeed;
         return true;
     }
     else {
@@ -548,10 +565,14 @@ bool CoreSM83::CheckNextFrame() {
     }
 }
 
+void CoreSM83::ResetStep() {
+    machineCycleScanlineCounter -= machineCyclesPerScanline * machine_ctx->currentSpeed;
+}
+
 // return clock cycles per second
 void CoreSM83::GetCurrentCoreFrequency() {
-    u32 result = machineCycleCounterClock * 4;
-    machineCycleCounterClock = 0;
+    u32 result = machineCycleClockCounter * 4;
+    machineCycleClockCounter = 0;
     machineInfo.current_frequency = (float)result / pow(10, 6);
 }
 

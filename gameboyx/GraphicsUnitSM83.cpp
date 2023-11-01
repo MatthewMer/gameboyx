@@ -2,8 +2,11 @@
 
 #include "gameboy_defines.h"
 #include "logger.h"
+#include <format>
 
 #include "vulkan/vulkan.h"
+
+using namespace std;
 
 // VK_FORMAT_R8G8B8A8_UNORM, gray scales
 const u32 DMG_COLOR_PALETTE[] = {
@@ -12,6 +15,22 @@ const u32 DMG_COLOR_PALETTE[] = {
 	0xAAAAAAFF,
 	0xFFFFFFFF
 };
+
+bool GraphicsUnitSM83::ProcessGPU() {
+	u8 ly = mem_instance->GetIOValue(LY_ADDR);
+	ly++;
+
+	if (ly == LCD_SCANLINES_TOTAL) {
+		ly = 0x00;
+	}
+	else if (ly == LCD_SCANLINES_VBLANK) {
+		mem_instance->RequestInterrupts(IRQ_VBLANK);
+	}
+
+	mem_instance->SetIOValue(ly, LY_ADDR);
+
+	return ly == LCD_SCANLINES_VBLANK;
+}
 
 void GraphicsUnitSM83::NextFrame() {
 	if (graphics_ctx->ppu_enable) {
@@ -61,7 +80,7 @@ void GraphicsUnitSM83::NextFrame() {
 
 		// TODO: let cpu run for machine cycles per scan line, render frame after last scanline, set LY to 0x90 after first 17500 machine cycles (via increment)
 		// currently directly set to 0x90 only for testing with blargg's instruction tests
-		mem_instance->SetIOValue(INIT_CGB_LY, LY_ADDR);//LCD_VBLANK_THRESHOLD;
+		//mem_instance->SetIOValue(INIT_CGB_LY, LY_ADDR);//LCD_VBLANK_THRESHOLD;
 	}
 }
 

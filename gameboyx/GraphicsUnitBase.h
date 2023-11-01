@@ -17,6 +17,7 @@ public:
 
 	// members
 	virtual void NextFrame() = 0;
+	virtual bool ProcessGPU() = 0;
 
 protected:
 	// constructor

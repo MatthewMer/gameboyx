@@ -10,6 +10,7 @@ public:
 
 	// members
 	void NextFrame() override;
+	bool ProcessGPU() override;
 
 private:
 	// constructor

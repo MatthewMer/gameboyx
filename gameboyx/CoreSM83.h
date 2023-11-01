@@ -67,9 +67,11 @@ public:
 	friend class CoreBase;
 
 	void RunCycles() override;
+	void RunCycle() override;
 	void GetCurrentHardwareState() const override;
 	void GetStartupHardwareInfo() const override;
-	bool CheckNextFrame() override;
+	bool CheckStep() override;
+	void ResetStep() override;
 	void GetCurrentCoreFrequency() override;
 
 	void GetCurrentProgramCounter() override;
@@ -130,9 +132,10 @@ private:
 	using instr_tuple = std::tuple <const u8, const instruction, const int, const std::string, const cgb_data_types, const cgb_data_types>;
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
-	int machineCycles = 0;
+	int machineCycleScanlineCounter = 0;
 	int currentMachineCycles = 0;
 	int GetDelayTime() override;
+	int GetStepsPerFrame() override;
 	void GetCurrentInstruction() const override;
 	void DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num);
 	void DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num, const std::string& _bank_name);

@@ -53,6 +53,8 @@ private:
 	u32 accumulatedTime = 0;
 	void CheckCoreFrequency();
 
+	int stepsPerFrame = 0;
+
 	// message fifo
 	machine_information& machineInfo;
 };

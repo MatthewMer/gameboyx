@@ -39,6 +39,7 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
 
     // returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
+    stepsPerFrame = core_instance->GetStepsPerFrame();
 
     core_instance->GetStartupHardwareInfo();
     core_instance->GetCurrentRegisterValues();
@@ -54,12 +55,26 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
     FUNCTIONALITY
 *********************************************************************************************************** */
 void VHardwareMgr::ProcessNext() {
-    // run cpu for 1/Display frequency
-    core_instance->RunCycles();
-    // if machine cycles per frame passed -> render frame
-    if (core_instance->CheckNextFrame()) {
-        SimulateDelay();
-        graphics_instance->NextFrame();
+
+
+    if (machineInfo.instruction_debug_enabled) {
+        core_instance->RunCycle();
+
+        if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
+            graphics_instance->NextFrame();
+        }
+    }
+    else {
+        // due to emulator executing cycles per frame before updating gui, there can be "inaccuracies" in e.g. memory inspector. to avoid this enable instruction debugger
+        for (int i = 0; i < stepsPerFrame; i++) {
+            core_instance->RunCycles();
+            
+            if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
+                // the entire program throttles to meet the refresh rate of the emulated display
+                SimulateDelay();
+                graphics_instance->NextFrame();
+            }
+        }
     }
 
     // get current hardware state
