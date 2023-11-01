@@ -507,6 +507,18 @@ void ImGuiGameboyX::ShowHardwareInfo() {
             ImGui::TextUnformatted("WRAM Selected");
             ImGui::TableNextColumn();
             ImGui::TextUnformatted(to_string(machineInfo.wram_bank_selected).c_str());
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("VRAM Banks");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(to_string(machineInfo.vram_bank_num).c_str());
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("VRAM Selected");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(to_string(machineInfo.vram_bank_selected).c_str());
+
 
             ImGui::PopStyleVar();
         }

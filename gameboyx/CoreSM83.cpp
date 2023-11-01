@@ -379,7 +379,7 @@ void CoreSM83::ExecuteInstruction() {
 void CoreSM83::CheckInterrupts() {
     if (ime) {
         u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
-        if (isr_requested & IRQ_VBLANK && machine_ctx->IE & IRQ_VBLANK) {
+        if ((isr_requested & IRQ_VBLANK) && (machine_ctx->IE & IRQ_VBLANK)) {
             ime = false;
 
             isr_push(ISR_VBLANK_HANDLER_ADDR);
@@ -387,7 +387,7 @@ void CoreSM83::CheckInterrupts() {
 
             mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
-        else if (isr_requested & IRQ_LCD_STAT && machine_ctx->IE & IRQ_LCD_STAT) {
+        else if ((isr_requested & IRQ_LCD_STAT) && (machine_ctx->IE & IRQ_LCD_STAT)) {
             ime = false;
 
             isr_push(ISR_LCD_STAT_HANDLER_ADDR);
@@ -395,7 +395,7 @@ void CoreSM83::CheckInterrupts() {
 
             mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
-        else if (isr_requested & IRQ_TIMER && machine_ctx->IE & IRQ_TIMER) {
+        else if ((isr_requested & IRQ_TIMER) && (machine_ctx->IE & IRQ_TIMER)) {
             ime = false;
 
             isr_push(ISR_TIMER_HANDLER_ADDR);
@@ -406,7 +406,7 @@ void CoreSM83::CheckInterrupts() {
         /*if (machine_ctx->IF & IRQ_SERIAL) {
             // not implemented
         }*/
-        else if (isr_requested & IRQ_JOYPAD && machine_ctx->IE & IRQ_JOYPAD) {
+        else if ((isr_requested & IRQ_JOYPAD) && (machine_ctx->IE & IRQ_JOYPAD)) {
             ime = false;
 
             isr_push(ISR_JOYPAD_HANDLER_ADDR);
@@ -577,6 +577,7 @@ void CoreSM83::GetStartupHardwareInfo() const {
     machineInfo.rom_bank_num = machine_ctx->rom_bank_num;
     machineInfo.ram_bank_num = machine_ctx->ram_bank_num;
     machineInfo.wram_bank_num = machine_ctx->wram_bank_num;
+    machineInfo.vram_bank_num = machine_ctx->vram_bank_num;
 }
 
 // get current hardware status (currently mapped memory banks)
@@ -584,6 +585,7 @@ void CoreSM83::GetCurrentHardwareState() const {
     machineInfo.rom_bank_selected = machine_ctx->rom_bank_selected + 1;
     machineInfo.ram_bank_selected = machine_ctx->ram_bank_selected;
     machineInfo.wram_bank_selected = machine_ctx->wram_bank_selected + 1;
+    machineInfo.vram_bank_selected = machine_ctx->vram_bank_selected;
 }
 
 void CoreSM83::GetCurrentRegisterValues() const {

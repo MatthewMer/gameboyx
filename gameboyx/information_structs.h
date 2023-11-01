@@ -20,7 +20,7 @@ struct machine_information {
 	std::vector<register_data> flag_values = std::vector<register_data>();
 	bool instruction_logging = false;
 	bool pause_execution = true;
-	int current_pc = 0;
+	int current_pc = -1;
 	int current_rom_bank = 0;
 	std::string current_instruction = "";
 
@@ -42,22 +42,22 @@ struct machine_information {
 	void reset_machine_information() {
 		program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 		program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-		std::vector<register_data> register_values = std::vector<register_data>();
-		bool instruction_logging = false;
-		bool pause_execution = true;
-		int current_pc = 0;
-		int current_rom_bank = 0;
-		std::string current_instruction = "";
+		register_values = std::vector<register_data>();
+		instruction_logging = false;
+		pause_execution = true;
+		current_pc = -1;
+		current_rom_bank = 0;
+		current_instruction = "";
 
-		float current_frequency = .0f;
-		int wram_bank_selected = 0;
-		int wram_bank_num = 0;
-		int ram_bank_selected = 0;
-		int ram_bank_num = 0;
-		int rom_bank_selected = 0;
-		int rom_bank_num = 0;
-		int vram_bank_selected = 0;
-		int vram_bank_num = 0;
+		current_frequency = .0f;
+		wram_bank_selected = 0;
+		wram_bank_num = 0;
+		ram_bank_selected = 0;
+		ram_bank_num = 0;
+		rom_bank_selected = 0;
+		rom_bank_num = 0;
+		vram_bank_selected = 0;
+		vram_bank_num = 0;
 
 		memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
 	}

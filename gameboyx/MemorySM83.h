@@ -18,6 +18,7 @@ struct machine_state_context {
 	int wram_bank_selected = 0;
 	int rom_bank_selected = 0;
 	int ram_bank_selected = 0;
+	int vram_bank_selected = 0;
 
 	// hardware
 	bool isCgb = false;
@@ -32,6 +33,7 @@ struct machine_state_context {
 	int rom_bank_num = 0;
 	int ram_bank_num = 0;
 	int wram_bank_num = 0;
+	int vram_bank_num = 0;
 };
 
 struct graphics_context {
@@ -41,9 +43,6 @@ struct graphics_context {
 	// VRAM/OAM
 	std::vector<std::vector<u8>> VRAM_N;
 	std::vector<u8> OAM;
-
-	// VRAM BANK SELECT
-	int vram_bank_num = 0;
 
 	// TODO: chekc initial register states
 	// LCD Control

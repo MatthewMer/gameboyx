@@ -59,7 +59,7 @@ void VHardwareMgr::ProcessNext() {
     // if machine cycles per frame passed -> render frame
     if (core_instance->CheckNextFrame()) {
         SimulateDelay();
-        //graphics_instance->NextFrame();
+        graphics_instance->NextFrame();
     }
 
     // get current hardware state
@@ -88,10 +88,10 @@ void VHardwareMgr::SimulateDelay() {
 // get core frequency once per second to stabilize output
 void VHardwareMgr::CheckCoreFrequency() {
     timeSecondCur = high_resolution_clock::now();
-    accumulatedTime += duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
+    accumulatedTime += duration_cast<nanoseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
-    if (accumulatedTime > msPerSecondThreshold) {
+    if (accumulatedTime > nsPerSThreshold) {
         core_instance->GetCurrentCoreFrequency();
         accumulatedTime = 0;
     }

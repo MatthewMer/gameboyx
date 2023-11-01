@@ -47,7 +47,7 @@ private:
 	void InitTime();
 
 	// timestamps for core frequency calculation
-	const int msPerSecondThreshold = 999999;					// constant to measure 1 second
+	const int nsPerSThreshold = 999999999;					// constant to measure 1 second
 	steady_clock::time_point timeSecondPrev;
 	steady_clock::time_point timeSecondCur;
 	u32 accumulatedTime = 0;

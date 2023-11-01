@@ -15,6 +15,7 @@ const u32 DMG_COLOR_PALETTE[] = {
 
 void GraphicsUnitSM83::NextFrame() {
 	if (graphics_ctx->ppu_enable) {
+		/*
 		isrFlags = 0x00;
 
 		// generate frame data
@@ -37,6 +38,7 @@ void GraphicsUnitSM83::NextFrame() {
 		if (graphics_ctx->obj_enable) {
 			DrawObjectTiles();
 		}
+		*/
 		/*
 		// everything from here just pretends to have processed the scanlines (horizontal lines) of the LCD *****
 		// request mode 0 to 2 interrupts (STAT)
@@ -59,7 +61,7 @@ void GraphicsUnitSM83::NextFrame() {
 
 		// TODO: let cpu run for machine cycles per scan line, render frame after last scanline, set LY to 0x90 after first 17500 machine cycles (via increment)
 		// currently directly set to 0x90 only for testing with blargg's instruction tests
-		mem_instance->SetIOValue(0x90, LY_ADDR);//LCD_VBLANK_THRESHOLD;
+		mem_instance->SetIOValue(INIT_CGB_LY, LY_ADDR);//LCD_VBLANK_THRESHOLD;
 	}
 }
 
