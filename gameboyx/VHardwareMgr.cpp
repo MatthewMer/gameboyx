@@ -70,11 +70,12 @@ void VHardwareMgr::ProcessNext() {
             core_instance->RunCycles();
             
             if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
-                // the entire program throttles to meet the refresh rate of the emulated display
-                SimulateDelay();
                 graphics_instance->NextFrame();
             }
         }
+
+        // the entire program throttles to meet the refresh rate of the emulated display
+        SimulateDelay();
     }
 
     // get current hardware state
