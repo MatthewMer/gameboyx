@@ -369,7 +369,6 @@ bool MemorySM83::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
 
     // get ram info
     value = _vec_rom[ROM_HEAD_RAMSIZE];
-    LOG_WARN(format("RAM Size: {:x}", value));
     switch (value) {
     case 0x00:
         machine_ctx.ram_bank_num = 0;
