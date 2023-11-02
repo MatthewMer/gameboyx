@@ -54,7 +54,6 @@ ImGuiGameboyX::ImGuiGameboyX(machine_information& _machine_info, game_status& _g
     graphicsFPScount = 1;
     for (int i = 0; i < FPS_SAMPLES_NUM; i++) {
         graphicsFPSfifo.push(.0f);
-        graphicsEmuFPSfifo.push(.0f);
     }
 }
 
@@ -670,9 +669,6 @@ void ImGuiGameboyX::ShowGraphicsOverlay() {
 
     graphicsFPSfifo.pop();
     graphicsFPSfifo.push(fps);
-
-    graphicsEmuFPSfifo.pop();
-    graphicsEmuFPSfifo.push(machineInfo.current_framerate);
     
     // stablize output (roughly once per second)
     if (graphicsFPScount >= graphicsFPSavg) {
@@ -688,12 +684,6 @@ void ImGuiGameboyX::ShowGraphicsOverlay() {
         if (graphicsFPSsamples[i] > graphicsFPSmax) { graphicsFPSmax = graphicsFPSsamples[i]; }
     }
 
-    graphicsEmuFPSfifoCopy = graphicsEmuFPSfifo;
-    for (int i = 0; i < FPS_SAMPLES_NUM; i++) {
-        graphicsEmuFPSsamples[i] = graphicsEmuFPSfifoCopy.front();
-        graphicsEmuFPSfifoCopy.pop();
-    }
-
     if (ImGui::Begin("graphics_overlay", &graphicsShowOverlay, WIN_OVERLAY_FLAGS))
     {
         if (ImGui::IsWindowHovered()) {
@@ -703,15 +693,14 @@ void ImGuiGameboyX::ShowGraphicsOverlay() {
             }
         }
 
+        ImGui::TextUnformatted(to_string(machineInfo.current_framerate).c_str());
+        ImGui::SameLine();
+        ImGui::TextUnformatted("FPS (Emu)");
+
         ImGui::TextUnformatted(to_string(graphicsFPScur).c_str());
         ImGui::SameLine();
         ImGui::TextUnformatted("FPS (App)");
         ImGui::PlotLines("", graphicsFPSsamples, IM_ARRAYSIZE(graphicsFPSsamples), 0, nullptr, .0f, graphicsFPSmax, ImVec2(0, 80.0f));
-
-        ImGui::TextUnformatted(to_string(machineInfo.current_framerate).c_str());
-        ImGui::SameLine();
-        ImGui::TextUnformatted("FPS (Emu)");
-        ImGui::PlotLines("", graphicsEmuFPSsamples, IM_ARRAYSIZE(graphicsEmuFPSsamples), 0, nullptr, .0f, machineInfo.max_framerate, ImVec2(0, 80.0f));
         
         if (ImGui::BeginPopupContextWindow())
         {
