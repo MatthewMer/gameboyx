@@ -636,11 +636,7 @@ void MemorySM83::WriteIORegister(const u8& _data, const u16& _addr) {
     }
 }
 
-void MemorySM83::SetIOValue(const u8& _data, const u16& _addr) {
-    IO[_addr - IO_OFFSET] = _data;
-}
-
-u8 MemorySM83::GetIOValue(const u16& _addr) {
+u8& MemorySM83::GetIOValue(const u16& _addr) {
     return IO[_addr - IO_OFFSET];
 }
 

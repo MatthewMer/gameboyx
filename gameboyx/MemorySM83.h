@@ -100,8 +100,8 @@ public:
 
 	// direct hardware access
 	void RequestInterrupts(const u8& isr_flags) override;
-	u8 GetIOValue(const u16& _addr);
-	void SetIOValue(const u8& _data, const u16& _addr);
+	u8& GetIOValue(const u16& _addr);
+	//void SetIOValue(const u8& _data, const u16& _addr);
 
 	std::vector<std::pair<int, std::vector<u8>>> GetProgramData() const override;
 

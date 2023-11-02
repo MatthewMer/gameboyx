@@ -18,7 +18,7 @@ const u32 DMG_COLOR_PALETTE[] = {
 
 bool GraphicsUnitSM83::ProcessGPU() {
 	if (graphics_ctx->ppu_enable) {
-		u8 ly = mem_instance->GetIOValue(LY_ADDR);
+		u8& ly = mem_instance->GetIOValue(LY_ADDR);
 		ly++;
 
 		if (ly == LCD_SCANLINES_TOTAL) {
@@ -27,8 +27,6 @@ bool GraphicsUnitSM83::ProcessGPU() {
 		else if (ly == LCD_SCANLINES_VBLANK) {
 			mem_instance->RequestInterrupts(IRQ_VBLANK);
 		}
-
-		mem_instance->SetIOValue(ly, LY_ADDR);
 
 		return ly == LCD_SCANLINES_VBLANK;
 	}

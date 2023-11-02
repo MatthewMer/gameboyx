@@ -391,30 +391,24 @@ void CoreSM83::ExecuteInstruction() {
 
 void CoreSM83::CheckInterrupts() {
     if (ime) {
-        u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
+        u8& isr_requested = mem_instance->GetIOValue(IF_ADDR);
         if ((isr_requested & IRQ_VBLANK) && (machine_ctx->IE & IRQ_VBLANK)) {
             ime = false;
 
             isr_push(ISR_VBLANK_HANDLER_ADDR);
             isr_requested &= ~IRQ_VBLANK;
-
-            mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
         else if ((isr_requested & IRQ_LCD_STAT) && (machine_ctx->IE & IRQ_LCD_STAT)) {
             ime = false;
 
             isr_push(ISR_LCD_STAT_HANDLER_ADDR);
             isr_requested &= ~IRQ_LCD_STAT;
-
-            mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
         else if ((isr_requested & IRQ_TIMER) && (machine_ctx->IE & IRQ_TIMER)) {
             ime = false;
 
             isr_push(ISR_TIMER_HANDLER_ADDR);
             isr_requested &= ~IRQ_TIMER;
-
-            mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
         /*if (machine_ctx->IF & IRQ_SERIAL) {
             // not implemented
@@ -424,19 +418,17 @@ void CoreSM83::CheckInterrupts() {
 
             isr_push(ISR_JOYPAD_HANDLER_ADDR);
             isr_requested &= ~IRQ_JOYPAD;
-
-            mem_instance->SetIOValue(isr_requested, IF_ADDR);
         }
     }
 }
 
 void CoreSM83::TickTimers() {
     bool div_low_byte_selected = machine_ctx->timaDivMask < 0x100;
-    u8 div = mem_instance->GetIOValue(DIV_ADDR);
+    u8& div = mem_instance->GetIOValue(DIV_ADDR);
     bool tima_enabled = mem_instance->GetIOValue(TAC_ADDR) & TAC_CLOCK_ENABLE;
 
     if (machine_ctx->tima_reload_cycle) {
-        mem_instance->SetIOValue(mem_instance->GetIOValue(TMA_ADDR), TIMA_ADDR);
+        div = mem_instance->GetIOValue(TMA_ADDR);
         if (!machine_ctx->tima_reload_if_write) {
             mem_instance->RequestInterrupts(IRQ_TIMER);
         }
@@ -460,7 +452,6 @@ void CoreSM83::TickTimers() {
             else {
                 div++;
             }
-            mem_instance->SetIOValue(div, DIV_ADDR);
         }
         else {
             machine_ctx->div_low_byte++;
@@ -483,7 +474,7 @@ void CoreSM83::TickTimers() {
 }
 
 void CoreSM83::IncrementTIMA() {
-    u8 tima = mem_instance->GetIOValue(TIMA_ADDR);
+    u8& tima = mem_instance->GetIOValue(TIMA_ADDR);
     if (tima == 0xFF) {
         tima = 0x00;
         machine_ctx->tima_overflow_cycle = true;
@@ -491,7 +482,6 @@ void CoreSM83::IncrementTIMA() {
     else {
         tima++;
     }
-    mem_instance->SetIOValue(tima, TIMA_ADDR);
 }
 
 void CoreSM83::FetchOpCode() {
