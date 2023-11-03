@@ -294,14 +294,14 @@ void CoreSM83::InitRegisterStates() {
 void CoreSM83::RunCycles() {
     if (stopped) {
         // check button press
-        if (mem_instance->GetIOValue(IF_ADDR) & IRQ_JOYPAD) {
+        if (mem_instance->GetIORef(IF_ADDR) & IRQ_JOYPAD) {
             stopped = false;
         }
     }
     else if (halted) {
         TickTimers();
         // check pending and enabled interrupts
-        if (machine_ctx->IE & mem_instance->GetIOValue(IF_ADDR)) {
+        if (machine_ctx->IE & mem_instance->GetIORef(IF_ADDR)) {
             halted = false;
             CheckInterrupts();
         }
@@ -319,14 +319,14 @@ void CoreSM83::RunCycle() {
     }
     else if (stopped) {
         // check button press
-        if (mem_instance->GetIOValue(IF_ADDR) & IRQ_JOYPAD) {
+        if (mem_instance->GetIORef(IF_ADDR) & IRQ_JOYPAD) {
             stopped = false;
         }
     }
     else if (halted) {
         TickTimers();
         // check pending and enabled interrupts
-        if (machine_ctx->IE & mem_instance->GetIOValue(IF_ADDR)) {
+        if (machine_ctx->IE & mem_instance->GetIORef(IF_ADDR)) {
             halted = false;
             CheckInterrupts();
         }
@@ -391,7 +391,7 @@ void CoreSM83::ExecuteInstruction() {
 
 void CoreSM83::CheckInterrupts() {
     if (ime) {
-        u8& isr_requested = mem_instance->GetIOValue(IF_ADDR);
+        u8& isr_requested = mem_instance->GetIORef(IF_ADDR);
         if ((isr_requested & IRQ_VBLANK) && (machine_ctx->IE & IRQ_VBLANK)) {
             ime = false;
 
@@ -424,11 +424,11 @@ void CoreSM83::CheckInterrupts() {
 
 void CoreSM83::TickTimers() {
     bool div_low_byte_selected = machine_ctx->timaDivMask < 0x100;
-    u8& div = mem_instance->GetIOValue(DIV_ADDR);
-    bool tima_enabled = mem_instance->GetIOValue(TAC_ADDR) & TAC_CLOCK_ENABLE;
+    u8& div = mem_instance->GetIORef(DIV_ADDR);
+    bool tima_enabled = mem_instance->GetIORef(TAC_ADDR) & TAC_CLOCK_ENABLE;
 
     if (machine_ctx->tima_reload_cycle) {
-        div = mem_instance->GetIOValue(TMA_ADDR);
+        div = mem_instance->GetIORef(TMA_ADDR);
         if (!machine_ctx->tima_reload_if_write) {
             mem_instance->RequestInterrupts(IRQ_TIMER);
         }
@@ -474,7 +474,7 @@ void CoreSM83::TickTimers() {
 }
 
 void CoreSM83::IncrementTIMA() {
-    u8& tima = mem_instance->GetIOValue(TIMA_ADDR);
+    u8& tima = mem_instance->GetIORef(TIMA_ADDR);
     if (tima == 0xFF) {
         tima = 0x00;
         machine_ctx->tima_overflow_cycle = true;
@@ -560,10 +560,10 @@ void CoreSM83::ResetStep() {
 }
 
 // return clock cycles per second
-void CoreSM83::GetCurrentCoreFrequency() {
+u32 CoreSM83::GetCurrentClockCycles() {
     u32 result = machineCycleClockCounter * 4;
     machineCycleClockCounter = 0;
-    machineInfo.current_frequency = (float)result / pow(10, 6);
+    return result;
 }
 
 void CoreSM83::GetCurrentProgramCounter() {
@@ -609,7 +609,7 @@ void CoreSM83::GetCurrentRegisterValues() const {
     machineInfo.register_values.emplace_back(get_register_name(SP), format("{:04x}", Regs.SP));
     machineInfo.register_values.emplace_back(get_register_name(PC), format("{:04x}", Regs.PC));
     machineInfo.register_values.emplace_back(get_register_name(IE), format("{:02x}", machine_ctx->IE));
-    machineInfo.register_values.emplace_back(get_register_name(IF), format("{:02x}", mem_instance->GetIOValue(IF_ADDR)));
+    machineInfo.register_values.emplace_back(get_register_name(IF), format("{:02x}", mem_instance->GetIORef(IF_ADDR)));
 }
 
 void CoreSM83::GetCurrentFlagsAndISR() const {
@@ -620,7 +620,7 @@ void CoreSM83::GetCurrentFlagsAndISR() const {
     machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
     machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
     machineInfo.flag_values.emplace_back(get_flag_and_isr_name(FLAG_IME), format("{:01b}", ime ? 1 : 0));
-    u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
+    u8 isr_requested = mem_instance->GetIORef(IF_ADDR);
     machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
     machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
     machineInfo.flag_values.emplace_back(get_flag_and_isr_name(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
@@ -782,7 +782,7 @@ void CoreSM83::InitMessageBufferProgramTmp() {
             machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 
             graphics_context* graphics_ctx = mem_instance->GetGraphicsContext();
-            bank_num = mem_instance->GetIOValue(CGB_VRAM_SELECT_ADDR);
+            bank_num = mem_instance->GetIORef(CGB_VRAM_SELECT_ADDR);
             DecodeBankContent(bank_table, pair(VRAM_N_OFFSET, graphics_ctx->VRAM_N[bank_num]), bank_num, "VRAM");
             machineInfo.current_rom_bank = -1;
 
@@ -1158,7 +1158,7 @@ void CoreSM83::NOP() {
 
 // stopped
 void CoreSM83::STOP() {
-    u8 isr_requested = mem_instance->GetIOValue(IF_ADDR);
+    u8 isr_requested = mem_instance->GetIORef(IF_ADDR);
 
     bool joyp = (isr_requested & IRQ_JOYPAD);
     bool two_byte = false;

@@ -72,7 +72,7 @@ public:
 	void GetStartupHardwareInfo() const override;
 	bool CheckStep() override;
 	void ResetStep() override;
-	void GetCurrentCoreFrequency() override;
+	u32 GetCurrentClockCycles() override;
 
 	void GetCurrentProgramCounter() override;
 	void InitMessageBufferProgram() override;

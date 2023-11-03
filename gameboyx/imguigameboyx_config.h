@@ -1,6 +1,7 @@
 #pragma once
 
 #include "imgui.h"
+#include "defs.h"
 #include <vector>
 #include <string>
 
@@ -14,6 +15,46 @@
 #define GBX_VERSION_MINOR			0
 #define GBX_VERSION_PATCH           0
 #define GBX_AUTHOR					"MatthewMer"
+
+inline const std::vector<const char*> VK_ENABLED_LAYERS = {
+    "VK_LAYER_KHRONOS_validation"
+};
+
+inline const u16 ID_NVIDIA = 0x10DE;
+inline const u16 ID_AMD = 0x1002;
+
+inline const std::vector<std::pair<uint32_t, std::string>> VENDOR_IDS = {
+    {0x1002, "AMD"},
+    {0x10DE, "nVidia"},
+    {0x1043, "ASUS"},
+    {0x196D, "Club 3D"},
+    {0x1092, "Diamond Multimedia"},
+    {0x18BC, "GeCube"},
+    {0x1458, "Gigabyte"},
+    {0x17AF, "HIS"},
+    {0x16F3, "Jetway"},
+    {0x1462, "MSI"},
+    {0x1DA2, "Sapphire"},
+    {0x148C, "PowerColor"},
+    {0x1545, "VisionTek"},
+    {0x1682, "XFX"},
+    {0x1025, "Acer"},
+    {0x106B, "Apple"},
+    {0x1028, "Dell"},
+    {0x107B, "Gateway"},
+    {0x103C, "HP"},
+    {0x17AA, "Lenovo"},
+    {0x104D, "Sony"},
+    {0x1179, "Toshiba"}
+};
+
+inline std::string get_vendor(const u16& _ven_id) {
+    for (const auto& n : VENDOR_IDS) {
+        if (n.first == _ven_id) { return n.second; }
+    }
+
+    return "";
+}
 
 /* ***********************************************************************************************************
     IMGUI GBX CONSTANTS/DEFINES

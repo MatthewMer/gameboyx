@@ -49,8 +49,8 @@ graphics_context* MemorySM83::GetGraphicsContext() {
     return &graphics_ctx;
 }
 
-void MemorySM83::RequestInterrupts(const u8& isr_flags) {
-    IO[IF_ADDR - IO_OFFSET] |= isr_flags;
+void MemorySM83::RequestInterrupts(const u8& _isr_flags) {
+    IO[IF_ADDR - IO_OFFSET] |= _isr_flags;
 }
 
 /* ***********************************************************************************************************
@@ -636,7 +636,7 @@ void MemorySM83::WriteIORegister(const u8& _data, const u16& _addr) {
     }
 }
 
-u8& MemorySM83::GetIOValue(const u16& _addr) {
+u8& MemorySM83::GetIORef(const u16& _addr) {
     return IO[_addr - IO_OFFSET];
 }
 

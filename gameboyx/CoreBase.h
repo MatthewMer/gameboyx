@@ -29,7 +29,7 @@ public:
 	virtual int GetStepsPerFrame() = 0;
 	virtual void GetCurrentHardwareState() const = 0;
 	virtual void GetStartupHardwareInfo() const = 0;
-	virtual void GetCurrentCoreFrequency() = 0;
+	virtual u32 GetCurrentClockCycles() = 0;
 	virtual bool CheckStep() = 0;
 	virtual void ResetStep() = 0;
 

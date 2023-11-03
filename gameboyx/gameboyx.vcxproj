@@ -186,6 +186,7 @@
     <ClCompile Include="MmuBase.cpp" />
     <ClCompile Include="MmuSM83.cpp" />
     <ClCompile Include="VHardwareMgr.cpp" />
+    <ClCompile Include="VulkanMgr.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cartridge.h" />
@@ -209,6 +210,7 @@
     <ClInclude Include="registers.h" />
     <ClInclude Include="ScrollableTable.h" />
     <ClInclude Include="VHardwareMgr.h" />
+    <ClInclude Include="VulkanMgr.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui-lib\imgui-lib.vcxproj">

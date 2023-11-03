@@ -18,7 +18,7 @@ const u32 DMG_COLOR_PALETTE[] = {
 
 bool GraphicsUnitSM83::ProcessGPU() {
 	if (graphics_ctx->ppu_enable) {
-		u8& ly = mem_instance->GetIOValue(LY_ADDR);
+		u8& ly = mem_instance->GetIORef(LY_ADDR);
 		ly++;
 
 		if (ly == LCD_SCANLINES_TOTAL) {
@@ -88,8 +88,8 @@ void GraphicsUnitSM83::NextFrame() {
 
 // draw tilemaps BG and WIN
 void GraphicsUnitSM83::DrawTileMapBackground() {
-	int scx = mem_instance->GetIOValue(SCX_ADDR);
-	int scy = mem_instance->GetIOValue(SCY_ADDR);
+	int scx = mem_instance->GetIORef(SCX_ADDR);
+	int scy = mem_instance->GetIORef(SCY_ADDR);
 
 	for (int x = 0; x < PPU_SCREEN_X; x+= PPU_PIXELS_TILE_X) {
 		for (int y = 0; y < PPU_SCREEN_Y; y+= PPU_PIXELS_TILE_Y) {
@@ -133,8 +133,8 @@ void GraphicsUnitSM83::DrawTileBackground(const int& _pos_x, const int& _pos_y) 
 // draw window (window pos at top left corner is (WX-7/WY) !)
 void GraphicsUnitSM83::DrawTileMapWindow() {
 	u8 win_offset = graphics_ctx->win_tilemap_offset;
-	int wx = (int)mem_instance->GetIOValue(WX_ADDR) - 7;
-	int wy = mem_instance->GetIOValue(WY_ADDR);
+	int wx = (int)mem_instance->GetIORef(WX_ADDR) - 7;
+	int wy = mem_instance->GetIORef(WY_ADDR);
 
 	for (int x = 0; x < PPU_TILES_HORIZONTAL - wx; x+=PPU_PIXELS_TILE_X) {
 		for (int y = 0; y < PPU_TILES_VERTICAL - wy; y+=PPU_PIXELS_TILE_Y) {

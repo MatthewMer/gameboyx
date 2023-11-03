@@ -114,10 +114,11 @@ void VHardwareMgr::CheckFPSandClock() {
     timeSecondPrev = timeSecondCur;
 
     if (accumulatedTime > nsPerSThreshold) {
-        core_instance->GetCurrentCoreFrequency();
+        machineInfo.current_frequency = ((float)core_instance->GetCurrentClockCycles() / accumulatedTime) / pow(10,6);
 
         machineInfo.current_framerate = frameCounter / (accumulatedTime / pow(10,9));
         frameCounter = 0;
+
         accumulatedTime = 0;
     }
 }
