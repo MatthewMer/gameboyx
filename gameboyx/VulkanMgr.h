@@ -2,52 +2,87 @@
 
 #include <vulkan/vulkan.h>
 #include <SDL.h>
+#include <SDL_vulkan.h>
+#include "imgui_impl_vulkan.h"
+
 #include <vector>
 #include <string>
 
 class VulkanMgr
 {
 public:
-	VulkanMgr(SDL_Window* _window) : window(_window) {};
+	explicit VulkanMgr(SDL_Window* _window) : window(_window) {};
 	~VulkanMgr() = default;
 
-	bool InitVulkan(std::vector<const char*>& _sdl_extensions, const std::vector<const char*>& _device_extensions);
+	void RenderFrame();
+
+	bool InitVulkan(std::vector<const char*>& _sdl_extensions, std::vector<const char*>& _device_extensions);
 	bool InitSwapchain(VkImageUsageFlags _flags);
+	bool InitSurface();
+	bool InitRenderPass();
+	bool InitFrameBuffers();
+	bool InitCommandBuffers();
+
+	bool InitImGui();
 
 	bool ExitVulkan();
-	void DestroySwapchain();
+	void DestroySwapchain(); 
+	void DestroySurface();
+	void DestroyRenderPass();
+	void DestroyFrameBuffers();
+	void DestroyCommandBuffer();
 
-	VkSurfaceKHR surface;
-	VkInstance instance;
+	void WaitIdle();
 
 private:
 	// sdl
 	SDL_Window* window;
 
 	// graphics queue
-	VkQueue queue;
-	uint32_t family_index;
+	VkQueue queue = VK_NULL_HANDLE;
+	uint32_t familyIndex = (uint32_t) - 1;
 
 	// swapchain
-	VkSwapchainKHR swapchain;
+	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	uint32_t width;
 	uint32_t height;
 	VkFormat format;
+	VkColorSpaceKHR colorSpace;
 	std::vector<VkImage> images;
+	uint32_t minImageCount;
+	VkPresentModeKHR presentMode;
+	std::vector<VkImageView> imageViews;
 
 	// context
-	VkPhysicalDevice physical_device;
-	VkPhysicalDeviceProperties phys_dev_properties;
-	VkDevice device;
+	VkSurfaceKHR surface;
+	VkInstance instance = VK_NULL_HANDLE;
+	VkDevice device = VK_NULL_HANDLE;
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	VkPhysicalDeviceProperties physicalDeviceProperties;
+
+	// renderpass
+	VkRenderPass renderPass;
+
+	// framebuffer
+	std::vector<VkFramebuffer> frameBuffers;
+
+	// buffers
+	VkCommandBuffer commandBuffer;
+	VkCommandPool commandPool;
+
+	// rendering
+	VkFence fence;
 
 	// gpu info
 	std::string vendor;
-	std::string driver_version;
+	std::string driverVersion;
+
+	// misc
+	VkClearValue clearColor = { 1.f, 0.f, 1.f, 1.f };
 
 	bool InitVulkanInstance(std::vector<const char*>& _sdl_extensions);
 	bool InitPhysicalDevice();
-	bool InitLogicalDevice(std::vector<const char*> _device_extensions);
+	bool InitLogicalDevice(std::vector<const char*>& _device_extensions);
 
 	void SetGPUInfo();
 };
-

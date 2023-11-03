@@ -39,7 +39,7 @@ const vector<pair<cgb_flag_types, string>> flag_names{
     {INT_JOYPAD, "JOYPAD"}
 };
 
-inline string get_flag_and_isr_name(const cgb_flag_types& _type) {
+string get_flag_and_isr_name(const cgb_flag_types& _type) {
     for (const auto& [type, val] : flag_names) {
         if (type == _type) { return val; }
     }
@@ -66,7 +66,7 @@ const vector<pair<cgb_data_types, string>> register_names{
     {IF, "IF"}
 };
 
-inline string get_register_name(const cgb_data_types& _type) {
+string get_register_name(const cgb_data_types& _type) {
     for (const auto& [type, val] : register_names) {
         if (type == _type) { return val; }
     }
@@ -91,7 +91,7 @@ const vector<pair<cgb_data_types, string>> data_names{
     {C_ref, "(FF00+C)"},
 };
 
-inline string get_data_name(const cgb_data_types& _type) {
+string get_data_name(const cgb_data_types& _type) {
     for (const auto& [type, val] : data_names) {
         if (type == _type) { return val; }
     }
@@ -103,7 +103,7 @@ inline string get_data_name(const cgb_data_types& _type) {
 *   Resolve enums to strings for log output (to compare actual instruction execution to debug window)
 *   probably no reason to keep the log output
 */
-inline string get_arg_name(const cgb_data_types& _type) {
+string get_arg_name(const cgb_data_types& _type) {
     string result = get_register_name(_type);
     if (result.compare("") == 0) {
         result = get_data_name(_type);
@@ -114,7 +114,7 @@ inline string get_arg_name(const cgb_data_types& _type) {
 /*
 *   Resolve enums to strings for program debugger
 */
-inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, const u16& _data) {
+string resolve_data_enum(const cgb_data_types& _type, const int& _addr, const u16& _data) {
     string result = "";
     u8 data;
 
@@ -170,7 +170,7 @@ inline string resolve_data_enum(const cgb_data_types& _type, const int& _addr, c
     return result;
 }
 
-inline void instruction_args_to_string(u16& _addr, const vector<u8>& _bank, u16& _data, string& _raw_data, const cgb_data_types& _type) {
+void instruction_args_to_string(u16& _addr, const vector<u8>& _bank, u16& _data, string& _raw_data, const cgb_data_types& _type) {
     switch (_type) {
     case d8:
     case a8:
@@ -195,7 +195,7 @@ inline void instruction_args_to_string(u16& _addr, const vector<u8>& _bank, u16&
     }
 }
 
-inline void data_enums_to_string(const int& _bank, u16 _addr, const u16& _base_ptr, const u16& _data, string& _args, const cgb_data_types& _type_1, const cgb_data_types& _type_2) {
+void data_enums_to_string(const int& _bank, u16 _addr, const u16& _base_ptr, const u16& _data, string& _args, const cgb_data_types& _type_1, const cgb_data_types& _type_2) {
     _addr += _base_ptr;
 
     _args = "";
@@ -268,7 +268,7 @@ void CoreSM83::InitCpu() {
 
 // initial register states
 void CoreSM83::InitRegisterStates() {
-    Regs = gbc_registers();
+    Regs = registers();
 
     Regs.A = (INIT_CGB_AF & 0xFF00) >> 8;
     Regs.F = INIT_CGB_AF & 0xFF;
@@ -652,7 +652,7 @@ void CoreSM83::GetCurrentInstruction() const {
 /* ***********************************************************************************************************
     PREPARE DEBUG DATA (DISASSEMBLED INSTRUCTIONS)
 *********************************************************************************************************** */
-inline void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num) {
+void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num) {
     u16 data = 0;
     bool cb = false;
 
@@ -725,7 +725,7 @@ void CoreSM83::InitMessageBufferProgram() {
     }
 }
 
-inline void CoreSM83::DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num, const string& _bank_name) {
+void CoreSM83::DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num, const string& _bank_name) {
     u16 data = 0;
     bool cb = false;
 

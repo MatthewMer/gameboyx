@@ -25,7 +25,7 @@ inline const u16 ID_AMD = 0x1002;
 
 inline const std::vector<std::pair<uint32_t, std::string>> VENDOR_IDS = {
     {0x1002, "AMD"},
-    {0x10DE, "nVidia"},
+    {0x10DE, "NVIDIA"},
     {0x1043, "ASUS"},
     {0x196D, "Club 3D"},
     {0x1092, "Diamond Multimedia"},

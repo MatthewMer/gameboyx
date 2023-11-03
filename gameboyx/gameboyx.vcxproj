@@ -207,7 +207,6 @@
     <ClInclude Include="information_structs.h" />
     <ClInclude Include="MmuBase.h" />
     <ClInclude Include="MmuSM83.h" />
-    <ClInclude Include="registers.h" />
     <ClInclude Include="ScrollableTable.h" />
     <ClInclude Include="VHardwareMgr.h" />
     <ClInclude Include="VulkanMgr.h" />

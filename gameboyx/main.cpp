@@ -3,11 +3,9 @@
 *********************************************************************************************************** */
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
-#include "imgui_impl_vulkan.h"
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
 #include <SDL.h>
-#include <SDL_vulkan.h>
 #include <vector>
 
 #include "ImGuiGameboyX.h"
@@ -28,11 +26,14 @@ using namespace std;
 /* ***********************************************************************************************************
     PROTOTYPES
 *********************************************************************************************************** */
-static void sdl_toggle_full_screen(SDL_Window* _window);
-static bool sdl_init_env(SDL_Window* _window);
-static bool sdl_init_vulkan(VulkanMgr& _vk_mgr, SDL_Window* _window);
-static bool sdl_start(VulkanMgr& _vk_mgr, SDL_Window* _window);
-static void sdl_shutdown(VulkanMgr& _vk_mgr, SDL_Window* _window);
+bool sdl_init_vulkan(VulkanMgr& _vk_mgr, SDL_Window* _window);
+bool sdl_vulkan_start(VulkanMgr& _vk_mgr);
+
+void sdl_shutdown(VulkanMgr& _vk_mgr, SDL_Window* _window);
+
+void sdl_toggle_full_screen(SDL_Window* _window);
+
+bool imgui_init();
 
 /* ***********************************************************************************************************
  *
@@ -43,16 +44,35 @@ int main(int, char**)
 {
     auto machine_info = machine_information();
     auto game_stat = game_status();
-    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat);
+    //ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat);
     VHardwareMgr* vhwmgr_obj = nullptr;
 
+    // init sdl
     SDL_Window* window = nullptr;
-    if (!sdl_init_env(window)) { return -1; }
+    //if (!sdl_init_env(window)) { return -1; }
+    // Setup SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
+        LOG_ERROR("[SDL]", SDL_GetError());
+    }
+    else {
+        LOG_INFO("[SDL] initialized");
+    }
+
+    // Create window with Vulkan graphics context
+    auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    window = SDL_CreateWindow(APP_TITLE.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, GUI_WIN_WIDTH, GUI_WIN_HEIGHT, window_flags);
+    if (!window) {
+        LOG_ERROR("[SDL]", SDL_GetError());
+        return false;
+    }
+    else {
+        LOG_INFO("[SDL] window created");
+    }
 
     auto vk_mgr = VulkanMgr(window);
-    if (!sdl_init_vulkan(vk_mgr, window)) { return -2; }
+    if (!sdl_init_vulkan(vk_mgr, window)) { return -1; }
 
-    if (!sdl_start(vk_mgr, window)) { return -3; }
+    if (!sdl_vulkan_start(vk_mgr)) { return -2; }
 
     // Main loop
     LOG_INFO("Initialization completed");
@@ -60,6 +80,7 @@ int main(int, char**)
     bool running = true;
     while (running)
     {
+        /*
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -148,9 +169,10 @@ int main(int, char**)
         if (game_stat.game_running) {
             vhwmgr_obj->ProcessNext();
         }
-
-        
+        */
+        vk_mgr.RenderFrame();
     }
+    
 
     sdl_shutdown(vk_mgr, window);
 
@@ -160,40 +182,7 @@ int main(int, char**)
 /* ***********************************************************************************************************
     SDL FUNCTIONS
 *********************************************************************************************************** */
-static void sdl_toggle_full_screen(SDL_Window* _window) {
-    if (SDL_GetWindowFlags(_window) & SDL_WINDOW_FULLSCREEN) {
-        SDL_SetWindowFullscreen(_window, 0);
-    }
-    else {
-        SDL_SetWindowFullscreen(_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-    }
-}
-
-static bool sdl_init_env(SDL_Window* _window) {
-    // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
-        LOG_ERROR("[SDL]", SDL_GetError());
-        return false;
-    }
-    else {
-        LOG_INFO("[SDL] initialized");
-    }
-
-    // Create window with Vulkan graphics context
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    _window = SDL_CreateWindow(APP_TITLE.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, GUI_WIN_WIDTH, GUI_WIN_HEIGHT, window_flags);
-    if (!_window) {
-        LOG_ERROR("[SDL]", SDL_GetError());
-        return false;
-    }
-    else {
-        LOG_INFO("[SDL] window created");
-    }
-
-    return true;
-}
-
-static bool sdl_init_vulkan(VulkanMgr& _vk_mgr, SDL_Window* _window) {
+bool sdl_init_vulkan(VulkanMgr& _vk_mgr, SDL_Window* _window) {
     uint32_t sdl_extension_count;
     SDL_Vulkan_GetInstanceExtensions(_window, &sdl_extension_count, nullptr);
     auto sdl_extensions = vector<const char*>(sdl_extension_count);
@@ -206,21 +195,50 @@ static bool sdl_init_vulkan(VulkanMgr& _vk_mgr, SDL_Window* _window) {
     return true;
 }
 
-static bool sdl_start(VulkanMgr& _vk_mgr, SDL_Window* _window) {
-    if (!SDL_Vulkan_CreateSurface(_window, _vk_mgr.instance, &_vk_mgr.surface)) {
+bool sdl_vulkan_start(VulkanMgr& _vk_mgr) {
+    if (!_vk_mgr.InitSurface()) {
         return false;
     }
     if (!_vk_mgr.InitSwapchain(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
+        return false;
+    }
+    if (!_vk_mgr.InitRenderPass()) {
+        return false;
+    }
+    if (!_vk_mgr.InitFrameBuffers()) {
+        return false;
+    }
+    if (!_vk_mgr.InitCommandBuffers()) {
         return false;
     }
 
     return true;
 }
 
-static void sdl_shutdown(VulkanMgr& _vk_mgr, SDL_Window* _window) {
+void sdl_shutdown(VulkanMgr& _vk_mgr, SDL_Window* _window) {
+    _vk_mgr.DestroyCommandBuffer();
+    _vk_mgr.DestroyFrameBuffers();
+    _vk_mgr.DestroyRenderPass();
     _vk_mgr.DestroySwapchain();
+    _vk_mgr.DestroySurface();
     _vk_mgr.ExitVulkan();
 
     SDL_DestroyWindow(_window);
     SDL_Quit();
+}
+
+void sdl_toggle_full_screen(SDL_Window* _window) {
+    if (SDL_GetWindowFlags(_window) & SDL_WINDOW_FULLSCREEN) {
+        SDL_SetWindowFullscreen(_window, 0);
+    }
+    else {
+        SDL_SetWindowFullscreen(_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    }
+}
+
+/* ***********************************************************************************************************
+    IMGUI FUNCTIONS
+*********************************************************************************************************** */
+bool imgui_init() {
+    return true;
 }

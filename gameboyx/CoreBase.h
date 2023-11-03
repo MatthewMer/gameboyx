@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Cartridge.h"
-#include "registers.h"
 #include "MmuBase.h"
 #include "information_structs.h"
 #include <chrono>

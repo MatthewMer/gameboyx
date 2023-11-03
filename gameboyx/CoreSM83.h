@@ -2,11 +2,46 @@
 
 #include "CoreBase.h"
 #include "Cartridge.h"
-#include "registers.h"
 #include "defs.h"
 #include "MemorySM83.h"
 
 #include <vector>
+
+/* ***********************************************************************************************************
+	STRUCTS
+*********************************************************************************************************** */
+struct registers {
+
+	u8 F;
+	u8 A;
+
+	union {
+		u16 BC = 0;
+		struct {
+			u8 C;
+			u8 B;
+		}BC_;
+	};
+
+	union {
+		u16 DE = 0;
+		struct {
+			u8 E;
+			u8 D;
+		}DE_;
+	};
+
+	union {
+		u16 HL = 0;
+		struct {
+			u8 L;
+			u8 H;
+		}HL_;
+	};
+
+	u16 SP = 0;						// stack pointer
+	u16 PC = 0;						// program counter
+};
 
 /* ***********************************************************************************************************
 	CLASSES FOR INSTRUCTION IN/OUTPUT POINTERS
@@ -108,7 +143,7 @@ private:
 	u16 curPC;
 
 	// internals
-	gbc_registers Regs = gbc_registers();
+	registers Regs = registers();
 	void InitRegisterStates() override;
 	void InitCpu() override;
 
