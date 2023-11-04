@@ -36,6 +36,11 @@ void VulkanMgr::RenderFrame() {
 		begin_info.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
+		// imgui
+		ImGui::Render();
+		ImDrawData* drawData = ImGui::GetDrawData();
+		ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer);
+
 		vkCmdEndRenderPass(commandBuffer);
 	}
 	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -324,7 +329,7 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 bool VulkanMgr::InitRenderPass() {
 	VkAttachmentDescription attachment_description = {};
 	attachment_description.format = format;
-	attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;												// no MSAA
+	attachment_description.samples = sample_count;														// MSAA
 	attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;										// clear previous
 	attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;										// store result
 	attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;									// before renderpass -> don't care
@@ -402,6 +407,79 @@ bool VulkanMgr::InitCommandBuffers() {
 	return true;
 }
 
+bool VulkanMgr::InitImgui() {
+	VkDescriptorPoolSize pool_sizes[] =
+	{
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+	};
+
+	VkDescriptorPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	pool_info.maxSets = 1;
+	pool_info.poolSizeCount = (u32)IM_ARRAYSIZE(pool_sizes);
+	pool_info.pPoolSizes = pool_sizes;
+	if (vkCreateDescriptorPool(device, &pool_info, nullptr, &imguiDescriptorPool) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create imgui descriptor pool");
+		return false;
+	}
+
+	ImGui_ImplSDL2_InitForVulkan(window);
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = instance;
+	init_info.PhysicalDevice = physicalDevice;
+	init_info.Device = device;
+	init_info.QueueFamily = familyIndex;
+	init_info.Queue = queue;
+	init_info.DescriptorPool = imguiDescriptorPool;
+	init_info.MinImageCount = 2;
+	init_info.ImageCount = images.size();
+	init_info.MSAASamples = sample_count;
+	if (!ImGui_ImplVulkan_Init(&init_info, renderPass)) {
+		LOG_ERROR("[vulkan] init imgui");
+		return false;
+	}
+
+	// Upload Fonts
+	{
+		if (vkResetCommandPool(device, commandPool, 0) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] imgui reset command pool");
+			return false;
+		}
+
+		// fill command buffer and submit to queue
+		VkCommandBufferBeginInfo begin_info = {};
+		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		if (vkBeginCommandBuffer(commandBuffer, &begin_info) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] imgui begin command buffer");
+			return false;
+		}
+		{
+			ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
+		}
+		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] imgui end command buffer");
+			return false;
+		}
+
+		VkSubmitInfo end_info = {};
+		end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		end_info.commandBufferCount = 1;
+		end_info.pCommandBuffers = &commandBuffer;
+		if (vkQueueSubmit(queue, 1, &end_info, VK_NULL_HANDLE) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] imgui queue submit");
+			return false;
+		}
+
+		WaitIdle();
+		ImGui_ImplVulkan_DestroyFontUploadObjects();
+	}
+
+	LOG_INFO("[vulkan] imgui font upload done");
+	return true;
+}
+
 bool VulkanMgr::ExitVulkan() {
 	WaitIdle();
 
@@ -442,8 +520,18 @@ void VulkanMgr::DestroyCommandBuffer() {
 	vkDestroyFence(device, fence, nullptr);
 }
 
+void VulkanMgr::DestroyImgui() {
+	ImGui_ImplVulkan_Shutdown();
+
+	vkDestroyDescriptorPool(device, imguiDescriptorPool, nullptr);
+}
+
 void VulkanMgr::WaitIdle() {
 	if (vkDeviceWaitIdle(device) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] GPU wait idle");
 	}
+}
+
+void VulkanMgr::NextFrameImGui() {
+	ImGui_ImplVulkan_NewFrame();
 }

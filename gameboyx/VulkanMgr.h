@@ -4,6 +4,7 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 #include "imgui_impl_vulkan.h"
+#include "imgui_impl_sdl2.h"
 
 #include <vector>
 #include <string>
@@ -32,7 +33,13 @@ public:
 	void DestroyFrameBuffers();
 	void DestroyCommandBuffer();
 
+	void DestroyImgui();
+
 	void WaitIdle();
+
+	bool InitImgui();
+
+	void NextFrameImGui();
 
 private:
 	// sdl
@@ -62,6 +69,7 @@ private:
 
 	// renderpass
 	VkRenderPass renderPass;
+	VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT;
 
 	// framebuffer
 	std::vector<VkFramebuffer> frameBuffers;
@@ -73,12 +81,15 @@ private:
 	// rendering
 	VkFence fence;
 
+	// imgui
+	VkDescriptorPool imguiDescriptorPool;
+
 	// gpu info
 	std::string vendor;
 	std::string driverVersion;
 
 	// misc
-	VkClearValue clearColor = { 1.f, 0.f, 1.f, 1.f };
+	VkClearValue clearColor = { 0.f, 0.f, 0.f, 1.f };
 
 	bool InitVulkanInstance(std::vector<const char*>& _sdl_extensions);
 	bool InitPhysicalDevice();

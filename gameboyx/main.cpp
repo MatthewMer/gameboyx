@@ -2,7 +2,6 @@
     INCLUDES
 *********************************************************************************************************** */
 #include "imgui.h"
-#include "imgui_impl_sdl2.h"
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
 #include <SDL.h>
@@ -28,12 +27,13 @@ using namespace std;
 *********************************************************************************************************** */
 bool sdl_init_vulkan(VulkanMgr& _vk_mgr, SDL_Window* _window);
 bool sdl_vulkan_start(VulkanMgr& _vk_mgr);
-
 void sdl_shutdown(VulkanMgr& _vk_mgr, SDL_Window* _window);
 
 void sdl_toggle_full_screen(SDL_Window* _window);
 
-bool imgui_init();
+bool imgui_init(VulkanMgr& _vk_mgr);
+void imgui_shutdown(VulkanMgr& _vk_mgr);
+void imgui_nextframe(VulkanMgr& _vk_mgr);
 
 /* ***********************************************************************************************************
  *
@@ -42,17 +42,11 @@ bool imgui_init();
 *********************************************************************************************************** */
 int main(int, char**)
 {
-    auto machine_info = machine_information();
-    auto game_stat = game_status();
-    //ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat);
-    VHardwareMgr* vhwmgr_obj = nullptr;
-
     // init sdl
     SDL_Window* window = nullptr;
-    //if (!sdl_init_env(window)) { return -1; }
-    // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
         LOG_ERROR("[SDL]", SDL_GetError());
+        return -1;
     }
     else {
         LOG_INFO("[SDL] initialized");
@@ -63,16 +57,23 @@ int main(int, char**)
     window = SDL_CreateWindow(APP_TITLE.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, GUI_WIN_WIDTH, GUI_WIN_HEIGHT, window_flags);
     if (!window) {
         LOG_ERROR("[SDL]", SDL_GetError());
-        return false;
+        return -1;
     }
     else {
         LOG_INFO("[SDL] window created");
     }
 
     auto vk_mgr = VulkanMgr(window);
-    if (!sdl_init_vulkan(vk_mgr, window)) { return -1; }
+    if (!sdl_init_vulkan(vk_mgr, window)) { return -2; }
 
-    if (!sdl_vulkan_start(vk_mgr)) { return -2; }
+    if (!sdl_vulkan_start(vk_mgr)) { return -3; }
+
+    if (!imgui_init(vk_mgr)) { return -4; }
+
+    auto machine_info = machine_information();
+    auto game_stat = game_status();
+    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat);
+    VHardwareMgr* vhwmgr_obj = nullptr;
 
     // Main loop
     LOG_INFO("Initialization completed");
@@ -80,10 +81,7 @@ int main(int, char**)
     bool running = true;
     while (running)
     {
-        
         SDL_Event event;
-        while(SDL_PollEvent(&event)){}              // currently just poll events to make window moveable
-        /*
         while (SDL_PollEvent(&event))
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
@@ -171,11 +169,17 @@ int main(int, char**)
         if (game_stat.game_running) {
             vhwmgr_obj->ProcessNext();
         }
-        */
+        
+        // new frame
+        imgui_nextframe(vk_mgr);
+
+        gbx_gui->ProcessGUI();
+
+        // render results
         vk_mgr.RenderFrame();
     }
     
-
+    imgui_shutdown(vk_mgr);
     sdl_shutdown(vk_mgr, window);
 
     return 0;
@@ -241,6 +245,24 @@ void sdl_toggle_full_screen(SDL_Window* _window) {
 /* ***********************************************************************************************************
     IMGUI FUNCTIONS
 *********************************************************************************************************** */
-bool imgui_init() {
+bool imgui_init(VulkanMgr& _vk_mgr) {
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+
+    if (!_vk_mgr.InitImgui()) { return false; }
+
     return true;
+}
+
+void imgui_shutdown(VulkanMgr& _vk_mgr) {
+    _vk_mgr.DestroyImgui();
+
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+}
+
+void imgui_nextframe(VulkanMgr& _vk_mgr) {
+    _vk_mgr.NextFrameImGui();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
 }
