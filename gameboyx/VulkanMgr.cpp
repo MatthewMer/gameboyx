@@ -35,6 +35,8 @@ void VulkanMgr::RenderFrame() {
 		begin_info.clearValueCount = 1;
 		begin_info.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdEndRenderPass(commandBuffer);
 	}
 	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] end command buffer");
@@ -56,7 +58,7 @@ void VulkanMgr::RenderFrame() {
 		LOG_ERROR("[vulkan] submit command buffer to queue");
 	}
 
-	WaitIdle();
+	WaitIdle();				// wait until GPU finished processing command buffer
 
 	// present
 	VkPresentInfoKHR present_info = {};
