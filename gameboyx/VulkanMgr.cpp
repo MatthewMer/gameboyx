@@ -26,7 +26,6 @@ void VulkanMgr::RenderFrame() {
 		LOG_ERROR("[vulkan] begin command buffer");
 	}
 	{
-		/*
 		// render commands
 		VkRenderPassBeginInfo begin_info = {};
 		begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -36,7 +35,6 @@ void VulkanMgr::RenderFrame() {
 		begin_info.clearValueCount = 1;
 		begin_info.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
-		*/
 	}
 	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] end command buffer");
@@ -66,9 +64,7 @@ void VulkanMgr::RenderFrame() {
 	present_info.pSwapchains = &swapchain;
 	present_info.swapchainCount = 1;
 	present_info.pImageIndices = &image_index;
-	if (vkQueuePresentKHR(queue, &present_info) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] queue present");
-	}
+	vkQueuePresentKHR(queue, &present_info);
 }
 
 bool VulkanMgr::InitVulkan(std::vector<const char*>& _sdl_extensions, std::vector<const char*>& _device_extensions) {

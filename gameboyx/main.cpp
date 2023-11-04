@@ -80,8 +80,10 @@ int main(int, char**)
     bool running = true;
     while (running)
     {
-        /*
+        
         SDL_Event event;
+        while(SDL_PollEvent(&event)){}              // currently just poll events to make window moveable
+        /*
         while (SDL_PollEvent(&event))
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
