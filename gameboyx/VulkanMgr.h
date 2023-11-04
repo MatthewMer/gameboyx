@@ -24,10 +24,12 @@ public:
 	bool InitFrameBuffers();
 	bool InitCommandBuffers();
 
-	bool InitImGui();
+	bool InitImgui();
+
+	void RebuildSwapchain();
 
 	bool ExitVulkan();
-	void DestroySwapchain(); 
+	void DestroySwapchain(const bool& _rebuild);
 	void DestroySurface();
 	void DestroyRenderPass();
 	void DestroyFrameBuffers();
@@ -37,9 +39,7 @@ public:
 
 	void WaitIdle();
 
-	bool InitImgui();
-
-	void NextFrameImGui();
+	void NextFrameImGui() const;
 
 private:
 	// sdl
@@ -51,6 +51,7 @@ private:
 
 	// swapchain
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+	VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE;
 	uint32_t width;
 	uint32_t height;
 	VkFormat format;

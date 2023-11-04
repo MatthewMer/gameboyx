@@ -11,8 +11,14 @@ void VulkanMgr::RenderFrame() {
 	}
 
 	u32 image_index = 0;
-	if (vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, nullptr, fence, &image_index) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] acquire image");
+	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, nullptr, fence, &image_index); result != VK_SUCCESS) {
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+			RebuildSwapchain();
+			return;
+		}
+		else {
+			LOG_ERROR("[vulkan] acquire image");
+		}
 	} 
 
 	if (vkResetCommandPool(device, commandPool, 0) != VK_SUCCESS) {
@@ -71,7 +77,15 @@ void VulkanMgr::RenderFrame() {
 	present_info.pSwapchains = &swapchain;
 	present_info.swapchainCount = 1;
 	present_info.pImageIndices = &image_index;
-	vkQueuePresentKHR(queue, &present_info);
+	
+	if (VkResult result = vkQueuePresentKHR(queue, &present_info); result != VK_SUCCESS) {
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+			RebuildSwapchain();
+		}
+		else {
+			LOG_ERROR("[vulkan] present image");
+		}
+	}
 }
 
 bool VulkanMgr::InitVulkan(std::vector<const char*>& _sdl_extensions, std::vector<const char*>& _device_extensions) {
@@ -292,7 +306,7 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 	swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;		// no transparency (opaque)
 	swapchain_info.presentMode = presentMode;								// simple image fifo (vsync)
 	swapchain_info.clipped = VK_FALSE;										// draw only visible window areas if true (clipping)
-	swapchain_info.oldSwapchain = VK_NULL_HANDLE;
+	swapchain_info.oldSwapchain = oldSwapchain;
 	swapchain_info.pNext = nullptr;
 
 	if (vkCreateSwapchainKHR(device, &swapchain_info, nullptr, &swapchain) != VK_SUCCESS) {
@@ -308,10 +322,15 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 		LOG_ERROR("[vulkan] couldn't acquire image count");
 		return false;
 	}
-
+	
+	images.clear();
 	images.resize(image_num);
 	if (vkGetSwapchainImagesKHR(device, swapchain, &image_num, images.data()) != VK_SUCCESS) { return false; }
 
+	for (auto& n : imageViews) {
+		vkDestroyImageView(device, n, nullptr);
+	}
+	imageViews.clear();
 	imageViews.resize(image_num);
 	for (u32 i = 0; i < image_num; i++) {
 		VkImageViewCreateInfo imageview_info = {};
@@ -362,6 +381,7 @@ bool VulkanMgr::InitRenderPass() {
 }
 
 bool VulkanMgr::InitFrameBuffers() {
+	frameBuffers.clear();
 	frameBuffers.resize(images.size());
 	for (u32 i = 0; i < images.size(); i++) {
 		VkFramebufferCreateInfo framebuffer_info = {};
@@ -485,6 +505,19 @@ bool VulkanMgr::InitImgui() {
 	return true;
 }
 
+void VulkanMgr::RebuildSwapchain() {
+	WaitIdle();
+	oldSwapchain = swapchain;
+	InitSwapchain(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+	DestroySwapchain(true);
+
+	DestroyFrameBuffers();
+	DestroyRenderPass();
+
+	InitRenderPass();
+	InitFrameBuffers();
+}
+
 bool VulkanMgr::ExitVulkan() {
 	WaitIdle();
 
@@ -494,12 +527,17 @@ bool VulkanMgr::ExitVulkan() {
 	return true;
 }
 
-void VulkanMgr::DestroySwapchain() {
+void VulkanMgr::DestroySwapchain(const bool& _rebuild) {
 	WaitIdle();
-	for (auto& n : imageViews) {
-		vkDestroyImageView(device, n, nullptr);
+	if (_rebuild) {
+		vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
 	}
-	vkDestroySwapchainKHR(device, swapchain, nullptr);
+	else {
+		for (auto& n : imageViews) {
+			vkDestroyImageView(device, n, nullptr);
+		}
+		vkDestroySwapchainKHR(device, swapchain, nullptr);
+	}
 }
 
 void VulkanMgr::DestroySurface() {
@@ -512,6 +550,7 @@ void VulkanMgr::DestroyFrameBuffers() {
 	for (auto& n : frameBuffers) {
 		vkDestroyFramebuffer(device, n, nullptr);
 	}
+	frameBuffers.clear();
 }
 
 void VulkanMgr::DestroyRenderPass() {
@@ -537,6 +576,6 @@ void VulkanMgr::WaitIdle() {
 	}
 }
 
-void VulkanMgr::NextFrameImGui() {
+void VulkanMgr::NextFrameImGui() const {
 	ImGui_ImplVulkan_NewFrame();
 }

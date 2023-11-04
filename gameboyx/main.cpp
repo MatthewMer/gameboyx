@@ -225,7 +225,7 @@ void sdl_shutdown(VulkanMgr& _vk_mgr, SDL_Window* _window) {
     _vk_mgr.DestroyCommandBuffer();
     _vk_mgr.DestroyFrameBuffers();
     _vk_mgr.DestroyRenderPass();
-    _vk_mgr.DestroySwapchain();
+    _vk_mgr.DestroySwapchain(false);
     _vk_mgr.DestroySurface();
     _vk_mgr.ExitVulkan();
 
