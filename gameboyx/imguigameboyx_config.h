@@ -16,6 +16,7 @@
 #define GBX_VERSION_PATCH           0
 #define GBX_AUTHOR					"MatthewMer"
 
+#define VK_VALIDATION "VK_LAYER_KHRONOS_validation"
 inline const std::vector<const char*> VK_ENABLED_LAYERS = {
     "VK_LAYER_KHRONOS_validation"
 };

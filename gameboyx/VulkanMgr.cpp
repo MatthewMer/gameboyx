@@ -125,7 +125,12 @@ bool VulkanMgr::InitVulkanInstance(std::vector<const char*>& _sdl_extensions) {
 	}
 
 	for (const auto& n : VK_ENABLED_LAYERS) {
-		LOG_INFO("[vulkan] ", n, " layer enabled");
+		if (strcmp(n, VK_VALIDATION) == 0) {
+			LOG_WARN("[vulkan] ", n, " layer enabled");
+		}
+		else {
+			LOG_INFO("[vulkan] ", n, " layer enabled");
+		}
 	}
 	for (const auto& n : _sdl_extensions) {
 		LOG_INFO("[vulkan] ", n, " extension enabled");
@@ -150,17 +155,17 @@ bool VulkanMgr::InitPhysicalDevice() {
 	auto vk_physical_devices = std::vector<VkPhysicalDevice>(device_num);
 	if (vkEnumeratePhysicalDevices(instance, &device_num, vk_physical_devices.data()) != VK_SUCCESS) { return false; }
 
-	LOG_INFO(device_num, " GPU(s) found:");
+	LOG_INFO("[vulkan] ", device_num, " GPU(s) found:");
 	for (const auto& n : vk_physical_devices) {
 		VkPhysicalDeviceProperties vk_phys_dev_prop = {};
 		vkGetPhysicalDeviceProperties(n, &vk_phys_dev_prop);
-		LOG_INFO(vk_phys_dev_prop.deviceName);
+		LOG_INFO("[vulkan] ", vk_phys_dev_prop.deviceName);
 	}
 
 	physicalDevice = vk_physical_devices[0];
 	vkGetPhysicalDeviceProperties(vk_physical_devices[0], &physicalDeviceProperties);
 	SetGPUInfo();
-	LOG_INFO(physicalDeviceProperties.deviceName, " (", driverVersion, ") selected");
+	LOG_INFO("[vulkan] ", physicalDeviceProperties.deviceName, " (", driverVersion, ") selected");
 
 	return true;
 }
@@ -476,7 +481,7 @@ bool VulkanMgr::InitImgui() {
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 	}
 
-	LOG_INFO("[vulkan] imgui font upload done");
+	LOG_INFO("[vulkan] imgui initialized");
 	return true;
 }
 
