@@ -9,11 +9,12 @@
 
 #include "ImGuiGameboyX.h"
 #include "logger.h"
-#include "imguigameboyx_config.h"
+#include "general_config.h"
 #include "Cartridge.h"
 #include "VHardwareMgr.h"
 #include "information_structs.h"
 #include "VulkanMgr.h"
+#include "data_io.h"
 
 using namespace std;
 
@@ -25,15 +26,17 @@ using namespace std;
 /* ***********************************************************************************************************
     PROTOTYPES
 *********************************************************************************************************** */
-bool sdl_init_vulkan(VulkanMgr& _vk_mgr, SDL_Window* _window);
-bool sdl_vulkan_start(VulkanMgr& _vk_mgr);
-void sdl_shutdown(VulkanMgr& _vk_mgr, SDL_Window* _window);
+bool sdl_init_vulkan(VulkanMgr& _graphics_mgr, SDL_Window* _window);
+bool sdl_vulkan_start(VulkanMgr& _graphics_mgr);
+void sdl_shutdown(VulkanMgr& _graphics_mgr, SDL_Window* _window);
 
 void sdl_toggle_full_screen(SDL_Window* _window);
 
-bool imgui_init(VulkanMgr& _vk_mgr);
-void imgui_shutdown(VulkanMgr& _vk_mgr);
-void imgui_nextframe(VulkanMgr& _vk_mgr);
+bool imgui_init(VulkanMgr& _graphics_mgr);
+void imgui_shutdown(VulkanMgr& _graphics_mgr);
+void imgui_nextframe(VulkanMgr& _graphics_mgr);
+
+void create_fs_hierarchy();
 
 /* ***********************************************************************************************************
  *
@@ -42,6 +45,8 @@ void imgui_nextframe(VulkanMgr& _vk_mgr);
 *********************************************************************************************************** */
 int main(int, char**)
 {
+    create_fs_hierarchy();
+
     // init sdl
     SDL_Window* window = nullptr;
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
@@ -63,12 +68,12 @@ int main(int, char**)
         LOG_INFO("[SDL] window created");
     }
 
-    auto vk_mgr = VulkanMgr(window);
-    if (!sdl_init_vulkan(vk_mgr, window)) { return -2; }
+    auto graphics_mgr = VulkanMgr(window);
+    if (!sdl_init_vulkan(graphics_mgr, window)) { return -2; }
 
-    if (!sdl_vulkan_start(vk_mgr)) { return -3; }
+    if (!sdl_vulkan_start(graphics_mgr)) { return -3; }
 
-    if (!imgui_init(vk_mgr)) { return -4; }
+    if (!imgui_init(graphics_mgr)) { return -4; }
 
     auto machine_info = machine_information();
     auto game_stat = game_status();
@@ -77,6 +82,9 @@ int main(int, char**)
 
     // Main loop
     LOG_INFO("Initialization completed");
+
+    int width, height;
+    u32 win_min;
 
     bool running = true;
     while (running)
@@ -96,6 +104,7 @@ int main(int, char**)
             case SDL_KEYDOWN:
                 key = event.key.keysym.sym;
                 switch (key) {
+                case SDLK_F3:
                 case SDLK_LSHIFT:
                     gbx_gui->EventKeyDown(key);
                     break;
@@ -169,18 +178,21 @@ int main(int, char**)
         if (game_stat.game_running) {
             vhwmgr_obj->ProcessNext();
         }
-        
-        // new frame
-        imgui_nextframe(vk_mgr);
 
-        gbx_gui->ProcessGUI();
+        win_min = SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED;
+        if (!win_min) {
+            // new imgui frame
+            imgui_nextframe(graphics_mgr);
 
-        // render results
-        vk_mgr.RenderFrame();
+            gbx_gui->ProcessGUI();
+
+            // render results
+            graphics_mgr.RenderFrame();
+        }
     }
     
-    imgui_shutdown(vk_mgr);
-    sdl_shutdown(vk_mgr, window);
+    imgui_shutdown(graphics_mgr);
+    sdl_shutdown(graphics_mgr, window);
 
     return 0;
 }
@@ -188,7 +200,7 @@ int main(int, char**)
 /* ***********************************************************************************************************
     SDL FUNCTIONS
 *********************************************************************************************************** */
-bool sdl_init_vulkan(VulkanMgr& _vk_mgr, SDL_Window* _window) {
+bool sdl_init_vulkan(VulkanMgr& _graphics_mgr, SDL_Window* _window) {
     uint32_t sdl_extension_count;
     SDL_Vulkan_GetInstanceExtensions(_window, &sdl_extension_count, nullptr);
     auto sdl_extensions = vector<const char*>(sdl_extension_count);
@@ -196,38 +208,38 @@ bool sdl_init_vulkan(VulkanMgr& _vk_mgr, SDL_Window* _window) {
 
     auto device_extensions = vector<const char*>() = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-    if (!_vk_mgr.InitVulkan(sdl_extensions, device_extensions)) { return false; }
+    if (!_graphics_mgr.InitVulkan(sdl_extensions, device_extensions)) { return false; }
 
     return true;
 }
 
-bool sdl_vulkan_start(VulkanMgr& _vk_mgr) {
-    if (!_vk_mgr.InitSurface()) {
+bool sdl_vulkan_start(VulkanMgr& _graphics_mgr) {
+    if (!_graphics_mgr.InitSurface()) {
         return false;
     }
-    if (!_vk_mgr.InitSwapchain(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
+    if (!_graphics_mgr.InitSwapchain(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
         return false;
     }
-    if (!_vk_mgr.InitRenderPass()) {
+    if (!_graphics_mgr.InitRenderPass()) {
         return false;
     }
-    if (!_vk_mgr.InitFrameBuffers()) {
+    if (!_graphics_mgr.InitFrameBuffers()) {
         return false;
     }
-    if (!_vk_mgr.InitCommandBuffers()) {
+    if (!_graphics_mgr.InitCommandBuffers()) {
         return false;
     }
 
     return true;
 }
 
-void sdl_shutdown(VulkanMgr& _vk_mgr, SDL_Window* _window) {
-    _vk_mgr.DestroyCommandBuffer();
-    _vk_mgr.DestroyFrameBuffers();
-    _vk_mgr.DestroyRenderPass();
-    _vk_mgr.DestroySwapchain(false);
-    _vk_mgr.DestroySurface();
-    _vk_mgr.ExitVulkan();
+void sdl_shutdown(VulkanMgr& _graphics_mgr, SDL_Window* _window) {
+    _graphics_mgr.DestroyCommandBuffer();
+    _graphics_mgr.DestroyFrameBuffers();
+    _graphics_mgr.DestroyRenderPass();
+    _graphics_mgr.DestroySwapchain(false);
+    _graphics_mgr.DestroySurface();
+    _graphics_mgr.ExitVulkan();
 
     SDL_DestroyWindow(_window);
     SDL_Quit();
@@ -245,24 +257,35 @@ void sdl_toggle_full_screen(SDL_Window* _window) {
 /* ***********************************************************************************************************
     IMGUI FUNCTIONS
 *********************************************************************************************************** */
-bool imgui_init(VulkanMgr& _vk_mgr) {
+bool imgui_init(VulkanMgr& _graphics_mgr) {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
 
-    if (!_vk_mgr.InitImgui()) { return false; }
+    if (!_graphics_mgr.InitImgui()) { return false; }
 
     return true;
 }
 
-void imgui_shutdown(VulkanMgr& _vk_mgr) {
-    _vk_mgr.DestroyImgui();
+void imgui_shutdown(VulkanMgr& _graphics_mgr) {
+    _graphics_mgr.DestroyImgui();
 
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 }
 
-void imgui_nextframe(VulkanMgr& _vk_mgr) {
-    _vk_mgr.NextFrameImGui();
+void imgui_nextframe(VulkanMgr& _graphics_mgr) {
+    _graphics_mgr.NextFrameImGui();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+}
+
+/* ***********************************************************************************************************
+    MISC
+*********************************************************************************************************** */
+void create_fs_hierarchy() {
+    check_and_create_config_folders();
+    check_and_create_config_files();
+    check_and_create_log_folders();
+    check_and_create_shader_folder();
+    Cartridge::check_and_create_rom_folder();
 }

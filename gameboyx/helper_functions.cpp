@@ -1,7 +1,11 @@
 #include "helper_functions.h"
 
+#include <vector>
+#include <string>
 #include <fstream>
 #include <filesystem>
+
+#include "logger.h"
 
 using namespace std;
 namespace fs = filesystem;
@@ -49,6 +53,16 @@ string get_current_path() {
     current_path += current_path_vec.back();
 
     return current_path;
+}
+
+vector<string> get_files_in_path(const string& _path_rel) {
+    auto files = vector<string>();
+
+    for (const auto& n : fs::directory_iterator(get_current_path() + _path_rel)) {
+        files.emplace_back(n.path().generic_string());
+    }
+    
+    return files;
 }
 
 string trim(const string& _in_string) {

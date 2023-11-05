@@ -3,14 +3,12 @@
 #include "game_info.h"
 #include "logger.h"
 #include "helper_functions.h"
-#include "io_config.h"
+#include "general_config.h"
 
 #include <fstream>
 #include <string>
 
 using namespace std;
-
-
 
 
 bool read_data(vector<string>& _config_input, const string& _config_path_rel);
@@ -19,10 +17,6 @@ bool write_data(const vector<string>& _games, const string& _config_path_rel, bo
 void games_from_string(vector<game_info>& _games, const vector<string>& _config_games);
 void games_to_string(const vector<game_info>& _games, vector<string>& _config_games);
 bool filter_parameter_game_info_enum(game_info& _game_ctx, const vector<string>& _parameter);
-
-
-
-
 
 
 bool read_games_from_config(vector<game_info>& _games, const string& _config_path_rel) {
@@ -229,9 +223,6 @@ bool filter_parameter_game_info_enum(game_info& _game_ctx, const vector<string>&
     return true;
 }
 
-
-
-
 void check_and_create_config_folders() {
     check_and_create_path(CONFIG_FOLDER);
 }
@@ -242,4 +233,8 @@ void check_and_create_config_files() {
 
 void check_and_create_log_folders() {
     check_and_create_path(LOG_FOLDER);
+}
+
+void check_and_create_shader_folder() {
+    check_and_create_path(SHADER_FOLDER);
 }

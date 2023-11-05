@@ -589,6 +589,7 @@ void CoreSM83::GetStartupHardwareInfo() const {
     machineInfo.ram_bank_num = machine_ctx->ram_bank_num;
     machineInfo.wram_bank_num = machine_ctx->wram_bank_num;
     machineInfo.vram_bank_num = machine_ctx->vram_bank_num;
+    machineInfo.current_speedmode = machine_ctx->currentSpeed;
 }
 
 // get current hardware status (currently mapped memory banks)
@@ -597,6 +598,7 @@ void CoreSM83::GetCurrentHardwareState() const {
     machineInfo.ram_bank_selected = machine_ctx->ram_bank_selected;
     machineInfo.wram_bank_selected = machine_ctx->wram_bank_selected + 1;
     machineInfo.vram_bank_selected = machine_ctx->vram_bank_selected;
+    machineInfo.current_speedmode = machine_ctx->currentSpeed;
 }
 
 void CoreSM83::GetCurrentRegisterValues() const {

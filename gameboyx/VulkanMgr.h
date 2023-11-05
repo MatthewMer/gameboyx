@@ -24,6 +24,9 @@ public:
 	bool InitFrameBuffers();
 	bool InitCommandBuffers();
 
+	void PrecompileShaders();
+	bool InitShaderModule(const std::string& _shader);
+
 	bool InitImgui();
 
 	void RebuildSwapchain();
@@ -81,6 +84,10 @@ private:
 
 	// rendering
 	VkFence fence;
+
+	// graphics pipeline
+	std::vector<std::string> shaders;
+	std::vector<VkShaderModule> shaderModules;
 
 	// imgui
 	VkDescriptorPool imguiDescriptorPool;

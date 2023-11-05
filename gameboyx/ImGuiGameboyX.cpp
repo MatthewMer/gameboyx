@@ -9,8 +9,7 @@
 #include "nfd.h"
 #include "logger.h"
 #include "helper_functions.h"
-#include "imguigameboyx_config.h"
-#include "io_config.h"
+#include "general_config.h"
 #include <format>
 #include <cmath>
 
@@ -46,7 +45,6 @@ void ImGuiGameboyX::resetInstance() {
 
 ImGuiGameboyX::ImGuiGameboyX(machine_information& _machine_info, game_status& _game_status) : machineInfo(_machine_info), gameState(_game_status) {
     NFD_Init();
-    create_fs_hierarchy();
     if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
         InitGamesGuiCtx();
     }
@@ -468,6 +466,11 @@ void ImGuiGameboyX::ShowHardwareInfo() {
             ImGui::TextUnformatted("CPU Clock");
             ImGui::TableNextColumn();
             ImGui::TextUnformatted((to_string(machineInfo.current_frequency) + " MHz").c_str());
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Speed Mode");
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(to_string(machineInfo.current_speedmode).c_str());
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
@@ -1014,6 +1017,9 @@ void ImGuiGameboyX::EventKeyDown(const SDL_Keycode& _key) {
     case SDLK_a:
         sdlkADown = true;
         break;
+    case SDLK_F3:
+        machineInfo.pause_execution = true;
+        break;
     case SDLK_LSHIFT:
         sdlkShiftDown = true;
         break;
@@ -1052,7 +1058,7 @@ void ImGuiGameboyX::EventKeyUp(const SDL_Keycode& _key) {
         ActionRequestReset();
         break;
     case SDLK_F3:
-        machineInfo.pause_execution = false;
+        machineInfo.pause_execution = true;
         break;
     default:
         break;
@@ -1085,14 +1091,4 @@ void ImGuiGameboyX::ProcessMainMenuKeys() {
         ActionDeleteGames();
         sdlkDelDown = false;
     }
-}
-
-/* ***********************************************************************************************************
-    HELPER FUNCTIONS
-*********************************************************************************************************** */
-static void create_fs_hierarchy() {
-    check_and_create_config_folders();
-    check_and_create_config_files();
-    check_and_create_log_folders();
-    Cartridge::check_and_create_rom_folder();
 }

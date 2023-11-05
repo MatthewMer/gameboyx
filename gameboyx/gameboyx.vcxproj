@@ -178,7 +178,6 @@
     <ClCompile Include="GraphicsUnitSM83.cpp" />
     <ClCompile Include="helper_functions.cpp" />
     <ClCompile Include="include\simple_logger.cpp" />
-    <ClCompile Include="io_config.h" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="game_info.cpp" />
     <ClCompile Include="ImGuiGameboyX.cpp" />
@@ -200,7 +199,7 @@
     <ClInclude Include="GraphicsUnitSM83.h" />
     <ClInclude Include="helper_functions.h" />
     <ClInclude Include="ImGuiGameboyX.h" />
-    <ClInclude Include="imguigameboyx_config.h" />
+    <ClInclude Include="general_config.h" />
     <ClInclude Include="include\logger.h" />
     <ClInclude Include="MemoryBase.h" />
     <ClInclude Include="MemorySM83.h" />

@@ -5,7 +5,7 @@
 
 #include "defs.h"
 #include "ScrollableTable.h"
-#include "imguigameboyx_config.h"
+#include "general_config.h"
 
 template <class T> using MemoryBufferEntry = std::pair<std::string, std::vector<T>>;	// memory buffer: type, vector<Table>
 template <class T> using MemoryBuffer = std::vector<MemoryBufferEntry<T>>;				// memory buffer: type, vector<Table>
@@ -27,6 +27,7 @@ struct machine_information {
 	// current hardware state
 	bool track_hardware_info = false;
 	float current_frequency = .0f;
+	int current_speedmode = 1;
 	float current_framerate = .0f;
 	int wram_bank_selected = 0;
 	int wram_bank_num = 0;
@@ -36,7 +37,6 @@ struct machine_information {
 	int rom_bank_num = 0;
 	int vram_bank_selected = 0;
 	int vram_bank_num = 0;
-	int current_speed = 1;
 
 	MemoryBuffer<ScrollableTable<memory_data>> memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
 
@@ -51,6 +51,7 @@ struct machine_information {
 		current_instruction = "";
 
 		current_frequency = .0f;
+		current_speedmode = 1;
 		current_framerate = .0f;
 		wram_bank_selected = 0;
 		wram_bank_num = 0;

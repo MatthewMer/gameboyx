@@ -1,9 +1,30 @@
 #include "VulkanMgr.h"
 
 #include "logger.h"
-#include "imguigameboyx_config.h"
+#include "general_config.h"
+#include "helper_functions.h"
 
 #include <format>
+
+using namespace std;
+
+#define VK_VALIDATION "VK_LAYER_KHRONOS_validation"
+
+const vector<const char*> VK_ENABLED_LAYERS = {
+	"VK_LAYER_KHRONOS_validation"
+};
+
+const vector<string> SHADER_EXTS = {
+	"glsl",
+	"hlsl"
+};
+
+bool check_shader_ext(const string& _ext) {
+	for (const auto& n : SHADER_EXTS) {
+		if (n.compare(_ext) == 0) { return true; }
+	}
+	return false;
+}
 
 void VulkanMgr::RenderFrame() {
 	if (vkResetFences(device, 1, &fence) != VK_SUCCESS) {
@@ -578,4 +599,29 @@ void VulkanMgr::WaitIdle() {
 
 void VulkanMgr::NextFrameImGui() const {
 	ImGui_ImplVulkan_NewFrame();
+}
+
+void VulkanMgr::PrecompileShaders() {
+	vector<string> files = get_files_in_path(SHADER_FOLDER);
+	if (files.empty()) { return; }
+
+	LOG_WARN("shaders:");
+
+	shaders = vector<string>();
+	for (const auto& n : files) {
+		const auto file_parts = split_string(n, ".");
+
+		if (check_shader_ext(file_parts.back())) {
+			shaders.emplace_back(n);
+			LOG_INFO(shaders.back());
+		}
+	}
+}
+
+bool VulkanMgr::InitShaderModule(const string& _shader) {
+	//shaderModules.emplace_back();
+
+	
+
+
 }

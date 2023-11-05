@@ -4,27 +4,37 @@
 #include "defs.h"
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 /* ***********************************************************************************************************
-    GBX DEFINES
+    STORAGE DEFINES
 *********************************************************************************************************** */
 #define _DEBUG_GBX
 
+inline const std::string ROM_FOLDER = "/rom/";
+
+inline const std::string CONFIG_FOLDER = "/config/";
+inline const std::string GAMES_CONFIG_FILE = "games.ini";
+
+inline const std::string LOG_FOLDER = "/logs/";
+inline const std::string DEBUG_INSTR_LOG = "_instructions.log";
+
+inline const std::string SHADER_FOLDER = "/shader/";
+//inline const std::string SHADER_BYTECODE_FOLDER = "/shaderbytecode/";
+
+/* ***********************************************************************************************************
+    GRAPHICS BACKEND
+*********************************************************************************************************** */
 #define GBX_RELEASE					"PRE-ALPHA"
 #define GBX_VERSION_MAJOR			0
 #define GBX_VERSION_MINOR			0
 #define GBX_VERSION_PATCH           0
 #define GBX_AUTHOR					"MatthewMer"
 
-#define VK_VALIDATION "VK_LAYER_KHRONOS_validation"
-inline const std::vector<const char*> VK_ENABLED_LAYERS = {
-    "VK_LAYER_KHRONOS_validation"
-};
-
 inline const u16 ID_NVIDIA = 0x10DE;
 inline const u16 ID_AMD = 0x1002;
 
-inline const std::vector<std::pair<uint32_t, std::string>> VENDOR_IDS = {
+inline const std::vector<std::pair<u32, std::string>> VENDOR_IDS = {
     {0x1002, "AMD"},
     {0x10DE, "NVIDIA"},
     {0x1043, "ASUS"},
@@ -58,7 +68,7 @@ inline std::string get_vendor(const u16& _ven_id) {
 }
 
 /* ***********************************************************************************************************
-    IMGUI GBX CONSTANTS/DEFINES
+    IMGUI EMULATOR
 *********************************************************************************************************** */
 #define GUI_WIN_WIDTH               1280
 #define GUI_WIN_HEIGHT              720
@@ -121,13 +131,12 @@ inline const std::vector<std::pair<std::string, float>> DEBUG_MEM_COLUMNS{
 
 inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Color" };
 
-#define BG_COL 0.1f
-#define CLR_COL 0.0f
-inline const ImVec4 IMGUI_BG_COLOR(BG_COL, BG_COL, BG_COL, 1.0f);
-inline const ImVec4 IMGUI_CLR_COLOR(CLR_COL, CLR_COL, CLR_COL, 1.0f);
+#define BG_CHANNEL_COL .1f
+inline const ImVec4 IMGUI_BG_COLOR(BG_CHANNEL_COL, BG_CHANNEL_COL, BG_CHANNEL_COL, 1.f);
 
-inline const ImVec4 IMGUI_RED_COL(1.0f, .0f, .0f, 1.0f);
-inline const ImVec4 IMGUI_GREEN_COL(.0f, 1.0f, .0f, 1.0f);
+inline const ImVec4 IMGUI_RED_COL(1.f, .0f, .0f, 1.f);
+inline const ImVec4 IMGUI_GREEN_COL(.0f, 1.f, .0f, 1.f);
+inline const ImVec4 IMGUI_BLUE_COLOR(.0f, .0f, 1.f, 1.f);
 
 inline const float OVERLAY_DISTANCE = 10.0f;
 
