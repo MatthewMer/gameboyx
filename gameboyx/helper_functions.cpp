@@ -65,6 +65,7 @@ vector<string> get_files_in_path(const string& _path_rel) {
     auto files = vector<string>();
 
     for (const auto& n : fs::directory_iterator(get_current_path() + _path_rel)) {
+        if (n.is_directory()) { continue; }
         files.emplace_back(n.path().generic_string());
     }
     

@@ -11,15 +11,6 @@
 #include <vector>
 #include <string>
 
-struct vk_shader_context {
-	char* shader_src = nullptr;
-	size_t shader_src_size = 0;
-	shaderc_shader_kind type;
-	char* file_name = nullptr;
-	char* entry_point_name = nullptr;
-	shaderc_compile_options_t options;
-};
-
 class VulkanMgr
 {
 public:
@@ -101,6 +92,7 @@ private:
 	std::vector<std::pair<shaderc_shader_kind, std::string>> shaders;
 	std::vector<VkShaderModule> shaderModules;
 	shaderc_compiler_t compiler = shaderc_compiler_initialize();
+	shaderc_compile_options_t options = shaderc_compile_options_initialize();
 
 	// imgui
 	VkDescriptorPool imguiDescriptorPool;

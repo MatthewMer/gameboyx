@@ -92,7 +92,7 @@ bool Cartridge::read_rom_to_buffer(const game_info& _game_ctx, std::vector<u8>& 
 
 	ifstream is(full_file_path, ios::binary | ios::beg);
 	if (!is) { return false; }
-	_vec_rom =  vector<u8>((istreambuf_iterator<char>(is)), istreambuf_iterator<char>());
+	_vec_rom =  vector<u8>(istreambuf_iterator<char>(is), istreambuf_iterator<char>());
 	is.close();
 	
 	return true;

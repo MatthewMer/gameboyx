@@ -5,6 +5,7 @@
 #include "helper_functions.h"
 #include "data_io.h"
 
+#include <unordered_map>
 #include <format>
 
 using namespace std;
@@ -15,29 +16,11 @@ const vector<const char*> VK_ENABLED_LAYERS = {
 	"VK_LAYER_KHRONOS_validation"
 };
 
-const string GLSL_VERTSHADER_RESULT = "gl_Position";
-
-shaderc_shader_kind get_shader_type(vector<string>& _src) {
-	for (const auto& n : _src) {
-		if (n.find(GLSL_VERTSHADER_RESULT) != string::npos) {
-			return shaderc_glsl_default_vertex_shader;
-		}
-	}
-	return shaderc_glsl_default_fragment_shader;
-}
-
-// for now just use glsl
-const vector<string> SHADER_EXTS = {
-	"glsl"//,
-	//"hlsl"
+const unordered_map<string, shaderc_shader_kind> SHADER_TYPES = {
+	{"vert", shaderc_glsl_default_vertex_shader},
+	{"frag", shaderc_glsl_default_fragment_shader},
+	{"comp", shaderc_glsl_default_compute_shader}
 };
-
-bool check_shader_ext(const string& _ext) {
-	for (const auto& n : SHADER_EXTS) {
-		if (n.compare(_ext) == 0) { return true; }
-	}
-	return false;
-}
 
 void VulkanMgr::RenderFrame() {
 	if (vkResetFences(device, 1, &fence) != VK_SUCCESS) {
@@ -628,15 +611,11 @@ void VulkanMgr::EnumerateShaders() {
 	for (const auto& n : items) {
 		const auto file_ext = split_string(n, ".").back();
 
-		if (check_shader_ext(file_ext)) {
-			auto file_content = vector<string>();
-			if (!read_data(file_content, n, false)) {
-				LOG_ERROR("[vulkan] couldn't read shader source: ", n);
-			}
-
-			shaders.emplace_back(get_shader_type(file_content), n);
-			// TODO: remove, just for testing
-			LOG_WARN((shaders.back().first == shaderc_glsl_default_vertex_shader ? "VERTEX" : "FRAGMENT"), " shader: ", shaders.back().second);
+		if (SHADER_TYPES.contains(file_ext)) {
+			shaders.emplace_back(SHADER_TYPES.at(file_ext), n);
+		}
+		else {
+			LOG_WARN("[vulkan] unknown shader type: ", n);
 		}
 	}
 	LOG_INFO("[vulkan] ", shaders.size(), " shader source file(s) found");
@@ -653,9 +632,41 @@ void VulkanMgr::EnumerateShaders() {
 }
 
 void VulkanMgr::CompileNextShader() {
-	vk_shader_context shader_ctx = {};
+	if (graphicsInfo.shaders_compiled == graphicsInfo.shaders_total) {
+		graphicsInfo.shaders_compilation_finished = true;
+		shaderc_compiler_release(compiler);
+		return;
+	}
 
-	//shaderc_compilation_result_t result = shaderc_compile_into_spv();
+	auto source_text_vec = vector<char>();
+	if (!read_data(source_text_vec, shaders[graphicsInfo.shaders_compiled].second, false)) {
+		LOG_ERROR("[vulkan] read shader source");
+		return;
+	}
+
+	const char* source_text = source_text_vec.data();
+	size_t source_size = source_text_vec.size();
+	shaderc_shader_kind type = shaders[graphicsInfo.shaders_compiled].first;
+	const char* file_name = split_string(shaders[graphicsInfo.shaders_compiled].second, "/").back().c_str();
+
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, source_text, source_size, type, file_name, "main", nullptr);
+	
+	size_t error_num = shaderc_result_get_num_errors(result);
+	size_t warning_num = shaderc_result_get_num_warnings(result);
+	if (error_num > 0) {
+		const char* error = shaderc_result_get_error_message(result);
+		LOG_ERROR("[vulkan] compilation of ", shaders[graphicsInfo.shaders_compiled].second, " ", error);
+	}
+
+	size_t size = shaderc_result_get_length(result);
+	const char* byte_code = shaderc_result_get_bytes(result);
+	
+	for (size_t i = 0; i < size; i++) {
+		printf("%.02x ", *(byte_code + i));
+	}
+	
+	shaderc_result_release(result);
+	graphicsInfo.shaders_compiled++;
 }
 
 bool VulkanMgr::InitShaderModule() {

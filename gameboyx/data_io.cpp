@@ -76,7 +76,7 @@ bool read_data(vector<string>& _input, const string& _file_path, const bool& _re
 
     ifstream is(file_path, ios::beg);
     if (!is) {
-        LOG_WARN("Couldn't read ", file_path);
+        LOG_WARN("Couldn't open ", file_path);
         return false;
     }
 
@@ -88,6 +88,19 @@ bool read_data(vector<string>& _input, const string& _file_path, const bool& _re
 
     is.close();
     return true;
+}
+
+bool read_data(std::vector<char>& _input, const std::string& _file_path, const bool& _relative) {
+    string file_path = check_and_create_file(_file_path, _relative);
+
+    ifstream is(file_path, ios::beg);
+    if (!is) {
+        LOG_WARN("Couldn't open ", file_path);
+        return false;
+    }
+
+    _input = vector<char>();
+    _input = vector<char>(istreambuf_iterator<char>(is), istreambuf_iterator<char>());
 }
 
 bool write_data(const vector<string>& _output, const string& _file_path_rel, bool _rewrite) {
