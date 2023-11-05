@@ -235,6 +235,7 @@ void check_and_create_log_folders() {
     check_and_create_path(LOG_FOLDER);
 }
 
-void check_and_create_shader_folder() {
+void check_and_create_shader_folders() {
     check_and_create_path(SHADER_FOLDER);
+    check_and_create_path(SPIR_V_FOLDER);
 }

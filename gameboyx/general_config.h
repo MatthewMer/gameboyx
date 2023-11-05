@@ -20,6 +20,7 @@ inline const std::string LOG_FOLDER = "/logs/";
 inline const std::string DEBUG_INSTR_LOG = "_instructions.log";
 
 inline const std::string SHADER_FOLDER = "/shader/";
+inline const std::string SPIR_V_FOLDER = "/shader/spir_v/";
 //inline const std::string SHADER_BYTECODE_FOLDER = "/shaderbytecode/";
 
 /* ***********************************************************************************************************

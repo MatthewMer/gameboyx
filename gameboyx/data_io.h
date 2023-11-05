@@ -12,4 +12,4 @@ bool write_to_debug_log(const std::string& _output, const std::string& _file_pat
 void check_and_create_config_folders();
 void check_and_create_config_files();
 void check_and_create_log_folders();
-void check_and_create_shader_folder();
+void check_and_create_shader_folders();

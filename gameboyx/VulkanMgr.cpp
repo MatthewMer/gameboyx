@@ -601,20 +601,25 @@ void VulkanMgr::NextFrameImGui() const {
 	ImGui_ImplVulkan_NewFrame();
 }
 
-void VulkanMgr::PrecompileShaders() {
+void VulkanMgr::CompileShadersToSpirV() {
+	for (auto& n : shaderModules) {
+		vkDestroyShaderModule(device, n, nullptr);
+	}
+
 	vector<string> files = get_files_in_path(SHADER_FOLDER);
 	if (files.empty()) { return; }
 
-	LOG_WARN("shaders:");
-
 	shaders = vector<string>();
 	for (const auto& n : files) {
-		const auto file_parts = split_string(n, ".");
+		const auto file_ext = split_string(n, ".").back();
 
-		if (check_shader_ext(file_parts.back())) {
+		if (check_shader_ext(file_ext)) {
 			shaders.emplace_back(n);
-			LOG_INFO(shaders.back());
 		}
+	}
+
+	if (!shaders.empty()) {
+
 	}
 }
 

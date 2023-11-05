@@ -83,8 +83,8 @@ int main(int, char**)
     // Main loop
     LOG_INFO("Initialization completed");
 
-    int width, height;
     u32 win_min;
+    bool shaders_compiled = false;
 
     bool running = true;
     while (running)
@@ -286,6 +286,6 @@ void create_fs_hierarchy() {
     check_and_create_config_folders();
     check_and_create_config_files();
     check_and_create_log_folders();
-    check_and_create_shader_folder();
+    check_and_create_shader_folders();
     Cartridge::check_and_create_rom_folder();
 }

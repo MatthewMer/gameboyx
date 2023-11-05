@@ -24,7 +24,7 @@ public:
 	bool InitFrameBuffers();
 	bool InitCommandBuffers();
 
-	void PrecompileShaders();
+	void CompileShadersToSpirV();
 	bool InitShaderModule(const std::string& _shader);
 
 	bool InitImgui();
