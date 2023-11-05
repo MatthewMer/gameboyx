@@ -9,6 +9,9 @@ bool delete_games_from_config(std::vector<game_info>& _games, const std::string&
 
 bool write_to_debug_log(const std::string& _output, const std::string& _file_path_rel, const bool& _rewrite);
 
+bool read_data(std::vector<std::string>& _input, const std::string& _file_path_rel, const bool& _relative);
+bool write_data(const std::vector<std::string>& _output, const std::string& _file_path_rel, bool _rewrite);
+
 void check_and_create_config_folders();
 void check_and_create_config_files();
 void check_and_create_log_folders();

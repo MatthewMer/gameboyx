@@ -10,17 +10,13 @@
 
 using namespace std;
 
-
-bool read_data(vector<string>& _config_input, const string& _config_path_rel);
-bool write_data(const vector<string>& _games, const string& _config_path_rel, bool _rewrite);
-
 void games_from_string(vector<game_info>& _games, const vector<string>& _config_games);
 void games_to_string(const vector<game_info>& _games, vector<string>& _config_games);
 bool filter_parameter_game_info_enum(game_info& _game_ctx, const vector<string>& _parameter);
 
 
 bool read_games_from_config(vector<game_info>& _games, const string& _config_path_rel) {
-    if (auto config_games = vector<string>(); read_data(config_games, _config_path_rel)) {
+    if (auto config_games = vector<string>(); read_data(config_games, _config_path_rel, true)) {
         games_from_string(_games, config_games);
         return true;
     }
@@ -75,18 +71,19 @@ bool write_to_debug_log(const string& _output, const string& _file_path_rel, con
 }
 
 
-bool read_data(vector<string>& _config_input, const string& _config_path_rel) {
-    string full_config_path = check_and_create_file(_config_path_rel);
+bool read_data(vector<string>& _input, const string& _file_path, const bool& _relative) {
+    string file_path = check_and_create_file(_file_path, _relative);
 
-    ifstream is(full_config_path, ios::beg);
-    if (!is) { 
-        LOG_WARN("Couldn't read .", _config_path_rel);
-        return false; 
+    ifstream is(file_path, ios::beg);
+    if (!is) {
+        LOG_WARN("Couldn't read ", file_path);
+        return false;
     }
+
     string line;
-    _config_input.clear();
+    _input.clear();
     while (getline(is, line)) {
-        _config_input.push_back(line);
+        _input.push_back(line);
     }
 
     is.close();
@@ -94,7 +91,7 @@ bool read_data(vector<string>& _config_input, const string& _config_path_rel) {
 }
 
 bool write_data(const vector<string>& _output, const string& _file_path_rel, bool _rewrite) {
-    string full_config_path = check_and_create_file(_file_path_rel);
+    string full_config_path = check_and_create_file(_file_path_rel, true);
     
     ofstream os(full_config_path, (_rewrite ? ios::trunc : ios::app));
     if (!os.is_open()) {
@@ -228,7 +225,7 @@ void check_and_create_config_folders() {
 }
 
 void check_and_create_config_files() {
-    check_and_create_file(CONFIG_FOLDER + GAMES_CONFIG_FILE);
+    check_and_create_file(CONFIG_FOLDER + GAMES_CONFIG_FILE, true);
 }
 
 void check_and_create_log_folders() {

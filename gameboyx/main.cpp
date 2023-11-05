@@ -46,6 +46,9 @@ void create_fs_hierarchy();
 int main(int, char**)
 {
     create_fs_hierarchy();
+    auto machine_info = machine_information();
+    auto game_stat = game_status();
+    auto graphics_info = graphics_information();
 
     // init sdl
     SDL_Window* window = nullptr;
@@ -68,23 +71,22 @@ int main(int, char**)
         LOG_INFO("[SDL] window created");
     }
 
-    auto graphics_mgr = VulkanMgr(window);
+    auto graphics_mgr = VulkanMgr(window, graphics_info);
     if (!sdl_init_vulkan(graphics_mgr, window)) { return -2; }
 
     if (!sdl_vulkan_start(graphics_mgr)) { return -3; }
 
     if (!imgui_init(graphics_mgr)) { return -4; }
 
-    auto machine_info = machine_information();
-    auto game_stat = game_status();
-    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat);
+    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat, graphics_info);
     VHardwareMgr* vhwmgr_obj = nullptr;
+
+    graphics_mgr.EnumerateShaders();
 
     // Main loop
     LOG_INFO("Initialization completed");
 
     u32 win_min;
-    bool shaders_compiled = false;
 
     bool running = true;
     while (running)
@@ -174,8 +176,12 @@ int main(int, char**)
             machine_info.reset_machine_information();
         }
 
+        if (!graphics_info.shaders_compilation_finished) {
+            graphics_mgr.CompileNextShader();
+        }
+
         // run virtual hardware
-        if (game_stat.game_running) {
+        if (game_stat.game_running && vhwmgr_obj != nullptr) {
             vhwmgr_obj->ProcessNext();
         }
 

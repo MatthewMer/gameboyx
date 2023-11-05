@@ -104,7 +104,7 @@ bool Cartridge::copy_rom_to_rom_folder(game_info& game_ctx, std::vector<u8>& _ve
 	LOG_INFO("Copying file to .", ROM_FOLDER);
 
 	check_and_create_rom_folder();
-	check_and_create_file(ROM_FOLDER + game_ctx.file_name);
+	check_and_create_file(ROM_FOLDER + game_ctx.file_name, true);
 	
 	ofstream os(_new_file_path + game_ctx.file_name, ios::binary | ios::beg);
 	if (!os) { return false; }

@@ -13,7 +13,7 @@
 class ImGuiGameboyX {
 public:
 	// singleton instance access
-	static ImGuiGameboyX* getInstance(machine_information& _machine_info, game_status& _game_status);
+	static ImGuiGameboyX* getInstance(machine_information& _machine_info, game_status& _game_status, graphics_information& _graphics_info);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -37,7 +37,7 @@ public:
 
 private:
 	// constructor
-	ImGuiGameboyX(machine_information& _machine_info, game_status& _game_status);
+	ImGuiGameboyX(machine_information& _machine_info, game_status& _game_status, graphics_information& _graphics_info);
 	static ImGuiGameboyX* instance;
 	~ImGuiGameboyX() = default;
 
@@ -148,6 +148,9 @@ private:
 
 	// game status variables
 	game_status& gameState;
+
+	// communication with graphics backend
+	graphics_information& graphicsInfo;
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();

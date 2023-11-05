@@ -73,3 +73,9 @@ struct game_status {
 	int game_to_start = 0;
 	bool request_reset = false;
 };
+
+struct graphics_information {
+	bool shaders_compilation_finished = false;
+	int shaders_total = 0;
+	int shaders_compiled = 0;
+};

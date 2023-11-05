@@ -25,13 +25,13 @@ static void create_fs_hierarchy();
 *********************************************************************************************************** */
 ImGuiGameboyX* ImGuiGameboyX::instance = nullptr;
 
-ImGuiGameboyX* ImGuiGameboyX::getInstance(machine_information& _machine_info, game_status& _game_status) {
+ImGuiGameboyX* ImGuiGameboyX::getInstance(machine_information& _machine_info, game_status& _game_status, graphics_information& _graphics_info) {
     if (instance != nullptr) {
         delete instance;
         instance = nullptr;
     }
 
-    instance = new ImGuiGameboyX(_machine_info, _game_status);
+    instance = new ImGuiGameboyX(_machine_info, _game_status, _graphics_info);
     return instance;
 }
 
@@ -43,7 +43,8 @@ void ImGuiGameboyX::resetInstance() {
     instance = nullptr;
 }
 
-ImGuiGameboyX::ImGuiGameboyX(machine_information& _machine_info, game_status& _game_status) : machineInfo(_machine_info), gameState(_game_status) {
+ImGuiGameboyX::ImGuiGameboyX(machine_information& _machine_info, game_status& _game_status, graphics_information& _graphics_info) 
+    : machineInfo(_machine_info), gameState(_game_status), graphicsInfo(_graphics_info){
     NFD_Init();
     if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
         InitGamesGuiCtx();

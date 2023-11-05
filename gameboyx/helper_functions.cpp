@@ -25,8 +25,14 @@ vector<string> split_string(const string& _in_string, const string& _delimiter) 
     return vec_in_string;
 }
 
-string check_and_create_file(const string& _path_to_file_rel) {
-    string full_file_path = get_current_path() + _path_to_file_rel;
+string check_and_create_file(const string& _path_to_file, const bool& _relative) {
+    string full_file_path;
+    if (_relative) {
+        full_file_path = get_current_path() + _path_to_file;
+    }
+    else {
+        full_file_path = _path_to_file;
+    }
 
     if (!fs::exists(full_file_path)) {
         ofstream(full_file_path).close();

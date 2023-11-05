@@ -3,16 +3,29 @@
 #include <vulkan/vulkan.h>
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include <shaderc/shaderc.h>
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_sdl2.h"
+#include "information_structs.h"
 
 #include <vector>
 #include <string>
 
+struct vk_shader_context {
+	char* shader_src = nullptr;
+	size_t shader_src_size = 0;
+	shaderc_shader_kind type;
+	char* file_name = nullptr;
+	char* entry_point_name = nullptr;
+	shaderc_compile_options_t options;
+};
+
 class VulkanMgr
 {
 public:
-	explicit VulkanMgr(SDL_Window* _window) : window(_window) {};
+	explicit VulkanMgr(SDL_Window* _window, graphics_information& _graphics_info) 
+		: window(_window), graphicsInfo(_graphics_info)
+	{};
 	~VulkanMgr() = default;
 
 	void RenderFrame();
@@ -24,8 +37,9 @@ public:
 	bool InitFrameBuffers();
 	bool InitCommandBuffers();
 
-	void CompileShadersToSpirV();
-	bool InitShaderModule(const std::string& _shader);
+	void EnumerateShaders();
+	void CompileNextShader();
+	bool InitShaderModule();
 
 	bool InitImgui();
 
@@ -75,10 +89,8 @@ private:
 	VkRenderPass renderPass;
 	VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT;
 
-	// framebuffer
-	std::vector<VkFramebuffer> frameBuffers;
-
 	// buffers
+	std::vector<VkFramebuffer> frameBuffers;
 	VkCommandBuffer commandBuffer;
 	VkCommandPool commandPool;
 
@@ -86,8 +98,9 @@ private:
 	VkFence fence;
 
 	// graphics pipeline
-	std::vector<std::string> shaders;
+	std::vector<std::pair<shaderc_shader_kind, std::string>> shaders;
 	std::vector<VkShaderModule> shaderModules;
+	shaderc_compiler_t compiler = shaderc_compiler_initialize();
 
 	// imgui
 	VkDescriptorPool imguiDescriptorPool;
@@ -95,6 +108,8 @@ private:
 	// gpu info
 	std::string vendor;
 	std::string driverVersion;
+
+	graphics_information& graphicsInfo;
 
 	// misc
 	VkClearValue clearColor = { 0.f, 0.f, 0.f, 1.f };
