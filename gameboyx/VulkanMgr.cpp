@@ -5,6 +5,7 @@
 #include "helper_functions.h"
 
 #include <format>
+#include <shaderc/shaderc.h>
 
 using namespace std;
 
@@ -628,5 +629,5 @@ bool VulkanMgr::InitShaderModule(const string& _shader) {
 
 	
 
-
+	return true;
 }

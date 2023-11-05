@@ -9,8 +9,6 @@
 /* ***********************************************************************************************************
     STORAGE DEFINES
 *********************************************************************************************************** */
-#define _DEBUG_GBX
-
 inline const std::string ROM_FOLDER = "/rom/";
 
 inline const std::string CONFIG_FOLDER = "/config/";
@@ -21,17 +19,10 @@ inline const std::string DEBUG_INSTR_LOG = "_instructions.log";
 
 inline const std::string SHADER_FOLDER = "/shader/";
 inline const std::string SPIR_V_FOLDER = "/shader/spir_v/";
-//inline const std::string SHADER_BYTECODE_FOLDER = "/shaderbytecode/";
 
 /* ***********************************************************************************************************
     GRAPHICS BACKEND
 *********************************************************************************************************** */
-#define GBX_RELEASE					"PRE-ALPHA"
-#define GBX_VERSION_MAJOR			0
-#define GBX_VERSION_MINOR			0
-#define GBX_VERSION_PATCH           0
-#define GBX_AUTHOR					"MatthewMer"
-
 inline const u16 ID_NVIDIA = 0x10DE;
 inline const u16 ID_AMD = 0x1002;
 
@@ -71,6 +62,14 @@ inline std::string get_vendor(const u16& _ven_id) {
 /* ***********************************************************************************************************
     IMGUI EMULATOR
 *********************************************************************************************************** */
+//#define _DEBUG_GBX
+
+#define GBX_RELEASE					"PRE-ALPHA"
+#define GBX_VERSION_MAJOR			0
+#define GBX_VERSION_MINOR			0
+#define GBX_VERSION_PATCH           0
+#define GBX_AUTHOR					"MatthewMer"
+
 #define GUI_WIN_WIDTH               1280
 #define GUI_WIN_HEIGHT              720
 
