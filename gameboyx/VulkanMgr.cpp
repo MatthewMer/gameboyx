@@ -598,7 +598,7 @@ void VulkanMgr::NextFrameImGui() const {
 }
 
 void VulkanMgr::EnumerateShaders() {
-	LOG_INFO("[vulkan] enumerating shaders");
+	LOG_INFO("[vulkan] enumerating shaderSourceFiles");
 
 	for (auto& n : shaderModules) {
 		vkDestroyShaderModule(device, n, nullptr);
@@ -606,67 +606,75 @@ void VulkanMgr::EnumerateShaders() {
 	shaderModules.clear();
 
 	vector<string> items = get_files_in_path(SHADER_FOLDER);
-	shaders = vector<pair<shaderc_shader_kind, string>>();
+	shaderSourceFiles = vector<pair<shaderc_shader_kind, string>>();
 
 	for (const auto& n : items) {
 		const auto file_ext = split_string(n, ".").back();
 
 		if (SHADER_TYPES.contains(file_ext)) {
-			shaders.emplace_back(SHADER_TYPES.at(file_ext), n);
+			shaderSourceFiles.emplace_back(SHADER_TYPES.at(file_ext), n);
 		}
 		else {
 			LOG_WARN("[vulkan] unknown shader type: ", n);
 		}
 	}
-	LOG_INFO("[vulkan] ", shaders.size(), " shader source file(s) found");
+	LOG_INFO("[vulkan] ", shaderSourceFiles.size(), " shader source file(s) found");
 
-	if (shaders.empty()) {
+	if (shaderSourceFiles.empty()) {
 		graphicsInfo.shaders_compilation_finished = true;
 		return;
 	}
 	else {
 		graphicsInfo.shaders_compiled = 0;
-		graphicsInfo.shaders_total = (int)(shaders.size());
+		graphicsInfo.shaders_total = (int)(shaderSourceFiles.size());
 		graphicsInfo.shaders_compilation_finished = false;
+
+		compiler = shaderc_compiler_initialize();
+		options = shaderc_compile_options_initialize();
+		shaderc_compile_options_set_auto_map_locations(options, true);
 	}
 }
 
 void VulkanMgr::CompileNextShader() {
-	if (graphicsInfo.shaders_compiled == graphicsInfo.shaders_total) {
-		graphicsInfo.shaders_compilation_finished = true;
-		shaderc_compiler_release(compiler);
-		return;
-	}
-
 	auto source_text_vec = vector<char>();
-	if (!read_data(source_text_vec, shaders[graphicsInfo.shaders_compiled].second, false)) {
+	if (!read_data(source_text_vec, shaderSourceFiles[graphicsInfo.shaders_compiled].second, false)) {
 		LOG_ERROR("[vulkan] read shader source");
 		return;
 	}
 
 	const char* source_text = source_text_vec.data();
 	size_t source_size = source_text_vec.size();
-	shaderc_shader_kind type = shaders[graphicsInfo.shaders_compiled].first;
-	const char* file_name = split_string(shaders[graphicsInfo.shaders_compiled].second, "/").back().c_str();
+	shaderc_shader_kind type = shaderSourceFiles[graphicsInfo.shaders_compiled].first;
+	string file_name_str = split_string(shaderSourceFiles[graphicsInfo.shaders_compiled].second, "/").back();
+	const char* file_name = file_name_str.c_str();
 
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, source_text, source_size, type, file_name, "main", nullptr);
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, source_text, source_size, type, file_name, "main", options);
 	
 	size_t error_num = shaderc_result_get_num_errors(result);
-	size_t warning_num = shaderc_result_get_num_warnings(result);
+	//size_t warning_num = shaderc_result_get_num_warnings(result);
 	if (error_num > 0) {
 		const char* error = shaderc_result_get_error_message(result);
-		LOG_ERROR("[vulkan] compilation of ", shaders[graphicsInfo.shaders_compiled].second, " ", error);
+		LOG_ERROR("[vulkan] compilation of ", shaderSourceFiles[graphicsInfo.shaders_compiled].second, " ", error);
+		graphicsInfo.shaders_compiled++;
+		shaderc_result_release(result);
+		return;
 	}
 
 	size_t size = shaderc_result_get_length(result);
 	const char* byte_code = shaderc_result_get_bytes(result);
-	
-	for (size_t i = 0; i < size; i++) {
-		printf("%.02x ", *(byte_code + i));
-	}
+	const vector<char> byte_code_vec(byte_code, byte_code + size);
+	string out_file_path = SPIR_V_FOLDER + split_string(file_name_str, ".").front() + ".spv";
+	write_data(byte_code_vec, out_file_path, true, true);
 	
 	shaderc_result_release(result);
 	graphicsInfo.shaders_compiled++;
+
+	if (graphicsInfo.shaders_compiled == graphicsInfo.shaders_total) {
+		graphicsInfo.shaders_compilation_finished = true;
+
+		shaderc_compiler_release(compiler);
+		shaderc_compile_options_release(options);
+	}
 }
 
 bool VulkanMgr::InitShaderModule() {

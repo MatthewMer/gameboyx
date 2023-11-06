@@ -1,4 +1,11 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	This class represents the graphics backend (currently jsut Vulkan Graphics API).
+*	It manages shaders, framebuffers, commandbuffers, swapchain, etc. (everything related to rendering on the GPU)
+*/
 
 #include <vulkan/vulkan.h>
 #include <SDL.h>
@@ -89,10 +96,10 @@ private:
 	VkFence fence;
 
 	// graphics pipeline
-	std::vector<std::pair<shaderc_shader_kind, std::string>> shaders;
+	std::vector<std::pair<shaderc_shader_kind, std::string>> shaderSourceFiles;
 	std::vector<VkShaderModule> shaderModules;
-	shaderc_compiler_t compiler = shaderc_compiler_initialize();
-	shaderc_compile_options_t options = shaderc_compile_options_initialize();
+	shaderc_compiler_t compiler;
+	shaderc_compile_options_t options;
 
 	// imgui
 	VkDescriptorPool imguiDescriptorPool;

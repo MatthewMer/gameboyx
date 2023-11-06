@@ -1,4 +1,11 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The main GUI object which passes the draw data to the imgui backend (draws the screen) and manages it's contents
+*	as well as processes parts of the user input (keyboard/mouse)
+*/
 
 #include <SDL.h>
 #include <imgui.h>

@@ -1,4 +1,11 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	This class manages all the emulated hardware and synchronizes it as well as initialization. It takes the game_info struct instance
+*	passed by the GUI object and passes it to the constructors of the hardware classes. 
+*/
 
 #include "Cartridge.h"
 #include "CoreBase.h"

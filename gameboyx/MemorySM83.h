@@ -1,4 +1,11 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The MemorySM83 memory class.
+*	This class is purely there to emulate this memory type.
+*/
 
 #include "Cartridge.h"
 #include "MemoryBase.h"

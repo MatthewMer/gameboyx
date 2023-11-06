@@ -1,4 +1,13 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The Cartridge source contains the class related to everythig with the actual ROM data of the dumped cartridge.
+*	The VHardwareMgr creates at first an Instance of this class and reads the ROM dump to a vector based on the
+*	information stored in the game_info Struct in game_info.h and reads basic information from it.
+*	That's literally the only purpose of this class.
+*/
 
 /* ***********************************************************************************************************
 	INCLUDES

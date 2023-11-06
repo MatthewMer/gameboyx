@@ -1,4 +1,11 @@
 #pragma once
+/* ***********************************************************************************************************
+    DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	game information used for GUI, reading and writing game related data to config and selecting appropriate hardware
+*   in VHardwareMgr class. Will get changed to fit every type of console, currently tied to the gameboy (color).
+*/
 
 #include "defs.h"
 #include <vector>
@@ -14,7 +21,7 @@ inline const std::string N_A = "N/A";
 inline const std::string PARAMETER_TRUE = "true";
 inline const std::string PARAMETER_FALSE = "false";
 
-enum info_types{
+enum info_types {
     NONE_INFO_TYPE,
     TITLE,
     LICENSEE,
@@ -29,14 +36,14 @@ enum info_types{
 };
 
 struct game_info {
-	std::string title = "";
+    std::string title = "";
     std::string licensee = "";
     std::string cart_type = "";
-	bool is_cgb = false;
-	bool is_sgb = false;
+    bool is_cgb = false;
+    bool is_sgb = false;
     std::string dest_code = "";
-	std::string game_ver = "";
-	bool chksum_passed = "";
+    std::string game_ver = "";
+    bool chksum_passed = "";
     std::string file_name = "";
     std::string file_path = "";
 
@@ -65,5 +72,6 @@ std::string get_cart_type(const u8& _cart_type);
 std::string get_dest_code(const u8& _dest_code);
 std::string get_info_type_string(const info_types& _info_type);
 info_types get_info_type_enum(const std::string& _info_type_string);
+bool filter_parameter_game_info_enum(game_info& _game_ctx, const std::vector<std::string>& _parameter);
 bool check_game_info_integrity(const game_info& _game_ctx);
 bool check_ext(const std::string& _file);

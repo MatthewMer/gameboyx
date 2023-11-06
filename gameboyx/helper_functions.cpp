@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include <filesystem>
 
 #include "logger.h"
 
@@ -23,53 +22,6 @@ vector<string> split_string(const string& _in_string, const string& _delimiter) 
     vec_in_string.push_back(in_string_copy);
 
     return vec_in_string;
-}
-
-string check_and_create_file(const string& _path_to_file, const bool& _relative) {
-    string full_file_path;
-    if (_relative) {
-        full_file_path = get_current_path() + _path_to_file;
-    }
-    else {
-        full_file_path = _path_to_file;
-    }
-
-    if (!fs::exists(full_file_path)) {
-        ofstream(full_file_path).close();
-    }
-    
-    return full_file_path;
-}
-
-string check_and_create_path(const string& _path_rel) {
-    string full_path = get_current_path() + _path_rel;
-    if (!fs::is_directory(full_path) || !fs::exists(full_path)) {
-        fs::create_directory(full_path);
-    }
-
-    return full_path;
-}
-
-string get_current_path() {
-    vector<string> current_path_vec = split_string(fs::current_path().string(), "\\");
-    string current_path = "";
-    for (int i = 0; i < current_path_vec.size() - 1; i++) {
-        current_path += current_path_vec[i] + "/";
-    }
-    current_path += current_path_vec.back();
-
-    return current_path;
-}
-
-vector<string> get_files_in_path(const string& _path_rel) {
-    auto files = vector<string>();
-
-    for (const auto& n : fs::directory_iterator(get_current_path() + _path_rel)) {
-        if (n.is_directory()) { continue; }
-        files.emplace_back(n.path().generic_string());
-    }
-    
-    return files;
 }
 
 string trim(const string& _in_string) {

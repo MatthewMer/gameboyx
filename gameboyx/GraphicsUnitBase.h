@@ -1,4 +1,12 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The GraphicsUnitBase class is just used to derive the different GPU types (NES, GB, ..) of the emulated hardware from it.
+*	The member methods are as generic as possible to fit every GPU type without exposing the GPUs
+*	specific internals.
+*/
 
 #include "Cartridge.h"
 

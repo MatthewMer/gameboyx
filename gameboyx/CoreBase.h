@@ -1,4 +1,12 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The CoreBase class is just used to derive the different processor types (NES, GB, ..) of the emulated hardware from it.
+*	The member methods are as generic as possible to fit every processor type without exposing the processor
+*	specific internals.
+*/
 
 #include "Cartridge.h"
 #include "MmuBase.h"

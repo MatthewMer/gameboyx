@@ -1,4 +1,12 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The MemoryBase class is just used to derive the different Memory types (NES, GB, ..) of the emulated hardware from it.
+*	The member methods are as generic as possible. The child classes are specifically tied to the different MMU and CPU types
+*	and expose the entire interals of the memory. This way CPU and MMU can interact with it much more efficiently.
+*/
 
 #include "Cartridge.h"
 #include "information_structs.h"

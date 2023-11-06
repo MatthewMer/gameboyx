@@ -1,4 +1,13 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The MmuSM83 class emulating the different Gameboy (Color) memory mappers (directly built into the cartridge).
+*	Therefor every cartridge can have a different size of ROM and RAM (or no RAM) and a optional built in RTC which
+*	lets tick the clock when gameboy is turned off and battery buffered RAM for storing save states.
+*	This class is purely there to emulate these memory mappings and extensions.
+*/
 
 #include "MmuBase.h"
 #include "Cartridge.h"

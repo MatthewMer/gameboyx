@@ -1,4 +1,11 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The SharpSM83 processor class (a mixture of the Intel 8080 and the Z80 with some additions).
+*	This class is purely there to emulate this processor.
+*/
 
 #include "CoreBase.h"
 #include "Cartridge.h"

@@ -1,4 +1,11 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The GraphicsUnitSM83 GPU class (in detail a PPU(Pixel Processing Unit), not directly a GPU in a modern context).
+*	This class is purely there to emulate this GPU.
+*/
 
 #include "GraphicsUnitBase.h"
 #include "MemorySM83.h"

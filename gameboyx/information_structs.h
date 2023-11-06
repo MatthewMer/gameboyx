@@ -1,4 +1,11 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	Different information structs (data containers) used for information passing from and to GUI without the need for an extensive usage
+*	of Getters and Setters (reduce unnecessary function call overhead and complexity)
+*/
 
 #include <queue>
 #include <string>

@@ -1,4 +1,11 @@
 #pragma once
+/* ***********************************************************************************************************
+    DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	contains defines and variabkle definitions used at various spots, mainly related to the imgui GUI layout, smaller backends
+*   or overrall information that doesn't change and could be used multiple times without being directly tied to a specific source file
+*/
 
 #include "imgui.h"
 #include "defs.h"

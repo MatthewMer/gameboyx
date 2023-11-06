@@ -1,4 +1,12 @@
 #pragma once
+/* ***********************************************************************************************************
+	DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	The MmuBase class is just used to derive the different "MMU" types (NES, GB, ..) of the emulated hardware from it.
+*	The member methods are as generic as possible to fit every memory management without exposing it's
+*	specific internals.
+*/
 
 #include "Cartridge.h"
 #include "MemoryBase.h"

@@ -1,10 +1,40 @@
 #pragma once
+/* ***********************************************************************************************************
+    DESCRIPTION
+*********************************************************************************************************** */
+/*
+*	A template class to transform imgui tables with a fixed number of tuples into scrollable tables.
+*   Most relevant data of emulated hardware could easily surpass millions of entries which effectively means
+*   passing huge arrays of strings/char* to the imgui backend each frame. This is a basic approach to circumvent this
+*   by passing just a small snippet of the entire data to the backend.
+*/
 
 #include <vector>
 #include <string>
 #include <tuple>
 
 #include "logger.h"
+
+using debug_instr_data = std::pair<std::string, std::string>;
+using register_data = std::pair<std::string, std::string>;
+
+enum memory_data_types {
+    MEM_ENTRY_ADDR,
+    MEM_ENTRY_LEN,
+    MEM_ENTRY_REF
+};
+using memory_data = std::tuple<std::string, int, u8*>;
+
+struct bank_index {
+    int bank;
+    int index;
+
+    bank_index(int _bank, int _index) : bank(_bank), index(_index) {};
+
+    constexpr bool operator==(const bank_index& n) const {
+        return (n.bank == bank) && (n.index == index);
+    }
+};
 
 // index, address, data (T)
 template <class T> using ScrollableTableEntry = std::tuple<int, T>;
