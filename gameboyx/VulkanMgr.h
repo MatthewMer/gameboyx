@@ -38,7 +38,7 @@ public:
 
 	void EnumerateShaders();
 	void CompileNextShader();
-	bool InitShaderModule(std::vector<char>& _vertex_byte_code, std::vector<char>& _fragment_byte_code, VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader);
+	bool InitShaderModules(std::vector<char>& _vertex_byte_code, std::vector<char>& _fragment_byte_code, VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader);
 
 	bool InitImgui();
 

@@ -531,11 +531,12 @@ bool VulkanMgr::InitImgui() {
 	return true;
 }
 
-bool VulkanMgr::InitShaderModule(vector<char>& _vertex_byte_code, vector<char>& _fragment_byte_code, VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader) {
+bool VulkanMgr::InitShaderModules(vector<char>& _vertex_byte_code, vector<char>& _fragment_byte_code, VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader) {
 	// vertex shader
 	VkShaderModuleCreateInfo vertex_info = {};
 	vertex_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	vertex_info.pCode = (u32*)_vertex_byte_code.data();
+	vertex_info.codeSize = _vertex_byte_code.size();
 	
 	if (vkCreateShaderModule(device, &vertex_info, nullptr, &_vertex_shader) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] create vertex shader module");
@@ -545,6 +546,7 @@ bool VulkanMgr::InitShaderModule(vector<char>& _vertex_byte_code, vector<char>& 
 	VkShaderModuleCreateInfo fragment_info = {};
 	fragment_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	fragment_info.pCode = (u32*)_fragment_byte_code.data();
+	fragment_info.codeSize = _fragment_byte_code.size();
 
 	if (vkCreateShaderModule(device, &fragment_info, nullptr, &_fragment_shader) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] create fragment shader module");
@@ -565,7 +567,7 @@ bool VulkanMgr::InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fr
 	shader_stages[0].pName = "main";
 	shader_stages[1] = {};
 	shader_stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shader_stages[0].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	shader_stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 	shader_stages[1].module = _fragment_shader;
 	shader_stages[1].pName = "main";
 
@@ -769,7 +771,7 @@ void VulkanMgr::CompileNextShader() {
 		VkShaderModule vertex_shader;
 		VkShaderModule fragment_shader;
 
-		if (InitShaderModule(vertex_byte_code, fragment_byte_code, vertex_shader, fragment_shader)) {
+		if (InitShaderModules(vertex_byte_code, fragment_byte_code, vertex_shader, fragment_shader)) {
 			InitPipeline(vertex_shader, fragment_shader);
 		}
 	}
