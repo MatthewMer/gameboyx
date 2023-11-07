@@ -34,10 +34,11 @@ public:
 	bool InitRenderPass();
 	bool InitFrameBuffers();
 	bool InitCommandBuffers();
+	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader);
 
 	void EnumerateShaders();
 	void CompileNextShader();
-	bool InitShaderModule();
+	bool InitShaderModule(std::vector<char>& _vertex_byte_code, std::vector<char>& _fragment_byte_code, VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader);
 
 	bool InitImgui();
 
@@ -49,6 +50,7 @@ public:
 	void DestroyRenderPass();
 	void DestroyFrameBuffers();
 	void DestroyCommandBuffer();
+	void DestroyPipelines();
 
 	void DestroyImgui();
 
@@ -96,10 +98,11 @@ private:
 	VkFence fence;
 
 	// graphics pipeline
-	std::vector<std::pair<shaderc_shader_kind, std::string>> shaderSourceFiles;
-	std::vector<VkShaderModule> shaderModules;
+	std::vector<std::string> enumeratedShaderFiles;										// contains all shader source files
+	std::vector<std::pair<std::string, std::string>> shaderSourceFiles;					// contains the vertex and fragment shaders in groups of two
 	shaderc_compiler_t compiler;
 	shaderc_compile_options_t options;
+	std::vector<std::pair<VkPipelineLayout, VkPipeline>> pipelines;
 
 	// imgui
 	VkDescriptorPool imguiDescriptorPool;

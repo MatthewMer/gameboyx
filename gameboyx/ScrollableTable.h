@@ -145,7 +145,7 @@ private:
 };
 
 template <class T> void ScrollableTable<T>::ScrollUp(const int& _num) {
-    static bool full_scroll = true;
+    bool full_scroll = true;
 
     if (startIndex.bank > 0 || startIndex.index > 0) {
         startIndex.index -= _num;
@@ -176,7 +176,7 @@ template <class T> void ScrollableTable<T>::ScrollUp(const int& _num) {
 }
 
 template <class T> void ScrollableTable<T>::ScrollDown(const int& _num) {
-    static bool full_scroll = true;
+    bool full_scroll = true;
     int current_buf_size_end = buffer[endIndex.bank].size();
 
     if (endIndex.bank < bufferSize - 1 || endIndex.index < current_buf_size_end) {

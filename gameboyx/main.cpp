@@ -82,6 +82,9 @@ int main(int, char**)
     VHardwareMgr* vhwmgr_obj = nullptr;
 
     graphics_mgr.EnumerateShaders();
+    while (!graphics_info.shaders_compilation_finished) {               // gets probably changed to get done when application is up and running -> output loading bar
+        graphics_mgr.CompileNextShader();
+    }
 
     // Main loop
     LOG_INFO("Initialization completed");
@@ -176,10 +179,6 @@ int main(int, char**)
             machine_info.reset_machine_information();
         }
 
-        if (!graphics_info.shaders_compilation_finished) {
-            graphics_mgr.CompileNextShader();
-        }
-
         // run virtual hardware
         if (game_stat.game_running && vhwmgr_obj != nullptr) {
             vhwmgr_obj->ProcessNext();
@@ -241,6 +240,7 @@ bool sdl_vulkan_start(VulkanMgr& _graphics_mgr) {
 
 void sdl_shutdown(VulkanMgr& _graphics_mgr, SDL_Window* _window) {
     _graphics_mgr.DestroyCommandBuffer();
+    _graphics_mgr.DestroyPipelines();
     _graphics_mgr.DestroyFrameBuffers();
     _graphics_mgr.DestroyRenderPass();
     _graphics_mgr.DestroySwapchain(false);

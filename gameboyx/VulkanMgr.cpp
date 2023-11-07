@@ -16,11 +16,18 @@ const vector<const char*> VK_ENABLED_LAYERS = {
 	"VK_LAYER_KHRONOS_validation"
 };
 
+#define VERT_EXT		"vert"
+#define FRAG_EXT		"frag"
+#define COMP_EXT		"comp"
+#define SPIRV_EXT		"spv"
+
 const unordered_map<string, shaderc_shader_kind> SHADER_TYPES = {
-	{"vert", shaderc_glsl_default_vertex_shader},
-	{"frag", shaderc_glsl_default_fragment_shader},
-	{"comp", shaderc_glsl_default_compute_shader}
+	{VERT_EXT, shaderc_glsl_default_vertex_shader},
+	{FRAG_EXT, shaderc_glsl_default_fragment_shader},
+	{COMP_EXT, shaderc_glsl_default_compute_shader}
 };
+
+bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file, const shaderc_compiler_t& _compiler, const shaderc_compile_options_t _options);
 
 void VulkanMgr::RenderFrame() {
 	if (vkResetFences(device, 1, &fence) != VK_SUCCESS) {
@@ -59,7 +66,9 @@ void VulkanMgr::RenderFrame() {
 		begin_info.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-		// imgui
+		// bind pipeline
+
+		// imgui -> last
 		ImGui::Render();
 		ImDrawData* drawData = ImGui::GetDrawData();
 		ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer);
@@ -475,7 +484,7 @@ bool VulkanMgr::InitImgui() {
 	init_info.Queue = queue;
 	init_info.DescriptorPool = imguiDescriptorPool;
 	init_info.MinImageCount = 2;
-	init_info.ImageCount = images.size();
+	init_info.ImageCount = (u32)images.size();
 	init_info.MSAASamples = sample_count;
 	if (!ImGui_ImplVulkan_Init(&init_info, renderPass)) {
 		LOG_ERROR("[vulkan] init imgui");
@@ -519,6 +528,109 @@ bool VulkanMgr::InitImgui() {
 	}
 
 	LOG_INFO("[vulkan] imgui initialized");
+	return true;
+}
+
+bool VulkanMgr::InitShaderModule(vector<char>& _vertex_byte_code, vector<char>& _fragment_byte_code, VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader) {
+	// vertex shader
+	VkShaderModuleCreateInfo vertex_info = {};
+	vertex_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	vertex_info.pCode = (u32*)_vertex_byte_code.data();
+	
+	if (vkCreateShaderModule(device, &vertex_info, nullptr, &_vertex_shader) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create vertex shader module");
+	}
+
+	// fragment shader
+	VkShaderModuleCreateInfo fragment_info = {};
+	fragment_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	fragment_info.pCode = (u32*)_fragment_byte_code.data();
+
+	if (vkCreateShaderModule(device, &fragment_info, nullptr, &_fragment_shader) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create fragment shader module");
+	}
+
+	return true;
+}
+
+bool VulkanMgr::InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader) {
+	pipelines.emplace_back();
+	auto& [layout, pipeline] = pipelines.back();
+
+	auto shader_stages = vector<VkPipelineShaderStageCreateInfo>(2);
+	shader_stages[0] = {};
+	shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shader_stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+	shader_stages[0].module = _vertex_shader;
+	shader_stages[0].pName = "main";
+	shader_stages[1] = {};
+	shader_stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shader_stages[0].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	shader_stages[1].module = _fragment_shader;
+	shader_stages[1].pName = "main";
+
+	VkPipelineVertexInputStateCreateInfo vertex_input_state = {};
+	vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+	VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {};
+	input_assembly_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+	VkPipelineViewportStateCreateInfo viewport_state = {};
+	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewport_state.viewportCount = 1;																// currently only one viewport
+	VkViewport viewport = { .0f, .0f, (float)width, (float)height };
+	viewport_state.pViewports = &viewport;
+	viewport_state.scissorCount = 1;
+	VkRect2D scissor = { (0, 0), (width, height) };
+	viewport_state.pScissors = &scissor;
+
+	VkPipelineRasterizationStateCreateInfo rasterization_state = {};
+	rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterization_state.lineWidth = 1.0f;
+
+	VkPipelineMultisampleStateCreateInfo multisample_state = {};
+	multisample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState color_blend_attachment = {};
+	color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;			// color mask
+	color_blend_attachment.blendEnable = VK_FALSE;
+	VkPipelineColorBlendStateCreateInfo color_blend_state = {};
+	color_blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	color_blend_state.attachmentCount = 1;
+	color_blend_state.pAttachments = &color_blend_attachment;
+
+	{
+		VkPipelineLayoutCreateInfo create_info = {};
+		create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		if (vkCreatePipelineLayout(device, &create_info, nullptr, &layout) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] create pipeline layout");
+		}
+	}
+
+	{
+		VkGraphicsPipelineCreateInfo create_info = {};
+		create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		create_info.stageCount = 2;
+		create_info.pStages = shader_stages.data();
+		create_info.pVertexInputState = &vertex_input_state;
+		create_info.pInputAssemblyState = &input_assembly_state;
+		create_info.pViewportState = &viewport_state;
+		create_info.pRasterizationState = &rasterization_state;
+		create_info.pMultisampleState = &multisample_state;
+		create_info.pColorBlendState = &color_blend_state;
+		create_info.layout = layout;
+		create_info.renderPass = renderPass;					// currently only one render pass, postprocessing probably more or multiple subpasses
+		create_info.subpass = 0;
+		if (vkCreateGraphicsPipelines(device, nullptr, 1, &create_info, nullptr, &pipeline) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] create graphics pipeline");
+		}
+	}
+
+	vkDestroyShaderModule(device, _vertex_shader, nullptr);
+	vkDestroyShaderModule(device, _fragment_shader, nullptr);
+
 	return true;
 }
 
@@ -587,6 +699,13 @@ void VulkanMgr::DestroyImgui() {
 	vkDestroyDescriptorPool(device, imguiDescriptorPool, nullptr);
 }
 
+void VulkanMgr::DestroyPipelines() {
+	for (auto& [layout, pipeline] : pipelines) {
+		vkDestroyPipeline(device, pipeline, nullptr);
+		vkDestroyPipelineLayout(device, layout, nullptr);
+	}
+}
+
 void VulkanMgr::WaitIdle() {
 	if (vkDeviceWaitIdle(device) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] GPU wait idle");
@@ -598,27 +717,27 @@ void VulkanMgr::NextFrameImGui() const {
 }
 
 void VulkanMgr::EnumerateShaders() {
-	LOG_INFO("[vulkan] enumerating shaderSourceFiles");
+	LOG_INFO("[vulkan] enumerating shader source files");
 
-	for (auto& n : shaderModules) {
-		vkDestroyShaderModule(device, n, nullptr);
-	}
-	shaderModules.clear();
+	enumeratedShaderFiles = get_files_in_path(SHADER_FOLDER);
+	shaderSourceFiles = vector<pair<string, string>>();
 
-	vector<string> items = get_files_in_path(SHADER_FOLDER);
-	shaderSourceFiles = vector<pair<shaderc_shader_kind, string>>();
+	for (const auto& n : enumeratedShaderFiles) {
+		const auto file_1 = split_string(n, "/").back();
 
-	for (const auto& n : items) {
-		const auto file_ext = split_string(n, ".").back();
+		if (SHADER_TYPES.at(VERT_EXT) == SHADER_TYPES.at(split_string(file_1, ".").back())) {
 
-		if (SHADER_TYPES.contains(file_ext)) {
-			shaderSourceFiles.emplace_back(SHADER_TYPES.at(file_ext), n);
+			for (const auto& m : enumeratedShaderFiles) {
+				const auto file_2 = split_string(m, "/").back();
+
+				if (split_string(file_1, ".").front().compare(split_string(file_2, ".").front()) == 0 &&
+					SHADER_TYPES.at(FRAG_EXT) == SHADER_TYPES.at(split_string(file_2, ".").back())) {
+					shaderSourceFiles.emplace_back(n, m);
+				}
+			}
 		}
-		else {
-			LOG_WARN("[vulkan] unknown shader type: ", n);
-		}
 	}
-	LOG_INFO("[vulkan] ", shaderSourceFiles.size(), " shader source file(s) found");
+	LOG_INFO("[vulkan] ", shaderSourceFiles.size(), " shader(s) found");
 
 	if (shaderSourceFiles.empty()) {
 		graphicsInfo.shaders_compilation_finished = true;
@@ -636,39 +755,26 @@ void VulkanMgr::EnumerateShaders() {
 }
 
 void VulkanMgr::CompileNextShader() {
-	auto source_text_vec = vector<char>();
-	if (!read_data(source_text_vec, shaderSourceFiles[graphicsInfo.shaders_compiled].second, false)) {
-		LOG_ERROR("[vulkan] read shader source");
-		return;
+	bool compiled = true;
+	vector<char> vertex_byte_code;
+	if(!compile_shader(vertex_byte_code, shaderSourceFiles[graphicsInfo.shaders_compiled].first, compiler, options)){
+		compiled = false;
+	}
+	vector<char> fragment_byte_code;
+	if (!compile_shader(fragment_byte_code, shaderSourceFiles[graphicsInfo.shaders_compiled].second, compiler, options)) {
+		compiled = false;
 	}
 
-	const char* source_text = source_text_vec.data();
-	size_t source_size = source_text_vec.size();
-	shaderc_shader_kind type = shaderSourceFiles[graphicsInfo.shaders_compiled].first;
-	string file_name_str = split_string(shaderSourceFiles[graphicsInfo.shaders_compiled].second, "/").back();
-	const char* file_name = file_name_str.c_str();
+	if (compiled) {
+		VkShaderModule vertex_shader;
+		VkShaderModule fragment_shader;
 
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, source_text, source_size, type, file_name, "main", options);
-	
-	size_t error_num = shaderc_result_get_num_errors(result);
-	//size_t warning_num = shaderc_result_get_num_warnings(result);
-	if (error_num > 0) {
-		const char* error = shaderc_result_get_error_message(result);
-		LOG_ERROR("[vulkan] compilation of ", shaderSourceFiles[graphicsInfo.shaders_compiled].second, " ", error);
-		graphicsInfo.shaders_compiled++;
-		shaderc_result_release(result);
-		return;
+		if (InitShaderModule(vertex_byte_code, fragment_byte_code, vertex_shader, fragment_shader)) {
+			InitPipeline(vertex_shader, fragment_shader);
+		}
 	}
 
-	size_t size = shaderc_result_get_length(result);
-	const char* byte_code = shaderc_result_get_bytes(result);
-	const vector<char> byte_code_vec(byte_code, byte_code + size);
-	string out_file_path = SPIR_V_FOLDER + split_string(file_name_str, ".").front() + ".spv";
-	write_data(byte_code_vec, out_file_path, true, true);
-	
-	shaderc_result_release(result);
 	graphicsInfo.shaders_compiled++;
-
 	if (graphicsInfo.shaders_compiled == graphicsInfo.shaders_total) {
 		graphicsInfo.shaders_compilation_finished = true;
 
@@ -677,10 +783,40 @@ void VulkanMgr::CompileNextShader() {
 	}
 }
 
-bool VulkanMgr::InitShaderModule() {
-	//shaderModules.emplace_back();
+bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file, const shaderc_compiler_t& _compiler, const shaderc_compile_options_t _options) {
+	auto source_text_vec = vector<char>();
+	if (!read_data(source_text_vec, _shader_source_file, false)) {
+		LOG_ERROR("[vulkan] read shader source ", _shader_source_file);
+		return false;
+	}
 
-	
+	size_t source_size = source_text_vec.size();
+	shaderc_shader_kind type = SHADER_TYPES.at(split_string(_shader_source_file, ".").back());
+	string file_name_str = split_string(_shader_source_file, "/").back();
+	const char* file_name = file_name_str.c_str();
+
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(_compiler, source_text_vec.data(), source_size, type, file_name, "main", _options);
+
+	size_t error_num = shaderc_result_get_num_errors(result);
+	//size_t warning_num = shaderc_result_get_num_warnings(result);
+	if (error_num > 0) {
+		const char* error = shaderc_result_get_error_message(result);
+		LOG_ERROR("[vulkan] compilation of ", _shader_source_file, ": ", error);
+		shaderc_result_release(result);
+		return false;
+	}
+
+	size_t size = shaderc_result_get_length(result);
+	const char* byte_code = shaderc_result_get_bytes(result);
+
+	_byte_code = vector<char>(byte_code, byte_code + size);
+
+	// uncomment this section to write the compiled bytecode to a *.spv file in ./shader/spir_v/
+	auto byte_code_vec = vector<char>(byte_code, byte_code + size);
+	auto file_name_parts = split_string(file_name_str, ".");
+	string out_file_path = SPIR_V_FOLDER + file_name_parts.front() + "_" + file_name_parts.back() + SPIRV_EXT;
+	write_data(byte_code_vec, out_file_path, true, true);
+	shaderc_result_release(result);
 
 	return true;
 }
