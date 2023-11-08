@@ -34,11 +34,11 @@ public:
 	bool InitRenderPass();
 	bool InitFrameBuffers();
 	bool InitCommandBuffers();
-	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader);
+
+	bool InitMainShader();
 
 	void EnumerateShaders();
 	void CompileNextShader();
-	bool InitShaderModules(std::vector<char>& _vertex_byte_code, std::vector<char>& _fragment_byte_code, VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader);
 
 	bool InitImgui();
 
@@ -51,6 +51,8 @@ public:
 	void DestroyFrameBuffers();
 	void DestroyCommandBuffer();
 	void DestroyPipelines();
+
+
 
 	void DestroyImgui();
 
@@ -102,6 +104,8 @@ private:
 	std::vector<std::pair<std::string, std::string>> shaderSourceFiles;					// contains the vertex and fragment shaders in groups of two
 	shaderc_compiler_t compiler;
 	shaderc_compile_options_t options;
+	VkPipelineLayout mainPipelineLayout;
+	VkPipeline mainPipeline;
 	std::vector<std::pair<VkPipelineLayout, VkPipeline>> pipelines;
 
 	// imgui
@@ -119,6 +123,9 @@ private:
 	bool InitVulkanInstance(std::vector<const char*>& _sdl_extensions);
 	bool InitPhysicalDevice();
 	bool InitLogicalDevice(std::vector<const char*>& _device_extensions);
+
+	bool InitShaderModule(const std::vector<char>& _byte_code, VkShaderModule& _shader);
+	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline);
 
 	void SetGPUInfo();
 };
