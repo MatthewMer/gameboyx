@@ -195,15 +195,31 @@ bool VulkanMgr::InitPhysicalDevice() {
 	auto vk_physical_devices = std::vector<VkPhysicalDevice>(device_num);
 	if (vkEnumeratePhysicalDevices(instance, &device_num, vk_physical_devices.data()) != VK_SUCCESS) { return false; }
 
+	int discrete_device_index = -1;
 	LOG_INFO("[vulkan] ", device_num, " GPU(s) found:");
-	for (const auto& n : vk_physical_devices) {
+	for (int i = 0; const auto & n : vk_physical_devices) {
 		VkPhysicalDeviceProperties vk_phys_dev_prop = {};
 		vkGetPhysicalDeviceProperties(n, &vk_phys_dev_prop);
+		VkPhysicalDeviceFeatures vk_phys_dev_feat = {};
+		vkGetPhysicalDeviceFeatures(n, &vk_phys_dev_feat);
+		if (vk_phys_dev_prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+			vk_phys_dev_feat.geometryShader == VK_TRUE) {
+			discrete_device_index = i;
+		}
 		LOG_INFO("[vulkan] ", vk_phys_dev_prop.deviceName);
+		i++;
 	}
 
-	physicalDevice = vk_physical_devices[0];
-	vkGetPhysicalDeviceProperties(vk_physical_devices[0], &physicalDeviceProperties);
+	if (discrete_device_index > -1) {
+		physicalDevice = vk_physical_devices[discrete_device_index];
+		vkGetPhysicalDeviceProperties(vk_physical_devices[discrete_device_index], &physicalDeviceProperties);
+	}
+	else {
+		LOG_INFO("[vulkan] fallback to first entry");
+		physicalDevice = vk_physical_devices[0];
+		vkGetPhysicalDeviceProperties(vk_physical_devices[0], &physicalDeviceProperties);
+	}
+
 	SetGPUInfo();
 	LOG_INFO("[vulkan] ", physicalDeviceProperties.deviceName, " (", driverVersion, ") selected");
 
@@ -260,6 +276,7 @@ void VulkanMgr::SetGPUInfo() {
 	if (vendor_id == ID_NVIDIA) {
 		driverVersion = std::format("{}.{}", (driver >> 22) & 0x3ff, (driver >> 14) & 0xff);
 	}
+	// TODO: doesn't work properly for AMD cards, will get fixed in the future
 	else if (vendor_id == ID_AMD) {
 		driverVersion = std::format("{}.{}", driver >> 14, driver & 0x3fff);
 	}
@@ -820,5 +837,6 @@ bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file,
 	write_data(byte_code_vec, out_file_path, true, true);
 	shaderc_result_release(result);
 
+	LOG_INFO("[vulkan] ", file_name_str, " compiled");
 	return true;
 }
