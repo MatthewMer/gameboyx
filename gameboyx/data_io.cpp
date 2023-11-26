@@ -174,7 +174,7 @@ bool write_data(const vector<char>& _output, const string& _file_path, const boo
     }
 
     for (const auto& n : _output) {
-        os << n << endl;
+        os << n;
     }
 
     os.close();

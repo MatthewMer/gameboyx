@@ -52,7 +52,7 @@ public:
 	void DestroyCommandBuffer();
 	void DestroyPipelines();
 
-
+	void DestroyMainShader();
 
 	void DestroyImgui();
 

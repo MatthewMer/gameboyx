@@ -242,8 +242,9 @@ bool sdl_vulkan_start(VulkanMgr& _graphics_mgr) {
 
 void sdl_shutdown(VulkanMgr& _graphics_mgr, SDL_Window* _window) {
     _graphics_mgr.DestroyCommandBuffer();
-    _graphics_mgr.DestroyPipelines();
+    _graphics_mgr.DestroyMainShader();
     _graphics_mgr.DestroyFrameBuffers();
+    _graphics_mgr.DestroyPipelines();
     _graphics_mgr.DestroyRenderPass();
     _graphics_mgr.DestroySwapchain(false);
     _graphics_mgr.DestroySurface();
