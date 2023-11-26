@@ -6,7 +6,7 @@ import sys
 if len(sys.argv) == 2:
     file = open(sys.argv[1], 'rb')
     hexdata = file.read().hex()
-    print("const vector<char> placeholder = {", end="")
+    print("const vector<u8> placeholder = {", end="")
     
     output = ""
     lines = int(len(hexdata) / 32)

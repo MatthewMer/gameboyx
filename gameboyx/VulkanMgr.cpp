@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 #include <format>
+#include <iostream>
 
 using namespace std;
 
@@ -279,6 +280,9 @@ void VulkanMgr::RenderFrame() {
 		ImGui::Render();
 		ImDrawData* drawData = ImGui::GetDrawData();
 		ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer);
+
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mainPipeline);
+		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffer);
 	}
@@ -762,6 +766,16 @@ bool VulkanMgr::InitMainShader() {
 	auto vert_shader = vector<char>(mainVertShader.data(), mainVertShader.data() + mainVertShader.size());
 	auto frag_shader = vector<char>(mainFragShader.data(), mainFragShader.data() + mainFragShader.size());
 
+	printf("Vert:\n");
+	for (const auto c : vert_shader) {
+		printf("%.2x", c);
+	}
+
+	printf("\nFrag:\n");
+	for (const auto c : vert_shader) {
+		printf("%.2x", c);
+	}
+
 	if (InitShaderModule(vert_shader, vertex_shader) && InitShaderModule(frag_shader, fragment_shader)) {
 		InitPipeline(vertex_shader, fragment_shader, mainPipelineLayout, mainPipeline);
 		return true;
@@ -1028,7 +1042,7 @@ bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file,
 	shaderc_shader_kind type = SHADER_TYPES.at(split_string(_shader_source_file, ".").back());
 	string file_name_str = split_string(_shader_source_file, "/").back();
 	const char* file_name = file_name_str.c_str();
-
+	
 	shaderc_compilation_result_t result = shaderc_compile_into_spv(_compiler, source_text_vec.data(), source_size, type, file_name, "main", _options);
 
 	size_t error_num = shaderc_result_get_num_errors(result);

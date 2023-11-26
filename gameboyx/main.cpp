@@ -81,6 +81,8 @@ int main(int, char**)
     ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat, graphics_info);
     VHardwareMgr* vhwmgr_obj = nullptr;
 
+    if (!graphics_mgr.InitMainShader()) { return -5; }
+
     graphics_mgr.EnumerateShaders();
     while (!graphics_info.shaders_compilation_finished) {               // gets probably changed to get done when application is up and running -> output loading bar
         graphics_mgr.CompileNextShader();
