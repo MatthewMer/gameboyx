@@ -11,6 +11,3 @@
 [submodule "submodules/nativefiledialog-extended"]
 	path = submodules/nativefiledialog-extended
 	url = https://github.com/btzy/nativefiledialog-extended.git
-[submodule "submodules/shaderc"]
-	path = submodules/shaderc
-	url = https://github.com/KhronosGroup/shaderc.git
