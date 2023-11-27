@@ -18,6 +18,8 @@
 #include <vector>
 #include <string>
 
+#define FRAMES_IN_FLIGHT	2
+
 class VulkanMgr
 {
 public:
@@ -43,6 +45,7 @@ public:
 	bool InitImgui();
 
 	void RebuildSwapchain();
+	void RebuildPipelines();
 
 	bool ExitVulkan();
 	void DestroySwapchain(const bool& _rebuild);
@@ -93,11 +96,14 @@ private:
 
 	// buffers
 	std::vector<VkFramebuffer> frameBuffers;
-	VkCommandBuffer commandBuffer;
-	VkCommandPool commandPool;
+	VkCommandBuffer commandBuffers[FRAMES_IN_FLIGHT];
+	VkCommandPool commandPools[FRAMES_IN_FLIGHT];
 
-	// rendering
+	// sync
 	VkFence fence;
+	VkSemaphore acquireSemaphore;
+	VkSemaphore releaseSemaphore;
+	VkPipelineStageFlags waitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;				// swapchain
 
 	// graphics pipeline
 	std::vector<std::string> enumeratedShaderFiles;										// contains all shader source files

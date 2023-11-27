@@ -71,6 +71,8 @@ int main(int, char**)
         LOG_INFO("[SDL] window created");
     }
 
+    SDL_SetWindowMinimumSize(window, GUI_WIN_WIDTH_MIN, GUI_WIN_HEIGHT_MIN);
+
     auto graphics_mgr = VulkanMgr(window, graphics_info);
     if (!sdl_init_vulkan(graphics_mgr, window)) { return -2; }
 

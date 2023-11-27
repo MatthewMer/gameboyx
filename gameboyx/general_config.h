@@ -79,6 +79,8 @@ inline std::string get_vendor(const u16& _ven_id) {
 
 #define GUI_WIN_WIDTH               1280
 #define GUI_WIN_HEIGHT              720
+#define GUI_WIN_WIDTH_MIN           720
+#define GUI_WIN_HEIGHT_MIN          480
 
 inline const std::string APP_TITLE = "GameboyX";
 
