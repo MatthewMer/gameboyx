@@ -186,11 +186,11 @@ void VulkanMgr::RenderFrame() {
 	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphore, nullptr, &image_index); result != VK_SUCCESS) {
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 			RebuildSwapchain();
-			RebuildPipelines();				// workaround for resizing -> gets replaced by projection matrix
-			return;
+			//RebuildPipelines();				// workaround for resizing -> gets replaced by projection matrix
 		}
 		else {
 			LOG_ERROR("[vulkan] acquire image");
+			return;
 		}
 	}
 
@@ -219,6 +219,8 @@ void VulkanMgr::RenderFrame() {
 
 		// bind pipeline
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mainPipeline);
+		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
 		// imgui -> last
@@ -481,6 +483,7 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 	if (surface_capabilites.currentExtent.height == 0xFFFFFFFF) {
 		surface_capabilites.currentExtent.height = surface_capabilites.minImageExtent.height;
 	}
+
 	// unlimited images
 	if (surface_capabilites.maxImageCount == 0) {
 		surface_capabilites.maxImageCount = 8;
@@ -515,6 +518,8 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 
 	width = surface_capabilites.currentExtent.width;
 	height = surface_capabilites.currentExtent.height;
+	viewport = { .0f, .0f, (float)width, (float)height, .0f, 1.f};
+	scissor = { {0, 0}, {width, height} };
 
 	u32 image_num = 0;
 	if (vkGetSwapchainImagesKHR(device, swapchain, &image_num, nullptr) != VK_SUCCESS) {
@@ -778,11 +783,9 @@ bool VulkanMgr::InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fr
 	VkPipelineViewportStateCreateInfo viewport_state = {};
 	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewport_state.viewportCount = 1;																// currently only one viewport
-	VkViewport viewport = { .0f, .0f, (float)width, (float)height };
-	viewport_state.pViewports = &viewport;
+	viewport_state.pViewports = nullptr;
 	viewport_state.scissorCount = 1;
-	VkRect2D scissor = { {0, 0}, {width, height} };
-	viewport_state.pScissors = &scissor;
+	viewport_state.pScissors = nullptr;
 
 	VkPipelineRasterizationStateCreateInfo rasterization_state = {};
 	rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -806,6 +809,15 @@ bool VulkanMgr::InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fr
 		LOG_ERROR("[vulkan] create pipeline layout");
 	}
 
+	VkDynamicState states[2] = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+	VkPipelineDynamicStateCreateInfo dynamic_state = {};
+	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamic_state.dynamicStateCount = 2;
+	dynamic_state.pDynamicStates = states;
+
 	VkGraphicsPipelineCreateInfo pipeline_info = {};
 	pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipeline_info.stageCount = (u32)shader_stages.size();
@@ -819,6 +831,7 @@ bool VulkanMgr::InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fr
 	pipeline_info.layout = _layout;
 	pipeline_info.renderPass = renderPass;					// currently only one render pass, postprocessing probably more or multiple subpasses
 	pipeline_info.subpass = 0;
+	pipeline_info.pDynamicState = &dynamic_state;
 	if (vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_info, nullptr, &_pipeline) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] create graphics pipeline");
 	}

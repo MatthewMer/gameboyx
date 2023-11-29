@@ -113,6 +113,8 @@ private:
 	VkPipelineLayout mainPipelineLayout;
 	VkPipeline mainPipeline;
 	std::vector<std::pair<VkPipelineLayout, VkPipeline>> pipelines;
+	VkViewport viewport;
+	VkRect2D scissor;
 
 	// imgui
 	VkDescriptorPool imguiDescriptorPool;
