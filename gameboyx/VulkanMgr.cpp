@@ -183,9 +183,11 @@ bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file,
 void VulkanMgr::RenderFrame() {
 	u32 image_index = 0;
 	static u32 frame_index = 0;
+
 	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphore, nullptr, &image_index); result != VK_SUCCESS) {
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 			RebuildSwapchain();
+			return;
 			//RebuildPipelines();				// workaround for resizing -> gets replaced by projection matrix
 		}
 		else {
