@@ -20,17 +20,16 @@
 
 #define FRAMES_IN_FLIGHT	2
 
-class VulkanMgr
-{
+class VulkanMgr{
 public:
-	explicit VulkanMgr(SDL_Window* _window, graphics_information& _graphics_info) 
-		: window(_window), graphicsInfo(_graphics_info)
-	{};
-	~VulkanMgr() = default;
+	// get/reset vkInstance
+	static VulkanMgr* getInstance(SDL_Window* _window, graphics_information& _graphics_info);
+	static void resetInstance();
 
 	void RenderFrame();
 
-	bool InitVulkan(std::vector<const char*>& _sdl_extensions, std::vector<const char*>& _device_extensions);
+	bool InitGraphics();
+	bool StartGraphics();
 	bool InitSwapchain(VkImageUsageFlags _flags);
 	bool InitSurface();
 	bool InitRenderPass();
@@ -47,7 +46,8 @@ public:
 	void RebuildSwapchain();
 	void RebuildPipelines();
 
-	bool ExitVulkan();
+	bool ExitGraphics();
+	void StopGraphics();
 	void DestroySwapchain(const bool& _rebuild);
 	void DestroySurface();
 	void DestroyRenderPass();
@@ -64,6 +64,13 @@ public:
 	void NextFrameImGui() const;
 
 private:
+	static VulkanMgr* instance;
+
+	explicit VulkanMgr(SDL_Window* _window, graphics_information& _graphics_info)
+		: window(_window), graphicsInfo(_graphics_info)
+	{};
+	~VulkanMgr() = default;
+
 	// sdl
 	SDL_Window* window;
 
@@ -85,7 +92,7 @@ private:
 
 	// context
 	VkSurfaceKHR surface;
-	VkInstance instance = VK_NULL_HANDLE;
+	VkInstance vulkanInstance = VK_NULL_HANDLE;
 	VkDevice device = VK_NULL_HANDLE;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceProperties physicalDeviceProperties;

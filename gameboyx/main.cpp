@@ -26,15 +26,14 @@ using namespace std;
 /* ***********************************************************************************************************
     PROTOTYPES
 *********************************************************************************************************** */
-bool sdl_init_vulkan(VulkanMgr& _graphics_mgr, SDL_Window* _window);
-bool sdl_vulkan_start(VulkanMgr& _graphics_mgr);
-void sdl_shutdown(VulkanMgr& _graphics_mgr, SDL_Window* _window);
+bool sdl_graphics_start(VulkanMgr* _graphics_mgr);
+void sdl_graphics_shutdown(VulkanMgr* _graphics_mgr);
 
 void sdl_toggle_full_screen(SDL_Window* _window);
 
-bool imgui_init(VulkanMgr& _graphics_mgr);
-void imgui_shutdown(VulkanMgr& _graphics_mgr);
-void imgui_nextframe(VulkanMgr& _graphics_mgr);
+bool imgui_init(VulkanMgr* _graphics_mgr);
+void imgui_shutdown(VulkanMgr* _graphics_mgr);
+void imgui_nextframe(VulkanMgr* _graphics_mgr);
 
 void create_fs_hierarchy();
 
@@ -73,21 +72,19 @@ int main(int, char**)
 
     SDL_SetWindowMinimumSize(window, GUI_WIN_WIDTH_MIN, GUI_WIN_HEIGHT_MIN);
 
-    auto graphics_mgr = VulkanMgr(window, graphics_info);
-    if (!sdl_init_vulkan(graphics_mgr, window)) { return -2; }
+    auto* graphics_mgr = VulkanMgr::getInstance(window, graphics_info);
+    if (!sdl_graphics_start(graphics_mgr)) { return -2; }
 
-    if (!sdl_vulkan_start(graphics_mgr)) { return -3; }
-
-    if (!imgui_init(graphics_mgr)) { return -4; }
+    if (!imgui_init(graphics_mgr)) { return -3; }
 
     ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat, graphics_info);
     VHardwareMgr* vhwmgr_obj = nullptr;
 
-    if (!graphics_mgr.InitMainShader()) { return -5; }
+    if (!graphics_mgr->InitMainShader()) { return -4; }
 
-    graphics_mgr.EnumerateShaders();
+    graphics_mgr->EnumerateShaders();
     while (!graphics_info.shaders_compilation_finished) {               // gets probably changed to get done when application is up and running -> output loading bar
-        graphics_mgr.CompileNextShader();
+        graphics_mgr->CompileNextShader();
     }
 
     // Main loop
@@ -196,12 +193,14 @@ int main(int, char**)
             gbx_gui->ProcessGUI();
 
             // render results
-            graphics_mgr.RenderFrame();
+            graphics_mgr->RenderFrame();
         }
     }
     
     imgui_shutdown(graphics_mgr);
-    sdl_shutdown(graphics_mgr, window);
+    sdl_graphics_shutdown(graphics_mgr);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return 0;
 }
@@ -209,51 +208,15 @@ int main(int, char**)
 /* ***********************************************************************************************************
     SDL FUNCTIONS
 *********************************************************************************************************** */
-bool sdl_init_vulkan(VulkanMgr& _graphics_mgr, SDL_Window* _window) {
-    uint32_t sdl_extension_count;
-    SDL_Vulkan_GetInstanceExtensions(_window, &sdl_extension_count, nullptr);
-    auto sdl_extensions = vector<const char*>(sdl_extension_count);
-    SDL_Vulkan_GetInstanceExtensions(_window, &sdl_extension_count, sdl_extensions.data());
-
-    auto device_extensions = vector<const char*>() = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-
-    if (!_graphics_mgr.InitVulkan(sdl_extensions, device_extensions)) { return false; }
-
+bool sdl_graphics_start(VulkanMgr* _graphics_mgr) {
+    if (!_graphics_mgr->InitGraphics()) { return false; }
+    if (!_graphics_mgr->StartGraphics()) { return false; }
     return true;
 }
 
-bool sdl_vulkan_start(VulkanMgr& _graphics_mgr) {
-    if (!_graphics_mgr.InitSurface()) {
-        return false;
-    }
-    if (!_graphics_mgr.InitSwapchain(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
-        return false;
-    }
-    if (!_graphics_mgr.InitRenderPass()) {
-        return false;
-    }
-    if (!_graphics_mgr.InitFrameBuffers()) {
-        return false;
-    }
-    if (!_graphics_mgr.InitCommandBuffers()) {
-        return false;
-    }
-
-    return true;
-}
-
-void sdl_shutdown(VulkanMgr& _graphics_mgr, SDL_Window* _window) {
-    _graphics_mgr.DestroyCommandBuffer();
-    _graphics_mgr.DestroyMainShader();
-    _graphics_mgr.DestroyFrameBuffers();
-    _graphics_mgr.DestroyPipelines();
-    _graphics_mgr.DestroyRenderPass();
-    _graphics_mgr.DestroySwapchain(false);
-    _graphics_mgr.DestroySurface();
-    _graphics_mgr.ExitVulkan();
-
-    SDL_DestroyWindow(_window);
-    SDL_Quit();
+void sdl_graphics_shutdown(VulkanMgr* _graphics_mgr) {
+    _graphics_mgr->StopGraphics();
+    _graphics_mgr->ExitGraphics();
 }
 
 void sdl_toggle_full_screen(SDL_Window* _window) {
@@ -268,24 +231,24 @@ void sdl_toggle_full_screen(SDL_Window* _window) {
 /* ***********************************************************************************************************
     IMGUI FUNCTIONS
 *********************************************************************************************************** */
-bool imgui_init(VulkanMgr& _graphics_mgr) {
+bool imgui_init(VulkanMgr* _graphics_mgr) {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
 
-    if (!_graphics_mgr.InitImgui()) { return false; }
+    if (!_graphics_mgr->InitImgui()) { return false; }
 
     return true;
 }
 
-void imgui_shutdown(VulkanMgr& _graphics_mgr) {
-    _graphics_mgr.DestroyImgui();
+void imgui_shutdown(VulkanMgr* _graphics_mgr) {
+    _graphics_mgr->DestroyImgui();
 
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 }
 
-void imgui_nextframe(VulkanMgr& _graphics_mgr) {
-    _graphics_mgr.NextFrameImGui();
+void imgui_nextframe(VulkanMgr* _graphics_mgr) {
+    _graphics_mgr->NextFrameImGui();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 }
