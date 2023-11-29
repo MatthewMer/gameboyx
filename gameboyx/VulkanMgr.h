@@ -26,42 +26,30 @@ public:
 	static VulkanMgr* getInstance(SDL_Window* _window, graphics_information& _graphics_info);
 	static void resetInstance();
 
+	// render
 	void RenderFrame();
 
+	// initialize
 	bool InitGraphics();
 	bool StartGraphics();
-	bool InitSwapchain(VkImageUsageFlags _flags);
-	bool InitSurface();
-	bool InitRenderPass();
-	bool InitFrameBuffers();
-	bool InitCommandBuffers();
 
-	bool InitMainShader();
+	// deinit
+	bool ExitGraphics();
+	void StopGraphics();
 
+	// shader compilation
 	void EnumerateShaders();
 	void CompileNextShader();
 
+	// imgui
 	bool InitImgui();
-
-	void RebuildSwapchain();
-	void RebuildPipelines();
-
-	bool ExitGraphics();
-	void StopGraphics();
-	void DestroySwapchain(const bool& _rebuild);
-	void DestroySurface();
-	void DestroyRenderPass();
-	void DestroyFrameBuffers();
-	void DestroyCommandBuffer();
-	void DestroyPipelines();
-
-	void DestroyMainShader();
-
 	void DestroyImgui();
-
-	void WaitIdle();
-
 	void NextFrameImGui() const;
+
+	// images (textures)
+	VkImage mainImage;
+	VkImageView mainImageView;
+	VkDeviceMemory mainImageMemory;
 
 private:
 	static VulkanMgr* instance;
@@ -135,12 +123,33 @@ private:
 	// misc
 	VkClearValue clearColor = { 0.f, 0.f, 0.f, 1.f };
 
+	// initialize
 	bool InitVulkanInstance(std::vector<const char*>& _sdl_extensions);
 	bool InitPhysicalDevice();
 	bool InitLogicalDevice(std::vector<const char*>& _device_extensions);
-
+	bool InitSwapchain(VkImageUsageFlags _flags);
+	bool InitSurface();
+	bool InitRenderPass();
+	bool InitFrameBuffers();
+	bool InitCommandBuffers();
+	bool InitMainShader();
 	bool InitShaderModule(const std::vector<char>& _byte_code, VkShaderModule& _shader);
 	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline);
-
 	void SetGPUInfo();
+
+	// deinit
+	void DestroySwapchain(const bool& _rebuild);
+	void DestroySurface();
+	void DestroyRenderPass();
+	void DestroyFrameBuffers();
+	void DestroyCommandBuffer();
+	void DestroyPipelines();
+	void DestroyMainShader();
+
+	// rebuild -> resize window(surface/render area)
+	void RebuildSwapchain();
+	void RebuildPipelines();
+
+	// sync to gpu (work done)
+	void WaitIdle();
 };

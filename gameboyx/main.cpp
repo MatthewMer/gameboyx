@@ -74,13 +74,10 @@ int main(int, char**)
 
     auto* graphics_mgr = VulkanMgr::getInstance(window, graphics_info);
     if (!sdl_graphics_start(graphics_mgr)) { return -2; }
-
     if (!imgui_init(graphics_mgr)) { return -3; }
 
     ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat, graphics_info);
     VHardwareMgr* vhwmgr_obj = nullptr;
-
-    if (!graphics_mgr->InitMainShader()) { return -4; }
 
     graphics_mgr->EnumerateShaders();
     while (!graphics_info.shaders_compilation_finished) {               // gets probably changed to get done when application is up and running -> output loading bar
@@ -234,15 +231,11 @@ void sdl_toggle_full_screen(SDL_Window* _window) {
 bool imgui_init(VulkanMgr* _graphics_mgr) {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
-
-    if (!_graphics_mgr->InitImgui()) { return false; }
-
-    return true;
+    return _graphics_mgr->InitImgui();
 }
 
 void imgui_shutdown(VulkanMgr* _graphics_mgr) {
     _graphics_mgr->DestroyImgui();
-
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 }

@@ -249,6 +249,9 @@ bool VulkanMgr::StartGraphics() {
 	if (!InitCommandBuffers()) {
 		return false;
 	}
+	if (!InitMainShader()) {
+		return false;
+	}
 
 	return true;
 }
