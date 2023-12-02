@@ -697,10 +697,8 @@ bool VulkanMgr::InitCommandBuffers() {
 		}
 	}
 
-	resizableBar = true;
-	VkBufferUsageFlags usage_flags = resizableBar ? 0 : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	VkMemoryPropertyFlags mem_prop_flags = resizableBar ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : 0;
-	if (!InitBuffer(mainVertexBuffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | usage_flags, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | mem_prop_flags)) {
+	
+	if (!InitBuffer(mainVertexBuffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
 		LOG_ERROR("[vulkan] init vertex buffer");
 		return false;
 	}
@@ -709,7 +707,7 @@ bool VulkanMgr::InitCommandBuffers() {
 		return false;
 	}
 	
-	if (!InitBuffer(mainIndexBuffer, sizeof(indexData), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | usage_flags, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | mem_prop_flags)) {
+	if (!InitBuffer(mainIndexBuffer, sizeof(indexData), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
 		LOG_ERROR("[vulkan] init index buffer");
 		return false;
 	}
@@ -1266,10 +1264,9 @@ void VulkanMgr::DetectResizableBar() {
 		if ((devMemProps.memoryTypes[i].propertyFlags & flags) == flags) {
 			resizableBar = true;
 			LOG_INFO("[vulkan] resizable bar enabled");
-			return;
 		}
 	}
 
-	resizableBar = false;
-	LOG_INFO("[vulkan] resizable bar disabled");
+	bufferUsageFlags = resizableBar ? 0 : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | (resizableBar ? (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) : 0);
 }

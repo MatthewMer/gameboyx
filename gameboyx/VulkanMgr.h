@@ -106,6 +106,8 @@ private:
 	VkCommandPool commandPools[FRAMES_IN_FLIGHT];
 
 	bool resizableBar = false;
+	VkBufferUsageFlags bufferUsageFlags;
+	VkMemoryPropertyFlags memoryPropertyFlags;
 
 	VulkanBuffer mainVertexBuffer = {};
 	VulkanBuffer mainIndexBuffer = {};
