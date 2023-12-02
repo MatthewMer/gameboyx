@@ -20,6 +20,16 @@
 
 #define FRAMES_IN_FLIGHT	2
 
+struct VulkanPipelineBufferInfo {
+	std::vector<VkVertexInputAttributeDescription> attrDesc;
+	std::vector<VkVertexInputBindingDescription> bindDesc;
+};
+
+struct VulkanBuffer {
+	VkBuffer buffer;					// memory view (offset and size)
+	VkDeviceMemory memory;			// allocated memory
+};
+
 class VulkanMgr{
 public:
 	// get/reset vkInstance
@@ -65,6 +75,7 @@ private:
 	// graphics queue
 	VkQueue queue = VK_NULL_HANDLE;
 	uint32_t familyIndex = (uint32_t) - 1;
+	VkPhysicalDeviceMemoryProperties devMemProps;
 
 	// swapchain
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
@@ -93,6 +104,11 @@ private:
 	std::vector<VkFramebuffer> frameBuffers;
 	VkCommandBuffer commandBuffers[FRAMES_IN_FLIGHT];
 	VkCommandPool commandPools[FRAMES_IN_FLIGHT];
+
+	bool resizableBar = false;
+
+	VulkanBuffer mainVertexBuffer = {};
+	VulkanBuffer mainIndexBuffer = {};
 
 	// sync
 	VkFence fence;
@@ -134,8 +150,11 @@ private:
 	bool InitCommandBuffers();
 	bool InitMainShader();
 	bool InitShaderModule(const std::vector<char>& _byte_code, VkShaderModule& _shader);
-	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline);
+	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info);
 	void SetGPUInfo();
+	bool InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
+
+	bool LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size);
 
 	// deinit
 	void DestroySwapchain(const bool& _rebuild);
@@ -145,10 +164,14 @@ private:
 	void DestroyCommandBuffer();
 	void DestroyPipelines();
 	void DestroyMainShader();
+	void DestroyBuffer(VulkanBuffer& _buffer);
 
 	// rebuild -> resize window(surface/render area)
 	void RebuildSwapchain();
 	void RebuildPipelines();
+
+	u32 findMemoryType(u32 _type_filter, VkMemoryPropertyFlags _mem_properties);
+	void DetectResizableBar();
 
 	// sync to gpu (work done)
 	void WaitIdle();
