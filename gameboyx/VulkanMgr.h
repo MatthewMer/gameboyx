@@ -7,6 +7,10 @@
 *	It manages shaders, framebuffers, commandbuffers, swapchain, etc. (everything related to rendering on the GPU)
 */
 
+#ifndef VK_DEBUG_CALLBACK
+#define VK_DEBUG_CALLBACK
+#endif
+
 #include <vulkan/vulkan.h>
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -95,6 +99,7 @@ private:
 	VkDevice device = VK_NULL_HANDLE;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceProperties physicalDeviceProperties;
+	VkDebugUtilsMessengerEXT debugCallback;
 
 	// renderpass
 	VkRenderPass renderPass;
@@ -172,9 +177,13 @@ private:
 	void RebuildSwapchain();
 	void RebuildPipelines();
 
-	u32 findMemoryType(u32 _type_filter, VkMemoryPropertyFlags _mem_properties);
+	u32 FindMemoryTypes(u32 _type_filter, VkMemoryPropertyFlags _mem_properties);
 	void DetectResizableBar();
 
 	// sync to gpu (work done)
 	void WaitIdle();
+
+#ifdef VK_DEBUG_CALLBACK
+	VkDebugUtilsMessengerEXT RegisterDebugCallback();
+#endif
 };

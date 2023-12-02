@@ -154,6 +154,9 @@ const vector<u8> mainFragShader = {
 };
 
 bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file, const shaderc_compiler_t& _compiler, const shaderc_compile_options_t& _options);
+#ifdef VK_DEBUG_CALLBACK
+VkBool32 VKAPI_CALL debug_report_callback(VkDebugUtilsMessageSeverityFlagBitsEXT _severity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* _callback_data, void* userData);
+#endif
 
 VulkanMgr* VulkanMgr::instance = nullptr;
 
@@ -171,11 +174,22 @@ void VulkanMgr::resetInstance() {
 }
 
 bool VulkanMgr::InitGraphics() {
+#ifdef VK_DEBUG_CALLBACK
+	vector<const char*> additional_extensions = {
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME
+	};
+#endif
+
 	uint32_t sdl_extension_count;
 	SDL_Vulkan_GetInstanceExtensions(window, &sdl_extension_count, nullptr);
 	auto sdl_extensions = vector<const char*>(sdl_extension_count);
 	SDL_Vulkan_GetInstanceExtensions(window, &sdl_extension_count, sdl_extensions.data());
-	auto device_extensions = vector<const char*>() = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+#ifdef VK_DEBUG_CALLBACK
+	sdl_extensions.insert(sdl_extensions.end(), additional_extensions.begin(), additional_extensions.end());
+#endif
+
+	vector<const char*> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	if (!InitVulkanInstance(sdl_extensions)) {
 		return false;
@@ -194,6 +208,14 @@ bool VulkanMgr::ExitGraphics() {
 	WaitIdle();
 
 	vkDestroyDevice(device, nullptr);
+#ifdef VK_DEBUG_CALLBACK
+	if (debugCallback) {
+		PFN_vkDestroyDebugUtilsMessengerEXT pfnDestroyDebugUtilsMessengerEXT;
+		pfnDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulkanInstance, "vkDestroyDebugUtilsMessengerEXT");
+		pfnDestroyDebugUtilsMessengerEXT(vulkanInstance, debugCallback, 0);
+		debugCallback = 0;
+	}
+#endif
 	vkDestroyInstance(vulkanInstance, nullptr);
 
 	return true;
@@ -345,6 +367,18 @@ bool VulkanMgr::InitVulkanInstance(std::vector<const char*>& _sdl_extensions) {
 	auto vk_extension_properties = std::vector<VkExtensionProperties>(vk_extension_count);
 	if (vkEnumerateInstanceExtensionProperties(nullptr, &vk_extension_count, vk_extension_properties.data()) != VK_SUCCESS) { return false; }
 
+	// only for debug
+#ifdef VK_DEBUG_CALLBACK
+	vector<VkValidationFeatureEnableEXT>  validation_features_list = {
+		//VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+		VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+		VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
+	};
+	VkValidationFeaturesEXT validation_features = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+	validation_features.enabledValidationFeatureCount = (u32)validation_features_list.size();
+	validation_features.pEnabledValidationFeatures = validation_features_list.data();
+#endif
+
 	VkApplicationInfo vk_app_info = {};
 	vk_app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	vk_app_info.pApplicationName = APP_TITLE.c_str();
@@ -353,6 +387,9 @@ bool VulkanMgr::InitVulkanInstance(std::vector<const char*>& _sdl_extensions) {
 
 	VkInstanceCreateInfo vk_create_info = {};
 	vk_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+#ifdef VK_DEBUG_CALLBACK
+	vk_create_info.pNext = &validation_features;
+#endif
 	vk_create_info.pApplicationInfo = &vk_app_info;
 	vk_create_info.enabledLayerCount = (u32)VK_ENABLED_LAYERS.size();
 	vk_create_info.ppEnabledLayerNames = VK_ENABLED_LAYERS.data();
@@ -363,6 +400,10 @@ bool VulkanMgr::InitVulkanInstance(std::vector<const char*>& _sdl_extensions) {
 		LOG_ERROR("[vulkan] create vulkan vulkanInstance");
 		return false;
 	}
+
+#ifdef VK_DEBUG_CALLBACK
+	debugCallback = RegisterDebugCallback();
+#endif
 
 	for (const auto& n : VK_ENABLED_LAYERS) {
 		if (strcmp(n, VK_VALIDATION) == 0) {
@@ -941,7 +982,7 @@ bool VulkanMgr::InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageFlags 
 	VkMemoryRequirements mem_requirements;
 	vkGetBufferMemoryRequirements(device, _buffer.buffer, &mem_requirements);
 
-	uint32_t mem_index = findMemoryType(mem_requirements.memoryTypeBits, _memory_properties);
+	uint32_t mem_index = FindMemoryTypes(mem_requirements.memoryTypeBits, _memory_properties);
 	if (mem_index == UINT32_MAX) {
 		LOG_ERROR("[vulkan] no matching memory types found: ", std::format("{:x}", mem_requirements.memoryTypeBits));
 		return false;
@@ -1206,6 +1247,65 @@ void VulkanMgr::CompileNextShader() {
 	}
 }
 
+u32 VulkanMgr::FindMemoryTypes(u32 _type_filter, VkMemoryPropertyFlags _mem_properties) {
+	for (uint32_t i = 0; i < devMemProps.memoryTypeCount; i++) {
+		if (_type_filter & (1 << i)) {
+			if ((devMemProps.memoryTypes[i].propertyFlags & _mem_properties) == _mem_properties) {
+				return i;
+			}
+		}
+	}
+	LOG_ERROR("[vulkan] memory type not found");
+	return UINT32_MAX;
+}
+
+void VulkanMgr::DetectResizableBar() {
+	resizableBar = false;
+	VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+	for (uint32_t i = 0; i < devMemProps.memoryTypeCount; i++) {
+		if (float heap_size = devMemProps.memoryHeaps[devMemProps.memoryTypes[i].heapIndex].size / (float)pow(10, 9); 
+			(devMemProps.memoryTypes[i].propertyFlags & flags) == flags && heap_size > .5f) {
+			resizableBar = true;
+			LOG_INFO(std::format("[vulkan] resizable bar enabled (Heap{:d}:{:.2f}GB)", devMemProps.memoryTypes[i].heapIndex, heap_size));
+		}
+	}
+
+	bufferUsageFlags = resizableBar ? 0 : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | (resizableBar ? (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) : 0);
+
+	if (!resizableBar) { LOG_INFO("[vulkan] resizable bar disabled"); }
+}
+
+#ifdef VK_DEBUG_CALLBACK
+VkBool32 VKAPI_CALL debug_report_callback(VkDebugUtilsMessageSeverityFlagBitsEXT _severity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* _callback_data, void* userData) {
+	if (_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+		LOG_ERROR(_callback_data->pMessage);
+	}
+	else {
+		LOG_WARN(_callback_data->pMessage);
+	}
+	return VK_FALSE;
+}
+
+VkDebugUtilsMessengerEXT VulkanMgr::RegisterDebugCallback() {
+	PFN_vkCreateDebugUtilsMessengerEXT pfnCreateDebutUtilsMessengerEXT;
+	pfnCreateDebutUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulkanInstance, "vkCreateDebugUtilsMessengerEXT");
+	VkDebugUtilsMessengerCreateInfoEXT callbackInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+	callbackInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+	callbackInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+	callbackInfo.pfnUserCallback = debug_report_callback;
+
+	VkDebugUtilsMessengerEXT callback = nullptr;
+	if (pfnCreateDebutUtilsMessengerEXT(vulkanInstance, &callbackInfo, nullptr, &callback) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create callback messenger");
+		return nullptr;
+	}
+
+	return callback;
+}
+#endif
+
 bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file, const shaderc_compiler_t& _compiler, const shaderc_compile_options_t& _options) {
 	auto source_text_vec = vector<char>();
 	if (!read_data(source_text_vec, _shader_source_file, false)) {
@@ -1217,7 +1317,7 @@ bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file,
 	shaderc_shader_kind type = SHADER_TYPES.at(split_string(_shader_source_file, ".").back());
 	string file_name_str = split_string(_shader_source_file, "/").back();
 	const char* file_name = file_name_str.c_str();
-	
+
 	shaderc_compilation_result_t result = shaderc_compile_into_spv(_compiler, source_text_vec.data(), source_size, type, file_name, "main", _options);
 
 	size_t error_num = shaderc_result_get_num_errors(result);
@@ -1243,30 +1343,4 @@ bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file,
 
 	LOG_INFO("[vulkan] ", file_name_str, " compiled");
 	return true;
-}
-
-u32 VulkanMgr::findMemoryType(u32 _type_filter, VkMemoryPropertyFlags _mem_properties) {
-	for (uint32_t i = 0; i < devMemProps.memoryTypeCount; i++) {
-		if (_type_filter & (1 << i)) {
-			if ((devMemProps.memoryTypes[i].propertyFlags & _mem_properties) == _mem_properties) {
-				return i;
-			}
-		}
-	}
-	LOG_ERROR("[vulkan] memory type not found");
-	return UINT32_MAX;
-}
-
-void VulkanMgr::DetectResizableBar() {
-	VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-	for (uint32_t i = 0; i < devMemProps.memoryTypeCount; i++) {
-		if ((devMemProps.memoryTypes[i].propertyFlags & flags) == flags) {
-			resizableBar = true;
-			LOG_INFO("[vulkan] resizable bar enabled");
-		}
-	}
-
-	bufferUsageFlags = resizableBar ? 0 : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | (resizableBar ? (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) : 0);
 }
