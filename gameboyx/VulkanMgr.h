@@ -31,7 +31,13 @@ struct VulkanPipelineBufferInfo {
 
 struct VulkanBuffer {
 	VkBuffer buffer;					// memory view (offset and size)
-	VkDeviceMemory memory;			// allocated memory
+	VkDeviceMemory memory;				// allocated memory
+};
+
+struct VulkanImage {
+	VkImage image;
+	VkImageView image_view;
+	VkDeviceMemory memory;
 };
 
 class VulkanMgr{
@@ -60,10 +66,8 @@ public:
 	void DestroyImgui();
 	void NextFrameImGui() const;
 
-	// images (textures)
-	VkImage mainImage;
-	VkImageView mainImageView;
-	VkDeviceMemory mainImageMemory;
+	// render virtual gpu output
+	void UpdateTex2dImage();
 
 private:
 	static VulkanMgr* instance;
@@ -114,8 +118,26 @@ private:
 	VkBufferUsageFlags bufferUsageFlags;
 	VkMemoryPropertyFlags memoryPropertyFlags;
 
-	VulkanBuffer mainVertexBuffer = {};
-	VulkanBuffer mainIndexBuffer = {};
+	
+
+	// render target 2d texture
+	VulkanBuffer tex2dVertexBuffer = {};
+	VulkanBuffer tex2dIndexBuffer = {};
+	VulkanImage tex2dImage = {};
+	VkPipelineLayout tex2dPipelineLayout;
+	VkPipeline tex2dPipeline;
+	VkSemaphore tex2dTransferSemaphore;
+	VkCommandPool tex2dCommandPool;
+	VkCommandBuffer tex2dCommandBuffer;
+	VulkanBuffer tex2dStagingBuffer;				// only used when resizable bar not supported
+	bool InitTex2dRenderTarget();
+	void DestroyTex2dRenderTarget();
+	bool InitTex2dBuffers();
+	void DestroyTex2dBuffers();
+	bool InitTex2dImage();
+	void DestroyTex2dImage();
+	bool InitTex2dShader();
+	void DestroyTex2dShader();
 
 	// sync
 	VkFence fence;
@@ -128,8 +150,6 @@ private:
 	std::vector<std::pair<std::string, std::string>> shaderSourceFiles;					// contains the vertex and fragment shaders in groups of two
 	shaderc_compiler_t compiler;
 	shaderc_compile_options_t options;
-	VkPipelineLayout mainPipelineLayout;
-	VkPipeline mainPipeline;
 	std::vector<std::pair<VkPipelineLayout, VkPipeline>> pipelines;
 	VkViewport viewport;
 	VkRect2D scissor;
@@ -155,11 +175,11 @@ private:
 	bool InitRenderPass();
 	bool InitFrameBuffers();
 	bool InitCommandBuffers();
-	bool InitMainShader();
 	bool InitShaderModule(const std::vector<char>& _byte_code, VkShaderModule& _shader);
 	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info);
 	void SetGPUInfo();
 	bool InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
+	bool InitImage();
 
 	bool LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size);
 
@@ -170,8 +190,8 @@ private:
 	void DestroyFrameBuffers();
 	void DestroyCommandBuffer();
 	void DestroyPipelines();
-	void DestroyMainShader();
 	void DestroyBuffer(VulkanBuffer& _buffer);
+	void DestroyImage();
 
 	// rebuild -> resize window(surface/render area)
 	void RebuildSwapchain();

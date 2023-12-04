@@ -85,4 +85,7 @@ struct graphics_information {
 	bool shaders_compilation_finished = false;
 	int shaders_total = 0;
 	int shaders_compiled = 0;
+
+	// drawing mode
+	bool renderTo2dTexture = true;
 };

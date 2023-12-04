@@ -43,7 +43,7 @@ u32 indexData[] = {
 
 // main vertex and fragment shader for rendering as byte code
 // created with ./shader/spir_v/print_array.py
-const vector<u8> mainVertShader = {
+const vector<u8> tex2dVertShader = {
 		0x03, 0x02, 0x23, 0x07, 0x00, 0x00, 0x01, 0x00, 0x0b, 0x00, 0x0d, 0x00, 0x21, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x11, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x06, 0x00,
 		0x01, 0x00, 0x00, 0x00, 0x47, 0x4c, 0x53, 0x4c, 0x2e, 0x73, 0x74, 0x64, 0x2e, 0x34, 0x35, 0x30,
@@ -114,7 +114,7 @@ const vector<u8> mainVertShader = {
 		0x20, 0x00, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x00, 0xfd, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00
 };
 
-const vector<u8> mainFragShader = {
+const vector<u8> tex2dFragShader = {
 		0x03, 0x02, 0x23, 0x07, 0x00, 0x00, 0x01, 0x00, 0x0b, 0x00, 0x0d, 0x00, 0x13, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x11, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x06, 0x00,
 		0x01, 0x00, 0x00, 0x00, 0x47, 0x4c, 0x53, 0x4c, 0x2e, 0x73, 0x74, 0x64, 0x2e, 0x34, 0x35, 0x30,
@@ -168,6 +168,7 @@ VulkanMgr* VulkanMgr::getInstance(SDL_Window* _window, graphics_information& _gr
 void VulkanMgr::resetInstance() {
 	if (instance != nullptr) {
 		instance->StopGraphics();
+		instance->ExitGraphics();
 		delete instance;
 		instance = nullptr;
 	}
@@ -212,8 +213,8 @@ bool VulkanMgr::ExitGraphics() {
 	if (debugCallback) {
 		PFN_vkDestroyDebugUtilsMessengerEXT pfnDestroyDebugUtilsMessengerEXT;
 		pfnDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulkanInstance, "vkDestroyDebugUtilsMessengerEXT");
-		pfnDestroyDebugUtilsMessengerEXT(vulkanInstance, debugCallback, 0);
-		debugCallback = 0;
+		pfnDestroyDebugUtilsMessengerEXT(vulkanInstance, debugCallback, nullptr);
+		debugCallback = nullptr;
 	}
 #endif
 	vkDestroyInstance(vulkanInstance, nullptr);
@@ -237,7 +238,7 @@ bool VulkanMgr::StartGraphics() {
 	if (!InitCommandBuffers()) {
 		return false;
 	}
-	if (!InitMainShader()) {
+	if (!InitTex2dRenderTarget()) {
 		return false;
 	}
 
@@ -245,13 +246,13 @@ bool VulkanMgr::StartGraphics() {
 }
 
 void VulkanMgr::StopGraphics() {
-	instance->DestroyCommandBuffer();
-	instance->DestroyMainShader();
-	instance->DestroyFrameBuffers();
-	instance->DestroyPipelines();
-	instance->DestroyRenderPass();
-	instance->DestroySwapchain(false);
-	instance->DestroySurface();
+	DestroyTex2dRenderTarget();
+	DestroyCommandBuffer();
+	DestroyFrameBuffers();
+	DestroyPipelines();
+	DestroyRenderPass();
+	DestroySwapchain(false);
+	DestroySurface();
 }
 
 void VulkanMgr::RenderFrame() {
@@ -291,15 +292,22 @@ void VulkanMgr::RenderFrame() {
 		begin_info.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-		// bind pipeline
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mainPipeline);
-		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mainVertexBuffer.buffer, &offset);
-		vkCmdBindIndexBuffer(commandBuffer, mainIndexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-		vkCmdDrawIndexed(commandBuffer, sizeof(indexData) / sizeof(u32), 1, 0, 0, 0);
-		//vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+		// bind pipelines
+		if (graphicsInfo.renderTo2dTexture) {
+			// render 2d texture
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipeline);
+			VkDeviceSize offset = 0;
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &tex2dVertexBuffer.buffer, &offset);
+			vkCmdBindIndexBuffer(commandBuffer, tex2dIndexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+			vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+			vkCmdDrawIndexed(commandBuffer, sizeof(indexData) / sizeof(u32), 1, 0, 0, 0);
+		}
+		else {
+			// render 3d space
+
+		}
+		
 
 		// imgui -> last
 		ImGui::Render();
@@ -344,7 +352,11 @@ void VulkanMgr::RenderFrame() {
 	present_info.pWaitSemaphores = &releaseSemaphore;
 	
 	if (VkResult result = vkQueuePresentKHR(queue, &present_info); result != VK_SUCCESS) {
-		//LOG_ERROR("[vulkan] frame present");
+		/*
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+			RebuildSwapchain();
+		}
+		*/
 	}
 
 	frame_index = (frame_index + 1) % FRAMES_IN_FLIGHT;
@@ -738,25 +750,6 @@ bool VulkanMgr::InitCommandBuffers() {
 		}
 	}
 
-	
-	if (!InitBuffer(mainVertexBuffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
-		LOG_ERROR("[vulkan] init vertex buffer");
-		return false;
-	}
-	if (!LoadBuffer(mainVertexBuffer, vertexData, sizeof(vertexData))) {
-		LOG_ERROR("[vulkan] copy data to vertex buffer");
-		return false;
-	}
-	
-	if (!InitBuffer(mainIndexBuffer, sizeof(indexData), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
-		LOG_ERROR("[vulkan] init index buffer");
-		return false;
-	}
-	if (!LoadBuffer(mainIndexBuffer, indexData, sizeof(indexData))) {
-		LOG_ERROR("[vulkan] copy data to index buffer");
-		return false;
-	}
-
 	return true;
 }
 
@@ -831,40 +824,6 @@ bool VulkanMgr::InitImgui() {
 
 	LOG_INFO("[vulkan] imgui initialized");
 	return true;
-}
-
-bool VulkanMgr::InitMainShader() {
-	VkShaderModule vertex_shader;
-	VkShaderModule fragment_shader;
-
-	auto vertex_shader_data = vector<char>(mainVertShader.data(), mainVertShader.data() + mainVertShader.size());
-	auto fragment_shader_data = vector<char>(mainFragShader.data(), mainFragShader.data() + mainFragShader.size());
-
-	if (InitShaderModule(vertex_shader_data, vertex_shader) && InitShaderModule(fragment_shader_data, fragment_shader)) {
-		VulkanPipelineBufferInfo buffer_info = {};
-		VkVertexInputBindingDescription bind_desc = {};
-		bind_desc.binding = 0;
-		bind_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		bind_desc.stride = sizeof(float) * 5;
-		buffer_info.bindDesc.push_back(bind_desc);
-
-		VkVertexInputAttributeDescription attr_desc[2] = {};
-		attr_desc[0].binding = 0;
-		attr_desc[0].location = 0;
-		attr_desc[0].format = VK_FORMAT_R32G32_SFLOAT;
-		attr_desc[0].offset = 0;
-		attr_desc[1].binding = 0;
-		attr_desc[1].location = 1;
-		attr_desc[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attr_desc[1].offset = sizeof(float) * 2;
-		buffer_info.attrDesc = vector<VkVertexInputAttributeDescription>(attr_desc, attr_desc + (sizeof(attr_desc) / sizeof(attr_desc[0])));
-
-		InitPipeline(vertex_shader, fragment_shader, mainPipelineLayout, mainPipeline, buffer_info);
-		return true;
-	}
-	else {
-		return false;
-	}
 }
 
 bool VulkanMgr::InitShaderModule(const vector<char>& _byte_code, VkShaderModule& _shader) {
@@ -1092,8 +1051,8 @@ void VulkanMgr::RebuildSwapchain() {
 }
 
 void VulkanMgr::RebuildPipelines() {
-	DestroyMainShader();
-	InitMainShader();
+	DestroyTex2dShader();
+	InitTex2dShader();
 }
 
 void VulkanMgr::DestroySwapchain(const bool& _rebuild) {
@@ -1129,8 +1088,6 @@ void VulkanMgr::DestroyRenderPass() {
 
 void VulkanMgr::DestroyCommandBuffer() {
 	WaitIdle();
-	DestroyBuffer(mainVertexBuffer);
-	DestroyBuffer(mainIndexBuffer);
 	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
 		vkDestroyCommandPool(device, commandPools[i], nullptr);
 	}
@@ -1154,15 +1111,104 @@ void VulkanMgr::DestroyPipelines() {
 	pipelines.clear();
 }
 
-void VulkanMgr::DestroyMainShader() {
-	WaitIdle();
-	vkDestroyPipeline(device, mainPipeline, nullptr);
-	vkDestroyPipelineLayout(device, mainPipelineLayout, nullptr);
-}
-
 void VulkanMgr::DestroyBuffer(VulkanBuffer& _buffer) {
 	vkDestroyBuffer(device, _buffer.buffer, 0);
 	vkFreeMemory(device, _buffer.memory, 0);
+}
+
+bool VulkanMgr::InitTex2dRenderTarget() {
+	if (!InitTex2dBuffers()) {
+		return false;
+	}
+	if (!InitTex2dImage()) {
+		return false;
+	}
+	if (!InitTex2dShader()) {
+		return false;
+	}
+	return true;
+}
+
+void VulkanMgr::DestroyTex2dRenderTarget() {
+	DestroyTex2dShader();
+	DestroyTex2dImage();
+	DestroyTex2dBuffers();
+}
+
+bool VulkanMgr::InitTex2dBuffers() {
+	if (!InitBuffer(tex2dVertexBuffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
+		LOG_ERROR("[vulkan] init vertex buffer");
+		return false;
+	}
+	if (!LoadBuffer(tex2dVertexBuffer, vertexData, sizeof(vertexData))) {
+		LOG_ERROR("[vulkan] copy data to vertex buffer");
+		return false;
+	}
+
+	if (!InitBuffer(tex2dIndexBuffer, sizeof(indexData), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
+		LOG_ERROR("[vulkan] init index buffer");
+		return false;
+	}
+	if (!LoadBuffer(tex2dIndexBuffer, indexData, sizeof(indexData))) {
+		LOG_ERROR("[vulkan] copy data to index buffer");
+		return false;
+	}
+	return true;
+}
+
+void VulkanMgr::DestroyTex2dBuffers() {
+	WaitIdle();
+	DestroyBuffer(tex2dVertexBuffer);
+	DestroyBuffer(tex2dIndexBuffer);
+}
+
+bool VulkanMgr::InitTex2dImage() {
+	// TODO
+	return true;
+}
+
+void VulkanMgr::DestroyTex2dImage() {
+	// TODO
+}
+
+bool VulkanMgr::InitTex2dShader() {
+	VkShaderModule vertex_shader;
+	VkShaderModule fragment_shader;
+
+	auto vertex_shader_data = vector<char>(tex2dVertShader.data(), tex2dVertShader.data() + tex2dVertShader.size());
+	auto fragment_shader_data = vector<char>(tex2dFragShader.data(), tex2dFragShader.data() + tex2dFragShader.size());
+
+	if (InitShaderModule(vertex_shader_data, vertex_shader) && InitShaderModule(fragment_shader_data, fragment_shader)) {
+		VulkanPipelineBufferInfo buffer_info = {};
+		VkVertexInputBindingDescription bind_desc = {};
+		bind_desc.binding = 0;
+		bind_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		bind_desc.stride = sizeof(float) * 5;
+		buffer_info.bindDesc.push_back(bind_desc);
+
+		VkVertexInputAttributeDescription attr_desc[2] = {};
+		attr_desc[0].binding = 0;
+		attr_desc[0].location = 0;
+		attr_desc[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attr_desc[0].offset = 0;
+		attr_desc[1].binding = 0;
+		attr_desc[1].location = 1;
+		attr_desc[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attr_desc[1].offset = sizeof(float) * 2;
+		buffer_info.attrDesc = vector<VkVertexInputAttributeDescription>(attr_desc, attr_desc + (sizeof(attr_desc) / sizeof(attr_desc[0])));
+
+		InitPipeline(vertex_shader, fragment_shader, tex2dPipelineLayout, tex2dPipeline, buffer_info);
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+void VulkanMgr::DestroyTex2dShader() {
+	WaitIdle();
+	vkDestroyPipeline(device, tex2dPipeline, nullptr);
+	vkDestroyPipelineLayout(device, tex2dPipelineLayout, nullptr);
 }
 
 void VulkanMgr::WaitIdle() {
