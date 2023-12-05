@@ -238,7 +238,7 @@ bool VulkanMgr::StartGraphics() {
 	if (!InitCommandBuffers()) {
 		return false;
 	}
-	if (!InitTex2dRenderTarget()) {
+	if (graphicsInfo.is2d && !InitTex2dRenderTarget()) {
 		return false;
 	}
 
@@ -246,7 +246,9 @@ bool VulkanMgr::StartGraphics() {
 }
 
 void VulkanMgr::StopGraphics() {
-	DestroyTex2dRenderTarget();
+	if (graphicsInfo.is2d) {
+		DestroyTex2dRenderTarget();
+	}
 	DestroyCommandBuffer();
 	DestroyFrameBuffers();
 	DestroyPipelines();
@@ -287,27 +289,12 @@ void VulkanMgr::RenderFrame() {
 		begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		begin_info.renderPass = renderPass;
 		begin_info.framebuffer = frameBuffers[image_index];
-		begin_info.renderArea = { {0, 0}, {width, height} };
+		begin_info.renderArea = { {0, 0}, {graphicsInfo.width, graphicsInfo.height} };
 		begin_info.clearValueCount = 1;
 		begin_info.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-		// bind pipelines
-		if (graphicsInfo.renderTo2dTexture) {
-			// render 2d texture
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipeline);
-			VkDeviceSize offset = 0;
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &tex2dVertexBuffer.buffer, &offset);
-			vkCmdBindIndexBuffer(commandBuffer, tex2dIndexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-			vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-			vkCmdDrawIndexed(commandBuffer, sizeof(indexData) / sizeof(u32), 1, 0, 0, 0);
-		}
-		else {
-			// render 3d space
-
-		}
-		
+		(this->*bindPipelines)(commandBuffer);
 
 		// imgui -> last
 		ImGui::Render();
@@ -360,6 +347,75 @@ void VulkanMgr::RenderFrame() {
 	}
 
 	frame_index = (frame_index + 1) % FRAMES_IN_FLIGHT;
+}
+
+void VulkanMgr::BindPipelinesTex2d(VkCommandBuffer& _command_buffer) {
+	vkCmdBindPipeline(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipeline);
+	VkDeviceSize offset = 0;
+	vkCmdBindVertexBuffers(_command_buffer, 0, 1, &tex2dVertexBuffer.buffer, &offset);
+	vkCmdBindIndexBuffer(_command_buffer, tex2dIndexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdSetViewport(_command_buffer, 0, 1, &viewport);
+	vkCmdSetScissor(_command_buffer, 0, 1, &scissor);
+	vkCmdDrawIndexed(_command_buffer, sizeof(indexData) / sizeof(u32), 1, 0, 0, 0);
+}
+
+void VulkanMgr::UpdateTex2d() {
+	memcpy(mappedImageData, graphicsInfo.imageData, graphicsInfo.height * graphicsInfo.width * 4);
+
+	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	if (vkBeginCommandBuffer(tex2dCommandBuffer, &beginInfo) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] begin command buffer tex2d update");
+	}
+
+	{
+		VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		imageBarrier.image = tex2dImage.image;
+		imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageBarrier.subresourceRange.levelCount = 1;
+		imageBarrier.subresourceRange.layerCount = 1;
+		imageBarrier.srcAccessMask = 0;
+		imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		vkCmdPipelineBarrier(tex2dCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 1, &imageBarrier);
+	}
+
+	VkBufferImageCopy region = {};
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.layerCount = 1;
+	region.imageExtent = { graphicsInfo.width, graphicsInfo.height, 1 };
+	vkCmdCopyBufferToImage(tex2dCommandBuffer, tex2dStagingBuffer.buffer, tex2dImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	{
+		VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		imageBarrier.image = tex2dImage.image;
+		imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageBarrier.subresourceRange.levelCount = 1;
+		imageBarrier.subresourceRange.layerCount = 1;
+		imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageBarrier.dstAccessMask = VK_ACCESS_NONE;
+		vkCmdPipelineBarrier(tex2dCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, 0, 0, 0, 1, &imageBarrier);
+	}
+
+	if (vkEndCommandBuffer(tex2dCommandBuffer) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] end command buffer tex2d update");
+	}
+
+	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &tex2dCommandBuffer;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = &releaseSemaphore;
+	if (vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] queue submit tex2d update");
+	}
 }
 
 bool VulkanMgr::InitVulkanInstance(std::vector<const char*>& _sdl_extensions) {
@@ -614,10 +670,10 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 		return false;
 	}
 
-	width = surface_capabilites.currentExtent.width;
-	height = surface_capabilites.currentExtent.height;
-	viewport = { .0f, .0f, (float)width, (float)height, .0f, 1.f};
-	scissor = { {0, 0}, {width, height} };
+	graphicsInfo.width = surface_capabilites.currentExtent.width;
+	graphicsInfo.height = surface_capabilites.currentExtent.height;
+	viewport = { .0f, .0f, (float)graphicsInfo.width, (float)graphicsInfo.height, .0f, 1.f};
+	scissor = { {0, 0}, {graphicsInfo.width, graphicsInfo.height} };
 
 	u32 image_num = 0;
 	if (vkGetSwapchainImagesKHR(device, swapchain, &image_num, nullptr) != VK_SUCCESS) {
@@ -691,8 +747,8 @@ bool VulkanMgr::InitFrameBuffers() {
 		framebuffer_info.renderPass = renderPass;
 		framebuffer_info.attachmentCount = 1;
 		framebuffer_info.pAttachments = &imageViews[i];
-		framebuffer_info.width = width;
-		framebuffer_info.height = height;
+		framebuffer_info.width = graphicsInfo.width;
+		framebuffer_info.height = graphicsInfo.height;
 		framebuffer_info.layers = 1;
 
 		if (vkCreateFramebuffer(device, &framebuffer_info, nullptr, &frameBuffers[i]) != VK_SUCCESS) {
@@ -725,16 +781,8 @@ bool VulkanMgr::InitCommandBuffers() {
 		return false;
 	}
 
-	VkSemaphoreCreateInfo acquire_info = {};
-	acquire_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	if (vkCreateSemaphore(device, &acquire_info, nullptr, &acquireSemaphore) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] create acquire semaphore");
-	}
-
-	VkSemaphoreCreateInfo release_info = {};
-	release_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	if (vkCreateSemaphore(device, &release_info, nullptr, &releaseSemaphore) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] create release semaphore");
+	if (!InitSemaphore(acquireSemaphore) || !InitSemaphore(releaseSemaphore)) {
+		return false;
 	}
 
 	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
@@ -750,6 +798,16 @@ bool VulkanMgr::InitCommandBuffers() {
 		}
 	}
 
+	return true;
+}
+
+bool VulkanMgr::InitSemaphore(VkSemaphore& _semaphore) {
+	VkSemaphoreCreateInfo sem_info = {};
+	sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	if (vkCreateSemaphore(device, &sem_info, nullptr, &_semaphore) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create semaphore");
+		return false;
+	}
 	return true;
 }
 
@@ -1031,9 +1089,55 @@ bool VulkanMgr::LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size) {
 			return false;
 		}
 
-		vkDestroyCommandPool(device, cmd_pool, 0);
+		vkDestroyCommandPool(device, cmd_pool, nullptr);
 		DestroyBuffer(staging_buffer);
 	}
+	return true;
+}
+
+bool VulkanMgr::InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage) {
+	VkImageCreateInfo image_info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+	image_info.imageType = VK_IMAGE_TYPE_2D;
+	image_info.extent.width = graphicsInfo.width;
+	image_info.extent.height = graphicsInfo.height;
+	image_info.extent.depth = 1;
+	image_info.mipLevels = 1;
+	image_info.arrayLayers = 1;
+	image_info.format = format;
+	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	image_info.usage = _usage;
+	image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	if (vkCreateImage(device, &image_info, nullptr, &_image.image) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create image");
+		return false;
+	}
+
+	VkMemoryRequirements mem_requ;
+	vkGetImageMemoryRequirements(device, _image.image, &mem_requ);
+	VkMemoryAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+	alloc_info.allocationSize = mem_requ.size;
+	alloc_info.memoryTypeIndex = FindMemoryTypes(mem_requ.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	if (vkAllocateMemory(device, &alloc_info, nullptr, &_image.memory) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] allocate image memory");
+	}
+	if (vkBindImageMemory(device, _image.image, _image.memory, 0) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] bind image memory");
+	}
+
+	VkImageViewCreateInfo create_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+	create_info.image = _image.image;
+	create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	create_info.format = format;
+	create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	create_info.subresourceRange.levelCount = 1;
+	create_info.subresourceRange.layerCount = 1;
+	if (vkCreateImageView(device, &create_info, nullptr, &_image.image_view) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create image view");
+		return false;
+	}
+
 	return true;
 }
 
@@ -1092,8 +1196,8 @@ void VulkanMgr::DestroyCommandBuffer() {
 		vkDestroyCommandPool(device, commandPools[i], nullptr);
 	}
 	vkDestroyFence(device, fence, nullptr);
-	vkDestroySemaphore(device, acquireSemaphore, nullptr);
-	vkDestroySemaphore(device, releaseSemaphore, nullptr);
+	DestroySemaphore(acquireSemaphore);
+	DestroySemaphore(releaseSemaphore);
 }
 
 void VulkanMgr::DestroyImgui() {
@@ -1112,30 +1216,37 @@ void VulkanMgr::DestroyPipelines() {
 }
 
 void VulkanMgr::DestroyBuffer(VulkanBuffer& _buffer) {
-	vkDestroyBuffer(device, _buffer.buffer, 0);
-	vkFreeMemory(device, _buffer.memory, 0);
+	vkDestroyBuffer(device, _buffer.buffer, nullptr);
+	vkFreeMemory(device, _buffer.memory, nullptr);
+}
+
+void VulkanMgr::DestroyImage(VulkanImage& _image) {
+	vkDestroyImageView(device, _image.image_view, nullptr);
+	vkDestroyImage(device, _image.image, nullptr);
+	vkFreeMemory(device, _image.memory, nullptr);
+}
+
+void VulkanMgr::DestroySemaphore(VkSemaphore& _semaphore) {
+	vkDestroySemaphore(device, _semaphore, nullptr);
 }
 
 bool VulkanMgr::InitTex2dRenderTarget() {
-	if (!InitTex2dBuffers()) {
-		return false;
+	VkCommandPoolCreateInfo cmd_pool_info = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+	cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+	cmd_pool_info.queueFamilyIndex = familyIndex;
+	if (vkCreateCommandPool(device, &cmd_pool_info, 0, &tex2dCommandPool) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create command pool for tex2d update");
 	}
-	if (!InitTex2dImage()) {
-		return false;
-	}
-	if (!InitTex2dShader()) {
-		return false;
-	}
-	return true;
-}
 
-void VulkanMgr::DestroyTex2dRenderTarget() {
-	DestroyTex2dShader();
-	DestroyTex2dImage();
-	DestroyTex2dBuffers();
-}
+	VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+	alloc_info.commandPool = tex2dCommandPool;
+	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	alloc_info.commandBufferCount = 1;
+	if (vkAllocateCommandBuffers(device, &alloc_info, &tex2dCommandBuffer) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] init command buffer for tex2d update");
+	}
 
-bool VulkanMgr::InitTex2dBuffers() {
+	// vertex buffer for triangle
 	if (!InitBuffer(tex2dVertexBuffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
 		LOG_ERROR("[vulkan] init vertex buffer");
 		return false;
@@ -1145,6 +1256,7 @@ bool VulkanMgr::InitTex2dBuffers() {
 		return false;
 	}
 
+	// index buffer for triangle
 	if (!InitBuffer(tex2dIndexBuffer, sizeof(indexData), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
 		LOG_ERROR("[vulkan] init index buffer");
 		return false;
@@ -1153,22 +1265,40 @@ bool VulkanMgr::InitTex2dBuffers() {
 		LOG_ERROR("[vulkan] copy data to index buffer");
 		return false;
 	}
+
+	// staging buffer for texture upload
+	u64 size = graphicsInfo.width * graphicsInfo.height * 4;
+	if (!InitBuffer(tex2dStagingBuffer, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+		LOG_ERROR("[vulkan] create staging buffer for main texture");
+		return false;
+	}
+	if (vkMapMemory(device, tex2dStagingBuffer.memory, 0, size, 0, &mappedImageData) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] map image memory");
+		return false;
+	}
+	// image buffer for shader usage
+	if (!InitImage(tex2dImage, graphicsInfo.width, graphicsInfo.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
+		LOG_ERROR("[vulkan] create target 2d texture for virtual hardware");
+		return false;
+	}
+
+	// shader to present 2d texture
+	if (!InitTex2dShader()) {
+		LOG_ERROR("[vulkan] init shader for 2d texture output");
+		return false;
+	}
+	bindPipelines = &VulkanMgr::BindPipelinesTex2d;
 	return true;
 }
 
-void VulkanMgr::DestroyTex2dBuffers() {
+void VulkanMgr::DestroyTex2dRenderTarget() {
 	WaitIdle();
+	DestroyTex2dShader();
+	DestroyBuffer(tex2dStagingBuffer);
+	DestroyImage(tex2dImage);
 	DestroyBuffer(tex2dVertexBuffer);
 	DestroyBuffer(tex2dIndexBuffer);
-}
-
-bool VulkanMgr::InitTex2dImage() {
-	// TODO
-	return true;
-}
-
-void VulkanMgr::DestroyTex2dImage() {
-	// TODO
+	vkDestroyCommandPool(device, tex2dCommandPool, nullptr);
 }
 
 bool VulkanMgr::InitTex2dShader() {

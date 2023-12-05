@@ -40,6 +40,8 @@ struct VulkanImage {
 	VkDeviceMemory memory;
 };
 
+//typedef void (VulkanMgr::* update_function)();
+
 class VulkanMgr{
 public:
 	// get/reset vkInstance
@@ -67,7 +69,7 @@ public:
 	void NextFrameImGui() const;
 
 	// render virtual gpu output
-	void UpdateTex2dImage();
+	void UpdateTex2d();
 
 private:
 	static VulkanMgr* instance;
@@ -88,8 +90,6 @@ private:
 	// swapchain
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE;
-	uint32_t width;
-	uint32_t height;
 	VkFormat format;
 	VkColorSpaceKHR colorSpace;
 	std::vector<VkImage> images;
@@ -118,7 +118,8 @@ private:
 	VkBufferUsageFlags bufferUsageFlags;
 	VkMemoryPropertyFlags memoryPropertyFlags;
 
-	
+	typedef void (VulkanMgr::* render_function)(VkCommandBuffer& _command_buffer);
+	render_function bindPipelines;
 
 	// render target 2d texture
 	VulkanBuffer tex2dVertexBuffer = {};
@@ -126,18 +127,15 @@ private:
 	VulkanImage tex2dImage = {};
 	VkPipelineLayout tex2dPipelineLayout;
 	VkPipeline tex2dPipeline;
-	VkSemaphore tex2dTransferSemaphore;
+	VulkanBuffer tex2dStagingBuffer;
 	VkCommandPool tex2dCommandPool;
 	VkCommandBuffer tex2dCommandBuffer;
-	VulkanBuffer tex2dStagingBuffer;				// only used when resizable bar not supported
+	void* mappedImageData;
 	bool InitTex2dRenderTarget();
 	void DestroyTex2dRenderTarget();
-	bool InitTex2dBuffers();
-	void DestroyTex2dBuffers();
-	bool InitTex2dImage();
-	void DestroyTex2dImage();
 	bool InitTex2dShader();
 	void DestroyTex2dShader();
+	void BindPipelinesTex2d(VkCommandBuffer& _command_buffer);
 
 	// sync
 	VkFence fence;
@@ -179,7 +177,8 @@ private:
 	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info);
 	void SetGPUInfo();
 	bool InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
-	bool InitImage();
+	bool InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage);
+	bool InitSemaphore(VkSemaphore& _semaphore);
 
 	bool LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size);
 
@@ -191,7 +190,8 @@ private:
 	void DestroyCommandBuffer();
 	void DestroyPipelines();
 	void DestroyBuffer(VulkanBuffer& _buffer);
-	void DestroyImage();
+	void DestroyImage(VulkanImage& _image);
+	void DestroySemaphore(VkSemaphore& _semaphore);
 
 	// rebuild -> resize window(surface/render area)
 	void RebuildSwapchain();

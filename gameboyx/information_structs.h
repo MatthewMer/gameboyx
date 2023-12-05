@@ -88,4 +88,8 @@ struct graphics_information {
 
 	// drawing mode
 	bool renderTo2dTexture = true;
+	bool is2d = true;
+	void* imageData;
+	u32 width;
+	u32 height;
 };
