@@ -131,11 +131,15 @@ private:
 	VkCommandPool tex2dCommandPool;
 	VkCommandBuffer tex2dCommandBuffer;
 	void* mappedImageData;
+	u64 currentSize;
 	bool InitTex2dRenderTarget();
 	void DestroyTex2dRenderTarget();
 	bool InitTex2dShader();
 	void DestroyTex2dShader();
 	void BindPipelinesTex2d(VkCommandBuffer& _command_buffer);
+	void TransferTex2dData();
+	bool ReinitTex2dRenderTarget();
+	bool InitTex2dBuffers();
 
 	// sync
 	VkFence fence;

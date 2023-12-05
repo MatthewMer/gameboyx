@@ -360,7 +360,7 @@ void VulkanMgr::BindPipelinesTex2d(VkCommandBuffer& _command_buffer) {
 }
 
 void VulkanMgr::UpdateTex2d() {
-	memcpy(mappedImageData, graphicsInfo.imageData, graphicsInfo.height * graphicsInfo.width * 4);
+	memcpy(mappedImageData, graphicsInfo.image_data.data(), graphicsInfo.image_data.size());
 
 	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -380,7 +380,7 @@ void VulkanMgr::UpdateTex2d() {
 		imageBarrier.subresourceRange.layerCount = 1;
 		imageBarrier.srcAccessMask = 0;
 		imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		vkCmdPipelineBarrier(tex2dCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 1, &imageBarrier);
+		vkCmdPipelineBarrier(tex2dCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 	}
 
 	VkBufferImageCopy region = {};
@@ -401,7 +401,7 @@ void VulkanMgr::UpdateTex2d() {
 		imageBarrier.subresourceRange.layerCount = 1;
 		imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		imageBarrier.dstAccessMask = VK_ACCESS_NONE;
-		vkCmdPipelineBarrier(tex2dCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, 0, 0, 0, 1, &imageBarrier);
+		vkCmdPipelineBarrier(tex2dCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 	}
 
 	if (vkEndCommandBuffer(tex2dCommandBuffer) != VK_SUCCESS) {
@@ -1266,34 +1266,49 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 		return false;
 	}
 
-	u64 size = graphicsInfo.width * graphicsInfo.height * 4;
-	if (!resizableBar) {
-		// staging buffer for texture upload
-		if (!InitBuffer(tex2dStagingBuffer, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
-			LOG_ERROR("[vulkan] create staging buffer for main texture");
-			return false;
-		}
-	}
-	
-	// image buffer for shader usage
-	VkImageTiling tiling = resizableBar ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
-	if (!InitImage(tex2dImage, graphicsInfo.width, graphicsInfo.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, tiling)) {
-		LOG_ERROR("[vulkan] create target 2d texture for virtual hardware");
-		return false;
-	}
-
-	if (vkMapMemory(device, resizableBar ? tex2dImage.memory : tex2dStagingBuffer.memory, 0, size, 0, &mappedImageData) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] map image memory");
-		return false;
-	}
+	if (!InitTex2dBuffers()) { return false; }
 
 	// shader to present 2d texture
 	if (!InitTex2dShader()) {
 		LOG_ERROR("[vulkan] init shader for 2d texture output");
 		return false;
 	}
+
 	bindPipelines = &VulkanMgr::BindPipelinesTex2d;
+
 	return true;
+}
+
+bool VulkanMgr::InitTex2dBuffers() {
+	// staging buffer for texture upload
+	currentSize = graphicsInfo.width * graphicsInfo.height * 4;
+	if (!resizableBar && !InitBuffer(tex2dStagingBuffer, currentSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+		LOG_ERROR("[vulkan] create staging buffer for main texture");
+		return false;
+	}
+
+	// image buffer for shader usage
+	if (!InitImage(tex2dImage, graphicsInfo.width, graphicsInfo.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, resizableBar ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL)) {
+		LOG_ERROR("[vulkan] create target 2d texture for virtual hardware");
+		return false;
+	}
+
+	if (vkMapMemory(device, resizableBar ? tex2dImage.memory : tex2dStagingBuffer.memory, 0, currentSize, 0, &mappedImageData) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] map image memory");
+		return false;
+	}
+
+	graphicsInfo.image_data = vector<u8>(currentSize);
+
+	return true;
+}
+
+bool VulkanMgr::ReinitTex2dRenderTarget() {
+	vkMapMemory(device, tex2dImage.memory, 0, currentSize, 0, &mappedImageData);
+	DestroyImage(tex2dImage);
+	DestroyBuffer(tex2dStagingBuffer);
+
+	return InitTex2dBuffers();
 }
 
 void VulkanMgr::DestroyTex2dRenderTarget() {

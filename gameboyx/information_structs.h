@@ -87,9 +87,10 @@ struct graphics_information {
 	int shaders_compiled = 0;
 
 	// drawing mode
-	bool renderTo2dTexture = true;
 	bool is2d = true;
-	void* imageData;
+
+	// data for 2d rendering
+	std::vector<u8> image_data = std::vector<u8>();
 	u32 width;
 	u32 height;
 };
