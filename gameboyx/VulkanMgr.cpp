@@ -1095,7 +1095,7 @@ bool VulkanMgr::LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size) {
 	return true;
 }
 
-bool VulkanMgr::InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage) {
+bool VulkanMgr::InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling) {
 	VkImageCreateInfo image_info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	image_info.imageType = VK_IMAGE_TYPE_2D;
 	image_info.extent.width = graphicsInfo.width;
@@ -1104,7 +1104,7 @@ bool VulkanMgr::InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat
 	image_info.mipLevels = 1;
 	image_info.arrayLayers = 1;
 	image_info.format = format;
-	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	image_info.tiling = _tiling;
 	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	image_info.usage = _usage;
 	image_info.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -1118,7 +1118,7 @@ bool VulkanMgr::InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat
 	vkGetImageMemoryRequirements(device, _image.image, &mem_requ);
 	VkMemoryAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
 	alloc_info.allocationSize = mem_requ.size;
-	alloc_info.memoryTypeIndex = FindMemoryTypes(mem_requ.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	alloc_info.memoryTypeIndex = FindMemoryTypes(mem_requ.memoryTypeBits, memoryPropertyFlags);
 	if (vkAllocateMemory(device, &alloc_info, nullptr, &_image.memory) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] allocate image memory");
 	}
@@ -1266,19 +1266,24 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 		return false;
 	}
 
-	// staging buffer for texture upload
 	u64 size = graphicsInfo.width * graphicsInfo.height * 4;
-	if (!InitBuffer(tex2dStagingBuffer, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
-		LOG_ERROR("[vulkan] create staging buffer for main texture");
-		return false;
+	if (!resizableBar) {
+		// staging buffer for texture upload
+		if (!InitBuffer(tex2dStagingBuffer, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+			LOG_ERROR("[vulkan] create staging buffer for main texture");
+			return false;
+		}
 	}
-	if (vkMapMemory(device, tex2dStagingBuffer.memory, 0, size, 0, &mappedImageData) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] map image memory");
-		return false;
-	}
+	
 	// image buffer for shader usage
-	if (!InitImage(tex2dImage, graphicsInfo.width, graphicsInfo.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
+	VkImageTiling tiling = resizableBar ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
+	if (!InitImage(tex2dImage, graphicsInfo.width, graphicsInfo.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, tiling)) {
 		LOG_ERROR("[vulkan] create target 2d texture for virtual hardware");
+		return false;
+	}
+
+	if (vkMapMemory(device, resizableBar ? tex2dImage.memory : tex2dStagingBuffer.memory, 0, size, 0, &mappedImageData) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] map image memory");
 		return false;
 	}
 
@@ -1294,7 +1299,9 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 void VulkanMgr::DestroyTex2dRenderTarget() {
 	WaitIdle();
 	DestroyTex2dShader();
-	DestroyBuffer(tex2dStagingBuffer);
+	if (resizableBar) {
+		DestroyBuffer(tex2dStagingBuffer);
+	}
 	DestroyImage(tex2dImage);
 	DestroyBuffer(tex2dVertexBuffer);
 	DestroyBuffer(tex2dIndexBuffer);
