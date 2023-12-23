@@ -309,7 +309,7 @@ void VulkanMgr::RenderFrame() {
 		begin_info.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-		//(this->*bindPipelines)(commandBuffer);
+		(this->*bindPipelines)(commandBuffer);
 
 		// imgui -> last
 		ImGui::Render();
@@ -323,10 +323,10 @@ void VulkanMgr::RenderFrame() {
 		}
 	}
 
-	if (vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+	if (vkWaitForFences(device, 1, &renderFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] wait for fences");
 	}
-	if (vkResetFences(device, 1, &fence) != VK_SUCCESS) {
+	if (vkResetFences(device, 1, &renderFence) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] reset fences");
 	}
 
@@ -340,7 +340,7 @@ void VulkanMgr::RenderFrame() {
 	submit_info.pWaitDstStageMask = &waitFlags;
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores = &releaseSemaphore;
-	if (vkQueueSubmit(queue, 1, &submit_info, fence) != VK_SUCCESS) {
+	if (vkQueueSubmit(queue, 1, &submit_info, renderFence) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] submit command buffer to queue");
 	}
 
@@ -380,17 +380,24 @@ void VulkanMgr::UpdateGpuData() {
 }
 
 void VulkanMgr::UpdateTex2d() {
-	memcpy(mappedImageData, graphicsInfo.image_data.data(), graphicsInfo.image_data.size());
+	if (vkWaitForFences(device, 1, &tex2dUpdateFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] wait for texture2d update fance");
+	}
+	if (vkResetFences(device, 1, &tex2dUpdateFence) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] reset texture2d update renderFence");
+	}
 
+	memcpy(mappedImageData, graphicsInfo.image_data.data(), graphicsInfo.image_data.size());
+	
 	// currently only for testing
 	if (vkResetCommandPool(device, tex2dCommandPool, 0) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] reset command pool");
+		LOG_ERROR("[vulkan] reset texture2d command pool");
 	}
 
 	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	if (vkBeginCommandBuffer(tex2dCommandBuffer, &beginInfo) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] begin command buffer tex2d update");
+		LOG_ERROR("[vulkan] begin command buffer texture2d update");
 	}
 
 	// syncronize texture upload to shader stages -> shader stage TRANSFER with corresponding access mask for TRANSFER (L2 Cache) to make sure the copy is not interfering with the fragment shader read
@@ -404,7 +411,7 @@ void VulkanMgr::UpdateTex2d() {
 		imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		imageBarrier.subresourceRange.levelCount = 1;
 		imageBarrier.subresourceRange.layerCount = 1;
-		imageBarrier.srcAccessMask = 0;
+		imageBarrier.srcAccessMask = VK_ACCESS_NONE;
 		imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		vkCmdPipelineBarrier(tex2dCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 	}
@@ -431,14 +438,14 @@ void VulkanMgr::UpdateTex2d() {
 	}
 
 	if (vkEndCommandBuffer(tex2dCommandBuffer) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] end command buffer tex2d update");
+		LOG_ERROR("[vulkan] end command buffer texture2d update");
 	}
 
 	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &tex2dCommandBuffer;
-	if (vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] queue submit tex2d update");
+	if (vkQueueSubmit(queue, 1, &submitInfo, tex2dUpdateFence) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] queue submit texture2d update");
 	}
 }
 
@@ -809,8 +816,8 @@ bool VulkanMgr::InitCommandBuffers() {
 	VkFenceCreateInfo fence_info = {};
 	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	if (vkCreateFence(device, &fence_info, nullptr, &fence) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] create fence");
+	if (vkCreateFence(device, &fence_info, nullptr, &renderFence) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create renderFence");
 		return false;
 	}
 
@@ -1232,7 +1239,7 @@ void VulkanMgr::DestroyCommandBuffer() {
 	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
 		vkDestroyCommandPool(device, commandPools[i], nullptr);
 	}
-	vkDestroyFence(device, fence, nullptr);
+	vkDestroyFence(device, renderFence, nullptr);
 	DestroySemaphore(acquireSemaphore);
 	DestroySemaphore(releaseSemaphore);
 }
@@ -1361,6 +1368,14 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 			LOG_ERROR("[vulkan] init shader for 2d texture output");
 			return false;
 		}
+
+		VkFenceCreateInfo fence_info = {};
+		fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		if (vkCreateFence(device, &fence_info, nullptr, &tex2dUpdateFence) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] create tex2dUpdateFence");
+			return false;
+		}
 	}
 
 	if (graphicsInfo.is2d && graphicsInfo.en2d) {
@@ -1442,6 +1457,7 @@ void VulkanMgr::DestroyTex2dRenderTarget() {
 	DestroyBuffer(tex2dVertexBuffer);
 	DestroyBuffer(tex2dIndexBuffer);
 	vkDestroyCommandPool(device, tex2dCommandPool, nullptr);
+	vkDestroyFence(device, tex2dUpdateFence, nullptr);
 }
 
 void VulkanMgr::DestroyTex2dSampler() {

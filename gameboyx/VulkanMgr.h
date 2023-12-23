@@ -142,6 +142,7 @@ private:
 
 	VkCommandPool tex2dCommandPool;
 	VkCommandBuffer tex2dCommandBuffer;
+	VkFence tex2dUpdateFence;
 
 	VkDescriptorPool tex2dDescPool;
 	VkDescriptorSet tex2dDescSet;
@@ -165,7 +166,7 @@ private:
 	void DestroyTex2dSampler();
 
 	// sync
-	VkFence fence;
+	VkFence renderFence;
 	VkSemaphore acquireSemaphore;
 	VkSemaphore releaseSemaphore;
 	VkPipelineStageFlags waitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;				// swapchain
