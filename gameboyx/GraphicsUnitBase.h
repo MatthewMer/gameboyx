@@ -9,12 +9,13 @@
 */
 
 #include "Cartridge.h"
+#include "VulkanMgr.h"
 
 class GraphicsUnitBase
 {
 public:
 	// get/reset instance
-	static GraphicsUnitBase* getInstance();
+	static GraphicsUnitBase* getInstance(VulkanMgr* _graphics_mgr, graphics_information& _graphics_info);
 	static void resetInstance();
 
 	// clone/assign protection

@@ -13,11 +13,12 @@
 #include "information_structs.h"
 #include "SDL.h"
 
+#include "VulkanMgr.h"
 
 class VHardwareMgr
 {
 public:
-	static VHardwareMgr* getInstance(const game_info& _game_ctx, machine_information& _machine_info);
+	static VHardwareMgr* getInstance(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -35,7 +36,7 @@ public:
 
 private:
 	// constructor
-	VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info);
+	VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info);
 	static VHardwareMgr* instance;
 	~VHardwareMgr() = default;
 

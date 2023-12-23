@@ -88,9 +88,13 @@ struct graphics_information {
 
 	// drawing mode
 	bool is2d = true;
+	bool en2d = true;
 
 	// data for 2d rendering
 	std::vector<u8> image_data = std::vector<u8>();
-	u32 width;
-	u32 height;
+	u32 win_width;
+	u32 win_height;
+	int channels;
+
+
 };

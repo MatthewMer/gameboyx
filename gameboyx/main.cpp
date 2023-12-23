@@ -159,7 +159,7 @@ int main(int, char**)
             machine_info.reset_machine_information();
 
             VHardwareMgr::resetInstance();
-            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), machine_info);
+            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), machine_info, graphics_mgr, graphics_info);
 
             game_stat.request_reset = false;
             game_stat.pending_game_start = false;

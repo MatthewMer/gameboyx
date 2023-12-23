@@ -10,10 +10,10 @@ using namespace std;
 *********************************************************************************************************** */
 VHardwareMgr* VHardwareMgr::instance = nullptr;
 
-VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, machine_information& _machine_info) {
+VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) {
     VHardwareMgr::resetInstance();
 
-    instance = new VHardwareMgr(_game_ctx, _machine_info);
+    instance = new VHardwareMgr(_game_ctx, _machine_info, _graphics_mgr, _graphics_info);
     return instance;
 }
 
@@ -27,7 +27,7 @@ void VHardwareMgr::resetInstance() {
     }
 }
 
-VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info) : machineInfo(_machine_info) {
+VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) : machineInfo(_machine_info) {
     cart_instance = Cartridge::getInstance(_game_ctx);
     if (cart_instance == nullptr) {
         LOG_ERROR("Couldn't create virtual cartridge");
@@ -35,7 +35,7 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
     }
 
     core_instance = CoreBase::getInstance(_machine_info);
-    graphics_instance = GraphicsUnitBase::getInstance();
+    graphics_instance = GraphicsUnitBase::getInstance(_graphics_mgr, _graphics_info);
 
     // returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();

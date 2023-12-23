@@ -68,8 +68,7 @@ public:
 	void DestroyImgui();
 	void NextFrameImGui() const;
 
-	// render virtual gpu output
-	void UpdateTex2d();
+	void UpdateGpuData();
 
 private:
 	static VulkanMgr* instance;
@@ -82,7 +81,7 @@ private:
 	// sdl
 	SDL_Window* window;
 
-	// graphics queue
+	// graphics Queue
 	VkQueue queue = VK_NULL_HANDLE;
 	uint32_t familyIndex = (uint32_t) - 1;
 	VkPhysicalDeviceMemoryProperties devMemProps;
@@ -118,28 +117,52 @@ private:
 	VkBufferUsageFlags bufferUsageFlags;
 	VkMemoryPropertyFlags memoryPropertyFlags;
 
+	typedef void (VulkanMgr::* update_function)();
+	update_function updateFunction;
+
 	typedef void (VulkanMgr::* render_function)(VkCommandBuffer& _command_buffer);
 	render_function bindPipelines;
 
+	typedef void (VulkanMgr::* rebuild_function)();
+	rebuild_function rebuildFunction;
+
+	void Rebuild3d();
+	void Rebuild2d();
+
 	// render target 2d texture
+	void UpdateTex2d();
+
 	VulkanBuffer tex2dVertexBuffer = {};
 	VulkanBuffer tex2dIndexBuffer = {};
 	VulkanImage tex2dImage = {};
+
 	VkPipelineLayout tex2dPipelineLayout;
 	VkPipeline tex2dPipeline;
 	VulkanBuffer tex2dStagingBuffer;
+
 	VkCommandPool tex2dCommandPool;
 	VkCommandBuffer tex2dCommandBuffer;
+
+	VkDescriptorPool tex2dDescPool;
+	VkDescriptorSet tex2dDescSet;
+	std::vector<VkDescriptorSetLayout> tex2dDescSetLayout = std::vector<VkDescriptorSetLayout>(1);
+
+	VkSampler samplerTex2d;
+
 	void* mappedImageData;
+
 	u64 currentSize;
+
 	bool InitTex2dRenderTarget();
 	void DestroyTex2dRenderTarget();
-	bool InitTex2dShader();
+	bool InitTex2dPipeline();
 	void DestroyTex2dShader();
-	void BindPipelinesTex2d(VkCommandBuffer& _command_buffer);
+	void BindPipelines2d(VkCommandBuffer& _command_buffer);
 	void TransferTex2dData();
-	bool ReinitTex2dRenderTarget();
+	bool ReinitTex2dBuffers();
 	bool InitTex2dBuffers();
+	bool InitTex2dSampler();
+	void DestroyTex2dSampler();
 
 	// sync
 	VkFence fence;
@@ -178,10 +201,10 @@ private:
 	bool InitFrameBuffers();
 	bool InitCommandBuffers();
 	bool InitShaderModule(const std::vector<char>& _byte_code, VkShaderModule& _shader);
-	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info);
+	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info, std::vector<VkDescriptorSetLayout>& _set_leyouts);
 	void SetGPUInfo();
 	bool InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
-	bool InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
+	bool InitImage(VulkanImage& _image, u32 width, u32 height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
 	bool InitSemaphore(VkSemaphore& _semaphore);
 
 	bool LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size);
@@ -199,7 +222,6 @@ private:
 
 	// rebuild -> resize window(surface/render area)
 	void RebuildSwapchain();
-	void RebuildPipelines();
 
 	u32 FindMemoryTypes(u32 _type_filter, VkMemoryPropertyFlags _mem_properties);
 	void DetectResizableBar();

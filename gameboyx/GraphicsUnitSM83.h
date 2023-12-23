@@ -9,6 +9,7 @@
 
 #include "GraphicsUnitBase.h"
 #include "MemorySM83.h"
+#include "VulkanMgr.h"
 
 class GraphicsUnitSM83 : protected GraphicsUnitBase
 {
@@ -21,16 +22,19 @@ public:
 
 private:
 	// constructor
-	GraphicsUnitSM83() {
-		mem_instance = MemorySM83::getInstance();
-		graphics_ctx = mem_instance->GetGraphicsContext();
+	GraphicsUnitSM83(VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) : graphicsMgr(_graphics_mgr), graphicsInfo(_graphics_info) {
+		memInstance = MemorySM83::getInstance();
+		graphicsCtx = memInstance->GetGraphicsContext();
+		LoadImage();
 	}
 	// destructor
 	~GraphicsUnitSM83() = default;
 
 	// memory access
-	MemorySM83* mem_instance;
-	graphics_context* graphics_ctx;
+	MemorySM83* memInstance;
+	graphics_context* graphicsCtx;
+	graphics_information& graphicsInfo;
+	VulkanMgr* graphicsMgr;
 
 	// members
 	void DrawTileMapBackground();
@@ -56,4 +60,7 @@ private:
 	u8 currentTile[PPU_VRAM_TILE_SIZE];
 	u8 currentTile16[PPU_VRAM_TILE_SIZE];
 	u8 pixel;
+
+	// just for testing
+	void LoadImage();
 };
