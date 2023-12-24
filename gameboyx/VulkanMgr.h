@@ -89,7 +89,7 @@ private:
 	// swapchain
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE;
-	VkFormat format;
+	VkFormat swapchainFormat;
 	VkColorSpaceKHR colorSpace;
 	std::vector<VkImage> images;
 	uint32_t minImageCount;
@@ -131,6 +131,8 @@ private:
 
 	// render target 2d texture
 	void UpdateTex2d();
+
+	VkFormat tex2dFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
 	VulkanBuffer tex2dVertexBuffer = {};
 	VulkanBuffer tex2dIndexBuffer = {};

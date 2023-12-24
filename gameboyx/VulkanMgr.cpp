@@ -668,8 +668,7 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 	auto image_formats = std::vector<VkSurfaceFormatKHR>(formats_num);
 	if (vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formats_num, image_formats.data()) != VK_SUCCESS) { return false; }
 
-	// TODO: look into formats and which to use
-	format = image_formats[0].format;
+	swapchainFormat = image_formats[0].format;
 	colorSpace = image_formats[0].colorSpace;
 
 	VkSurfaceCapabilitiesKHR surface_capabilites;
@@ -698,7 +697,7 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 	swapchain_info.flags = 0;
 	swapchain_info.surface = surface;
 	swapchain_info.minImageCount = minImageCount;							// triple buffering
-	swapchain_info.imageFormat = format;									// bit depth/format
+	swapchain_info.imageFormat = swapchainFormat;							// bit depth/tex2dFormat
 	swapchain_info.imageColorSpace = colorSpace;							// used color space
 	swapchain_info.imageExtent = surface_capabilites.currentExtent;			// image size
 	swapchain_info.imageArrayLayers = 1;									// multiple images at once (e.g. VR)
@@ -741,7 +740,7 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 		imageview_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		imageview_info.image = images[i];
 		imageview_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		imageview_info.format = format;
+		imageview_info.format = swapchainFormat;
 		imageview_info.components = { VK_COMPONENT_SWIZZLE_IDENTITY };
 		imageview_info.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
@@ -756,14 +755,14 @@ bool VulkanMgr::InitSwapchain(VkImageUsageFlags _flags) {
 
 bool VulkanMgr::InitRenderPass() {
 	VkAttachmentDescription attachment_description = {};
-	attachment_description.format = format;
+	attachment_description.format = swapchainFormat;
 	attachment_description.samples = sample_count;														// MSAA
 	attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;										// clear previous
 	attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;										// store result
 	attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;									// before renderpass -> don't care
-	attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;								// final format to present
+	attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;								// final tex2dFormat to present
 
-	VkAttachmentReference attachment_reference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };		// format for rendering
+	VkAttachmentReference attachment_reference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };		// tex2dFormat for rendering
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;										// pass type: graphics
 	subpass.colorAttachmentCount = 1;
@@ -1184,7 +1183,7 @@ bool VulkanMgr::InitImage(VulkanImage& _image, u32 width, u32 height, VkFormat _
 	VkImageViewCreateInfo create_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	create_info.image = _image.image;
 	create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	create_info.format = format;
+	create_info.format = _format;
 	create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	create_info.subresourceRange.levelCount = 1;
 	create_info.subresourceRange.layerCount = 1;
@@ -1414,14 +1413,14 @@ bool VulkanMgr::InitTex2dDescriptorSets() {
 
 		// info for descriptor of texture2d to sample from -> fragment shader
 		VkDescriptorImageInfo imageInfo = { samplerTex2d, tex2dImage.image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-		VkWriteDescriptorSet descriptorWrites[1];
+		auto descriptorWrites = std::vector<VkWriteDescriptorSet>(1);
 		descriptorWrites[0] = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 		descriptorWrites[0].dstSet = tex2dDescSet;
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorWrites[0].pImageInfo = &imageInfo;
-		vkUpdateDescriptorSets(device, sizeof(descriptorWrites) / sizeof(descriptorWrites[0]), descriptorWrites, 0, nullptr);
+		vkUpdateDescriptorSets(device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
 	}
 
 	return true;
@@ -1446,7 +1445,7 @@ bool VulkanMgr::InitTex2dBuffers() {
 	}
 
 	// image buffer for shader usage
-	if (!InitImage(tex2dImage, graphicsInfo.win_width, graphicsInfo.win_height, format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, /*resizableBar ? VK_IMAGE_TILING_LINEAR :*/ VK_IMAGE_TILING_OPTIMAL)) {
+	if (!InitImage(tex2dImage, graphicsInfo.win_width, graphicsInfo.win_height, tex2dFormat, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, /*resizableBar ? VK_IMAGE_TILING_LINEAR :*/ VK_IMAGE_TILING_OPTIMAL)) {
 		LOG_ERROR("[vulkan] create target 2d texture for virtual hardware");
 		return false;
 	}
