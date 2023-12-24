@@ -138,11 +138,13 @@ private:
 
 	VkPipelineLayout tex2dPipelineLayout;
 	VkPipeline tex2dPipeline;
-	VulkanBuffer tex2dStagingBuffer;
+	std::vector<VulkanBuffer> tex2dStagingBuffer = std::vector<VulkanBuffer>(2);
+
+	int tex2dUpdateIndex = 0;
 
 	VkCommandPool tex2dCommandPool;
-	VkCommandBuffer tex2dCommandBuffer;
-	VkFence tex2dUpdateFence;
+	std::vector<VkCommandBuffer> tex2dCommandBuffer = std::vector<VkCommandBuffer>(2);
+	std::vector<VkFence> tex2dUpdateFence = std::vector<VkFence>(2);
 
 	VkDescriptorPool tex2dDescPool;
 	VkDescriptorSet tex2dDescSet;
@@ -150,7 +152,7 @@ private:
 
 	VkSampler samplerTex2d;
 
-	void* mappedImageData;
+	std::vector<void*> mappedImageData = std::vector<void*>(2);
 
 	u64 currentSize;
 
