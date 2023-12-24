@@ -142,7 +142,7 @@ private:
 
 	int tex2dUpdateIndex = 0;
 
-	VkCommandPool tex2dCommandPool;
+	std::vector<VkCommandPool> tex2dCommandPool = std::vector<VkCommandPool>(2);
 	std::vector<VkCommandBuffer> tex2dCommandBuffer = std::vector<VkCommandBuffer>(2);
 	std::vector<VkFence> tex2dUpdateFence = std::vector<VkFence>(2);
 

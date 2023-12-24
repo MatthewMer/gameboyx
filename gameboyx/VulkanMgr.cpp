@@ -361,7 +361,7 @@ void VulkanMgr::RenderFrame() {
 		*/
 	}
 
-	frame_index = (frame_index + 1) % FRAMES_IN_FLIGHT;
+	++frame_index %= FRAMES_IN_FLIGHT;
 }
 
 void VulkanMgr::BindPipelines2d(VkCommandBuffer& _command_buffer) {
@@ -381,16 +381,15 @@ void VulkanMgr::UpdateGpuData() {
 
 void VulkanMgr::UpdateTex2d() {
 	if (vkWaitForFences(device, 1, &tex2dUpdateFence[tex2dUpdateIndex], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] wait for texture2d update fance");
+		LOG_ERROR("[vulkan] wait for texture2d update fence");
 	}
 	if (vkResetFences(device, 1, &tex2dUpdateFence[tex2dUpdateIndex]) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] reset texture2d update renderFence");
+		LOG_ERROR("[vulkan] reset texture2d update fence");
 	}
 
 	memcpy(mappedImageData[tex2dUpdateIndex], graphicsInfo.image_data.data(), graphicsInfo.image_data.size());
 	
-	// currently only for testing
-	if (vkResetCommandPool(device, tex2dCommandPool, 0) != VK_SUCCESS) {
+	if (vkResetCommandPool(device, tex2dCommandPool[tex2dUpdateIndex], 0) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] reset texture2d command pool");
 	}
 
@@ -1277,19 +1276,21 @@ void VulkanMgr::DestroySemaphore(VkSemaphore& _semaphore) {
 }
 
 bool VulkanMgr::InitTex2dRenderTarget() {
-	VkCommandPoolCreateInfo cmd_pool_info = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-	cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-	cmd_pool_info.queueFamilyIndex = familyIndex;
-	if (vkCreateCommandPool(device, &cmd_pool_info, nullptr, &tex2dCommandPool) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] create command pool for tex2d update");
-	}
+	for (int i = 0; i < tex2dCommandPool.size(); i++) {
+		VkCommandPoolCreateInfo cmd_pool_info = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+		cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+		cmd_pool_info.queueFamilyIndex = familyIndex;
+		if (vkCreateCommandPool(device, &cmd_pool_info, nullptr, &tex2dCommandPool[i]) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] create command pool for tex2d update");
+		}
 
-	VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-	alloc_info.commandPool = tex2dCommandPool;
-	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	alloc_info.commandBufferCount = 2;
-	if (vkAllocateCommandBuffers(device, &alloc_info, tex2dCommandBuffer.data()) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] init command buffer for tex2d update");
+		VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+		alloc_info.commandPool = tex2dCommandPool[i];
+		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		alloc_info.commandBufferCount = 1;
+		if (vkAllocateCommandBuffers(device, &alloc_info, &tex2dCommandBuffer[i]) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] init command buffer for tex2d update");
+		}
 	}
 
 	// vertex buffer for triangle
@@ -1418,10 +1419,11 @@ bool VulkanMgr::InitTex2dSampler() {
 bool VulkanMgr::InitTex2dBuffers() {
 	// staging buffer for texture upload
 	currentSize = graphicsInfo.win_width * graphicsInfo.win_height * 4;
-	if (!InitBuffer(tex2dStagingBuffer[0], currentSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) &&
-		!InitBuffer(tex2dStagingBuffer[1], currentSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
-		LOG_ERROR("[vulkan] create staging buffer for main texture");
-		return false;
+	for(auto& n : tex2dStagingBuffer){
+		if (!InitBuffer(n, currentSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+			LOG_ERROR("[vulkan] create staging buffer for main texture");
+			return false;
+		}
 	}
 
 	// image buffer for shader usage
@@ -1430,10 +1432,12 @@ bool VulkanMgr::InitTex2dBuffers() {
 		return false;
 	}
 
-	if (vkMapMemory(device, tex2dStagingBuffer[0].memory, 0, currentSize, 0, &mappedImageData[0]) != VK_SUCCESS &&
-		vkMapMemory(device, tex2dStagingBuffer[1].memory, 0, currentSize, 0, &mappedImageData[1]) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] map image memory");
-		return false;
+	for (int i = 0; auto & n : tex2dStagingBuffer) {
+		if (vkMapMemory(device, n.memory, 0, currentSize, 0, &mappedImageData[i]) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] map image memory");
+			return false;
+		}
+		i++;
 	}
 
 	graphicsInfo.image_data = vector<u8>(currentSize);
@@ -1460,14 +1464,18 @@ void VulkanMgr::DestroyTex2dRenderTarget() {
 	DestroyTex2dShader();
 	vkDestroyDescriptorPool(device, tex2dDescPool, nullptr);
 	vkDestroyDescriptorSetLayout(device, tex2dDescSetLayout[0], nullptr);
-	DestroyBuffer(tex2dStagingBuffer[0]);
-	DestroyBuffer(tex2dStagingBuffer[1]);
+	for (auto& n : tex2dStagingBuffer) {
+		DestroyBuffer(n);
+	}
 	DestroyImage(tex2dImage);
 	DestroyBuffer(tex2dVertexBuffer);
 	DestroyBuffer(tex2dIndexBuffer);
-	vkDestroyCommandPool(device, tex2dCommandPool, nullptr);
-	vkDestroyFence(device, tex2dUpdateFence[0], nullptr);
-	vkDestroyFence(device, tex2dUpdateFence[1], nullptr);
+	for (auto& n : tex2dCommandPool) {
+		vkDestroyCommandPool(device, n, nullptr);
+	}
+	for (auto& n : tex2dUpdateFence) {
+		vkDestroyFence(device, n, nullptr);
+	}
 }
 
 void VulkanMgr::DestroyTex2dSampler() {
