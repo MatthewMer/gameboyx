@@ -369,7 +369,7 @@ void VulkanMgr::BindPipelines2d(VkCommandBuffer& _command_buffer) {
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(_command_buffer, 0, 1, &tex2dVertexBuffer.buffer, &offset);
 	vkCmdBindIndexBuffer(_command_buffer, tex2dIndexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdBindDescriptorSets(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipelineLayout, 0, 1, &tex2dDescSet, 0, 0);
+	vkCmdBindDescriptorSets(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipelineLayout, 0, 1, &tex2dDescSet, 0, nullptr);
 	vkCmdSetViewport(_command_buffer, 0, 1, &viewport);
 	vkCmdSetScissor(_command_buffer, 0, 1, &scissor);
 	vkCmdDrawIndexed(_command_buffer, sizeof(indexData) / sizeof(u32), 1, 0, 0, 0);
@@ -399,7 +399,8 @@ void VulkanMgr::UpdateTex2d() {
 		LOG_ERROR("[vulkan] begin command buffer texture2d update");
 	}
 
-	// syncronize texture upload to shader stages -> shader stage TRANSFER with corresponding access mask for TRANSFER (L2 Cache) to make sure the copy is not interfering with the fragment shader read
+	// synchronize texture upload to shader stages -> shader stage TRANSFER with corresponding access mask for TRANSFER (L2 Cache) 
+	// to make sure the copy is not interfering with the fragment shader read and image is in proper layout and memory location for update
 	{
 		VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -451,8 +452,12 @@ void VulkanMgr::UpdateTex2d() {
 }
 
 void VulkanMgr::Rebuild2d() {
-	RebuildSwapchain();
-	ReinitTex2dBuffers();
+	if (ReinitTex2dBuffers() && ReinitTex2dDescripotorSets()) {
+		RebuildSwapchain();
+	}
+	else {
+		LOG_ERROR("[vulkan] error during swapchain rebuild");
+	}
 }
 
 void VulkanMgr::Rebuild3d() {
@@ -1153,7 +1158,7 @@ bool VulkanMgr::InitImage(VulkanImage& _image, u32 width, u32 height, VkFormat _
 	image_info.extent.depth = 1;
 	image_info.mipLevels = 1;
 	image_info.arrayLayers = 1;
-	image_info.format = format;
+	image_info.format = _format;
 	image_info.tiling = _tiling;
 	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	image_info.usage = _usage;
@@ -1168,7 +1173,7 @@ bool VulkanMgr::InitImage(VulkanImage& _image, u32 width, u32 height, VkFormat _
 	vkGetImageMemoryRequirements(device, _image.image, &mem_requ);
 	VkMemoryAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
 	alloc_info.allocationSize = mem_requ.size;
-	alloc_info.memoryTypeIndex = FindMemoryTypes(mem_requ.memoryTypeBits, memoryPropertyFlags);
+	alloc_info.memoryTypeIndex = FindMemoryTypes(mem_requ.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	if (vkAllocateMemory(device, &alloc_info, nullptr, &_image.memory) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] allocate image memory");
 	}
@@ -1327,53 +1332,7 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 
 		if (!InitTex2dSampler()) { return false; }
 
-		{
-			VkDescriptorPoolSize poolSizes[] = {
-				{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
-			};
-			VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-			createInfo.maxSets = 1;
-			createInfo.poolSizeCount = sizeof(poolSizes) / sizeof(poolSizes[0]);
-			createInfo.pPoolSizes = poolSizes;
-			if (vkCreateDescriptorPool(device, &createInfo, nullptr, &tex2dDescPool) != VK_SUCCESS) {
-				LOG_ERROR("[vulkan] create descriptor pool");
-				return false;
-			}
-		}
-
-		{
-			// combined: texture and sampler at the same time
-			VkDescriptorSetLayoutBinding bindings[] = {
-				{0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-			};
-			VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-			createInfo.bindingCount = sizeof(bindings) / sizeof(bindings[0]);
-			createInfo.pBindings = bindings;
-			if (vkCreateDescriptorSetLayout(device, &createInfo, nullptr, tex2dDescSetLayout.data()) != VK_SUCCESS) {
-				LOG_ERROR("[vulkan] create descriptor pool layout");
-				return false;
-			}
-
-			VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-			allocateInfo.descriptorPool = tex2dDescPool;
-			allocateInfo.descriptorSetCount = (u32)tex2dDescSetLayout.size();
-			allocateInfo.pSetLayouts = tex2dDescSetLayout.data();
-			if (vkAllocateDescriptorSets(device, &allocateInfo, &tex2dDescSet) != VK_SUCCESS) {
-				LOG_ERROR("[vulkan] allocate descriptor sets");
-				return false;
-			}
-
-			// info for descriptor of texture2d to sample from -> fragment shader
-			VkDescriptorImageInfo imageInfo = { samplerTex2d, tex2dImage.image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-			VkWriteDescriptorSet descriptorWrites[1];
-			descriptorWrites[0] = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-			descriptorWrites[0].dstSet = tex2dDescSet;
-			descriptorWrites[0].dstBinding = 0;
-			descriptorWrites[0].descriptorCount = 1;
-			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrites[0].pImageInfo = &imageInfo;
-			vkUpdateDescriptorSets(device, sizeof(descriptorWrites) / sizeof(descriptorWrites[0]), descriptorWrites, 0, nullptr);
-		}
+		if (!InitTex2dDescriptorSets()) { return false; }
 
 		// shader to present 2d texture
 		if (!InitTex2dPipeline()) {
@@ -1416,6 +1375,66 @@ bool VulkanMgr::InitTex2dSampler() {
 	return true;
 }
 
+bool VulkanMgr::InitTex2dDescriptorSets() {
+	{
+		VkDescriptorPoolSize poolSizes[] = {
+			{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
+		};
+		VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+		createInfo.maxSets = 1;
+		createInfo.poolSizeCount = sizeof(poolSizes) / sizeof(poolSizes[0]);
+		createInfo.pPoolSizes = poolSizes;
+		if (vkCreateDescriptorPool(device, &createInfo, nullptr, &tex2dDescPool) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] create descriptor pool");
+			return false;
+		}
+	}
+
+	{
+		// combined: texture and sampler at the same time
+		VkDescriptorSetLayoutBinding bindings[] = {
+			{0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+		};
+		VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+		createInfo.bindingCount = sizeof(bindings) / sizeof(bindings[0]);
+		createInfo.pBindings = bindings;
+		if (vkCreateDescriptorSetLayout(device, &createInfo, nullptr, tex2dDescSetLayout.data()) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] create descriptor pool layout");
+			return false;
+		}
+
+		VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		allocateInfo.descriptorPool = tex2dDescPool;
+		allocateInfo.descriptorSetCount = (u32)tex2dDescSetLayout.size();
+		allocateInfo.pSetLayouts = tex2dDescSetLayout.data();
+		if (vkAllocateDescriptorSets(device, &allocateInfo, &tex2dDescSet) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] allocate descriptor sets");
+			return false;
+		}
+
+		// info for descriptor of texture2d to sample from -> fragment shader
+		VkDescriptorImageInfo imageInfo = { samplerTex2d, tex2dImage.image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+		VkWriteDescriptorSet descriptorWrites[1];
+		descriptorWrites[0] = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+		descriptorWrites[0].dstSet = tex2dDescSet;
+		descriptorWrites[0].dstBinding = 0;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[0].pImageInfo = &imageInfo;
+		vkUpdateDescriptorSets(device, sizeof(descriptorWrites) / sizeof(descriptorWrites[0]), descriptorWrites, 0, nullptr);
+	}
+
+	return true;
+}
+
+bool VulkanMgr::ReinitTex2dDescripotorSets() {
+	WaitIdle();
+	vkDestroyDescriptorPool(device, tex2dDescPool, nullptr);
+	vkDestroyDescriptorSetLayout(device, tex2dDescSetLayout[0], nullptr);
+
+	return InitTex2dDescriptorSets();
+}
+
 bool VulkanMgr::InitTex2dBuffers() {
 	// staging buffer for texture upload
 	currentSize = graphicsInfo.win_width * graphicsInfo.win_height * 4;
@@ -1427,7 +1446,7 @@ bool VulkanMgr::InitTex2dBuffers() {
 	}
 
 	// image buffer for shader usage
-	if (!InitImage(tex2dImage, graphicsInfo.win_width, graphicsInfo.win_height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, resizableBar ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL)) {
+	if (!InitImage(tex2dImage, graphicsInfo.win_width, graphicsInfo.win_height, format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, /*resizableBar ? VK_IMAGE_TILING_LINEAR :*/ VK_IMAGE_TILING_OPTIMAL)) {
 		LOG_ERROR("[vulkan] create target 2d texture for virtual hardware");
 		return false;
 	}
@@ -1449,6 +1468,7 @@ bool VulkanMgr::InitTex2dBuffers() {
 }
 
 bool VulkanMgr::ReinitTex2dBuffers() {
+	WaitIdle();
 	vkUnmapMemory(device, tex2dStagingBuffer[0].memory);
 	vkUnmapMemory(device, tex2dStagingBuffer[1].memory);
 	DestroyImage(tex2dImage);

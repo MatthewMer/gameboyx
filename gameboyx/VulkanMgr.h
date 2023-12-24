@@ -166,6 +166,8 @@ private:
 	bool InitTex2dBuffers();
 	bool InitTex2dSampler();
 	void DestroyTex2dSampler();
+	bool InitTex2dDescriptorSets();
+	bool ReinitTex2dDescripotorSets();
 
 	// sync
 	VkFence renderFence;
