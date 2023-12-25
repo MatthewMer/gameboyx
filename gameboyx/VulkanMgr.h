@@ -45,7 +45,7 @@ struct VulkanImage {
 class VulkanMgr{
 public:
 	// get/reset vkInstance
-	static VulkanMgr* getInstance(SDL_Window* _window, graphics_information& _graphics_info);
+	static VulkanMgr* getInstance(SDL_Window* _window, graphics_information& _graphics_info, game_status& _game_stat);
 	static void resetInstance();
 
 	// render
@@ -70,11 +70,14 @@ public:
 
 	void UpdateGpuData();
 
+	bool Init2dGraphicsBackend();
+	void Destroy2dGraphicsBackend();
+
 private:
 	static VulkanMgr* instance;
 
-	explicit VulkanMgr(SDL_Window* _window, graphics_information& _graphics_info)
-		: window(_window), graphicsInfo(_graphics_info)
+	explicit VulkanMgr(SDL_Window* _window, graphics_information& _graphics_info, game_status& _game_stat)
+		: window(_window), graphicsInfo(_graphics_info), gameStat(_game_stat)
 	{};
 	~VulkanMgr() = default;
 
@@ -119,12 +122,15 @@ private:
 
 	typedef void (VulkanMgr::* update_function)();
 	update_function updateFunction;
+	void UpdateDummy();
 
 	typedef void (VulkanMgr::* render_function)(VkCommandBuffer& _command_buffer);
 	render_function bindPipelines;
+	void BindPipelinesDummy(VkCommandBuffer& _command_buffer);
 
 	typedef void (VulkanMgr::* rebuild_function)();
 	rebuild_function rebuildFunction;
+	void RebuildDummy();
 
 	void Rebuild3d();
 	void Rebuild2d();
@@ -164,12 +170,10 @@ private:
 	void DestroyTex2dShader();
 	void BindPipelines2d(VkCommandBuffer& _command_buffer);
 	void TransferTex2dData();
-	bool ReinitTex2dBuffers();
 	bool InitTex2dBuffers();
 	bool InitTex2dSampler();
 	void DestroyTex2dSampler();
 	bool InitTex2dDescriptorSets();
-	bool ReinitTex2dDescripotorSets();
 
 	// sync
 	VkFence renderFence;
@@ -194,6 +198,7 @@ private:
 	std::string driverVersion;
 
 	graphics_information& graphicsInfo;
+	game_status& gameStat;
 
 	// misc
 	VkClearValue clearColor = { 0.f, 0.f, 0.f, 1.f };

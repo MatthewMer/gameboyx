@@ -735,7 +735,7 @@ bool ImGuiGameboyX::ActionAddGame(const string& _path_to_rom) {
 
     for (const auto& n : games) {
         if (game_ctx == n) {
-            LOG_WARN("Game already added ! Process aborted");
+            LOG_WARN("[emu] Game already added ! Process aborted");
             showNewGameDialog = false;
             return false;
         }

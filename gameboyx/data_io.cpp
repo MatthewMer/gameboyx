@@ -30,7 +30,7 @@ bool write_games_to_config(const vector<game_info>& _games, const string& _confi
     games_to_string(_games, config_games);
 
     if (write_data(config_games, _config_path_rel, true, _rewrite)) {
-        if(!_rewrite) LOG_INFO(_games.size(), " game(s) added to ." + _config_path_rel);
+        if(!_rewrite) LOG_INFO("[emu] ", _games.size(), " game(s) added to ." + _config_path_rel);
         return true; 
     }
 
@@ -102,7 +102,7 @@ bool delete_games_from_config(vector<game_info>& _games, const std::string& _con
         return false;
     }
 
-    LOG_INFO(_games.size(), " game(s) removed from .", _config_path_rel);
+    LOG_INFO("[emu] ", _games.size(), " game(s) removed from .", _config_path_rel);
 
     return true;
 }
@@ -120,7 +120,7 @@ bool read_data(vector<string>& _input, const string& _file_path, const bool& _re
 
     ifstream is(file_path, ios::beg);
     if (!is) {
-        LOG_WARN("Couldn't open ", file_path);
+        LOG_WARN("[emu] Couldn't open ", file_path);
         return false;
     }
 
@@ -139,7 +139,7 @@ bool read_data(std::vector<char>& _input, const std::string& _file_path, const b
 
     ifstream is(file_path, ios::beg | ios::binary);
     if (!is) {
-        LOG_WARN("Couldn't open ", file_path);
+        LOG_WARN("[emu] Couldn't open ", file_path);
         return false;
     }
 
@@ -152,7 +152,7 @@ bool write_data(const vector<string>& _output, const string& _file_path, const b
     
     ofstream os(file_path, (_rewrite ? ios::trunc : ios::app));
     if (!os.is_open()) {
-        LOG_WARN("Couldn't write ", file_path);
+        LOG_WARN("[emu] Couldn't write ", file_path);
         return false;
     }
 
@@ -169,7 +169,7 @@ bool write_data(const vector<char>& _output, const string& _file_path, const boo
 
     ofstream os(file_path, (_rewrite ? ios::trunc : ios::app) | ios::binary);
     if (!os.is_open()) {
-        LOG_WARN("Couldn't write ", file_path);
+        LOG_WARN("[emu] Couldn't write ", file_path);
         return false;
     }
 

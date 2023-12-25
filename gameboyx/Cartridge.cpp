@@ -45,7 +45,7 @@ bool Cartridge::ReadHeaderConsole() {
 
 bool Cartridge::read_basic_header_info(game_info& _game_ctx, vector<u8>& _vec_rom) {
 	// read header info -----
-	LOG_INFO("Reading header info");
+	LOG_INFO("[emu] Reading header info");
 
 	// cgb/sgb flags
 	_game_ctx.is_cgb = _vec_rom[ROM_HEAD_CGBFLAG] & 0x80;
@@ -83,12 +83,12 @@ bool Cartridge::read_basic_header_info(game_info& _game_ctx, vector<u8>& _vec_ro
 	_game_ctx.dest_code = get_dest_code(_vec_rom[ROM_HEAD_DEST]);
 
 	_game_ctx.chksum_passed = chksum_expected == chksum_calulated;
-	LOG_INFO("Header read (checksum passed: ", (_game_ctx.chksum_passed ? "true" : "false"), ")");
+	LOG_INFO("[emu] Header read (checksum passed: ", (_game_ctx.chksum_passed ? "true" : "false"), ")");
 	return true;
 }
 
 bool Cartridge::read_rom_to_buffer(const game_info& _game_ctx, std::vector<u8>& _vec_rom) {
-	LOG_INFO("Reading ROM");
+	LOG_INFO("[emu] Reading ROM");
 	string full_file_path = get_full_file_path(_game_ctx);
 
 	ifstream is(full_file_path, ios::binary | ios::beg);
@@ -102,7 +102,7 @@ bool Cartridge::read_rom_to_buffer(const game_info& _game_ctx, std::vector<u8>& 
 bool Cartridge::copy_rom_to_rom_folder(game_info& game_ctx, std::vector<u8>& _vec_rom, const string& _new_file_path) {
 	if (_new_file_path.compare(game_ctx.file_path) == 0) return true;
 	
-	LOG_INFO("Copying file to .", ROM_FOLDER);
+	LOG_INFO("[emu] Copying file to .", ROM_FOLDER);
 
 	check_and_create_rom_folder();
 	check_and_create_file(ROM_FOLDER + game_ctx.file_name, true);
@@ -140,16 +140,16 @@ bool Cartridge::read_new_game(game_info& _game_ctx, const string& _path_to_rom) 
 
 	auto vec_rom = vector<u8>();
 	if (!Cartridge::read_rom_to_buffer(_game_ctx, vec_rom)) {
-		LOG_ERROR("Error while reading rom");
+		LOG_ERROR("[emu] Error while reading rom");
 		return false;
 	}
 
 	if (!Cartridge::copy_rom_to_rom_folder(_game_ctx, vec_rom, s_path_rom_folder)) {
-		LOG_WARN("Fallback to given path");
+		LOG_WARN("[emu] Fallback to given path");
 	}
 
 	if (!Cartridge::read_basic_header_info(_game_ctx, vec_rom)) {
-		LOG_ERROR("Rom header corrupted");
+		LOG_ERROR("[emu] Rom header corrupted");
 		return false;
 	}
 

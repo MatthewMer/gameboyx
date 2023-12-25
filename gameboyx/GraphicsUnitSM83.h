@@ -25,6 +25,7 @@ private:
 	GraphicsUnitSM83(VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) : graphicsMgr(_graphics_mgr), graphicsInfo(_graphics_info) {
 		memInstance = MemorySM83::getInstance();
 		graphicsCtx = memInstance->GetGraphicsContext();
+		graphicsInfo.is2d = graphicsInfo.en2d = true;
 		LoadImage();
 	}
 	// destructor

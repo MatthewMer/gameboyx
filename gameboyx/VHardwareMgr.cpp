@@ -48,14 +48,13 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
 
     core_instance->InitMessageBufferProgram();
 
-    LOG_INFO(_game_ctx.title, " started");
+    LOG_INFO("[emu] hardware for ", _game_ctx.title, " initialized");
 }
 
 /* ***********************************************************************************************************
     FUNCTIONALITY
 *********************************************************************************************************** */
 void VHardwareMgr::ProcessNext() {
-
 
     if (machineInfo.instruction_debug_enabled) {
         core_instance->RunCycle();

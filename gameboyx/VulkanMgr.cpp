@@ -175,8 +175,11 @@ VkBool32 VKAPI_CALL debug_report_callback(VkDebugUtilsMessageSeverityFlagBitsEXT
 
 VulkanMgr* VulkanMgr::instance = nullptr;
 
-VulkanMgr* VulkanMgr::getInstance(SDL_Window* _window, graphics_information& _graphics_info) {
-	instance = new VulkanMgr(_window, _graphics_info);
+VulkanMgr* VulkanMgr::getInstance(SDL_Window* _window, graphics_information& _graphics_info, game_status& _game_stat) {
+	if (instance != nullptr) {
+		instance->resetInstance();
+	}
+	instance = new VulkanMgr(_window, _graphics_info, _game_stat);
 	return instance;
 }
 
@@ -253,16 +256,19 @@ bool VulkanMgr::StartGraphics() {
 	if (!InitCommandBuffers()) {
 		return false;
 	}
-	if (graphicsInfo.is2d && !InitTex2dRenderTarget()) {
-		return false;
-	}
+
+	bindPipelines = &VulkanMgr::BindPipelinesDummy;
+	rebuildFunction = &VulkanMgr::RebuildDummy;
+	updateFunction = &VulkanMgr::UpdateDummy;
 
 	return true;
 }
 
 void VulkanMgr::StopGraphics() {
-	if (graphicsInfo.is2d) {
-		DestroyTex2dRenderTarget();
+	if (gameStat.game_running) {
+		if (graphicsInfo.is2d) {
+			DestroyTex2dRenderTarget();
+		}
 	}
 	DestroyCommandBuffer();
 	DestroyFrameBuffers();
@@ -270,6 +276,19 @@ void VulkanMgr::StopGraphics() {
 	DestroyRenderPass();
 	DestroySwapchain(false);
 	DestroySurface();
+}
+
+bool VulkanMgr::Init2dGraphicsBackend() {
+	return InitTex2dRenderTarget();
+}
+
+void VulkanMgr::Destroy2dGraphicsBackend() {
+	DestroyTex2dRenderTarget();
+
+	updateFunction = &VulkanMgr::UpdateDummy;
+	rebuildFunction = &VulkanMgr::RebuildDummy;
+
+	LOG_INFO("[vulkan] 2d graphics backend stopped");
 }
 
 void VulkanMgr::RenderFrame() {
@@ -362,6 +381,18 @@ void VulkanMgr::RenderFrame() {
 	}
 
 	++frame_index %= FRAMES_IN_FLIGHT;
+}
+
+void VulkanMgr::BindPipelinesDummy(VkCommandBuffer& _command_buffer) {
+	return;
+}
+
+void VulkanMgr::UpdateDummy() {
+	return;
+}
+
+void VulkanMgr::RebuildDummy() {
+	RebuildSwapchain();
 }
 
 void VulkanMgr::BindPipelines2d(VkCommandBuffer& _command_buffer) {
@@ -1363,6 +1394,8 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 	// upload dummy data
 	UpdateTex2d();
 
+	LOG_INFO("[vulkan] 2d graphics backend initialized");
+
 	return true;
 }
 
@@ -1487,6 +1520,8 @@ void VulkanMgr::DestroyTex2dRenderTarget() {
 	for (auto& n : tex2dUpdateFence) {
 		vkDestroyFence(device, n, nullptr);
 	}
+
+	bindPipelines = &VulkanMgr::BindPipelinesDummy;
 }
 
 void VulkanMgr::DestroyTex2dSampler() {

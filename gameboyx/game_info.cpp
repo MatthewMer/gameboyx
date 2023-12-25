@@ -220,17 +220,17 @@ void games_from_string(vector<game_info>& _games, const vector<string>& _config_
             const auto parameter = split_string(line, "=");
 
             if (parameter.size() != 2) {
-                LOG_WARN("Multiple '=' on line ", (i + 1));
+                LOG_WARN("[emu] Multiple '=' on line ", (i + 1));
                 continue;
             }
 
             if (!filter_parameter_game_info_enum(game_ctx, parameter)) {
-                LOG_WARN("Faulty parameter on line ", (i + 1));
+                LOG_WARN("[emu] Faulty parameter on line ", (i + 1));
             }
         }
         else {
-            LOG_WARN("Game entry error line ", i);
-        }
+            LOG_WARN("[emu] Game entry error line ", i);
+        } 
     }
 
     if (game_ctx.title.compare("") != 0)

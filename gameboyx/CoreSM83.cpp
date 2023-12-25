@@ -1179,7 +1179,7 @@ void CoreSM83::STOP() {
         if (machine_ctx->speed_switch_requested) {
             if (machine_ctx->IE & isr_requested) {
                 if (ime) {
-                    LOG_ERROR("STOP Glitch encountered");
+                    LOG_ERROR("[emu] STOP Glitch encountered");
                     halted = true;
                     // set IE to 0x00 (this case is undefined behaviour, simply prevent cpu from execution)
                     machine_ctx->IE = 0x00;
@@ -1207,7 +1207,7 @@ void CoreSM83::STOP() {
         Regs.PC++;
 
         if (data) {
-            LOG_ERROR("Wrong usage of STOP instruction at: ", format("{:x}", Regs.PC - 1));
+            LOG_ERROR("[emu] Wrong usage of STOP instruction at: ", format("{:x}", Regs.PC - 1));
             return;
         }
     }

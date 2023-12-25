@@ -72,7 +72,7 @@ int main(int, char**)
 
     SDL_SetWindowMinimumSize(window, GUI_WIN_WIDTH_MIN, GUI_WIN_HEIGHT_MIN);
 
-    auto* graphics_mgr = VulkanMgr::getInstance(window, graphics_info);
+    auto* graphics_mgr = VulkanMgr::getInstance(window, graphics_info, game_stat);
     if (!sdl_graphics_start(graphics_mgr)) { return -2; }
     if (!imgui_init(graphics_mgr)) { return -3; }
 
@@ -85,7 +85,7 @@ int main(int, char**)
     }
 
     // Main loop
-    LOG_INFO("Initialization completed");
+    LOG_INFO("[emu] Initialization completed");
 
     u32 win_min;
 
@@ -137,7 +137,7 @@ int main(int, char**)
                     sdl_toggle_full_screen(window);
                     break;
                 default:
-                    if (game_stat.game_running) {
+                    if (game_stat.game_running && vhwmgr_obj) {
                         vhwmgr_obj->EventKeyUp(key);
                     }
                     else {
@@ -161,12 +161,20 @@ int main(int, char**)
             VHardwareMgr::resetInstance();
             vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), machine_info, graphics_mgr, graphics_info);
 
+            if (game_stat.pending_game_start) {
+                if (graphics_info.is2d) {
+                    graphics_mgr->Init2dGraphicsBackend();
+                }
+            }
+
             game_stat.request_reset = false;
             game_stat.pending_game_start = false;
 
             game_stat.game_running = true;
 
             gbx_gui->GameStartCallback();
+
+
         }
         if (game_stat.pending_game_stop) {
             VHardwareMgr::resetInstance();
@@ -175,6 +183,10 @@ int main(int, char**)
             game_stat.game_running = false;
             game_stat.pending_game_stop = false;
             machine_info.reset_machine_information();
+
+            if (graphics_info.is2d) {
+                graphics_mgr->Destroy2dGraphicsBackend();
+            }
         }
 
         // run virtual hardware
