@@ -211,7 +211,7 @@ private:
 	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info, std::vector<VkDescriptorSetLayout>& _set_leyouts);
 	void SetGPUInfo();
 	bool InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
-	bool InitImage(VulkanImage& _image, u32 width, u32 height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
+	bool InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
 	bool InitSemaphore(VkSemaphore& _semaphore);
 
 	bool LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size);

@@ -452,12 +452,23 @@ void VulkanMgr::UpdateTex2d() {
 }
 
 void VulkanMgr::Rebuild2d() {
-	if (ReinitTex2dBuffers() && ReinitTex2dDescripotorSets()) {
-		RebuildSwapchain();
-	}
-	else {
-		LOG_ERROR("[vulkan] error during swapchain rebuild");
-	}
+	WaitIdle();
+
+	RebuildSwapchain();
+
+	vkUnmapMemory(device, tex2dStagingBuffer[0].memory);
+	vkUnmapMemory(device, tex2dStagingBuffer[1].memory);
+	DestroyImage(tex2dImage);
+	DestroyBuffer(tex2dStagingBuffer[0]);
+	DestroyBuffer(tex2dStagingBuffer[1]);
+	InitTex2dBuffers();
+
+	vkDestroyDescriptorPool(device, tex2dDescPool, nullptr);
+	vkDestroyDescriptorSetLayout(device, tex2dDescSetLayout[0], nullptr);
+	InitTex2dDescriptorSets();
+
+	// upload dummy data
+	UpdateTex2d();
 }
 
 void VulkanMgr::Rebuild3d() {
@@ -1149,11 +1160,11 @@ bool VulkanMgr::LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size) {
 	return true;
 }
 
-bool VulkanMgr::InitImage(VulkanImage& _image, u32 width, u32 height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling) {
+bool VulkanMgr::InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling) {
 	VkImageCreateInfo image_info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	image_info.imageType = VK_IMAGE_TYPE_2D;
-	image_info.extent.width = width;
-	image_info.extent.height = height;
+	image_info.extent.width = _width;
+	image_info.extent.height = _height;
 	image_info.extent.depth = 1;
 	image_info.mipLevels = 1;
 	image_info.arrayLayers = 1;
@@ -1265,11 +1276,13 @@ void VulkanMgr::DestroyPipelines() {
 }
 
 void VulkanMgr::DestroyBuffer(VulkanBuffer& _buffer) {
+	WaitIdle();
 	vkDestroyBuffer(device, _buffer.buffer, nullptr);
 	vkFreeMemory(device, _buffer.memory, nullptr);
 }
 
 void VulkanMgr::DestroyImage(VulkanImage& _image) {
+	WaitIdle();
 	vkDestroyImageView(device, _image.image_view, nullptr);
 	vkDestroyImage(device, _image.image, nullptr);
 	vkFreeMemory(device, _image.memory, nullptr);
@@ -1317,30 +1330,28 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 		return false;
 	}
 
-	if (graphicsInfo.is2d) {
-		VkFenceCreateInfo fence_info = {};
-		fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-		if (vkCreateFence(device, &fence_info, nullptr, &tex2dUpdateFence[0]) != VK_SUCCESS ||
-			vkCreateFence(device, &fence_info, nullptr, &tex2dUpdateFence[1]) != VK_SUCCESS) {
-			LOG_ERROR("[vulkan] create tex2dUpdateFence");
-			return false;
-		}
-
-		if (!InitTex2dBuffers()) { return false; }
-
-		if (!InitTex2dSampler()) { return false; }
-
-		if (!InitTex2dDescriptorSets()) { return false; }
-
-		// shader to present 2d texture
-		if (!InitTex2dPipeline()) {
-			LOG_ERROR("[vulkan] init shader for 2d texture output");
-			return false;
-		}
+	VkFenceCreateInfo fence_info = {};
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	if (vkCreateFence(device, &fence_info, nullptr, &tex2dUpdateFence[0]) != VK_SUCCESS ||
+		vkCreateFence(device, &fence_info, nullptr, &tex2dUpdateFence[1]) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] create tex2dUpdateFence");
+		return false;
 	}
 
-	if (graphicsInfo.is2d && graphicsInfo.en2d) {
+	if (!InitTex2dBuffers()) { return false; }
+
+	if (!InitTex2dSampler()) { return false; }
+
+	if (!InitTex2dDescriptorSets()) { return false; }
+
+	// shader to present 2d texture
+	if (!InitTex2dPipeline()) {
+		LOG_ERROR("[vulkan] init shader for 2d texture output");
+		return false;
+	}
+
+	if (graphicsInfo.en2d) {
 		bindPipelines = &VulkanMgr::BindPipelines2d;
 		rebuildFunction = &VulkanMgr::Rebuild2d;
 		updateFunction = &VulkanMgr::UpdateTex2d;
@@ -1348,6 +1359,9 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 	else {
 
 	}
+
+	// upload dummy data
+	UpdateTex2d();
 
 	return true;
 }
@@ -1420,18 +1434,10 @@ bool VulkanMgr::InitTex2dDescriptorSets() {
 		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorWrites[0].pImageInfo = &imageInfo;
-		vkUpdateDescriptorSets(device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(device, (u32)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
 	}
 
 	return true;
-}
-
-bool VulkanMgr::ReinitTex2dDescripotorSets() {
-	WaitIdle();
-	vkDestroyDescriptorPool(device, tex2dDescPool, nullptr);
-	vkDestroyDescriptorSetLayout(device, tex2dDescSetLayout[0], nullptr);
-
-	return InitTex2dDescriptorSets();
 }
 
 bool VulkanMgr::InitTex2dBuffers() {
@@ -1460,21 +1466,7 @@ bool VulkanMgr::InitTex2dBuffers() {
 
 	graphicsInfo.image_data = vector<u8>(currentSize);
 
-	// upload dummy data
-	UpdateTex2d();
-
 	return true;
-}
-
-bool VulkanMgr::ReinitTex2dBuffers() {
-	WaitIdle();
-	vkUnmapMemory(device, tex2dStagingBuffer[0].memory);
-	vkUnmapMemory(device, tex2dStagingBuffer[1].memory);
-	DestroyImage(tex2dImage);
-	DestroyBuffer(tex2dStagingBuffer[0]);
-	DestroyBuffer(tex2dStagingBuffer[1]);
-
-	return InitTex2dBuffers();
 }
 
 void VulkanMgr::DestroyTex2dRenderTarget() {
