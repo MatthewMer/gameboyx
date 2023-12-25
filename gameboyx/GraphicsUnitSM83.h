@@ -20,16 +20,21 @@ public:
 	void NextFrame() override;
 	bool ProcessGPU() override;
 
+	// just for testing
+	void LoadImage();
+
 private:
 	// constructor
 	GraphicsUnitSM83(VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) : graphicsMgr(_graphics_mgr), graphicsInfo(_graphics_info) {
 		memInstance = MemorySM83::getInstance();
 		graphicsCtx = memInstance->GetGraphicsContext();
-		graphicsInfo.is2d = graphicsInfo.en2d = true;
-		LoadImage();
+
+		SetGraphicsParameters();
 	}
 	// destructor
 	~GraphicsUnitSM83() = default;
+
+	void SetGraphicsParameters();
 
 	// memory access
 	MemorySM83* memInstance;
@@ -61,7 +66,4 @@ private:
 	u8 currentTile[PPU_VRAM_TILE_SIZE];
 	u8 currentTile16[PPU_VRAM_TILE_SIZE];
 	u8 pixel;
-
-	// just for testing
-	void LoadImage();
 };

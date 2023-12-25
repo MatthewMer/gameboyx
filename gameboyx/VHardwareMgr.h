@@ -34,6 +34,9 @@ public:
 	void EventKeyDown(const SDL_Keycode& _key);
 	void EventKeyUp(const SDL_Keycode& _key);
 
+	// just for texting
+	GraphicsUnitBase* GetGraphicsUnit();
+
 private:
 	// constructor
 	VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info);

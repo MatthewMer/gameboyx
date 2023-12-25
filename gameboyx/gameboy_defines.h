@@ -7,6 +7,13 @@
 */
 
 /* ***********************************************************************************************************
+    FREQUENCIES
+*********************************************************************************************************** */
+#define DIV_FREQUENCY               16384               // Hz
+#define BASE_CLOCK_CPU              4.20f               // MHz
+#define DISPLAY_FREQUENCY           60                  // Hz
+
+/* ***********************************************************************************************************
     PROCESSOR AND ROM DEFINES
 *********************************************************************************************************** */
 // ROM HEADER *****
@@ -62,8 +69,8 @@
 #define NOT_USED_MEMORY_OFFSET      0xFEA0              // prohibited
 #define NOT_USED_MEMORY_SIZE        0x0060
 
-#define IO_OFFSET         0xFF00              // peripherals
-#define IO_SIZE           0x0080
+#define IO_OFFSET                   0xFF00              // peripherals
+#define IO_SIZE                     0x0080
 
 #define HRAM_OFFSET                 0xFF80              // stack, etc.
 #define HRAM_SIZE                   0x007F
@@ -160,7 +167,7 @@
 #define CGB_SPEED_SWITCH_ADDR       0xFF4D              // Mixed, affects: CPU 1MHz -> 2.1MHz, timer/divider, OAM DMA(not needed)
 #define SPEED                       0x80
 #define NORMAL_SPEED                0x00
-#define SET_SPEED                0x80
+#define SET_SPEED                   0x80
 #define PREPARE_SPEED_SWITCH        0x01
 
 // VRAM BANK SELECT
@@ -196,13 +203,6 @@
 // DIGITAL AUDIO OUT
 #define PCM12_ADDR                  0xFF76              // R
 #define PCM34_ADDR                  0xFF77              // R
-
-/* ***********************************************************************************************************
-    FREQUENCIES
-*********************************************************************************************************** */
-#define DIV_FREQUENCY               16384               // Hz
-#define BASE_CLOCK_CPU              4.20f               // MHz
-#define DISPLAY_FREQUENCY           60                  // Hz
 
 /* ***********************************************************************************************************
     GRAPHICS DEFINES
@@ -270,6 +270,8 @@
 #define PPU_SCREEN_X                160
 #define PPU_SCREEN_Y                144
 #define PPU_TILEMAP_SIZE_1D         256
+
+#define LCD_ASPECT_RATIO            10.f/9.f
 
 /* ***********************************************************************************************************
     REGISTERS INITIAL STATES

@@ -6,9 +6,6 @@
 
 #include "vulkan/vulkan.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 using namespace std;
 
 // VK_FORMAT_R8G8B8A8_UNORM, gray scales
@@ -18,6 +15,13 @@ const u32 DMG_COLOR_PALETTE[] = {
 	0xAAAAAAFF,
 	0xFFFFFFFF
 };
+
+void GraphicsUnitSM83::SetGraphicsParameters() {
+	graphicsInfo.is2d = graphicsInfo.en2d = true;
+	graphicsInfo.ascpect_ratio = LCD_ASPECT_RATIO;
+	graphicsInfo.x_ = PPU_SCREEN_X;
+	graphicsInfo.y_ = PPU_SCREEN_Y;
+}
 
 bool GraphicsUnitSM83::ProcessGPU() {
 	if (graphicsCtx->ppu_enable) {
@@ -236,10 +240,17 @@ void GraphicsUnitSM83::DrawPixel(const int& _pos_x, const int& _pos_y) {
 	}
 }
 
-// only for testing -> output random png
+// only for testing -> set all pixels to 0xff just to test texture upload and presentation
 void GraphicsUnitSM83::LoadImage() {
-	int width, height;
-	uint8_t* data = stbi_load("", &width, &height, &graphicsInfo.channels, 4);			// insert image to load
-
-	stbi_image_free(data);
+	for (int y = 0; y < graphicsInfo.y_; y++) {
+		for (int x = 0; x < graphicsInfo.x_; x++) {
+			for (int y_ = 0; y_ < graphicsInfo.texels_per_pixel; y_++) {
+				for (int x_ = 0; x_ < graphicsInfo.texels_per_pixel; x_++) {
+					for (int i = 0; i < 4; i++) {
+						graphicsInfo.image_data[((graphicsInfo.y_offset + (y * graphicsInfo.texels_per_pixel) + y_) * graphicsInfo.win_width * 4) + ((graphicsInfo.x_offset + (x * graphicsInfo.texels_per_pixel) + x_) * 4) + i] = 0xFF;
+					}
+				}
+			}
+		}
+	}
 }

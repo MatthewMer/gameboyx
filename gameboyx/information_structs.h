@@ -96,5 +96,11 @@ struct graphics_information {
 	u32 win_height;
 	int channels;
 
-
+	// virtual hardware defines
+	float ascpect_ratio = .0f;
+	int x_ = 0;
+	int y_ = 0;
+	int texels_per_pixel = 0;
+	int x_offset = 0;
+	int y_offset = 0;
 };

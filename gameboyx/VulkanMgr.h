@@ -175,6 +175,8 @@ private:
 	void DestroyTex2dSampler();
 	bool InitTex2dDescriptorSets();
 
+	void UpdateGraphicsInfo();
+
 	// sync
 	VkFence renderFence;
 	VkSemaphore acquireSemaphore;

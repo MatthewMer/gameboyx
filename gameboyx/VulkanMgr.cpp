@@ -279,7 +279,14 @@ void VulkanMgr::StopGraphics() {
 }
 
 bool VulkanMgr::Init2dGraphicsBackend() {
-	return InitTex2dRenderTarget();
+	if (InitTex2dRenderTarget()) {
+		UpdateGraphicsInfo();
+		UpdateTex2d();
+		return true;
+	}
+	else {
+		return false;
+	}
 }
 
 void VulkanMgr::Destroy2dGraphicsBackend() {
@@ -289,6 +296,31 @@ void VulkanMgr::Destroy2dGraphicsBackend() {
 	rebuildFunction = &VulkanMgr::RebuildDummy;
 
 	LOG_INFO("[vulkan] 2d graphics backend stopped");
+}
+
+void VulkanMgr::UpdateGraphicsInfo() {
+	graphicsInfo.image_data = vector<u8>(currentSize);
+
+	float aspect_ratio = (float)graphicsInfo.win_width / graphicsInfo.win_height;
+
+	if (aspect_ratio > graphicsInfo.ascpect_ratio) {
+		graphicsInfo.y_offset = 0;
+
+		graphicsInfo.texels_per_pixel = graphicsInfo.win_height / graphicsInfo.y_;
+
+		graphicsInfo.x_offset = (graphicsInfo.win_width - (graphicsInfo.texels_per_pixel * graphicsInfo.x_)) / 2;
+	}
+	else {
+		graphicsInfo.x_offset = 0;
+
+		graphicsInfo.texels_per_pixel = graphicsInfo.win_width / graphicsInfo.x_;
+
+		graphicsInfo.y_offset = (graphicsInfo.win_height - (graphicsInfo.texels_per_pixel * graphicsInfo.y_)) / 2;
+	}
+
+	LOG_WARN("Aspect ratio: ", aspect_ratio);
+	LOG_WARN("Win X: ", graphicsInfo.win_width, "; LCD X Offset: ", graphicsInfo.x_offset, "; LCD X Pixels: ", graphicsInfo.x_ * graphicsInfo.texels_per_pixel);
+	LOG_WARN("Win Y: ", graphicsInfo.win_height, "; LCD Y Offset: ", graphicsInfo.y_offset, "; LCD Y Pixels: ", graphicsInfo.y_ * graphicsInfo.texels_per_pixel);
 }
 
 void VulkanMgr::RenderFrame() {
@@ -493,6 +525,9 @@ void VulkanMgr::Rebuild2d() {
 	DestroyBuffer(tex2dStagingBuffer[0]);
 	DestroyBuffer(tex2dStagingBuffer[1]);
 	InitTex2dBuffers();
+
+	UpdateGraphicsInfo();
+	UpdateTex2d();
 
 	vkDestroyDescriptorPool(device, tex2dDescPool, nullptr);
 	vkDestroyDescriptorSetLayout(device, tex2dDescSetLayout[0], nullptr);
@@ -1391,9 +1426,6 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 
 	}
 
-	// upload dummy data
-	UpdateTex2d();
-
 	LOG_INFO("[vulkan] 2d graphics backend initialized");
 
 	return true;
@@ -1496,8 +1528,6 @@ bool VulkanMgr::InitTex2dBuffers() {
 		}
 		i++;
 	}
-
-	graphicsInfo.image_data = vector<u8>(currentSize);
 
 	return true;
 }

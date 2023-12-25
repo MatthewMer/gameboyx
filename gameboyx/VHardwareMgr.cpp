@@ -51,6 +51,11 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
     LOG_INFO("[emu] hardware for ", _game_ctx.title, " initialized");
 }
 
+// for testing
+GraphicsUnitBase* VHardwareMgr::GetGraphicsUnit() {
+    return graphics_instance;
+}
+
 /* ***********************************************************************************************************
     FUNCTIONALITY
 *********************************************************************************************************** */

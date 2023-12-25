@@ -28,12 +28,15 @@ public:
 	virtual void NextFrame() = 0;
 	virtual bool ProcessGPU() = 0;
 
+	// just for testing
+	virtual void LoadImage() = 0;
+
 protected:
 	// constructor
 	GraphicsUnitBase() = default;
 	~GraphicsUnitBase() = default;
 
-	u8 isrFlags = 0;
+	virtual void SetGraphicsParameters() = 0;
 
 private:
 	static GraphicsUnitBase* instance;
