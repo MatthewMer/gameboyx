@@ -4,6 +4,7 @@
 #include "general_config.h"
 #include "helper_functions.h"
 #include "data_io.h"
+#include "matrix_transform.hpp"
 
 #include <unordered_map>
 #include <format>
@@ -258,7 +259,6 @@ bool VulkanMgr::StartGraphics() {
 	}
 
 	bindPipelines = &VulkanMgr::BindPipelinesDummy;
-	rebuildFunction = &VulkanMgr::RebuildDummy;
 	updateFunction = &VulkanMgr::UpdateDummy;
 
 	return true;
@@ -280,7 +280,6 @@ void VulkanMgr::StopGraphics() {
 
 bool VulkanMgr::Init2dGraphicsBackend() {
 	if (InitTex2dRenderTarget()) {
-		UpdateGraphicsInfo();
 		UpdateTex2d();
 		return true;
 	}
@@ -293,34 +292,9 @@ void VulkanMgr::Destroy2dGraphicsBackend() {
 	DestroyTex2dRenderTarget();
 
 	updateFunction = &VulkanMgr::UpdateDummy;
-	rebuildFunction = &VulkanMgr::RebuildDummy;
+	bindPipelines = &VulkanMgr::BindPipelinesDummy;
 
 	LOG_INFO("[vulkan] 2d graphics backend stopped");
-}
-
-void VulkanMgr::UpdateGraphicsInfo() {
-	graphicsInfo.image_data = vector<u8>(currentSize);
-
-	float aspect_ratio = (float)graphicsInfo.win_width / graphicsInfo.win_height;
-
-	if (aspect_ratio > graphicsInfo.ascpect_ratio) {
-		graphicsInfo.y_offset = 0;
-
-		graphicsInfo.texels_per_pixel = graphicsInfo.win_height / graphicsInfo.y_;
-
-		graphicsInfo.x_offset = (graphicsInfo.win_width - (graphicsInfo.texels_per_pixel * graphicsInfo.x_)) / 2;
-	}
-	else {
-		graphicsInfo.x_offset = 0;
-
-		graphicsInfo.texels_per_pixel = graphicsInfo.win_width / graphicsInfo.x_;
-
-		graphicsInfo.y_offset = (graphicsInfo.win_height - (graphicsInfo.texels_per_pixel * graphicsInfo.y_)) / 2;
-	}
-
-	LOG_WARN("Aspect ratio: ", aspect_ratio);
-	LOG_WARN("Win X: ", graphicsInfo.win_width, "; LCD X Offset: ", graphicsInfo.x_offset, "; LCD X Pixels: ", graphicsInfo.x_ * graphicsInfo.texels_per_pixel);
-	LOG_WARN("Win Y: ", graphicsInfo.win_height, "; LCD Y Offset: ", graphicsInfo.y_offset, "; LCD Y Pixels: ", graphicsInfo.y_ * graphicsInfo.texels_per_pixel);
 }
 
 void VulkanMgr::RenderFrame() {
@@ -329,7 +303,7 @@ void VulkanMgr::RenderFrame() {
 
 	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphore, nullptr, &image_index); result != VK_SUCCESS) {
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-			(this->*rebuildFunction)();
+			RebuildSwapchain();
 		}
 		else {
 			LOG_ERROR("[vulkan] acquire image from swapchain");
@@ -423,10 +397,6 @@ void VulkanMgr::UpdateDummy() {
 	return;
 }
 
-void VulkanMgr::RebuildDummy() {
-	RebuildSwapchain();
-}
-
 void VulkanMgr::BindPipelines2d(VkCommandBuffer& _command_buffer) {
 	vkCmdBindPipeline(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipeline);
 	VkDeviceSize offset = 0;
@@ -482,7 +452,7 @@ void VulkanMgr::UpdateTex2d() {
 	VkBufferImageCopy region = {};
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.layerCount = 1;
-	region.imageExtent = { graphicsInfo.win_width, graphicsInfo.win_height, 1 };
+	region.imageExtent = { graphicsInfo.lcd_width, graphicsInfo.lcd_height, 1 };
 	vkCmdCopyBufferToImage(tex2dCommandBuffer[tex2dUpdateIndex], tex2dStagingBuffer[tex2dUpdateIndex].buffer, tex2dImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 	{
@@ -512,33 +482,6 @@ void VulkanMgr::UpdateTex2d() {
 	}
 
 	++tex2dUpdateIndex %= 2;
-}
-
-void VulkanMgr::Rebuild2d() {
-	WaitIdle();
-
-	RebuildSwapchain();
-
-	vkUnmapMemory(device, tex2dStagingBuffer[0].memory);
-	vkUnmapMemory(device, tex2dStagingBuffer[1].memory);
-	DestroyImage(tex2dImage);
-	DestroyBuffer(tex2dStagingBuffer[0]);
-	DestroyBuffer(tex2dStagingBuffer[1]);
-	InitTex2dBuffers();
-
-	UpdateGraphicsInfo();
-	UpdateTex2d();
-
-	vkDestroyDescriptorPool(device, tex2dDescPool, nullptr);
-	vkDestroyDescriptorSetLayout(device, tex2dDescSetLayout[0], nullptr);
-	InitTex2dDescriptorSets();
-
-	// upload dummy data
-	UpdateTex2d();
-}
-
-void VulkanMgr::Rebuild3d() {
-	RebuildSwapchain();
 }
 
 bool VulkanMgr::InitVulkanInstance(std::vector<const char*>& _sdl_extensions) {
@@ -1419,7 +1362,6 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 
 	if (graphicsInfo.en2d) {
 		bindPipelines = &VulkanMgr::BindPipelines2d;
-		rebuildFunction = &VulkanMgr::Rebuild2d;
 		updateFunction = &VulkanMgr::UpdateTex2d;
 	}
 	else {
@@ -1507,7 +1449,7 @@ bool VulkanMgr::InitTex2dDescriptorSets() {
 
 bool VulkanMgr::InitTex2dBuffers() {
 	// staging buffer for texture upload
-	currentSize = graphicsInfo.win_width * graphicsInfo.win_height * 4;
+	currentSize = graphicsInfo.lcd_width * graphicsInfo.lcd_height * 4;
 	for(auto& n : tex2dStagingBuffer){
 		if (!InitBuffer(n, currentSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
 			LOG_ERROR("[vulkan] create staging buffer for main texture");
@@ -1516,7 +1458,7 @@ bool VulkanMgr::InitTex2dBuffers() {
 	}
 
 	// image buffer for shader usage
-	if (!InitImage(tex2dImage, graphicsInfo.win_width, graphicsInfo.win_height, tex2dFormat, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, /*resizableBar ? VK_IMAGE_TILING_LINEAR :*/ VK_IMAGE_TILING_OPTIMAL)) {
+	if (!InitImage(tex2dImage, graphicsInfo.lcd_width, graphicsInfo.lcd_height, tex2dFormat, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, /*resizableBar ? VK_IMAGE_TILING_LINEAR :*/ VK_IMAGE_TILING_OPTIMAL)) {
 		LOG_ERROR("[vulkan] create target 2d texture for virtual hardware");
 		return false;
 	}

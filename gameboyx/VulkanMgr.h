@@ -128,13 +128,6 @@ private:
 	render_function bindPipelines;
 	void BindPipelinesDummy(VkCommandBuffer& _command_buffer);
 
-	typedef void (VulkanMgr::* rebuild_function)();
-	rebuild_function rebuildFunction;
-	void RebuildDummy();
-
-	void Rebuild3d();
-	void Rebuild2d();
-
 	// render target 2d texture
 	void UpdateTex2d();
 
@@ -169,7 +162,6 @@ private:
 	bool InitTex2dPipeline();
 	void DestroyTex2dShader();
 	void BindPipelines2d(VkCommandBuffer& _command_buffer);
-	void TransferTex2dData();
 	bool InitTex2dBuffers();
 	bool InitTex2dSampler();
 	void DestroyTex2dSampler();

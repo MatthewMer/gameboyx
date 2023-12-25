@@ -18,9 +18,9 @@ const u32 DMG_COLOR_PALETTE[] = {
 
 void GraphicsUnitSM83::SetGraphicsParameters() {
 	graphicsInfo.is2d = graphicsInfo.en2d = true;
-	graphicsInfo.ascpect_ratio = LCD_ASPECT_RATIO;
-	graphicsInfo.x_ = PPU_SCREEN_X;
-	graphicsInfo.y_ = PPU_SCREEN_Y;
+	graphicsInfo.lcd_width = PPU_SCREEN_X;
+	graphicsInfo.lcd_height = PPU_SCREEN_Y;
+	graphicsInfo.image_data = vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y);
 }
 
 bool GraphicsUnitSM83::ProcessGPU() {
@@ -240,6 +240,7 @@ void GraphicsUnitSM83::DrawPixel(const int& _pos_x, const int& _pos_y) {
 	}
 }
 
+/*
 // only for testing -> set all pixels to 0xff just to test texture upload and presentation
 void GraphicsUnitSM83::LoadImage() {
 	for (int y = 0; y < graphicsInfo.y_; y++) {
@@ -254,3 +255,4 @@ void GraphicsUnitSM83::LoadImage() {
 		}
 	}
 }
+*/

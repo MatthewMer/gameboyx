@@ -20,9 +20,6 @@ public:
 	void NextFrame() override;
 	bool ProcessGPU() override;
 
-	// just for testing
-	void LoadImage();
-
 private:
 	// constructor
 	GraphicsUnitSM83(VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) : graphicsMgr(_graphics_mgr), graphicsInfo(_graphics_info) {

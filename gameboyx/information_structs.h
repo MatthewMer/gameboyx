@@ -90,17 +90,22 @@ struct graphics_information {
 	bool is2d = true;
 	bool en2d = true;
 
-	// data for 2d rendering
+	// data for gameboy output
 	std::vector<u8> image_data = std::vector<u8>();
-	u32 win_width;
-	u32 win_height;
+	u32 lcd_width;
+	u32 lcd_height;
 	int channels;
 
-	// virtual hardware defines
+	// graphics backend data
+	u32 win_width;
+	u32 win_height;
+
+	/*
 	float ascpect_ratio = .0f;
 	int x_ = 0;
 	int y_ = 0;
 	int texels_per_pixel = 0;
 	int x_offset = 0;
 	int y_offset = 0;
+	*/
 };

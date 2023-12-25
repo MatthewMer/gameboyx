@@ -71,18 +71,18 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm\ext;$(IncludePath)</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib;$(LibraryPath)</LibraryPath>
     <LinkIncremental />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm\ext;$(IncludePath)</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib;$(LibraryPath)</LibraryPath>
     <LinkIncremental>
     </LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm\ext;$(IncludePath)</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib32;$(LibraryPath)</LibraryPath>
     <LinkIncremental>
     </LinkIncremental>
@@ -91,7 +91,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LibraryPath>$(VULKAN_SDK)\Lib32;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm\ext;$(IncludePath)</IncludePath>
     <LinkIncremental />
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
@@ -103,7 +103,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm\ext</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -121,7 +121,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm\ext</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,7 +139,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm\ext</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -157,7 +157,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm\ext</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -28,9 +28,6 @@ public:
 	virtual void NextFrame() = 0;
 	virtual bool ProcessGPU() = 0;
 
-	// just for testing
-	virtual void LoadImage() = 0;
-
 protected:
 	// constructor
 	GraphicsUnitBase() = default;

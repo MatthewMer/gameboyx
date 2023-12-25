@@ -164,10 +164,6 @@ int main(int, char**)
             if (game_stat.pending_game_start) {
                 if (graphics_info.is2d) {
                     graphics_mgr->Init2dGraphicsBackend();
-
-                    // just for testing
-                    GraphicsUnitBase* graphics_instance = vhwmgr_obj->GetGraphicsUnit();
-                    graphics_instance->LoadImage();
                 }
             }
 
