@@ -20,7 +20,10 @@ void GraphicsUnitSM83::SetGraphicsParameters() {
 	graphicsInfo.is2d = graphicsInfo.en2d = true;
 	graphicsInfo.lcd_width = PPU_SCREEN_X;
 	graphicsInfo.lcd_height = PPU_SCREEN_Y;
-	graphicsInfo.image_data = vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y);
+	graphicsInfo.image_data = vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * 4);
+
+	// for testing
+	LoadTestImage();
 }
 
 bool GraphicsUnitSM83::ProcessGPU() {
@@ -240,19 +243,13 @@ void GraphicsUnitSM83::DrawPixel(const int& _pos_x, const int& _pos_y) {
 	}
 }
 
-/*
 // only for testing -> set all pixels to 0xff just to test texture upload and presentation
-void GraphicsUnitSM83::LoadImage() {
-	for (int y = 0; y < graphicsInfo.y_; y++) {
-		for (int x = 0; x < graphicsInfo.x_; x++) {
-			for (int y_ = 0; y_ < graphicsInfo.texels_per_pixel; y_++) {
-				for (int x_ = 0; x_ < graphicsInfo.texels_per_pixel; x_++) {
-					for (int i = 0; i < 4; i++) {
-						graphicsInfo.image_data[((graphicsInfo.y_offset + (y * graphicsInfo.texels_per_pixel) + y_) * graphicsInfo.win_width * 4) + ((graphicsInfo.x_offset + (x * graphicsInfo.texels_per_pixel) + x_) * 4) + i] = 0xFF;
-					}
-				}
+void GraphicsUnitSM83::LoadTestImage() {
+	for (int y = 0; y < graphicsInfo.lcd_height; y++) {
+		for (int x = 0; x < graphicsInfo.lcd_width; x++) {
+			for (int i = 0; i < 4; i++) {
+				graphicsInfo.image_data[(y * graphicsInfo.lcd_width * 4) + (x * 4) + i] = 0xFF;
 			}
 		}
 	}
 }
-*/

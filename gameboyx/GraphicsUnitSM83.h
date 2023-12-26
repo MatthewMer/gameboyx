@@ -63,4 +63,7 @@ private:
 	u8 currentTile[PPU_VRAM_TILE_SIZE];
 	u8 currentTile16[PPU_VRAM_TILE_SIZE];
 	u8 pixel;
+
+	// for testing only
+	void LoadTestImage();
 };

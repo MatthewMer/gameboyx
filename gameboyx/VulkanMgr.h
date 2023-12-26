@@ -22,6 +22,12 @@
 #include <vector>
 #include <string>
 
+#ifndef GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include "ext/matrix_transform.hpp"
+#include "gtc/matrix_transform.hpp"
+#endif
+
 #define FRAMES_IN_FLIGHT	2
 
 struct VulkanPipelineBufferInfo {
@@ -167,6 +173,9 @@ private:
 	void DestroyTex2dSampler();
 	bool InitTex2dDescriptorSets();
 
+	glm::mat4 tex2dModelViewProj;
+	void UpdateTex2dProjMatrix();
+
 	void UpdateGraphicsInfo();
 
 	// sync
@@ -207,7 +216,7 @@ private:
 	bool InitFrameBuffers();
 	bool InitCommandBuffers();
 	bool InitShaderModule(const std::vector<char>& _byte_code, VkShaderModule& _shader);
-	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info, std::vector<VkDescriptorSetLayout>& _set_leyouts);
+	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info, std::vector<VkDescriptorSetLayout>& _set_leyouts, std::vector<VkPushConstantRange>& _push_constants);
 	void SetGPUInfo();
 	bool InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
 	bool InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
