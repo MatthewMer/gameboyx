@@ -21,6 +21,7 @@ void GraphicsUnitSM83::SetGraphicsParameters() {
 	graphicsInfo.lcd_width = PPU_SCREEN_X;
 	graphicsInfo.lcd_height = PPU_SCREEN_Y;
 	graphicsInfo.image_data = vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * 4);
+	graphicsInfo.aspect_ratio = LCD_ASPECT_RATIO;
 
 	// for testing
 	LoadTestImage();
@@ -248,7 +249,15 @@ void GraphicsUnitSM83::LoadTestImage() {
 	for (int y = 0; y < graphicsInfo.lcd_height; y++) {
 		for (int x = 0; x < graphicsInfo.lcd_width; x++) {
 			for (int i = 0; i < 4; i++) {
-				graphicsInfo.image_data[(y * graphicsInfo.lcd_width * 4) + (x * 4) + i] = 0xFF;
+				if (y < 10 && x < 10) {
+					graphicsInfo.image_data[(y * graphicsInfo.lcd_width * 4) + (x * 4) + i] = 0x00;
+				}
+				else if (y > 130 && x > 150) {
+					graphicsInfo.image_data[(y * graphicsInfo.lcd_width * 4) + (x * 4) + i] = 0x7F;
+				}
+				else {
+					graphicsInfo.image_data[(y * graphicsInfo.lcd_width * 4) + (x * 4) + i] = 0xFF;
+				}
 			}
 		}
 	}

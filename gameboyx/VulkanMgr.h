@@ -89,6 +89,8 @@ private:
 
 	// sdl
 	SDL_Window* window;
+	void RecalcModelMatrixInput();
+	float aspectRatio;
 
 	// graphics Queue
 	VkQueue queue = VK_NULL_HANDLE;
@@ -173,8 +175,9 @@ private:
 	void DestroyTex2dSampler();
 	bool InitTex2dDescriptorSets();
 
-	glm::mat4 tex2dModelViewProj;
-	void UpdateTex2dProjMatrix();
+	glm::mat4 tex2dModelMat;
+	float tex2dScaleX = 1.f;
+	float tex2dScaleY = 1.f;
 
 	void UpdateGraphicsInfo();
 

@@ -95,6 +95,7 @@ struct graphics_information {
 	u32 lcd_width;
 	u32 lcd_height;
 	int channels;
+	float aspect_ratio = 1.f;
 
 	// graphics backend data
 	u32 win_width;

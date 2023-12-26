@@ -149,7 +149,7 @@ inline const ImVec4 IMGUI_BLUE_COLOR(.0f, .0f, 1.f, 1.f);
 
 inline const float OVERLAY_DISTANCE = 10.0f;
 
-#define FPS_SAMPLES_NUM             100
+#define FPS_SAMPLES_NUM             1000
 
 #define DEBUG_INSTR_LINES           21
 #define DEBUG_MEM_LINES             32

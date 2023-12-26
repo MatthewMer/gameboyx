@@ -90,7 +90,7 @@ private:
 	bool dbgMemCellAnyHovered = false;
 
 	bool graphicsShowOverlay = false;
-	int graphicsOverlayCorner = 0;
+	int graphicsOverlayCorner = 1;
 	float graphicsFPSsamples[FPS_SAMPLES_NUM];
 	std::queue<float> graphicsFPSfifo = std::queue<float>();
 	std::queue<float> graphicsFPSfifoCopy = std::queue<float>();
