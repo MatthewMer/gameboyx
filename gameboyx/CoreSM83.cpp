@@ -297,16 +297,21 @@ void CoreSM83::RunCycles() {
         if (mem_instance->GetIORef(IF_ADDR) & IRQ_JOYPAD) {
             stopped = false;
         }
-    }
-    else if (halted) {
-        TickTimers();
-        // check pending and enabled interrupts
-        if (machine_ctx->IE & mem_instance->GetIORef(IF_ADDR)) {
-            halted = false;
-            CheckInterrupts();
+    } else if (halted) {
+        while (machineCycleScanlineCounter < (machineCyclesPerScanline * machine_ctx->currentSpeed)) {
+            currentMachineCycles = 0;
+            TickTimers();
+            machineCycleScanlineCounter += currentMachineCycles;
+            machineCycleClockCounter += currentMachineCycles;
+
+            // check pending and enabled interrupts
+            if (machine_ctx->IE & mem_instance->GetIORef(IF_ADDR)) {
+                halted = false;
+                CheckInterrupts();
+                break;
+            }
         }
-    }
-    else {
+    } else {
         while ((machineCycleScanlineCounter < (machineCyclesPerScanline * machine_ctx->currentSpeed)) && !halted && !stopped) {
             RunCpu();
         }
@@ -346,31 +351,6 @@ void CoreSM83::RunCpu() {
 
     machineCycleScanlineCounter += currentMachineCycles;
     machineCycleClockCounter += currentMachineCycles;
-
-
-    /*
-    * // Output for blarggs mem_timing_2 test, doesn't write to serial port. result written to RAM (see readme of test)
-    int check = 0;
-    if (Regs.PC == 0x2bdd) {
-        for (int i = 0; i < 4; i++) {
-            check |= (mmu_instance->Read8Bit(RAM_N_OFFSET + i) << ((3 - i) * 8));
-        }
-
-        if (check == 0x00deb061) {
-            string result = "";
-
-            char c;
-            for (int i = 0; (c = mmu_instance->Read8Bit(RAM_N_OFFSET + 4 + i)) != 0x00; i++) {
-                result += c;
-            }
-
-            printf(result.c_str());
-        }
-        else {
-            LOG_WARN("Error");
-        }
-    }
-    */
 }
 
 void CoreSM83::ExecuteInstruction() {

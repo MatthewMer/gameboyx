@@ -22,23 +22,38 @@ void GraphicsUnitSM83::SetGraphicsParameters() {
 	graphicsInfo.lcd_height = PPU_SCREEN_Y;
 	graphicsInfo.image_data = vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * 4);
 	graphicsInfo.aspect_ratio = LCD_ASPECT_RATIO;
-
-	// for testing
-	LoadTestImage();
 }
 
 bool GraphicsUnitSM83::ProcessGPU() {
 	if (graphicsCtx->ppu_enable) {
+		u8 interrupts = 0x00;
 		u8& ly = memInstance->GetIORef(LY_ADDR);
+		u8& lyc = memInstance->GetIORef(LYC_ADDR);
+		u8& stat = memInstance->GetIORef(STAT_ADDR);
+
 		ly++;
 
-		if (ly == LCD_SCANLINES_TOTAL) {
+		switch (ly) {
+		case LCD_SCANLINES_VBLANK:
+			SetMode(MODE_1, stat, interrupts);
+			break;
+		case LCD_SCANLINES_TOTAL:
 			ly = 0x00;
-		}
-		else if (ly == LCD_SCANLINES_VBLANK) {
-			memInstance->RequestInterrupts(IRQ_VBLANK);
+			SetMode(MODE_0, stat, interrupts);
+			break;
 		}
 
+		if (ly == lyc) {
+			stat |= PPU_STAT_LYC_FLAG;
+
+			if (graphicsCtx->lyc_ly_int_sel) {
+				interrupts |= IRQ_LCD_STAT;
+			}
+		} else {
+			stat &= ~PPU_STAT_LYC_FLAG;
+		}
+
+		memInstance->RequestInterrupts(interrupts);
 		return ly == LCD_SCANLINES_VBLANK;
 	}
 	else {
@@ -99,6 +114,34 @@ void GraphicsUnitSM83::NextFrame() {
 	graphicsMgr->UpdateGpuData();
 }
 
+void GraphicsUnitSM83::SetMode(const modes _mode, u8& _stat_reg, u8& _int) {
+	graphicsCtx->mode = _mode;
+	_stat_reg = (_stat_reg & ~PPU_STAT_WRITEABLE_BITS) | _mode;
+
+	switch (_mode) {
+	case MODE_0:
+		if (graphicsCtx->mode_0_int_sel) {
+			_int |= IRQ_LCD_STAT;
+		}
+		break;
+	case MODE_1:
+		_int |= IRQ_VBLANK;
+		if (graphicsCtx->mode_1_int_sel) {
+			_int |= IRQ_LCD_STAT;
+		}
+		break;
+	case MODE_2:
+		if (graphicsCtx->mode_2_int_sel) {
+			_int |= IRQ_LCD_STAT;
+		}
+		break;
+	}
+}
+
+
+
+
+
 // draw tilemaps BG and WIN
 void GraphicsUnitSM83::DrawTileMapBackground() {
 	int scx = memInstance->GetIORef(SCX_ADDR);
@@ -122,12 +165,14 @@ void GraphicsUnitSM83::DrawTileMapBackground() {
 
 // in CGB mode: copy attributes
 void GraphicsUnitSM83::ReadBGMapAttributes(const u8& _offset) {
+	/*
 	if (graphicsCtx->bg_win_8800_addr_mode) {
 		bgAttributes = graphicsCtx->VRAM_N[1][PPU_VRAM_BASEPTR_8800 - VRAM_N_OFFSET + (*(i8*)&_offset * PPU_VRAM_TILE_SIZE)];
 	}
 	else {
 		bgAttributes = graphicsCtx->VRAM_N[1][_offset * PPU_VRAM_TILE_SIZE];
 	}
+	*/
 }
 
 // draw stored tile to screen
@@ -171,12 +216,14 @@ void GraphicsUnitSM83::DrawTileWindow(const int& _pos_x, const int& _pos_y) {
 
 // copy tile data (pixels) for BG and WIN
 void GraphicsUnitSM83::ReadTileDataBGWIN(const u8& _offset) {
+	/*
 	if (graphicsCtx->bg_win_8800_addr_mode) {
 		memcpy(currentTile, &graphicsCtx->VRAM_N[0][PPU_VRAM_BASEPTR_8800 - VRAM_N_OFFSET + (*(i8*)&_offset * PPU_VRAM_TILE_SIZE)], PPU_VRAM_TILE_SIZE);
 	}
 	else {
 		memcpy(currentTile, &graphicsCtx->VRAM_N[0][_offset * PPU_VRAM_TILE_SIZE], PPU_VRAM_TILE_SIZE);
 	}
+	*/
 }
 
 // draw the objects to the screen
@@ -241,24 +288,5 @@ void GraphicsUnitSM83::DrawPixel(const int& _pos_x, const int& _pos_y) {
 	}
 	else {
 		DMG_COLOR_PALETTE[pixel];
-	}
-}
-
-// only for testing -> set all pixels to 0xff just to test texture upload and presentation
-void GraphicsUnitSM83::LoadTestImage() {
-	for (int y = 0; y < graphicsInfo.lcd_height; y++) {
-		for (int x = 0; x < graphicsInfo.lcd_width; x++) {
-			for (int i = 0; i < 4; i++) {
-				if (y < 10 && x < 10) {
-					graphicsInfo.image_data[(y * graphicsInfo.lcd_width * 4) + (x * 4) + i] = 0x00;
-				}
-				else if (y > 130 && x > 150) {
-					graphicsInfo.image_data[(y * graphicsInfo.lcd_width * 4) + (x * 4) + i] = 0x7F;
-				}
-				else {
-					graphicsInfo.image_data[(y * graphicsInfo.lcd_width * 4) + (x * 4) + i] = 0xFF;
-				}
-			}
-		}
 	}
 }

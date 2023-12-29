@@ -80,9 +80,12 @@ int main(int, char**)
     VHardwareMgr* vhwmgr_obj = nullptr;
 
     graphics_mgr->EnumerateShaders();
+
+    /*
     while (!graphics_info.shaders_compilation_finished) {               // gets probably changed to get done when application is up and running -> output loading bar
         graphics_mgr->CompileNextShader();
     }
+    */
 
     // Main loop
     LOG_INFO("[emu] Initialization completed");

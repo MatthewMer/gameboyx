@@ -61,11 +61,11 @@ void VHardwareMgr::ProcessNext() {
 
         if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
             graphics_instance->NextFrame();
+            frameCounter++;
         }
     }
     else {
         if (CheckDelay()) {
-            // due to emulator executing cycles per frame before updating gui, there can be "inaccuracies" in e.g. memory inspector. to avoid this enable instruction debugger
             for (int i = 0; i < stepsPerFrame; i++) {
                 core_instance->RunCycles();
 

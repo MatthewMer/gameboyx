@@ -221,16 +221,13 @@
 
 // LCD STAT
 #define PPU_STAT_MODE               0x03
-//#define PPU_STAT_MODE0_HBLANK       0x00
-#define PPU_STAT_MODE1_VBLANK       0x01
-//#define PPU_STAT_MODE2_OAMSEARCH    0x02
-//#define PPU_STAT_MODE3_LCDCTRL      0x03
-
 #define PPU_STAT_LYC_FLAG           0x04
 #define PPU_STAT_MODE0_EN           0x08                // isr STAT hblank
 #define PPU_STAT_MODE1_EN           0x10                // isr STAT vblank
 #define PPU_STAT_MODE2_EN           0x20                // isr STAT oam
-#define PPU_STAT_LYC_SOURCE         0x40
+#define PPU_STAT_LYC_SOURCE         0x40                // isr STAT LYC == LY
+
+#define PPU_STAT_WRITEABLE_BITS     0xF8
 
 // lcd
 #define LCD_SCANLINES_VBLANK        144

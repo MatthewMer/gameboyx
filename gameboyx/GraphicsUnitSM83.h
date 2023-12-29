@@ -39,6 +39,15 @@ private:
 	graphics_information& graphicsInfo;
 	VulkanMgr* graphicsMgr;
 
+	void SetMode(const modes _mode, u8& _stat_reg, u8& _int);
+
+
+
+
+
+
+
+
 	// members
 	void DrawTileMapBackground();
 	void ReadBGMapAttributes(const u8& _offset);
@@ -63,7 +72,4 @@ private:
 	u8 currentTile[PPU_VRAM_TILE_SIZE];
 	u8 currentTile16[PPU_VRAM_TILE_SIZE];
 	u8 pixel;
-
-	// for testing only
-	void LoadTestImage();
 };

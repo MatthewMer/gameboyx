@@ -1408,6 +1408,8 @@ bool VulkanMgr::InitTex2dRenderTarget() {
 
 	}
 
+	RecalcModelMatrixInput();
+
 	//UpdateTex2dProjMatrix();
 
 	LOG_INFO("[vulkan] 2d graphics backend initialized");
@@ -1573,9 +1575,9 @@ bool VulkanMgr::InitTex2dPipeline() {
 		push_constants[0].offset = 0;
 		push_constants[0].size = sizeof(glm::mat4);
 		push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
 		InitPipeline(vertex_shader, fragment_shader, tex2dPipelineLayout, tex2dPipeline, buffer_info, tex2dDescSetLayout, push_constants);
 
-		RecalcModelMatrixInput();
 		return true;
 	}
 	else {

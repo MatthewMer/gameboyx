@@ -13,6 +13,13 @@
 #include "defs.h"
 #include "information_structs.h"
 
+enum modes {			// PPUs current status
+	MODE_0,
+	MODE_1,
+	MODE_2,
+	MODE_3
+};
+
 struct machine_state_context {
 	// interrupt
 	u8 IE;
@@ -54,14 +61,39 @@ struct graphics_context {
 	// TODO: chekc initial register states
 	// LCD Control
 
-	u16 bg_tilemap_offset = 0;
-	u16 win_tilemap_offset = 0;
-	bool obj_size_16 = false;
-	bool obj_enable = false;
+	// LCDC
+	// bit 0 DMG
 	bool bg_win_enable = false;
-	bool bg_win_8800_addr_mode = false;
+	// bit 0 CGB
+	bool obj_prio = false;
+	// bit 1
+	bool obj_enable = false;
+	// bit 2
+	bool obj_size_16 = false;
+	// bit 3
+	u16 bg_tilemap_offset = 0;
+	// bit 4
+	bool bg_win_addr_mode_8000 = false;
+	// bit 5
 	bool win_enable = false;
+	// bit 6
+	u16 win_tilemap_offset = 0;
+	// bit 7
 	bool ppu_enable = false;
+
+	// LCD STAT
+	// bit 0-1
+	modes mode = MODE_0;
+	// bit 2
+	//bool lyc_ly_flag = false;
+	// bit 3
+	bool mode_0_int_sel = false;
+	// bit 4
+	bool mode_1_int_sel = false;
+	// bit 5
+	bool mode_2_int_sel = false;
+	// bit 6
+	bool lyc_ly_int_sel = false;
 };
 
 class MemorySM83 : private MemoryBase
@@ -155,6 +187,7 @@ private:
 
 	// action for LCDC write
 	void SetLCDCValues(const u8& _data);
+	void SetLCDSTATValues(const u8& _data);
 
 	void SetVRAMBank(const u8& _data);
 	void SetWRAMBank(const u8& _data);

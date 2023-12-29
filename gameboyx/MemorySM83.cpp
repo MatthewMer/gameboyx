@@ -753,79 +753,103 @@ void MemorySM83::SetObjPrio(const u8& _data) {
 }
 
 void MemorySM83::SetLCDCValues(const u8& _data) {
-    switch (_data & PPU_LCDC_WINBG_EN_PRIO) {
-    case 0x00:
-        graphics_ctx.bg_win_enable = false;
-        break;
-    case PPU_LCDC_WINBG_EN_PRIO:
-        graphics_ctx.bg_win_enable = true;
-        break;
-    }
-
-    switch (_data & PPU_LCDC_OBJ_ENABLE) {
-    case 0x00:
-        graphics_ctx.obj_enable = false;
-        break;
-    case PPU_LCDC_OBJ_ENABLE:
-        graphics_ctx.obj_enable = true;
-        break;
-    }
-
-    switch (_data & PPU_LCDC_OBJ_SIZE) {
-    case 0x00:
-        graphics_ctx.obj_size_16 = false;
-        break;
-    case PPU_LCDC_OBJ_SIZE:
-        graphics_ctx.obj_size_16 = true;
-        break;
-    }
-
-    switch (_data & PPU_LCDC_BG_TILEMAP) {
-    case 0x00:
-        graphics_ctx.bg_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
-        break;
-    case PPU_LCDC_BG_TILEMAP:
-        graphics_ctx.bg_tilemap_offset = PPU_TILE_MAP1 - VRAM_N_OFFSET;
-        break;
-    }
-
-    switch (_data & PPU_LCDC_WINBG_TILEDATA) {
-    case 0x00:
-        graphics_ctx.bg_win_8800_addr_mode = true;
-        break;
-    case PPU_LCDC_WINBG_TILEDATA:
-        graphics_ctx.bg_win_8800_addr_mode = false;
-        break;
-    }
-
-    switch (_data & PPU_LCDC_WIN_ENABLE) {
-    case 0x00:
-        graphics_ctx.win_enable = false;
-        break;
-    case PPU_LCDC_WIN_TILEMAP:
-        graphics_ctx.win_enable = true;
-        break;
-    }
-
-    switch (_data & PPU_LCDC_WIN_TILEMAP) {
-    case 0x00:
-        graphics_ctx.win_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
-        break;
-    case PPU_LCDC_WIN_TILEMAP:
-        graphics_ctx.win_tilemap_offset = PPU_TILE_MAP1 - VRAM_N_OFFSET;
-        break;
-    }
-
-    switch (_data & PPU_LCDC_ENABLE) {
-    case 0x00:
-        graphics_ctx.ppu_enable = false;
-        break;
-    case PPU_LCDC_ENABLE:
-        graphics_ctx.ppu_enable = true;
-        break;
-    }
-
     IO[LCDC_ADDR - IO_OFFSET] = _data;
+
+    // bit 0
+    if (_data & PPU_LCDC_WINBG_EN_PRIO) {
+        graphics_ctx.bg_win_enable = true;              // DMG
+        graphics_ctx.obj_prio = true;                   // CGB
+    } else {
+        graphics_ctx.bg_win_enable = false;
+        graphics_ctx.obj_prio = false;
+    }
+
+    // bit 1
+    if(_data & PPU_LCDC_OBJ_ENABLE) {
+        graphics_ctx.obj_enable = true;
+    } else {
+        graphics_ctx.obj_enable = false;
+    }
+
+    // bit 2
+    if (_data & PPU_LCDC_OBJ_SIZE) {
+        graphics_ctx.obj_size_16 = true;
+    } else {
+        graphics_ctx.obj_size_16 = false;
+    }
+
+    // bit 3
+    if (_data & PPU_LCDC_BG_TILEMAP) {
+        graphics_ctx.bg_tilemap_offset = PPU_TILE_MAP1 - VRAM_N_OFFSET;
+    } else {
+        graphics_ctx.bg_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
+    }
+
+    // bit 4
+    if (_data & PPU_LCDC_WINBG_TILEDATA) {
+        graphics_ctx.bg_win_addr_mode_8000 = true;
+    } else {
+        graphics_ctx.bg_win_addr_mode_8000 = false;
+    }
+
+    // bit 5
+    if (machine_ctx.isCgb) {
+        if (_data & PPU_LCDC_WIN_ENABLE) {
+            graphics_ctx.win_enable = true;
+        } else {
+            graphics_ctx.win_enable = false;
+        }
+    } else {
+        if ((_data & PPU_LCDC_WIN_ENABLE) && graphics_ctx.bg_win_enable) {
+            graphics_ctx.win_enable = true;
+        } else {
+            graphics_ctx.win_enable = false;
+        }
+    }
+
+    // bit 6
+    if (_data & PPU_LCDC_WIN_TILEMAP) {
+        graphics_ctx.win_tilemap_offset = PPU_TILE_MAP1 - VRAM_N_OFFSET;
+    } else {
+        graphics_ctx.win_tilemap_offset = PPU_TILE_MAP0 - VRAM_N_OFFSET;
+    }
+
+    // bit 7
+    if (_data & PPU_LCDC_ENABLE) {
+        graphics_ctx.ppu_enable = true;
+
+    } else {
+        graphics_ctx.ppu_enable = false;
+    }
+}
+
+void MemorySM83::SetLCDSTATValues(const u8& _data) {
+    u8 data = (IO[LCDC_ADDR - IO_OFFSET] & ~PPU_STAT_WRITEABLE_BITS) | (_data & PPU_STAT_WRITEABLE_BITS);
+    IO[LCDC_ADDR - IO_OFFSET] = data;
+
+    if (data & PPU_STAT_MODE0_EN) {
+        graphics_ctx.mode_0_int_sel = true;
+    } else {
+        graphics_ctx.mode_0_int_sel = false;
+    }
+
+    if (data & PPU_STAT_MODE1_EN) {
+        graphics_ctx.mode_1_int_sel = true;
+    } else {
+        graphics_ctx.mode_1_int_sel = false;
+    }
+
+    if (data & PPU_STAT_MODE2_EN) {
+        graphics_ctx.mode_2_int_sel = true;
+    } else {
+        graphics_ctx.mode_2_int_sel = false;
+    }
+
+    if (data & PPU_STAT_LYC_SOURCE) {
+        graphics_ctx.lyc_ly_int_sel = true;
+    } else {
+        graphics_ctx.lyc_ly_int_sel = false;
+    }
 }
 
 /* ***********************************************************************************************************
