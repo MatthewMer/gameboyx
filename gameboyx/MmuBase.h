@@ -12,6 +12,10 @@
 #include "MemoryBase.h"
 #include "information_structs.h"
 
+#include "data_io.h"
+#include "general_config.h"
+#include "helper_functions.h"
+
 class MmuBase
 {
 public:
@@ -38,9 +42,12 @@ protected:
 	explicit MmuBase(machine_information& _machine_info) : machineInfo(_machine_info) {};
 	~MmuBase() = default;
 
+	virtual void ReadSave() = 0;
+	virtual void WriteSave() const = 0;
+
+	machine_information& machineInfo;
+		
 private:
 	static MmuBase* instance;
 	static MmuBase* getNewMmuInstance(machine_information& _machine_info);
-
-	machine_information& machineInfo;
 };

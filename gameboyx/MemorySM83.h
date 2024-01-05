@@ -171,6 +171,8 @@ public:
 	// direct hardware access
 	void RequestInterrupts(const u8& _isr_flags) override;
 	u8& GetIORef(const u16& _addr);
+	void CopyDataToRAM(const std::vector<char>& _data);
+	void CopyDataFromRAM(std::vector<char>& _data) const;
 
 	std::vector<std::pair<int, std::vector<u8>>> GetProgramData() const override;
 
@@ -189,8 +191,6 @@ private:
 	static MemorySM83* instance;
 	// destructor
 	~MemorySM83() = default;
-
-	bool isCgb = false;
 
 	// members
 	void InitMemory() override;

@@ -202,7 +202,6 @@
     <ClInclude Include="game_info.h" />
     <ClInclude Include="GraphicsUnitBase.h" />
     <ClInclude Include="GraphicsUnitSM83.h" />
-    <ClInclude Include="graphics_config.h" />
     <ClInclude Include="helper_functions.h" />
     <ClInclude Include="ImGuiGameboyX.h" />
     <ClInclude Include="general_config.h" />

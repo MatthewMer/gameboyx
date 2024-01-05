@@ -27,6 +27,10 @@ inline const std::string DEBUG_INSTR_LOG = "_instructions.log";
 inline const std::string SHADER_FOLDER = "/shader/";
 inline const std::string SPIR_V_FOLDER = "/shader/spir_v/";
 
+inline const std::string SAVE_FOLDER = "/save/";
+
+inline const std::string SAVE_EXT = ".sav";
+
 /* ***********************************************************************************************************
     GRAPHICS BACKEND
 *********************************************************************************************************** */
@@ -65,6 +69,8 @@ inline std::string get_vendor(const u16& _ven_id) {
 
     return "";
 }
+
+#define TEX2D_CHANNELS			    4
 
 /* ***********************************************************************************************************
     IMGUI EMULATOR

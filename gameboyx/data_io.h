@@ -22,9 +22,10 @@ std::string check_and_create_file(const std::string& _path_to_file_rel, const bo
 std::string check_and_create_path(const std::string& _path_rel);
 
 std::string get_current_path();
-std::vector<std::string> get_files_in_path(const std::string& _path_rel);
+void get_files_in_path(std::vector<std::string>& _input, const std::string& _path_rel);
 
 void check_and_create_config_folders();
 void check_and_create_config_files();
 void check_and_create_log_folders();
 void check_and_create_shader_folders();
+void check_and_create_save_folders();

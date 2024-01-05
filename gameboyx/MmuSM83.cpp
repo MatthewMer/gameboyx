@@ -378,6 +378,8 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 MmuSM83_MBC3::MmuSM83_MBC3(machine_information& _machine_info) : MmuBase(_machine_info) {
 	mem_instance = MemorySM83::getInstance(_machine_info);
 	machine_ctx = mem_instance->GetMachineContext();
+
+	ReadSave();
 }
 
 /* ***********************************************************************************************************
@@ -389,6 +391,9 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		// RAM/TIMER enable
 		if (_addr < MBC3_ROM_BANK_NUMBER_SELECT) {
 			timerRamEnable = (_data & MBC3_RAM_ENABLE_MASK) == MBC3_RAM_ENABLE;
+			if (!timerRamEnable) {
+				WriteSave();
+			}
 		}
 		// ROM Bank number
 		else {

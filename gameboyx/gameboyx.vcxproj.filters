@@ -146,9 +146,6 @@
     <ClInclude Include="SoundSM83.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="graphics_config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ControllerSM83.h">
       <Filter>Header Files</Filter>
     </ClInclude>

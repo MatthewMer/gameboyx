@@ -47,6 +47,7 @@ Thumbs.db
 *.mov
 *.wmv
 *.exe
+*.sav
 
 #directories
 /x64
@@ -58,6 +59,7 @@ Thumbs.db
 /gameboyx/rom
 /gameboyx/config
 /gameboyx/logs
+/gameboyx/save
 /gameboyx/x64
 /gameboyx/Win32
 /gameboyx/Debug

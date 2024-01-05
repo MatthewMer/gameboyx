@@ -69,14 +69,15 @@ void MemorySM83::InitMemory() {
 
     const auto& vec_rom = cart_obj->GetRomVector();
 
-    isCgb = cart_obj->GetIsCgb();
-    machine_ctx.isCgb = isCgb;
-    machine_ctx.wram_bank_num = (isCgb ? 8 : 2);
-    machine_ctx.vram_bank_num = (isCgb ? 2 : 1);
+    machine_ctx.isCgb = cart_obj->GetIsCgb();
+    machine_ctx.wram_bank_num = (machine_ctx.isCgb ? 8 : 2);
+    machine_ctx.vram_bank_num = (machine_ctx.isCgb ? 2 : 1);
 
     if (!ReadRomHeaderInfo(vec_rom)) { 
         LOG_ERROR("Couldn't acquire memory information");
         return; 
+    } else {
+        LOG_INFO("[emu] memory initialized");
     }
 
     AllocateMemory();
@@ -84,6 +85,8 @@ void MemorySM83::InitMemory() {
     if (!CopyRom(vec_rom)) {
         LOG_ERROR("Couldn't copy ROM data");
         return;
+    } else {
+        LOG_INFO("[emu] ROM copied");
     }
     InitMemoryState();
 
@@ -341,7 +344,7 @@ void MemorySM83::InitMemoryState() {
     SetLCDCValues(INIT_CGB_LCDC);
     SetLCDSTATValues(INIT_CGB_STAT);    
 
-    if (isCgb) { 
+    if (machine_ctx.isCgb) {
         IO[DIV_ADDR - IO_OFFSET] = INIT_CGB_DIV >> 8; 
         machine_ctx.div_low_byte = INIT_CGB_DIV & 0xFF;
     }
@@ -366,6 +369,12 @@ bool MemorySM83::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
     u8 value;
 
     // get rom info
+    machineInfo.title = "";
+    int title_size_max = (machine_ctx.isCgb ? ROM_HEAD_TITLE_SIZE_CGB : ROM_HEAD_TITLE_SIZE_GB);
+    for (int i = 0; _vec_rom[ROM_HEAD_TITLE + i] != 0x00 && i < title_size_max; i++) {
+        machineInfo.title += (char)_vec_rom[ROM_HEAD_TITLE + i];
+    }
+
     value = _vec_rom[ROM_HEAD_ROMSIZE];
 
     if (value != 0x52 && value != 0x53 && value != 0x54) {                          // TODO: these values are used for special variations
@@ -550,7 +559,7 @@ u8 MemorySM83::ReadIORegister(const u16& _addr) {
         if (_addr > 0xFF77) {
             return 0xFF;
         }
-        else if(isCgb){
+        else if(machine_ctx.isCgb){
             switch (_addr) {
             case 0xFF47:
             case 0xFF48:
@@ -664,13 +673,31 @@ u8& MemorySM83::GetIORef(const u16& _addr) {
     return IO[_addr - IO_OFFSET];
 }
 
+void MemorySM83::CopyDataToRAM(const vector<char>& _data) {
+    for (int i = 0; i < RAM_N.size(); i++) {
+        for (int j = 0; j < RAM_N_SIZE; j++) {
+            RAM_N[i][j] = _data[i * RAM_N_SIZE + j];
+        }
+    }
+}
+
+void MemorySM83::CopyDataFromRAM(vector<char>& _data) const {
+    _data = vector<char>(RAM_N.size() * RAM_N_SIZE);
+
+    for (int i = 0; i < RAM_N.size(); i++) {
+        for (int j = 0; j < RAM_N_SIZE; j++) {
+            _data[i * RAM_N_SIZE + j] = RAM_N[i][j];
+        }
+    }
+}
+
 /* ***********************************************************************************************************
     DMA
 *********************************************************************************************************** */
 void MemorySM83::VRAM_DMA(const u8& _data) {
     // u8 mode = HDMA5 & DMA_MODE_BIT;
     IO[CGB_HDMA5_ADDR - IO_OFFSET] = _data;
-    if (isCgb) {
+    if (machine_ctx.isCgb) {
         IO[CGB_HDMA5_ADDR - IO_OFFSET] |= 0x80;
         u16 length = ((IO[CGB_HDMA5_ADDR - IO_OFFSET] & 0x7F) + 1) * 0x10;
 
@@ -750,7 +777,7 @@ void MemorySM83::ProcessTAC() {
     SPEED SWITCH
 *********************************************************************************************************** */
 void MemorySM83::SwitchSpeed(const u8& _data) {
-    if (isCgb) {
+    if (machine_ctx.isCgb) {
         if (_data & PREPARE_SPEED_SWITCH) {
             IO[CGB_SPEED_SWITCH_ADDR - IO_OFFSET] ^= SET_SPEED;
             machine_ctx.speed_switch_requested = true;
@@ -934,7 +961,7 @@ void MemorySM83::SetColorPaletteValues(const u8& _data, u32* _color_palette) {
     MISC BANK SELECT
 *********************************************************************************************************** */
 void MemorySM83::SetVRAMBank(const u8& _data) {
-    if (isCgb) {
+    if (machine_ctx.isCgb) {
         IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x01;
         machine_ctx.vram_bank_selected = IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET];
     }
@@ -947,7 +974,7 @@ void MemorySM83::SetVRAMBank(const u8& _data) {
 void MemorySM83::SetWRAMBank(const u8& _data) {
     IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x07;
     if (IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] == 0) IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = 1;
-    if (isCgb) {
+    if (machine_ctx.isCgb) {
         machine_ctx.wram_bank_selected = IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] - 1;
     }
 }

@@ -20,6 +20,7 @@ template <class T> using MemoryBufferEntry = std::pair<std::string, std::vector<
 template <class T> using MemoryBuffer = std::vector<MemoryBufferEntry<T>>;				// memory buffer: type, vector<Table>
 
 struct machine_information {
+	std::string title;
 	// debug isntructions
 	bool instruction_debug_enabled = false;
 	// index, address, raw data, resolved data

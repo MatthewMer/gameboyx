@@ -2,7 +2,7 @@
 
 #include "gameboy_defines.h"
 #include "logger.h"
-#include "graphics_config.h"
+#include "general_config.h"
 
 #include <format>
 

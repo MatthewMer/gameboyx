@@ -272,5 +272,6 @@ void create_fs_hierarchy() {
     check_and_create_config_files();
     check_and_create_log_folders();
     check_and_create_shader_folders();
+    check_and_create_save_folders();
     Cartridge::check_and_create_rom_folder();
 }

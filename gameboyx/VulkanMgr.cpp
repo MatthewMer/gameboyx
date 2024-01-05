@@ -4,7 +4,7 @@
 #include "general_config.h"
 #include "helper_functions.h"
 #include "data_io.h"
-#include "graphics_config.h"
+#include "general_config.h"
 
 #include <unordered_map>
 #include <format>
@@ -1606,7 +1606,9 @@ void VulkanMgr::NextFrameImGui() const {
 void VulkanMgr::EnumerateShaders() {
 	LOG_INFO("[vulkan] enumerating shader source files");
 
-	enumeratedShaderFiles = get_files_in_path(SHADER_FOLDER);
+	auto enumeratedShaderFiles = vector<string>();
+
+	get_files_in_path(enumeratedShaderFiles, SHADER_FOLDER);
 	shaderSourceFiles = vector<pair<string, string>>();
 
 	for (const auto& n : enumeratedShaderFiles) {

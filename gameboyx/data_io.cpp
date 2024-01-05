@@ -73,15 +73,13 @@ string get_current_path() {
     return current_path;
 }
 
-vector<string> get_files_in_path(const string& _path_rel) {
-    auto files = vector<string>();
+void get_files_in_path(vector<string>& _input, const string& _path_rel) {
+    _input.clear();
 
     for (const auto& n : fs::directory_iterator(get_current_path() + _path_rel)) {
         if (n.is_directory()) { continue; }
-        files.emplace_back(n.path().generic_string());
+        _input.emplace_back(n.path().generic_string());
     }
-
-    return files;
 }
 
 bool delete_games_from_config(vector<game_info>& _games, const std::string& _config_path_rel) {
@@ -196,4 +194,8 @@ void check_and_create_log_folders() {
 void check_and_create_shader_folders() {
     check_and_create_path(SHADER_FOLDER);
     check_and_create_path(SPIR_V_FOLDER);
+}
+
+void check_and_create_save_folders() {
+    check_and_create_path(SAVE_FOLDER);
 }
