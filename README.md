@@ -14,6 +14,12 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 
 [![Gameboy Emulator Demo](./img/demo.png)](https://www.youtube.com/watch?v=FxrE-5kgZR0 "Gameboy Emulator Demo")
 
+### Tested Games (Currently only ROM and MBC3 (probably MBC1 mapper but not tested) for DMG) ###
+
+* Pokemon Red
+
+* Tetris
+
 ### Blargg's Test Roms ###
 
 * Instruction Test
