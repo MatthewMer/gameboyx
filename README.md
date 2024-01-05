@@ -12,9 +12,7 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 
 ### Demo ###
 
-[![Gameboy Emulator Demo]                                                        // Title
-(./img/demo.png)]                                                           // Thumbnail
-(https://www.youtube.com/watch?v=FxrE-5kgZR0 "Gameboy Emulator Demo")       // Video Link
+[![Gameboy Emulator Demo](./img/demo.png)](https://www.youtube.com/watch?v=FxrE-5kgZR0 "Gameboy Emulator Demo")
 
 ### Blargg's Test Roms ###
 
