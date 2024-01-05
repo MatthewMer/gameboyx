@@ -10,6 +10,12 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ```
 * compile with Visual Studio 2022 (open ./gameboyx.sln, set to Release and your target platform and start the build process)
 
+### Demo ###
+
+[![Gameboy Emulator Demo]                                                        // Title
+(./img/demo.png)]                                                           // Thumbnail
+(https://www.youtube.com/watch?v=FxrE-5kgZR0 "Gameboy Emulator Demo")       // Video Link
+
 ### Blargg's Test Roms ###
 
 * Instruction Test

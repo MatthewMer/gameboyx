@@ -68,10 +68,8 @@ private:
 	bank_index dbgInstrInstructionIndex = bank_index(0, 0);					// bank, index
 	int dbgInstrBank = 0;
 	int dbgInstrAddress = 0;
-	bank_index dbgInstrCurrentBreakpoint = bank_index(0, 0);
-	bool dbgInstrBreakpointSet = false;
-	bank_index dbgInstrCurrentBreakpointTmp = bank_index(0, 0);
-	bool dbgInstrBreakpointTmpSet = false;
+	std::list<bank_index> dbgInstrBreakpoints = std::list<bank_index>();
+	std::list<bank_index> dbgInstrBreakpointsTmp = std::list<bank_index>();
 	bool dbgInstrPCoutOfRange = false;
 	bool dbgInstrAutorun = false;
 	int dbgInstrLastPC = -1;
@@ -136,9 +134,7 @@ private:
 	void ResetDebugInstr(); 
 	void ResetMemInspector();
 	bool CheckCurrentPCAutoScroll();
-	bool CheckBreakPoint();
 	void SetBreakPoint(const bank_index& _current_index);
-	bool CheckBreakPointTmp();
 	void SetBreakPointTmp(const bank_index& _current_index);
 	void WriteInstructionLog();
 	void ResetEventMouseWheel();

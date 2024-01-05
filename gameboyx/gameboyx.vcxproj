@@ -169,8 +169,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\submodules\imgui\imgui_demo.cpp" />
     <ClCompile Include="Cartridge.cpp" />
+    <ClCompile Include="ControllerBase.cpp" />
+    <ClCompile Include="ControllerSM83.cpp" />
     <ClCompile Include="data_io.cpp" />
     <ClCompile Include="CoreBase.cpp" />
     <ClCompile Include="CoreSM83.cpp" />
@@ -184,11 +185,15 @@
     <ClCompile Include="MemorySM83.cpp" />
     <ClCompile Include="MmuBase.cpp" />
     <ClCompile Include="MmuSM83.cpp" />
+    <ClCompile Include="SoundBase.cpp" />
+    <ClCompile Include="SoundSM83.cpp" />
     <ClCompile Include="VHardwareMgr.cpp" />
     <ClCompile Include="VulkanMgr.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cartridge.h" />
+    <ClInclude Include="ControllerBase.h" />
+    <ClInclude Include="ControllerSM83.h" />
     <ClInclude Include="CoreBase.h" />
     <ClInclude Include="CoreSM83.h" />
     <ClInclude Include="gameboy_defines.h" />
@@ -197,6 +202,7 @@
     <ClInclude Include="game_info.h" />
     <ClInclude Include="GraphicsUnitBase.h" />
     <ClInclude Include="GraphicsUnitSM83.h" />
+    <ClInclude Include="graphics_config.h" />
     <ClInclude Include="helper_functions.h" />
     <ClInclude Include="ImGuiGameboyX.h" />
     <ClInclude Include="general_config.h" />
@@ -207,6 +213,8 @@
     <ClInclude Include="MmuBase.h" />
     <ClInclude Include="MmuSM83.h" />
     <ClInclude Include="ScrollableTable.h" />
+    <ClInclude Include="SoundBase.h" />
+    <ClInclude Include="SoundSM83.h" />
     <ClInclude Include="VHardwareMgr.h" />
     <ClInclude Include="VulkanMgr.h" />
   </ItemGroup>

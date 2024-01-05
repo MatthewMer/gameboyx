@@ -196,10 +196,10 @@ void ImGuiGameboyX::ShowDebugInstructions() {
         if (dbgInstrAutorun) {
             if (machineInfo.pause_execution) {
                 if (dbgInstrPCoutOfRange) {
-                    machineInfo.pause_execution = CheckBreakPointTmp();
+                    machineInfo.pause_execution = (std::find(dbgInstrBreakpointsTmp.begin(), dbgInstrBreakpointsTmp.end(), dbgInstrInstructionIndex) != dbgInstrBreakpointsTmp.end());
                 }
                 else {
-                    machineInfo.pause_execution = CheckBreakPoint();
+                    machineInfo.pause_execution = (std::find(dbgInstrBreakpoints.begin(), dbgInstrBreakpoints.end(), dbgInstrInstructionIndex) != dbgInstrBreakpoints.end());
                 }
             }
         }
@@ -225,7 +225,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
                     while (machineInfo.program_buffer_tmp.GetNextEntry(dbgInstrCurrentEntry)) {
                         ImGui::TableNextColumn();
 
-                        if (dbgInstrBreakpointTmpSet && current_index == dbgInstrCurrentBreakpointTmp) {
+                        if (std::find(dbgInstrBreakpointsTmp.begin(), dbgInstrBreakpointsTmp.end(), dbgInstrInstructionIndex) != dbgInstrBreakpointsTmp.end()) {
                             ImGui::TextColored(IMGUI_RED_COL, ">>>");
                         }
                         ImGui::TableNextColumn();
@@ -245,7 +245,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
                     while (machineInfo.program_buffer.GetNextEntry(dbgInstrCurrentEntry)) {
                         ImGui::TableNextColumn();
 
-                        if (dbgInstrBreakpointSet && current_index == dbgInstrCurrentBreakpoint) {
+                        if (std::find(dbgInstrBreakpoints.begin(), dbgInstrBreakpoints.end(), current_index) != dbgInstrBreakpoints.end()) {
                             ImGui::TextColored(IMGUI_RED_COL, ">>>");
                         }
                         ImGui::TableNextColumn();
@@ -333,6 +333,27 @@ void ImGuiGameboyX::ShowDebugInstructions() {
 
                 ImGui::TableNextColumn();
                 for (int i = 0; const auto & n : machineInfo.flag_values) {
+                    ImGui::TextUnformatted(n.first.c_str());
+                    ImGui::TableNextColumn();
+
+                    ImGui::TextUnformatted(n.second.c_str());
+
+                    if (i++ % 2) { ImGui::TableNextRow(); }
+                    ImGui::TableNextColumn();
+                }
+            }
+            ImGui::EndTable();
+        }
+        ImGui::Separator();
+        ImGui::TextColored(HIGHLIGHT_COLOR, "Misc:");
+        if (!machineInfo.misc_values.empty()) {
+            if (ImGui::BeginTable("misc_debug", dbgInstrColNumFlags, TABLE_FLAGS)) {
+                for (int i = 0; i < dbgInstrColNumFlags; i++) {
+                    ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER, DEBUG_FLAG_COLUMNS[i]);
+                }
+
+                ImGui::TableNextColumn();
+                for (int i = 0; const auto & n : machineInfo.misc_values) {
                     ImGui::TextUnformatted(n.first.c_str());
                     ImGui::TableNextColumn();
 
@@ -900,51 +921,19 @@ bool ImGuiGameboyX::CheckCurrentPCAutoScroll() {
 }
 
 // ***** DEBUG INSTRUCTION PROCESS BREAKPOINT *****
-bool ImGuiGameboyX::CheckBreakPoint() {
-    if (dbgInstrBreakpointSet) {
-        return dbgInstrInstructionIndex == dbgInstrCurrentBreakpoint;
-    }
-    else {
-        return false;
-    }
-}
-
-bool ImGuiGameboyX::CheckBreakPointTmp() {
-    if (dbgInstrBreakpointTmpSet) {
-        return dbgInstrInstructionIndex == dbgInstrCurrentBreakpointTmp;
-    }
-    else {
-        return false;
-    }
-}
-
 void ImGuiGameboyX::SetBreakPoint(const bank_index& _current_index) {
-    if (dbgInstrBreakpointSet) {
-        if (dbgInstrCurrentBreakpoint == _current_index) {
-            dbgInstrBreakpointSet = false;
-        }
-        else {
-            dbgInstrCurrentBreakpoint = _current_index;
-        }
-    }
-    else {
-        dbgInstrCurrentBreakpoint = _current_index;
-        dbgInstrBreakpointSet = true;
+    if (std::find(dbgInstrBreakpoints.begin(), dbgInstrBreakpoints.end(), _current_index) != dbgInstrBreakpoints.end()) {
+        dbgInstrBreakpoints.remove(_current_index);
+    } else {
+        dbgInstrBreakpoints.emplace_back(_current_index);
     }
 }
 
 void ImGuiGameboyX::SetBreakPointTmp(const bank_index& _current_index) {
-    if (dbgInstrBreakpointTmpSet) {
-        if (dbgInstrCurrentBreakpointTmp == _current_index) {
-            dbgInstrBreakpointTmpSet = false;
-        }
-        else {
-            dbgInstrCurrentBreakpointTmp = _current_index;
-        }
-    }
-    else {
-        dbgInstrCurrentBreakpointTmp = _current_index;
-        dbgInstrBreakpointTmpSet = true;
+    if (std::find(dbgInstrBreakpointsTmp.begin(), dbgInstrBreakpointsTmp.end(), _current_index) != dbgInstrBreakpointsTmp.end()) {
+        dbgInstrBreakpointsTmp.remove(_current_index);
+    } else {
+        dbgInstrBreakpointsTmp.emplace_back(_current_index);
     }
 }
 
@@ -1019,7 +1008,7 @@ void ImGuiGameboyX::EventKeyDown(const SDL_Keycode& _key) {
         sdlkADown = true;
         break;
     case SDLK_F3:
-        machineInfo.pause_execution = true;
+        machineInfo.pause_execution = false;
         break;
     case SDLK_LSHIFT:
         sdlkShiftDown = true;
@@ -1031,6 +1020,23 @@ void ImGuiGameboyX::EventKeyDown(const SDL_Keycode& _key) {
         break;
     case SDLK_DELETE:
         sdlkDelDown = true;
+        break;
+    case SDLK_DOWN:
+        for (int i = 0; i < gamesSelected.size(); i++) {
+            gamesSelected[i] = false;
+        }
+        if (gameSelectedIndex < games.size() - 1) { gameSelectedIndex++; }
+        gamesSelected[gameSelectedIndex] = true;
+        break;
+    case SDLK_UP:
+        for (int i = 0; i < gamesSelected.size(); i++) {
+            gamesSelected[i] = false;
+        }
+        if (gameSelectedIndex > 0) { gameSelectedIndex--; }
+        gamesSelected[gameSelectedIndex] = true;
+        break;
+    case SDLK_RETURN:
+        ActionStartGame(gameSelectedIndex);
         break;
     default:
         break;

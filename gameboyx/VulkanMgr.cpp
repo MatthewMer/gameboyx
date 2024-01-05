@@ -4,6 +4,7 @@
 #include "general_config.h"
 #include "helper_functions.h"
 #include "data_io.h"
+#include "graphics_config.h"
 
 #include <unordered_map>
 #include <format>
@@ -1493,7 +1494,7 @@ bool VulkanMgr::InitTex2dDescriptorSets() {
 
 bool VulkanMgr::InitTex2dBuffers() {
 	// staging buffer for texture upload
-	currentSize = graphicsInfo.lcd_width * graphicsInfo.lcd_height * 4;
+	currentSize = graphicsInfo.lcd_width * graphicsInfo.lcd_height * TEX2D_CHANNELS;
 	for(auto& n : tex2dStagingBuffer){
 		if (!InitBuffer(n, currentSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
 			LOG_ERROR("[vulkan] create staging buffer for main texture");
@@ -1527,6 +1528,7 @@ void VulkanMgr::DestroyTex2dRenderTarget() {
 	for (auto& n : tex2dStagingBuffer) {
 		DestroyBuffer(n);
 	}
+	WaitIdle();
 	DestroyImage(tex2dImage);
 	DestroyBuffer(tex2dVertexBuffer);
 	DestroyBuffer(tex2dIndexBuffer);

@@ -15,7 +15,7 @@ class GraphicsUnitBase
 {
 public:
 	// get/reset instance
-	static GraphicsUnitBase* getInstance(VulkanMgr* _graphics_mgr, graphics_information& _graphics_info);
+	static GraphicsUnitBase* getInstance(graphics_information& _graphics_info);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -25,7 +25,6 @@ public:
 	GraphicsUnitBase& operator=(GraphicsUnitBase&&) = delete;
 
 	// members
-	virtual void NextFrame() = 0;
 	virtual bool ProcessGPU() = 0;
 
 protected:

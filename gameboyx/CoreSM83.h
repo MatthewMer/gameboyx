@@ -109,7 +109,6 @@ public:
 	friend class CoreBase;
 
 	void RunCycles() override;
-	void RunCycle() override;
 	void GetCurrentHardwareState() const override;
 	void GetStartupHardwareInfo() const override;
 	bool CheckStep() override;
@@ -120,6 +119,7 @@ public:
 	void InitMessageBufferProgram() override;
 	void InitMessageBufferProgramTmp() override;
 	void GetCurrentRegisterValues() const  override;
+	void GetCurrentMiscValues() const override;
 	void GetCurrentFlagsAndISR() const override;
 
 private:
@@ -132,9 +132,10 @@ private:
 	u8 opcode;
 	u16 data;
 
-	void RunCpu() override;
+	void NextInstruction() override;
+	void SimulateInstruction();
 	void ExecuteInstruction() override;
-	void CheckInterrupts() override;
+	bool CheckInterrupts() override;
 	void TickTimers();
 	void IncrementTIMA();
 
@@ -156,6 +157,7 @@ private:
 
 	// cpu states and checks
 	bool halted = false;
+	bool was_halted = false;
 	bool stopped = false;
 	bool ime = false;
 
@@ -178,7 +180,6 @@ private:
 	int currentMachineCycles = 0;
 	int GetDelayTime() override;
 	int GetStepsPerFrame() override;
-	void GetCurrentInstruction() const override;
 	void DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num);
 	void DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num, const std::string& _bank_name);
 

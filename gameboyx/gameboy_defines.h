@@ -82,7 +82,6 @@
 *********************************************************************************************************** */
 // joypad
 #define JOYP_ADDR                   0xFF00              // Mixed
-#define JOYP_BUTTONS_MASK           0x0F
 
 // serial
 #define SERIAL_DATA                 0xFF01
@@ -205,10 +204,24 @@
 #define PCM34_ADDR                  0xFF77              // R
 
 /* ***********************************************************************************************************
+    CONTROL DEFINES
+*********************************************************************************************************** */
+#define JOYP_SELECT_MASK            0xF0
+#define JOYP_BUTTON_MASK            0x0F
+
+#define JOYP_SELECT_BUTTONS         0x20
+#define JOYP_SELECT_DPAD            0x10
+
+#define JOYP_START_DOWN             0x08
+#define JOYP_SELECT_UP              0x04
+#define JOYP_B_LEFT                 0x02
+#define JOYP_A_RIGHT                0x01
+
+#define JOYP_RESET_BUTTONS          0x0F
+
+/* ***********************************************************************************************************
     GRAPHICS DEFINES
 *********************************************************************************************************** */
-#define LCD_VBLANK_THRESHOLD        0x91
-
 // LCD CONTROL
 #define PPU_LCDC_ENABLE             0x80
 #define PPU_LCDC_WIN_TILEMAP        0x40
@@ -229,26 +242,35 @@
 
 #define PPU_STAT_WRITEABLE_BITS     0xF8
 
+#define PPU_MODE_0                  0x00
+#define PPU_MODE_1                  0x01
+#define PPU_MODE_2                  0x02
+#define PPU_MODE_3                  0x03
+
 // lcd
 #define LCD_SCANLINES_VBLANK        144
 #define LCD_SCANLINES_TOTAL         154
 
 // VRAM Tile data
 #define PPU_VRAM_TILE_SIZE          16                  // Bytes
+#define PPU_TILE_SIZE_SCANLINE      2
+#define PPU_TILE_SIZE_X             8
+#define PPU_TILE_SIZE_Y             8
+#define PPU_VRAM_BASEPTR_8000       0x8000
 #define PPU_VRAM_BASEPTR_8800       0x9000
 
 // tile maps
 #define PPU_TILE_MAP0               0x9800
 #define PPU_TILE_MAP1               0x9C00
 
-#define BG_ATTR_PALETTE             0x03
-#define BG_ATTR_VRAM_BANK           0x04
+#define BG_ATTR_PALETTE_CGB         0x03
+#define BG_ATTR_VRAM_BANK_CGB       0x04
 #define BG_ATTR_FLIP_HORIZONTAL     0x20
 #define BG_ATTR_FLIP_VERTICAL       0x40
 #define BG_ATTR_OAM_PRIORITY        0x80
 
 #define PPU_OBJ_ATTRIBUTES          0xFE00
-#define PPU_OBJ_ATTR_SIZE           0xA0
+#define PPU_OBJ_ATTR_NUM            40
 #define PPU_OBJ_ATTR_BYTES          4
 
 #define OBJ_ATTR_Y                  0
@@ -256,8 +278,12 @@
 #define OBJ_ATTR_INDEX              2
 #define OBJ_ATTR_FLAGS              3
 
-#define OBJ_ATTR_PALETTE            0x07
-#define OBJ_ATTR_VRAM_BANK          0x08
+#define OBJ_ATTR_PALETTE_CGB        0x07
+#define OBJ_ATTR_VRAM_BANK_CGB      0x08
+#define OBJ_ATTR_PALETTE_DMG        0x10
+#define OBJ_ATTR_X_FLIP             0x20
+#define OBJ_ATTR_Y_FLIP             0x40
+#define OBJ_ATTR_PRIO               0x80
 
 // screen
 #define PPU_TILES_HORIZONTAL        20
@@ -266,9 +292,24 @@
 #define PPU_PIXELS_TILE_Y           8
 #define PPU_SCREEN_X                160
 #define PPU_SCREEN_Y                144
-#define PPU_TILEMAP_SIZE_1D         256
+#define PPU_TILEMAP_SIZE_1D         32
+#define PPU_TILEMAP_SIZE_1D_PIXELS  256
+#define PPU_OBJ_PER_SCANLINE        10
 
 #define LCD_ASPECT_RATIO            10.f/9.f
+
+#define DMG_COLOR_WHITE             0x9bbc0fFF
+#define DMG_COLOR_LIGHTGREY         0x8bac0fFF
+#define DMG_COLOR_DARKGREY          0x306230FF
+#define DMG_COLOR_BLACK             0x0f380fFF
+
+// alternative monochromatic color palette for DMG (less greenish)
+#define DMG_COLOR_WHITE_ALT         0xf8e8f8FF
+#define DMG_COLOR_LIGHTGREY_ALT     0xd0a8b0FF
+#define DMG_COLOR_DARKGREY_ALT      0x787890FF
+#define DMG_COLOR_BLACK_ALT         0x000000FF
+
+
 
 /* ***********************************************************************************************************
     REGISTERS INITIAL STATES
@@ -276,14 +317,16 @@
 // initial register values (CGB in CGB and DMG mode)
 #define INIT_CGB_AF                     0x1180
 #define INIT_CGB_BC                     0x0000
-#define INIT_CGB_SP                     0xFFFE
-#define INIT_CGB_PC                     0x0100
+#define INIT_CGB_DE                     0xFF56
+#define INIT_CGB_HL                     0x000D
 
-#define INIT_CGB_CGB_DE                 0xFF56
-#define INIT_CGB_CGB_HL                 0x000D
+#define INIT_DMG_AF                     0x0100
+#define INIT_DMG_BC                     0x0014
+#define INIT_DMG_DE                     0x0000
+#define INIT_DMG_HL                     0xC060
 
-#define INIT_CGB_DMG_DE                 0x0008
-#define INIT_CGB_DMG_HL                 0x007C
+#define INIT_SP                         0xFFFE
+#define INIT_PC                         0x0100
 
 // misc registers (IO)
 // ISR

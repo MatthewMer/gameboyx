@@ -29,8 +29,7 @@ public:
 
 	// public members
 	virtual void RunCycles() = 0;
-	virtual void RunCycle() = 0;
-	virtual void RunCpu() = 0;
+	virtual void NextInstruction() = 0;
 
 	virtual int GetDelayTime() = 0;
 	virtual int GetStepsPerFrame() = 0;
@@ -44,6 +43,7 @@ public:
 	virtual void InitMessageBufferProgram() = 0;
 	virtual void InitMessageBufferProgramTmp() = 0;
 	virtual void GetCurrentRegisterValues() const = 0;
+	virtual void GetCurrentMiscValues() const = 0;
 	virtual void GetCurrentFlagsAndISR() const = 0;
 
 	virtual void Write8Bit(const u8& _data, const u16& _addr) = 0;
@@ -66,12 +66,10 @@ protected:
 	int machineCycleClockCounter = 0;				// counter
 
 	virtual void ExecuteInstruction() = 0;
-	virtual void CheckInterrupts() = 0;
+	virtual bool CheckInterrupts() = 0;
 
 	virtual void InitCpu() = 0;
 	virtual void InitRegisterStates() = 0;
-
-	virtual void GetCurrentInstruction() const = 0;
 
 	machine_information& machineInfo;
 

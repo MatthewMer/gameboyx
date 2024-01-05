@@ -116,7 +116,9 @@ int main(int, char**)
                     break;
                 default:
                     if (game_stat.game_running) {
-                        vhwmgr_obj->EventKeyDown(key);
+                        if (!vhwmgr_obj->EventKeyDown(key)) {
+                            gbx_gui->EventKeyDown(key);
+                        }
                     }
                     else {
                         gbx_gui->EventKeyDown(key);
@@ -140,10 +142,11 @@ int main(int, char**)
                     sdl_toggle_full_screen(window);
                     break;
                 default:
-                    if (game_stat.game_running && vhwmgr_obj) {
-                        vhwmgr_obj->EventKeyUp(key);
-                    }
-                    else {
+                    if (game_stat.game_running) {
+                        if (!vhwmgr_obj->EventKeyUp(key)) {
+                            gbx_gui->EventKeyUp(key);
+                        }
+                    } else {
                         gbx_gui->EventKeyUp(key);
                     }
                     break;
@@ -194,7 +197,7 @@ int main(int, char**)
 
         // run virtual hardware
         if (game_stat.game_running && vhwmgr_obj != nullptr) {
-            vhwmgr_obj->ProcessNext();
+            vhwmgr_obj->ProcessHardware();
         }
 
         win_min = SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED;

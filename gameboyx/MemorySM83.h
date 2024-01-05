@@ -13,13 +13,6 @@
 #include "defs.h"
 #include "information_structs.h"
 
-enum modes {			// PPUs current status
-	MODE_0,
-	MODE_1,
-	MODE_2,
-	MODE_3
-};
-
 struct machine_state_context {
 	// interrupt
 	u8 IE;
@@ -51,9 +44,6 @@ struct machine_state_context {
 };
 
 struct graphics_context {
-	// hardware
-	bool isCgb = false;
-
 	// VRAM/OAM
 	std::vector<std::vector<u8>> VRAM_N;
 	std::vector<u8> OAM;
@@ -83,7 +73,7 @@ struct graphics_context {
 
 	// LCD STAT
 	// bit 0-1
-	modes mode = MODE_0;
+	int mode = PPU_MODE_1;
 	// bit 2
 	//bool lyc_ly_flag = false;
 	// bit 3
@@ -94,6 +84,45 @@ struct graphics_context {
 	bool mode_2_int_sel = false;
 	// bit 6
 	bool lyc_ly_int_sel = false;
+
+	u32 dmg_bgp_color_palette[4] = {
+		DMG_COLOR_WHITE_ALT,
+		DMG_COLOR_LIGHTGREY_ALT,
+		DMG_COLOR_DARKGREY_ALT,
+		DMG_COLOR_BLACK_ALT
+	};
+
+	u32 dmg_obp0_color_palette[4] = {
+		DMG_COLOR_WHITE_ALT,
+		DMG_COLOR_LIGHTGREY_ALT,
+		DMG_COLOR_DARKGREY_ALT,
+		DMG_COLOR_BLACK_ALT
+	};
+
+	u32 dmg_obp1_color_palette[4] = {
+		DMG_COLOR_WHITE_ALT,
+		DMG_COLOR_LIGHTGREY_ALT,
+		DMG_COLOR_DARKGREY_ALT,
+		DMG_COLOR_BLACK_ALT
+	};
+};
+
+struct sound_context {
+
+};
+
+struct control_context {
+	bool buttons_selected = false;
+	bool dpad_selected = false;
+
+	bool start_pressed = false;
+	bool down_pressed = false;
+	bool select_pressed = false;
+	bool up_pressed = false;
+	bool b_pressed = false;
+	bool left_pressed = false;
+	bool a_pressed = false;
+	bool right_pressed = false;
 };
 
 class MemorySM83 : private MemoryBase
@@ -136,6 +165,8 @@ public:
 
 	machine_state_context* GetMachineContext();
 	graphics_context* GetGraphicsContext();
+	sound_context* GetSoundContext();
+	control_context* GetControlContext();
 
 	// direct hardware access
 	void RequestInterrupts(const u8& _isr_flags) override;
@@ -179,11 +210,16 @@ private:
 	void VRAM_DMA(const u8& _data);
 	void OAM_DMA();
 
+	// controller
+	void SetControlValues(const u8& _data);
+
 	// speed switch
 	void SwitchSpeed(const u8& _data);
 
 	// obj prio
 	void SetObjPrio(const u8& _data);
+
+	void SetColorPaletteValues(const u8& _data, u32* _color_palette);
 
 	// action for LCDC write
 	void SetLCDCValues(const u8& _data);
@@ -195,4 +231,6 @@ private:
 	// memory cpu context
 	machine_state_context machine_ctx = machine_state_context();
 	graphics_context graphics_ctx = graphics_context();
+	sound_context sound_ctx = sound_context();
+	control_context control_ctx = control_context();
 };

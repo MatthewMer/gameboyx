@@ -7,8 +7,10 @@
 *	of Getters and Setters (reduce unnecessary function call overhead and complexity)
 */
 
+#include "SDL.h"
 #include <queue>
 #include <string>
+#include <unordered_map>
 
 #include "defs.h"
 #include "ScrollableTable.h"
@@ -25,6 +27,7 @@ struct machine_information {
 	ScrollableTable<debug_instr_data> program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 	std::vector<register_data> register_values = std::vector<register_data>();
 	std::vector<register_data> flag_values = std::vector<register_data>();
+	std::vector<register_data> misc_values = std::vector<register_data>();
 	bool instruction_logging = false;
 	bool pause_execution = true;
 	int current_pc = -1;
@@ -47,10 +50,14 @@ struct machine_information {
 
 	MemoryBuffer<ScrollableTable<memory_data>> memory_buffer = MemoryBuffer<ScrollableTable<memory_data>>();
 
+	// controller
+	std::unordered_map<SDL_Keycode, int> key_map = std::unordered_map<SDL_Keycode, int>();
+
 	void reset_machine_information() {
 		program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 		program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 		register_values = std::vector<register_data>();
+		misc_values = std::vector<register_data>();
 		instruction_logging = false;
 		pause_execution = true;
 		current_pc = -1;
@@ -94,7 +101,6 @@ struct graphics_information {
 	std::vector<u8> image_data = std::vector<u8>();
 	u32 lcd_width;
 	u32 lcd_height;
-	int channels;
 	float aspect_ratio = 1.f;
 
 	// graphics backend data

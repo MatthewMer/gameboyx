@@ -21,13 +21,14 @@ void VHardwareMgr::resetInstance() {
     if (instance != nullptr) {
         CoreBase::resetInstance();
         GraphicsUnitBase::resetInstance();
+        ControllerBase::resetInstance();
         Cartridge::resetInstance();
         delete instance;
         instance = nullptr;
     }
 }
 
-VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) : machineInfo(_machine_info) {
+VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) : _graphics_mgr(_graphics_mgr), machineInfo(_machine_info) {
     cart_instance = Cartridge::getInstance(_game_ctx);
     if (cart_instance == nullptr) {
         LOG_ERROR("Couldn't create virtual cartridge");
@@ -35,7 +36,8 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
     }
 
     core_instance = CoreBase::getInstance(_machine_info);
-    graphics_instance = GraphicsUnitBase::getInstance(_graphics_mgr, _graphics_info);
+    graphics_instance = GraphicsUnitBase::getInstance(_graphics_info);
+    control_instance = ControllerBase::getInstance(_machine_info);
 
     // returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
@@ -43,6 +45,7 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
 
     core_instance->GetStartupHardwareInfo();
     core_instance->GetCurrentRegisterValues();
+    core_instance->GetCurrentMiscValues();
     core_instance->GetCurrentFlagsAndISR();
     core_instance->GetCurrentProgramCounter();
 
@@ -54,25 +57,17 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
 /* ***********************************************************************************************************
     FUNCTIONALITY
 *********************************************************************************************************** */
-void VHardwareMgr::ProcessNext() {
+void VHardwareMgr::ProcessHardware() {
 
     if (machineInfo.instruction_debug_enabled) {
-        core_instance->RunCycle();
-
-        if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
-            graphics_instance->NextFrame();
-            frameCounter++;
+        if (!machineInfo.pause_execution) {
+            RunHardware();
         }
     }
     else {
         if (CheckDelay()) {
             for (int i = 0; i < stepsPerFrame; i++) {
-                core_instance->RunCycles();
-
-                if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
-                    graphics_instance->NextFrame();
-                    frameCounter++;
-                }
+                RunHardware();
             }
         }
     }
@@ -86,8 +81,18 @@ void VHardwareMgr::ProcessNext() {
 
     if (machineInfo.instruction_debug_enabled) {
         core_instance->GetCurrentRegisterValues();
+        core_instance->GetCurrentMiscValues();
         core_instance->GetCurrentFlagsAndISR();
         core_instance->GetCurrentProgramCounter();
+    }
+}
+
+void VHardwareMgr::RunHardware() {
+    core_instance->RunCycles();
+
+    if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
+        _graphics_mgr->UpdateGpuData();
+        frameCounter++;
     }
 }
 
@@ -133,16 +138,10 @@ void VHardwareMgr::InitTime() {
 /* ***********************************************************************************************************
     VHARDWAREMANAGER SDL FUNCTIONS
 *********************************************************************************************************** */
-void VHardwareMgr::EventKeyDown(const SDL_Keycode& _key) {
-    switch (_key) {
-    default:
-        break;
-    }
+bool VHardwareMgr::EventKeyDown(const SDL_Keycode& _key) {
+    return control_instance->SetKey(_key);
 }
 
-void VHardwareMgr::EventKeyUp(const SDL_Keycode& _key) {
-    switch (_key) {
-    default:
-        break;
-    }
+bool VHardwareMgr::EventKeyUp(const SDL_Keycode& _key) {
+    return control_instance->ResetKey(_key);
 }

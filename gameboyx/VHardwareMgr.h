@@ -10,6 +10,7 @@
 #include "Cartridge.h"
 #include "CoreBase.h"
 #include "GraphicsUnitBase.h"
+#include "ControllerBase.h"
 #include "information_structs.h"
 #include "SDL.h"
 
@@ -28,11 +29,11 @@ public:
 	VHardwareMgr& operator=(VHardwareMgr&&) = delete;
 
 	// members for running hardware
-	void ProcessNext();
+	void ProcessHardware();
 
 	// SDL
-	void EventKeyDown(const SDL_Keycode& _key);
-	void EventKeyUp(const SDL_Keycode& _key);
+	bool EventKeyDown(const SDL_Keycode& _key);
+	bool EventKeyUp(const SDL_Keycode& _key);
 
 private:
 	// constructor
@@ -40,10 +41,14 @@ private:
 	static VHardwareMgr* instance;
 	~VHardwareMgr() = default;
 
+	void RunHardware();
+
 	// hardware instances
 	CoreBase* core_instance;
 	GraphicsUnitBase* graphics_instance;
+	ControllerBase* control_instance;
 	Cartridge* cart_instance;
+	VulkanMgr* _graphics_mgr;
 
 	// execution time
 	u32 timePerFrame = 0;
