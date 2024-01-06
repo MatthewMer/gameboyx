@@ -10,10 +10,6 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ```
 * compile with Visual Studio 2022 (open ./gameboyx.sln, set to Release and your target platform and start the build process)
 
-### Demo ###
-
-[![Gameboy Emulator Demo](./img/preview.png)](https://www.youtube.com/watch?v=FxrE-5kgZR0 "Gameboy Emulator Demo")
-
 ### Tested Games (Currently only ROM and MBC3 (probably MBC1 mapper but not tested) for DMG) ###
 
 * Pokemon Red
