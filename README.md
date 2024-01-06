@@ -10,11 +10,13 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ```
 * compile with Visual Studio 2022 (open ./gameboyx.sln, set to Release and your target platform and start the build process)
 
-### Tested Games (Currently only ROM and MBC3 (probably MBC1 mapper but not tested) for DMG) ###
+### Tested Games (Currently only ROM, MBC1 and MBC3 mapper for DMG) ###
 
-* Pokemon Red
+* Pokemon Red (MBC3)
 
-* Tetris
+* Zelda - Link's Awakening (MBC1)
+
+* Tetris (ROM)
 
 ### Blargg's Test Roms ###
 

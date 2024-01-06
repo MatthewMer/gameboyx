@@ -155,9 +155,8 @@ string get_full_file_path(const game_info& _game_ctx) {
 }
 
 bool check_ext(const string& _file) {
-    string delimiter = ".";
-    int ext_start = (int)_file.find(delimiter) + 1;
-    string file_ext = _file.substr(ext_start, _file.length() - ext_start);
+    const auto vec_file = split_string(_file, ".");
+    string file_ext = vec_file.back();
 
     for (const auto& n : FILE_EXTS) {
         if (file_ext.compare(n[1]) == 0) return true;

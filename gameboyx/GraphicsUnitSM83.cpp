@@ -78,8 +78,7 @@ bool GraphicsUnitSM83::ProcessGPU() {
 
 		memInstance->RequestInterrupts(interrupts);
 		return next_frame;
-	}
-	else {
+	} else {
 		return false;
 	}
 }
@@ -130,9 +129,9 @@ void GraphicsUnitSM83::DrawBackgroundDMG(const u8& _ly) {
 		tilemap_offset_x = (scx_ / PPU_TILE_SIZE_X) % PPU_TILEMAP_SIZE_1D;
 
 		tile_offset = graphicsCtx->VRAM_N[0][tilemap_offset + tilemap_offset_y + tilemap_offset_x];
-		
+
 		FetchTileDataBGWIN(tile_offset, y_clip * 2);
-		DrawTileBGWINDMG(x - x_clip , ly, graphicsCtx->dmg_bgp_color_palette);
+		DrawTileBGWINDMG(x - x_clip, ly, graphicsCtx->dmg_bgp_color_palette);
 	}
 }
 
@@ -171,7 +170,7 @@ void GraphicsUnitSM83::DrawWindowDMG(const u8& _ly) {
 void GraphicsUnitSM83::DrawObjectsDMG(const u8& _ly, const int* _objects, const int& _num_objects, const bool& _prio) {
 	for (int i = 0; i < _num_objects; i++) {
 		int oam_offset = _objects[i];
-		
+
 		int y_pos = (int)graphicsCtx->OAM[oam_offset + OBJ_ATTR_Y];
 		int x_pos = (int)graphicsCtx->OAM[oam_offset + OBJ_ATTR_X];
 		u8 tile_offset = graphicsCtx->OAM[oam_offset + OBJ_ATTR_INDEX];
@@ -180,10 +179,18 @@ void GraphicsUnitSM83::DrawObjectsDMG(const u8& _ly, const int* _objects, const 
 		int ly = _ly;
 
 		int y_clip;
-		if (flags & OBJ_ATTR_Y_FLIP) {
-			y_clip = (y_pos - ly) - (PPU_TILE_SIZE_Y + 1);
+		if (graphicsCtx->obj_size_16) {
+			if (flags & OBJ_ATTR_Y_FLIP) {
+				y_clip = y_pos - ly - 1;
+			} else {
+				y_clip = PPU_TILE_SIZE_Y_16 - (y_pos - ly);
+			}
 		} else {
-			y_clip = PPU_TILE_SIZE_Y - ((y_pos - ly) - PPU_TILE_SIZE_Y);
+			if (flags & OBJ_ATTR_Y_FLIP) {
+				y_clip = (y_pos - ly) - (PPU_TILE_SIZE_Y + 1);
+			} else {
+				y_clip = PPU_TILE_SIZE_Y - ((y_pos - ly) - PPU_TILE_SIZE_Y);
+			}
 		}
 
 		u32* palette;
@@ -261,7 +268,7 @@ void GraphicsUnitSM83::DrawTileBGWINDMG(const int& _x, const int& _y, const u32*
 	int image_offset_x;
 	int color_index = 0;
 	u32 color;
-	
+
 	u8 bit_mask = 0x80;
 	int x = _x;
 	for (int i = 7; i > -1; i--) {
@@ -288,7 +295,7 @@ void GraphicsUnitSM83::DrawTileBGWINDMG(const int& _x, const int& _y, const u32*
 
 void GraphicsUnitSM83::DrawScanlineCGB(const u8& _ly) {
 	if (graphicsCtx->bg_win_enable) {
-		
+
 	}
 }
 
@@ -300,17 +307,22 @@ void GraphicsUnitSM83::SearchOAM(const u8& _ly) {
 		int y_pos;
 		int ly = _ly;
 		bool prio;
+		bool add_entry = false;
 
 		for (int oam_offset = 0; oam_offset < OAM_SIZE; oam_offset += PPU_OBJ_ATTR_BYTES) {
 			y_pos = (int)graphicsCtx->OAM[oam_offset + OBJ_ATTR_Y];
-			
-			if ((y_pos - ly) > 8 && (y_pos - _ly) < (16 + 1)) {
+
+			add_entry =
+				(graphicsCtx->obj_size_16 && ((y_pos - ly) > 0 && (y_pos - _ly) < (16 + 1))) ||
+				((y_pos - ly) > 8 && (y_pos - _ly) < (16 + 1));
+
+			if (add_entry) {
 				prio = (graphicsCtx->OAM[oam_offset + OBJ_ATTR_FLAGS] & OBJ_ATTR_PRIO) ? true : false;
 
 				if (prio && numOAMEntriesPrio1DMG < 10) {
 					OAMPrio1DMG[numOAMEntriesPrio1DMG] = oam_offset;
 					numOAMEntriesPrio1DMG++;
-				} else if (numOAMEntriesPrio0DMG < 10){
+				} else if (numOAMEntriesPrio0DMG < 10) {
 					OAMPrio0DMG[numOAMEntriesPrio0DMG] = oam_offset;
 					numOAMEntriesPrio0DMG++;
 				}
@@ -320,14 +332,20 @@ void GraphicsUnitSM83::SearchOAM(const u8& _ly) {
 }
 
 void GraphicsUnitSM83::FetchTileDataOBJ(u8& _tile_offset, const int& _tile_sub_offset) {
-	int tile_sub_index = (PPU_VRAM_BASEPTR_8000 - VRAM_N_OFFSET) + (_tile_offset * 0x10) + _tile_sub_offset;
-	tileDataCur[0] = graphicsCtx->VRAM_N[0][tile_sub_index];
-	tileDataCur[1] = graphicsCtx->VRAM_N[0][tile_sub_index + 1];
+	if (graphicsCtx->obj_size_16) {
+		int tile_sub_index = (PPU_VRAM_BASEPTR_8000 - VRAM_N_OFFSET) + ((_tile_offset & 0xFE) * 0x10) + _tile_sub_offset;
+		tileDataCur[0] = graphicsCtx->VRAM_N[0][tile_sub_index];
+		tileDataCur[1] = graphicsCtx->VRAM_N[0][tile_sub_index + 1];
+	} else {
+		int tile_sub_index = (PPU_VRAM_BASEPTR_8000 - VRAM_N_OFFSET) + (_tile_offset * 0x10) + _tile_sub_offset;
+		tileDataCur[0] = graphicsCtx->VRAM_N[0][tile_sub_index];
+		tileDataCur[1] = graphicsCtx->VRAM_N[0][tile_sub_index + 1];
+	}
 }
 
 void GraphicsUnitSM83::FetchTileDataBGWIN(u8& _tile_offset, const int& _tile_sub_offset) {
 	if (graphicsCtx->bg_win_addr_mode_8000) {
-		int tile_sub_index = (PPU_VRAM_BASEPTR_8000 - VRAM_N_OFFSET) + (_tile_offset * 0x10) +_tile_sub_offset;
+		int tile_sub_index = (PPU_VRAM_BASEPTR_8000 - VRAM_N_OFFSET) + (_tile_offset * 0x10) + _tile_sub_offset;
 		tileDataCur[0] = graphicsCtx->VRAM_N[0][tile_sub_index];
 		tileDataCur[1] = graphicsCtx->VRAM_N[0][tile_sub_index + 1];
 	} else {

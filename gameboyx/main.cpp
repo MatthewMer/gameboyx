@@ -188,7 +188,6 @@ int main(int, char**)
         }
         if (game_stat.pending_game_stop) {
             VHardwareMgr::resetInstance();
-            gbx_gui->GameStopped();
 
             game_stat.game_running = false;
             game_stat.pending_game_stop = false;
@@ -197,6 +196,8 @@ int main(int, char**)
             if (graphics_info.is2d) {
                 graphics_mgr->Destroy2dGraphicsBackend();
             }
+
+            gbx_gui->GameStopped();
         }
 
         // run virtual hardware

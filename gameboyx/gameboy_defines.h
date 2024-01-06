@@ -256,6 +256,7 @@
 #define PPU_TILE_SIZE_SCANLINE      2
 #define PPU_TILE_SIZE_X             8
 #define PPU_TILE_SIZE_Y             8
+#define PPU_TILE_SIZE_Y_16          16
 #define PPU_VRAM_BASEPTR_8000       0x8000
 #define PPU_VRAM_BASEPTR_8800       0x9000
 

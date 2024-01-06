@@ -11,8 +11,7 @@
 #include "MemorySM83.h"
 #include "VulkanMgr.h"
 
-class GraphicsUnitSM83 : protected GraphicsUnitBase
-{
+class GraphicsUnitSM83 : protected GraphicsUnitBase {
 public:
 	friend class GraphicsUnitBase;
 

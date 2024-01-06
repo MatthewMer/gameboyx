@@ -714,6 +714,7 @@ bool ImGuiGameboyX::ActionAddGame(const string& _path_to_rom) {
 
     if (!Cartridge::read_new_game(game_ctx, _path_to_rom)) {
         showNewGameDialog = false;
+        LOG_ERROR("[emu] error while reading game file ", _path_to_rom);
         return false;
     }
 
@@ -727,6 +728,7 @@ bool ImGuiGameboyX::ActionAddGame(const string& _path_to_rom) {
 
     if (const vector<game_info> new_game = { game_ctx }; !write_games_to_config(new_game, CONFIG_FOLDER + GAMES_CONFIG_FILE, false)) {
         showNewGameDialog = false;
+        LOG_ERROR("[emu] couldn't write new game to config");
         return false;
     }
 

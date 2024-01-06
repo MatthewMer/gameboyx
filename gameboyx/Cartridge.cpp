@@ -130,7 +130,10 @@ bool Cartridge::read_new_game(game_info& _game_ctx, const string& _path_to_rom) 
 	string s_path_rom_folder = current_path + ROM_FOLDER;
 	string s_path_config = current_path + CONFIG_FOLDER;
 
-	if (!check_ext(vec_path_to_rom.back())) return false;
+	if (!check_ext(vec_path_to_rom.back())) {
+		LOG_ERROR("[emu] file extension not recognized");
+		return false;
+	}
 
 	_game_ctx.file_path = "";
 	for (int i = 0; i < vec_path_to_rom.size() - 1; i++) {
