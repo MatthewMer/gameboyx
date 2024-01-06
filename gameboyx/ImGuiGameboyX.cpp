@@ -54,6 +54,7 @@ ImGuiGameboyX::ImGuiGameboyX(machine_information& _machine_info, game_status& _g
     for (int i = 0; i < FPS_SAMPLES_NUM; i++) {
         graphicsFPSfifo.push(.0f);
     }
+    ActionSetEmulationSpeed(0);
 }
 
 /* ***********************************************************************************************************
@@ -71,11 +72,6 @@ void ImGuiGameboyX::ProcessGUI() {
     if (showGraphicsInfo) { ShowGraphicsInfo(); }
     if (graphicsShowOverlay) { ShowGraphicsOverlay(); }
 
-    if (gameState.game_running) {
-        if (machineInfo.instruction_debug_enabled) {
-            if (machineInfo.instruction_logging) { WriteInstructionLog(); }
-        }
-    }
     else {
         // gui elements
         if (showGameSelect) { ShowGameSelect(); }
@@ -111,10 +107,19 @@ void ImGuiGameboyX::ShowMainMenuBar() {
         }
         if (ImGui::BeginMenu("Settings")) {
             ImGui::MenuItem("Show menu bar", nullptr, &showMainMenuBar);
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Control")) {
+            if (ImGui::BeginMenu("Emulation speed", &showEmulationSpeedSelect)) {
+                for (int index = 0; const auto& [key, value] : EMULATION_SPEEDS) {
 
+                    bool& speed = emulationSpeedsEnabled[index].value;
+                    ImGui::MenuItem(value.c_str(), nullptr, &speed);
+
+                    if (speed && currentSpeedIndex != index) {
+                        ActionSetEmulationSpeed(index);
+                    }
+                    index++;
+                }
+                ImGui::EndMenu();
+            }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Graphics")) {
@@ -192,6 +197,7 @@ void ImGuiGameboyX::ShowDebugInstructions() {
             ImGui::EndDisabled();
         }
 
+        ImGui::SameLine();
         ImGui::Checkbox("Auto run", &dbgInstrAutorun);
         if (dbgInstrAutorun) {
             if (machineInfo.pause_execution) {
@@ -203,8 +209,6 @@ void ImGuiGameboyX::ShowDebugInstructions() {
                 }
             }
         }
-        ImGui::SameLine();
-        ImGui::Checkbox("Send to *_instructions.log", &machineInfo.instruction_logging);
 
         ImGui::Separator();
         ImGui::TextColored(HIGHLIGHT_COLOR, "Instructions:");
@@ -488,62 +492,21 @@ void ImGuiGameboyX::ShowHardwareInfo() {
             ImGui::TextUnformatted("CPU Clock");
             ImGui::TableNextColumn();
             ImGui::TextUnformatted((to_string(machineInfo.current_frequency) + " MHz").c_str());
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("Speed Mode");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(machineInfo.current_speedmode).c_str());
-            ImGui::TableNextRow();
 
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("ROM Banks");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(machineInfo.rom_bank_num).c_str());
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("ROM Selected");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(machineInfo.rom_bank_selected).c_str());
-            ImGui::TableNextRow();
-
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("RAM Banks");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(machineInfo.ram_bank_num).c_str());
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("RAM Selected");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(machineInfo.ram_bank_selected < machineInfo.ram_bank_num ? to_string(machineInfo.ram_bank_selected).c_str() : "-");
-            ImGui::TableNextRow();
-
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("RTC Register");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(machineInfo.ram_bank_selected >= machineInfo.ram_bank_num ? to_string(machineInfo.ram_bank_selected).c_str() : "-");
-            ImGui::TableNextRow();
-
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("WRAM Banks");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(machineInfo.wram_bank_num).c_str());
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("WRAM Selected");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(machineInfo.wram_bank_selected).c_str());
-            ImGui::TableNextRow();
-
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("VRAM Banks");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(machineInfo.vram_bank_num).c_str());
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("VRAM Selected");
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(to_string(machineInfo.vram_bank_selected).c_str());
-
+            int length = machineInfo.hardware_info.size();
+            if (length > 0) { ImGui::TableNextRow(); }
+            
+            length--;
+            for (int i = 0; const auto & [name, value] : machineInfo.hardware_info) {
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(name.c_str());
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(value.c_str());
+                if (i != length) {
+                    ImGui::TableNextRow();
+                }
+                i++;
+            }
 
             ImGui::PopStyleVar();
         }
@@ -829,6 +792,20 @@ void ImGuiGameboyX::ActionScrollToCurrentPC(ScrollableTableBase& _table_obj) {
     _table_obj.SearchAddress(dbgInstrLastPC);
 }
 
+void ImGuiGameboyX::ActionSetEmulationSpeed(const int& _index) {
+    emulationSpeedsEnabled[currentSpeedIndex].value = false;
+    emulationSpeedsEnabled[_index].value = true;
+
+    for (int i = 0; const auto & [key, value] : EMULATION_SPEEDS) {
+        if (_index == i) {
+            machineInfo.emulation_speed = key;
+        }
+        i++;
+    }
+
+    currentSpeedIndex = _index;
+}
+
 // ***** ACTIONS FOR MEMORY INSPECTOR WINDOW *****
 
 /* ***********************************************************************************************************
@@ -968,20 +945,6 @@ void ImGuiGameboyX::SetupMemInspectorIndex() {
 }
 
 /* ***********************************************************************************************************
-    LOG DATA IO
-*********************************************************************************************************** */
-// ***** WRITE EXECUTED INSTRUCTIONS + RESULTS TO LOG FILE *****
-void ImGuiGameboyX::WriteInstructionLog() {
-    if (machineInfo.current_instruction.compare("") != 0) {
-        string output = machineInfo.current_instruction;
-        write_to_debug_log(output, LOG_FOLDER + games[gameSelectedIndex].title + DEBUG_INSTR_LOG, firstInstruction);
-        firstInstruction = false;
-
-        machineInfo.current_instruction = "";
-    }
-}
-
-/* ***********************************************************************************************************
     MAIN DIRECT COMMUNICATION
 *********************************************************************************************************** */
 game_info& ImGuiGameboyX::GetGameStartContext() {
@@ -992,11 +955,15 @@ game_info& ImGuiGameboyX::GetGameStartContext() {
 
 void ImGuiGameboyX::GameStopped() {
     ActionEndGame();
+
+    showGameSelect = true;
 }
 
-void ImGuiGameboyX::GameStartCallback() {
+void ImGuiGameboyX::GameStarted() {
     ResetDebugInstr();
     SetupMemInspectorIndex();
+
+    showGameSelect = false;
 }
 
 /* ***********************************************************************************************************

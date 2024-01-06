@@ -662,9 +662,11 @@ void MemorySM83::WriteIORegister(const u8& _data, const u16& _addr) {
     default:
         IO[_addr - IO_OFFSET] = _data;
         // TODO: remove, only for testing with blargg's instruction test rom
+        /*
         if (_addr == SERIAL_DATA) {
             printf("%c", (char)IO[_addr - IO_OFFSET]);
         }
+        */
         break;
     }
 }

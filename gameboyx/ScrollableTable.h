@@ -16,7 +16,7 @@
 #include "logger.h"
 
 using debug_instr_data = std::pair<std::string, std::string>;
-using register_data = std::pair<std::string, std::string>;
+using misc_output_data = std::pair<std::string, std::string>;
 
 enum memory_data_types {
     MEM_ENTRY_ADDR,

@@ -161,6 +161,12 @@ inline const float OVERLAY_DISTANCE = 10.0f;
 #define DEBUG_MEM_LINES             32
 #define DEBUG_MEM_ELEM_PER_LINE     0x10
 
+inline const std::unordered_map<int, std::string> EMULATION_SPEEDS = {
+    {1, "x1"},
+    {2, "x2"},
+    {3, "x3"}
+};
+
 inline const ImGuiWindowFlags MAIN_WIN_FLAGS =
     ImGuiWindowFlags_NoTitleBar |
     ImGuiWindowFlags_NoMove |

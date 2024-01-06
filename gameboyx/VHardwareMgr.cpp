@@ -43,7 +43,7 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
     timePerFrame = core_instance->GetDelayTime();
     stepsPerFrame = core_instance->GetStepsPerFrame();
 
-    core_instance->GetStartupHardwareInfo();
+    core_instance->GetCurrentHardwareState();
     core_instance->GetCurrentRegisterValues();
     core_instance->GetCurrentMiscValues();
     core_instance->GetCurrentFlagsAndISR();
@@ -66,8 +66,10 @@ void VHardwareMgr::ProcessHardware() {
     }
     else {
         if (CheckDelay()) {
-            for (int i = 0; i < stepsPerFrame; i++) {
-                RunHardware();
+            for (int j = 0; j < machineInfo.emulation_speed; j++) {
+                for (int i = 0; i < stepsPerFrame; i++) {
+                    RunHardware();
+                }
             }
         }
     }

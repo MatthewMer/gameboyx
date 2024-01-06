@@ -15,33 +15,22 @@
 
 #include "MemorySM83.h"
 
-/* ***********************************************************************************************************
-*
-*		ROM only
-*
-*********************************************************************************************************** */
-class MmuSM83_ROM : protected MmuBase
-{
+class MmuSM83 : protected MmuBase {
 public:
 	friend class MmuBase;
 
 	// members
-	void Write8Bit(const u8& _data, const u16& _addr) override;
-	void Write16Bit(const u16& _data, const u16& _addr) override;
-	u8 Read8Bit(const u16& _addr) override;
-	//u16 Read16Bit(const u16& _addr) override;
+	void Write8Bit(const u8& _data, const u16& _addr) override {};
+	void Write16Bit(const u16& _data, const u16& _addr) override {};
+	u8 Read8Bit(const u16& _addr) override { return 0xFF; };
 
-	// access machine states
-	//int GetCurrentSpeed() const override;
-	//u8 GetInterruptEnable() const override;
-	//u8 GetInterruptRequests() const override;
-	//void ResetInterruptRequest(const u8& _isr_flags) override;
+	static MmuSM83* getInstance(machine_information& _machine_info, const std::vector<u8>& _vec_rom);
 
-private:
-	// constructor
-	explicit MmuSM83_ROM(machine_information& _machine_info);
+protected:
+
+	explicit MmuSM83(machine_information& _machine_info);
 	// destructor
-	~MmuSM83_ROM() = default;
+	~MmuSM83() = default;
 
 	void ResetChildMemoryInstances() override { MemorySM83::resetInstance(); }
 	MemorySM83* mem_instance;
@@ -49,99 +38,12 @@ private:
 	// hardware info and access
 	machine_state_context* machine_ctx;
 
-	void ReadSave() override {}
-	void WriteSave() const override {}
-
-	// RAM control
-	bool ramPresent = false;
-};
-
-/* ***********************************************************************************************************
-*
-*		MBC1
-*
-*********************************************************************************************************** */
-class MmuSM83_MBC1 : protected MmuBase
-{
-public:
-	friend class MmuBase;
-
-	// members
-	void Write8Bit(const u8& _data, const u16& _addr) override;
-	void Write16Bit(const u16& _data, const u16& _addr) override;
-	u8 Read8Bit(const u16& _addr) override;
-	//u16 Read16Bit(const u16& _addr) override;
-
-	// access machine states
-	//int GetCurrentSpeed() const override;
-	//u8 GetInterruptEnable() const override;
-	//u8 GetInterruptRequests() const override;
-	//void ResetInterruptRequest(const u8& _isr_flags) override;
-
-private:
-	// constructor
-	explicit MmuSM83_MBC1(machine_information& _machine_info);
-	// destructor
-	~MmuSM83_MBC1() = default;
-
-	void ResetChildMemoryInstances() override { MemorySM83::resetInstance(); }
-	MemorySM83* mem_instance;
-
-	// hardware info and access
-	machine_state_context* machine_ctx;
-
-	void ReadSave() override{}
-	void WriteSave() const override{}
-
-	// mbc1 control
-	bool ramEnable = false;
-	int ramBankMask = 0x00;
-	bool ramPresent = false;
-
-	bool advancedBankingMode = false;
-	u8 advancedBankingValue = 0x00;
-};
-
-/* ***********************************************************************************************************
-*
-*		MBC3
-*
-*********************************************************************************************************** */
-class MmuSM83_MBC3 : protected MmuBase
-{
-public:
-	friend class MmuBase;
-
-	// members
-	void Write8Bit(const u8& _data, const u16& _addr) override;
-	void Write16Bit(const u16& _data, const u16& _addr) override;
-	u8 Read8Bit(const u16& _addr) override;
-	//u16 Read16Bit(const u16& _addr) override;
-
-	// access machine states
-	//int GetCurrentSpeed() const override;
-	//u8 GetInterruptEnable() const override;
-	//u8 GetInterruptRequests() const override;
-	//void ResetInterruptRequest(const u8& _isr_flags) override;
-
-private:
-	// constructor
-	explicit MmuSM83_MBC3(machine_information& _machine_info);
-	// destructor
-	~MmuSM83_MBC3() = default;
-
-	void ResetChildMemoryInstances() override { MemorySM83::resetInstance(); }
-	MemorySM83* mem_instance;
-
-	// hardware info and access
-	machine_state_context* machine_ctx;
-
-	void ReadSave() override{
+	void ReadSave() override {
 		auto save_files = std::vector<std::string>();
 		get_files_in_path(save_files, SAVE_FOLDER);
 
 		const std::string save_file = SAVE_FOLDER + machineInfo.title + SAVE_EXT;
-		
+
 		for (const auto& file : save_files) {
 			auto found_file_path = split_string(file, "/");
 			std::string found_file = "/" + found_file_path[found_file_path.size() - 2] + "/" + found_file_path[found_file_path.size() - 1];
@@ -172,6 +74,100 @@ private:
 
 		write_data(data, save_file, true, true);
 	}
+};
+
+/* ***********************************************************************************************************
+*
+*		ROM only
+*
+*********************************************************************************************************** */
+class MmuSM83_ROM : protected MmuSM83
+{
+public:
+	friend class MmuSM83;
+
+	// members
+	void Write8Bit(const u8& _data, const u16& _addr) override;
+	void Write16Bit(const u16& _data, const u16& _addr) override;
+	u8 Read8Bit(const u16& _addr) override;
+	//u16 Read16Bit(const u16& _addr) override;
+
+	// access machine states
+	//int GetCurrentSpeed() const override;
+	//u8 GetInterruptEnable() const override;
+	//u8 GetInterruptRequests() const override;
+	//void ResetInterruptRequest(const u8& _isr_flags) override;
+
+private:
+	// constructor
+	explicit MmuSM83_ROM(machine_information& _machine_info);
+	// destructor
+	~MmuSM83_ROM() = default;
+};
+
+/* ***********************************************************************************************************
+*
+*		MBC1
+*
+*********************************************************************************************************** */
+class MmuSM83_MBC1 : protected MmuSM83
+{
+public:
+	friend class MmuSM83;
+
+	// members
+	void Write8Bit(const u8& _data, const u16& _addr) override;
+	void Write16Bit(const u16& _data, const u16& _addr) override;
+	u8 Read8Bit(const u16& _addr) override;
+	//u16 Read16Bit(const u16& _addr) override;
+
+	// access machine states
+	//int GetCurrentSpeed() const override;
+	//u8 GetInterruptEnable() const override;
+	//u8 GetInterruptRequests() const override;
+	//void ResetInterruptRequest(const u8& _isr_flags) override;
+
+private:
+	// constructor
+	explicit MmuSM83_MBC1(machine_information& _machine_info);
+	// destructor
+	~MmuSM83_MBC1() = default;
+
+	// mbc1 control
+	bool ramEnable = false;
+	int ramBankMask = 0x00;
+
+	bool advancedBankingMode = false;
+	u8 advancedBankingValue = 0x00;
+};
+
+/* ***********************************************************************************************************
+*
+*		MBC3
+*
+*********************************************************************************************************** */
+class MmuSM83_MBC3 : protected MmuSM83
+{
+public:
+	friend class MmuSM83;
+
+	// members
+	void Write8Bit(const u8& _data, const u16& _addr) override;
+	void Write16Bit(const u16& _data, const u16& _addr) override;
+	u8 Read8Bit(const u16& _addr) override;
+	//u16 Read16Bit(const u16& _addr) override;
+
+	// access machine states
+	//int GetCurrentSpeed() const override;
+	//u8 GetInterruptEnable() const override;
+	//u8 GetInterruptRequests() const override;
+	//void ResetInterruptRequest(const u8& _isr_flags) override;
+
+private:
+	// constructor
+	explicit MmuSM83_MBC3(machine_information& _machine_info);
+	// destructor
+	~MmuSM83_MBC3() = default;
 
 	// mbc3 control
 	bool timerRamEnable = false;

@@ -130,7 +130,9 @@ int main(int, char**)
                 key = event.key.keysym.sym;
                 switch (key) {
                 case SDLK_ESCAPE:
-                    game_stat.pending_game_stop = true;
+                    if (game_stat.game_running) {
+                        game_stat.pending_game_stop = true;
+                    }
                     break;
                 case SDLK_F1:
                 case SDLK_F3:
@@ -178,9 +180,11 @@ int main(int, char**)
 
             game_stat.game_running = true;
 
-            gbx_gui->GameStartCallback();
-
-
+            if (vhwmgr_obj) {
+                gbx_gui->GameStarted();
+            } else {
+                game_stat.pending_game_stop = true;
+            }
         }
         if (game_stat.pending_game_stop) {
             VHardwareMgr::resetInstance();

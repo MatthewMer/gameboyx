@@ -110,7 +110,6 @@ public:
 
 	void RunCycles() override;
 	void GetCurrentHardwareState() const override;
-	void GetStartupHardwareInfo() const override;
 	bool CheckStep() override;
 	void ResetStep() override;
 	u32 GetCurrentClockCycles() override;
@@ -173,7 +172,7 @@ private:
 	// raw data, decoded data
 
 	// current instruction context
-	using instr_tuple = std::tuple <const u8, const instruction, const int, const std::string, const cgb_data_types, const cgb_data_types>;
+	using instr_tuple = std::tuple <const u8, const instruction, const std::string, const cgb_data_types, const cgb_data_types>;
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
 	int machineCycleScanlineCounter = 0;

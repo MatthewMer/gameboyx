@@ -6,8 +6,119 @@
 #include "logger.h"
 
 #include <format>
+#include <unordered_map>
 
 using namespace std;
+
+/* ***********************************************************************************************************
+	MAPPER TYPES (GAMEBOY)
+*********************************************************************************************************** */
+enum gameboy_mapper_types {
+	GB_NONE,
+	ROM_ONLY,
+	ROM_RAM,
+	ROM_RAM_BATTERY,
+	MBC1,
+	MBC1_RAM,
+	MBC1_RAM_BATTERY,
+	MBC2,
+	MBC2_BATTERY,
+	MBC3,
+	MBC3_RAM,
+	MBC3_RAM_BATTERY,
+	MBC3_TIMER_BATTERY,
+	MBC3_TIMER_RAM_BATTERY,
+	MBC5,
+	MBC5_RAM,
+	MBC5_RAM_BATTERY,
+	MBC6,
+	MBC7_RAM_BATTERY,
+	MMM01,
+	MMM01_RAM,
+	MMM01_RAM_BATTERY,
+	HuC1_RAM_BATTERY,
+	HuC3
+};
+
+const unordered_map<u8, gameboy_mapper_types> gameboy_mapper_map{
+	{0x00, ROM_ONLY},
+	{0x01, MBC1},
+	{0x02, MBC1_RAM},
+	{0x03, MBC1_RAM_BATTERY},
+	{0x05, MBC2},
+	{0x06, MBC2_BATTERY},
+	{0x08, ROM_RAM},
+	{0x09, ROM_RAM_BATTERY},
+	{0x0B, MMM01},
+	{0x0C, MMM01_RAM},
+	{0x0D, MMM01_RAM_BATTERY},
+	{0x0F, MBC3_TIMER_BATTERY},
+	{0x10, MBC3_TIMER_RAM_BATTERY},
+	{0x11, MBC3},
+	{0x12, MBC3_RAM},
+	{0x13, MBC3_RAM_BATTERY},
+	{0x19, MBC5},
+	{0x1A, MBC5_RAM},
+	{0x1B, MBC5_RAM_BATTERY},
+	{0x1C, MBC5},
+	{0x1D, MBC5_RAM},
+	{0x1E, MBC5_RAM_BATTERY},
+	{0x20, MBC6},
+	{0x22, MBC7_RAM_BATTERY},
+	{0xFC, GB_NONE},			// TODO
+	{0xFD, GB_NONE},			// TODO
+	{0xFE, HuC3},
+	{0xFF, HuC1_RAM_BATTERY}
+};
+
+MmuSM83* MmuSM83::getInstance(machine_information& _machine_info, const vector<u8>& _vec_rom) {
+	u8 type_code = _vec_rom[ROM_HEAD_HW_TYPE];
+
+	if (gameboy_mapper_map.find(type_code) != gameboy_mapper_map.end()) {
+
+		gameboy_mapper_types type = gameboy_mapper_map.at(type_code);
+		switch (type) {
+		case ROM_RAM_BATTERY:
+			_machine_info.batteryBuffered = true;
+		case ROM_RAM:
+			_machine_info.ramPresent = true;
+		case ROM_ONLY:
+			return new MmuSM83_ROM(_machine_info);
+			break;
+		case MBC1_RAM_BATTERY:
+			_machine_info.batteryBuffered = true;
+		case MBC1_RAM:
+			_machine_info.ramPresent = true;
+		case MBC1:
+			return new MmuSM83_MBC1(_machine_info);
+			break;
+		case MBC3_TIMER_RAM_BATTERY:
+			_machine_info.ramPresent = true;
+		case MBC3_TIMER_BATTERY:
+			_machine_info.timerPresent = true;
+		case MBC3_RAM_BATTERY:
+			_machine_info.batteryBuffered = true;
+		case MBC3_RAM:
+			if (type == MBC3_RAM_BATTERY || type == MBC3_RAM) {
+				_machine_info.ramPresent = true;
+			}
+		case MBC3:
+			return new MmuSM83_MBC3(_machine_info);
+			break;
+		default:
+			LOG_WARN("Mapper type ", format("{:02x}", type_code), " not implemented");
+			break;
+		}
+	} else {
+		LOG_ERROR("Mapper type ", format("{:02x}", type_code), " unknown");
+		return nullptr;
+	}
+}
+
+MmuSM83::MmuSM83(machine_information& _machine_info) : MmuBase(_machine_info){
+	mem_instance = MemorySM83::getInstance(_machine_info);
+	machine_ctx = mem_instance->GetMachineContext();
+}
 
 /* ***********************************************************************************************************
 *
@@ -18,11 +129,10 @@ using namespace std;
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_ROM::MmuSM83_ROM(machine_information& _machine_info) : MmuBase(_machine_info) {
-	mem_instance = MemorySM83::getInstance(_machine_info);
-	machine_ctx = mem_instance->GetMachineContext();
-
-	ramPresent = (machine_ctx->ram_bank_num > 0);
+MmuSM83_ROM::MmuSM83_ROM(machine_information& _machine_info) : MmuSM83(_machine_info) {
+	if (_machine_info.batteryBuffered && _machine_info.ramPresent) {
+		ReadSave();
+	}
 }
 
 /* ***********************************************************************************************************
@@ -43,8 +153,10 @@ void MmuSM83_ROM::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (ramPresent) {
+		if (machineInfo.ramPresent) {
 			mem_instance->WriteRAM_N(_data, _addr);
+		} else {
+			return;
 		}
 	}
 	// WRAM 0
@@ -103,7 +215,7 @@ u8 MmuSM83_ROM::Read8Bit(const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (ramPresent) {
+		if (machineInfo.ramPresent) {
 			return mem_instance->ReadRAM_N(_addr);
 		}
 		else {
@@ -173,10 +285,7 @@ u8 MmuSM83_ROM::Read8Bit(const u16& _addr) {
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_MBC1::MmuSM83_MBC1(machine_information& _machine_info) 
-	: MmuBase(_machine_info)/*, romBankMask(MBC1_ROM_BANK_MASK_0_4), romBankMaskAdvanced(MBC1_ROM_BANK_MASK_5_6)*/ {
-	mem_instance = MemorySM83::getInstance(_machine_info);
-	machine_ctx = mem_instance->GetMachineContext();
+MmuSM83_MBC1::MmuSM83_MBC1(machine_information& _machine_info): MmuSM83(_machine_info) {
 
 	switch (machine_ctx->ram_bank_num) {
 	case 0:
@@ -192,7 +301,9 @@ MmuSM83_MBC1::MmuSM83_MBC1(machine_information& _machine_info)
 		break;
 	}
 
-	ramPresent = (machine_ctx->ram_bank_num > 0);
+	if (_machine_info.batteryBuffered && _machine_info.ramPresent) {
+		ReadSave();
+	}
 
 	/*
 	// bit mask for ROM Bank Number
@@ -214,6 +325,11 @@ void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 		// RAM/TIMER enable
 		if (_addr < MBC1_ROM_BANK_NUMBER_SEL_0_4) {
 			ramEnable = (_data & MBC1_RAM_ENABLE_MASK) == MBC1_RAM_ENABLE;
+
+			if (!ramEnable && machineInfo.ramPresent && machineInfo.batteryBuffered) {
+				WriteSave();
+			}
+			
 		}
 		// ROM Bank number
 		else {
@@ -242,8 +358,10 @@ void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (ramEnable && ramPresent) {
+		if (ramEnable && machineInfo.ramPresent) {
 			mem_instance->WriteRAM_N(_data, _addr);
+		} else {
+			LOG_ERROR("[emu] tried to access nonpresent RAM");
 		}
 	}
 	// WRAM 0
@@ -307,7 +425,7 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (ramEnable && ramPresent) {
+		if (ramEnable && machineInfo.ramPresent) {
 			return mem_instance->ReadRAM_N(_addr);
 		}
 		else {
@@ -375,11 +493,10 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_MBC3::MmuSM83_MBC3(machine_information& _machine_info) : MmuBase(_machine_info) {
-	mem_instance = MemorySM83::getInstance(_machine_info);
-	machine_ctx = mem_instance->GetMachineContext();
-
-	ReadSave();
+MmuSM83_MBC3::MmuSM83_MBC3(machine_information& _machine_info) : MmuSM83(_machine_info) {
+	if (_machine_info.batteryBuffered && _machine_info.ramPresent) {
+		ReadSave();
+	}
 }
 
 /* ***********************************************************************************************************
@@ -391,7 +508,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		// RAM/TIMER enable
 		if (_addr < MBC3_ROM_BANK_NUMBER_SELECT) {
 			timerRamEnable = (_data & MBC3_RAM_ENABLE_MASK) == MBC3_RAM_ENABLE;
-			if (!timerRamEnable) {
+			if (!timerRamEnable && machineInfo.ramPresent && machineInfo.batteryBuffered) {
 				WriteSave();
 			}
 		}
@@ -427,7 +544,11 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		if (timerRamEnable) {
 			int ramBankNumber = machine_ctx->ram_bank_selected;
 			if (ramBankNumber < 0x04) {
-				mem_instance->WriteRAM_N(_data, _addr);
+				if (machineInfo.ramPresent) {
+					mem_instance->WriteRAM_N(_data, _addr);
+				} else {
+					LOG_ERROR("[emu] tried to access nonpresent RAM");
+				}
 			}
 			else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
 				WriteClock(_data);

@@ -17,6 +17,12 @@
 #include "helper_functions.h"
 #include "ScrollableTable.h"
 
+// workaround for vector<bool> being a special type of stl container, which uses single bits
+// for beeleans and therefore no direct access by reference/pointer (google proxy reference object)
+struct Bool{
+	bool value = false;
+};
+
 class ImGuiGameboyX {
 public:
 	// singleton instance access
@@ -40,7 +46,7 @@ public:
 	game_info& GetGameStartContext();
 	// main reenables gui
 	void GameStopped();
-	void GameStartCallback();
+	void GameStarted();
 
 private:
 	// constructor
@@ -98,6 +104,9 @@ private:
 
 	const int hwInfoColNum = HW_INFO_COLUMNS.size();
 
+	int currentSpeedIndex = 0;
+	std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(EMULATION_SPEEDS.size(), { false });
+
 	bool showMainMenuBar = true;
 	bool showWinAbout = false;
 	bool showNewGameDialog = false;
@@ -105,6 +114,7 @@ private:
 	bool showMemoryInspector = false;
 	bool showImGuiDebug = false;
 	bool showGraphicsInfo = false;
+	bool showEmulationSpeedSelect = false;
 
 	// gui functions
 	void ShowMainMenuBar();
@@ -126,6 +136,7 @@ private:
 	void ActionRequestReset();
 	void ActionBankSwitch(ScrollableTableBase& _table_obj, int& _bank);
 	void ActionSearchAddress(ScrollableTableBase& _table_obj, int& _address);
+	void ActionSetEmulationSpeed(const int& _index);
 
 	// helpers
 	void AddGameGuiCtx(const game_info& _game_ctx);
@@ -136,7 +147,6 @@ private:
 	bool CheckCurrentPCAutoScroll();
 	void SetBreakPoint(const bank_index& _current_index);
 	void SetBreakPointTmp(const bank_index& _current_index);
-	void WriteInstructionLog();
 	void ResetEventMouseWheel();
 	void SetBankAndAddressScrollableTable(ScrollableTableBase& _tyble_obj, int& _bank, int& _address);
 	void SetupMemInspectorIndex();
