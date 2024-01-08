@@ -21,7 +21,7 @@ void GraphicsUnitSM83::SetGraphicsParameters() {
 	graphicsInfo.lcd_width = PPU_SCREEN_X;
 	graphicsInfo.lcd_height = PPU_SCREEN_Y;
 
-	graphicsCtx->current_step = MC_PER_SCANLINE;
+	graphicsCtx->current_substeps = MC_PER_SCANLINE;
 
 	if (machineCtx->isCgb) {
 		DrawScanline = &GraphicsUnitSM83::DrawScanlineCGB;
@@ -50,7 +50,7 @@ bool GraphicsUnitSM83::ProcessGPU(const int& _substep) {
 
 			mode3Dots = PPU_DOTS_MODE_3_MIN;
 			(this->*DrawScanline)(ly);
-			graphicsCtx->current_step = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_3;
+			graphicsCtx->current_substeps = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_3;
 			break;
 			// HBLANK -----
 		case PPU_MODE_3:
@@ -61,7 +61,7 @@ bool GraphicsUnitSM83::ProcessGPU(const int& _substep) {
 				interrupts |= IRQ_LCD_STAT;
 			}
 
-			graphicsCtx->current_step = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_0;
+			graphicsCtx->current_substeps = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_0;
 			break;
 			// VBLANK or OAM Scan
 		case PPU_MODE_0:
@@ -80,7 +80,7 @@ bool GraphicsUnitSM83::ProcessGPU(const int& _substep) {
 				drawWindow = false;
 				next_frame = true;
 
-				graphicsCtx->current_step = MC_PER_SCANLINE;
+				graphicsCtx->current_substeps = MC_PER_SCANLINE;
 			} else {
 				graphicsCtx->mode = PPU_MODE_2;
 				SET_MODE(stat, PPU_MODE_2);
@@ -90,7 +90,7 @@ bool GraphicsUnitSM83::ProcessGPU(const int& _substep) {
 				}
 
 				SearchOAM(ly);
-				graphicsCtx->current_step = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_2;
+				graphicsCtx->current_substeps = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_2;
 			}
 			break;
 			// OAM Scan (at scanline 153 -> 0 transition)
@@ -109,8 +109,12 @@ bool GraphicsUnitSM83::ProcessGPU(const int& _substep) {
 					}
 
 					SearchOAM(ly);
-					graphicsCtx->current_step = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_2;
+					graphicsCtx->current_substeps = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_2;
 				}
+			} else if (_substep == 0){
+				graphicsCtx->current_substeps = MC_PER_SCANLINE;
+			} else {
+				graphicsCtx->current_substeps = 0;
 			}
 			break;
 		}

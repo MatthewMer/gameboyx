@@ -380,7 +380,7 @@ void CoreSM83::SetStepsPerFrame(int& _steps, int& _substeps) {
 
 // check if cpu executed machinecycles per frame
 bool CoreSM83::CheckStep() {
-    int substep = graphics_ctx->current_step;
+    int substep = graphics_ctx->current_substeps;
     if (machineCycleCounter >= substep * machine_ctx->currentSpeed) {
         machineCycleCounter -= substep * machine_ctx->currentSpeed;
         return true;
@@ -570,7 +570,7 @@ void CoreSM83::RunCycles() {
             NextInstruction();
             machineInfo.pause_execution = true;
         } else {
-            int substep = graphics_ctx->current_step;
+            int substep = graphics_ctx->current_substeps;
             while ((machineCycleCounter < (substep * machine_ctx->currentSpeed)) && !halted && !stopped) {
                 NextInstruction();
             }
@@ -583,7 +583,7 @@ void CoreSM83::RunCycles() {
 }
 
 void CoreSM83::ProcessHALT() {
-    int substep = graphics_ctx->current_step;
+    int substep = graphics_ctx->current_substeps;
     while (machineCycleCounter < (substep * machine_ctx->currentSpeed)) {
         SimulateInstruction();
 

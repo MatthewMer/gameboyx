@@ -48,7 +48,7 @@ struct graphics_context {
 	std::vector<std::vector<u8>> VRAM_N;
 	std::vector<u8> OAM;
 
-	int current_step;
+	int current_substeps;
 
 	// TODO: chekc initial register states
 	// LCD Control
