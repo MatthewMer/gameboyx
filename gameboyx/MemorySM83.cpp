@@ -834,13 +834,14 @@ void MemorySM83::SetControlValues(const u8& _data) {
 /* ***********************************************************************************************************
     OBJ PRIORITY MODE
 *********************************************************************************************************** */
+// not relevant, gets set by boot rom but we do the check for DMG or CGB on our own
 void MemorySM83::SetObjPrio(const u8& _data) {
     switch (_data & PRIO_MODE) {
-    case PRIO_OAM:
-        IO[CGB_OBJ_PRIO_ADDR - IO_OFFSET] &= ~PRIO_COORD;
+    case DMG_OBJ_PRIO_MODE:
+        IO[CGB_OBJ_PRIO_ADDR - IO_OFFSET] |= DMG_OBJ_PRIO_MODE;
         break;
-    case PRIO_COORD:
-        IO[CGB_OBJ_PRIO_ADDR - IO_OFFSET] |= PRIO_COORD;
+    case CGB_OBJ_PRIO_MODE:
+        IO[CGB_OBJ_PRIO_ADDR - IO_OFFSET] &= ~DMG_OBJ_PRIO_MODE;
         break;
     }
 }

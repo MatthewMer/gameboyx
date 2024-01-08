@@ -12,12 +12,16 @@ using namespace std;
 
 // VK_FORMAT_R8G8B8A8_UNORM, gray scales
 
+#define MC_PER_SCANLINE		(((BASE_CLOCK_CPU / 4) * 1000000) / DISPLAY_FREQUENCY) / LCD_SCANLINES_TOTAL
+
 void GraphicsUnitSM83::SetGraphicsParameters() {
 	graphicsInfo.is2d = graphicsInfo.en2d = true;
-	graphicsInfo.image_data = vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * 4);
+	graphicsInfo.image_data = vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * TEX2D_CHANNELS);
 	graphicsInfo.aspect_ratio = LCD_ASPECT_RATIO;
 	graphicsInfo.lcd_width = PPU_SCREEN_X;
 	graphicsInfo.lcd_height = PPU_SCREEN_Y;
+
+	graphicsCtx->current_step = MC_PER_SCANLINE;
 
 	if (machineCtx->isCgb) {
 		DrawScanline = &GraphicsUnitSM83::DrawScanlineCGB;
@@ -26,7 +30,9 @@ void GraphicsUnitSM83::SetGraphicsParameters() {
 	}
 }
 
-bool GraphicsUnitSM83::ProcessGPU() {
+#define SET_MODE(stat, mode) stat = (stat & PPU_STAT_WRITEABLE_BITS) | mode 
+
+bool GraphicsUnitSM83::ProcessGPU(const int& _substep) {
 	if (graphicsCtx->ppu_enable) {
 		u8 interrupts = 0;
 
@@ -36,26 +42,77 @@ bool GraphicsUnitSM83::ProcessGPU() {
 
 		bool next_frame = false;
 
-		ly++;
+		switch (graphicsCtx->mode) {
+			// DRAWING PIXELS -----
+		case PPU_MODE_2:
+			graphicsCtx->mode = PPU_MODE_3;
+			SET_MODE(stat, PPU_MODE_3);
 
-		if (ly == LCD_SCANLINES_VBLANK) {
-			graphicsCtx->mode = PPU_MODE_1;
-			stat = (stat & PPU_STAT_WRITEABLE_BITS) | PPU_MODE_1;
+			mode3Dots = PPU_DOTS_MODE_3_MIN;
+			(this->*DrawScanline)(ly);
+			graphicsCtx->current_step = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_3;
+			break;
+			// HBLANK -----
+		case PPU_MODE_3:
+			graphicsCtx->mode = PPU_MODE_0;
+			SET_MODE(stat, PPU_MODE_0);
 
-			if (graphicsCtx->mode_1_int_sel) {
-				interrupts |= (IRQ_VBLANK | IRQ_LCD_STAT);
-			} else {
-				interrupts |= (IRQ_VBLANK);
+			if (graphicsCtx->mode_0_int_sel) {
+				interrupts |= IRQ_LCD_STAT;
 			}
 
-			drawWindow = false;
+			graphicsCtx->current_step = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_0;
+			break;
+			// VBLANK or OAM Scan
+		case PPU_MODE_0:
+			ly++;
 
-			next_frame = true;
-		} else if (ly == LCD_SCANLINES_TOTAL) {
-			ly = 0x00;
+			if (ly == LCD_SCANLINES_VBLANK) {
+				graphicsCtx->mode = PPU_MODE_1;
+				SET_MODE(stat, PPU_MODE_1);
 
-			graphicsCtx->mode = PPU_MODE_0;
-			stat = (stat & PPU_STAT_WRITEABLE_BITS) | PPU_MODE_0;
+				if (graphicsCtx->mode_1_int_sel) {
+					interrupts |= (IRQ_VBLANK | IRQ_LCD_STAT);
+				} else {
+					interrupts |= IRQ_VBLANK;
+				}
+
+				drawWindow = false;
+				next_frame = true;
+
+				graphicsCtx->current_step = MC_PER_SCANLINE;
+			} else {
+				graphicsCtx->mode = PPU_MODE_2;
+				SET_MODE(stat, PPU_MODE_2);
+
+				if (graphicsCtx->mode_2_int_sel) {
+					interrupts |= IRQ_LCD_STAT;
+				}
+
+				SearchOAM(ly);
+				graphicsCtx->current_step = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_2;
+			}
+			break;
+			// OAM Scan (at scanline 153 -> 0 transition)
+		case PPU_MODE_1:
+			if (_substep == LCD_MODES_PER_SCANLINE - 1) {
+				ly++;
+
+				if (ly == LCD_SCANLINES_TOTAL) {
+					ly = 0x00;
+
+					graphicsCtx->mode = PPU_MODE_2;
+					SET_MODE(stat, PPU_MODE_2);
+
+					if (graphicsCtx->mode_2_int_sel) {
+						interrupts |= IRQ_LCD_STAT;
+					}
+
+					SearchOAM(ly);
+					graphicsCtx->current_step = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_2;
+				}
+			}
+			break;
 		}
 
 		if (ly == lyc) {
@@ -68,14 +125,6 @@ bool GraphicsUnitSM83::ProcessGPU() {
 			stat &= ~PPU_STAT_LYC_FLAG;
 		}
 
-		if (graphicsCtx->mode == PPU_MODE_0) {
-			if (graphicsCtx->mode_0_int_sel || graphicsCtx->mode_2_int_sel) {
-				interrupts |= (IRQ_LCD_STAT);
-			}
-
-			(this->*DrawScanline)(ly);
-		}
-
 		memInstance->RequestInterrupts(interrupts);
 		return next_frame;
 	} else {
@@ -84,10 +133,7 @@ bool GraphicsUnitSM83::ProcessGPU() {
 }
 
 void GraphicsUnitSM83::DrawScanlineDMG(const u8& _ly) {
-	memset(objPrio1DMG, false, PPU_SCREEN_X);
-
 	if (graphicsCtx->obj_enable) {
-		SearchOAM(_ly);
 		DrawObjectsDMG(_ly, OAMPrio1DMG, numOAMEntriesPrio1DMG, true);
 	} else {
 		numOAMEntriesPrio0DMG = 0;
@@ -116,6 +162,8 @@ void GraphicsUnitSM83::DrawBackgroundDMG(const u8& _ly) {
 	auto scy = (int)memInstance->GetIORef(SCY_ADDR);
 	int scy_ = (scy + ly) % PPU_TILEMAP_SIZE_1D_PIXELS;
 	int scx_;
+
+	//mode3Dots += scx % 8;
 
 	int tilemap_offset_y = ((scy_ / PPU_TILE_SIZE_Y) * PPU_TILEMAP_SIZE_1D) % (PPU_TILEMAP_SIZE_1D * PPU_TILEMAP_SIZE_1D);
 	int tilemap_offset_x;
@@ -154,6 +202,8 @@ void GraphicsUnitSM83::DrawWindowDMG(const u8& _ly) {
 
 		int y_clip = (ly - wy) % PPU_TILE_SIZE_Y;
 		int x_clip = wx_ % PPU_TILE_SIZE_X;
+
+		//mode3Dots += PPU_DOTS_MODE_3_WIN_FETCH;
 
 		u8 tile_offset;
 		for (int x = 0; x < PPU_SCREEN_X + x_clip; x += PPU_TILE_SIZE_X) {
@@ -294,14 +344,31 @@ void GraphicsUnitSM83::DrawTileBGWINDMG(const int& _x, const int& _y, const u32*
 }
 
 void GraphicsUnitSM83::DrawScanlineCGB(const u8& _ly) {
-	if (graphicsCtx->bg_win_enable) {
+	if (graphicsCtx->obj_enable) {
+		DrawObjectsDMG(_ly, OAMPrio1DMG, numOAMEntriesPrio1DMG, true);
+	} else {
+		numOAMEntriesPrio0DMG = 0;
+		numOAMEntriesPrio1DMG = 0;
+	}
 
+	//if (graphicsCtx->bg_win_enable) {
+		DrawBackgroundDMG(_ly);
+
+		if (graphicsCtx->win_enable) {
+			DrawWindowDMG(_ly);
+		}
+	//}
+
+	if (graphicsCtx->obj_enable) {
+		DrawObjectsDMG(_ly, OAMPrio0DMG, numOAMEntriesPrio0DMG, false);
 	}
 }
 
 void GraphicsUnitSM83::SearchOAM(const u8& _ly) {
 	numOAMEntriesPrio0DMG = 0;
 	numOAMEntriesPrio1DMG = 0;
+
+	memset(objPrio1DMG, false, PPU_SCREEN_X);
 
 	if (graphicsCtx->obj_enable) {
 		int y_pos;

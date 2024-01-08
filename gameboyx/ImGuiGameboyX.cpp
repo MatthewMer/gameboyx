@@ -72,7 +72,7 @@ void ImGuiGameboyX::ProcessGUI() {
     if (showGraphicsInfo) { ShowGraphicsInfo(); }
     if (graphicsShowOverlay) { ShowGraphicsOverlay(); }
 
-    else {
+    if(!gameState.game_running) {
         // gui elements
         if (showGameSelect) { ShowGameSelect(); }
         if (showNewGameDialog) { ShowNewGameDialog(); }

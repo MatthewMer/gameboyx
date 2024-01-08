@@ -67,6 +67,7 @@ private:
 	void CheckFPSandClock();
 
 	int stepsPerFrame = 0;
+	int substepsPerStep = 0;
 	int frameCounter = 0;
 
 	// message fifo

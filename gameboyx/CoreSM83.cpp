@@ -373,22 +373,20 @@ int CoreSM83::GetDelayTime() {
     return (1.f / DISPLAY_FREQUENCY) * pow(10, 9);
 }
 
-int CoreSM83::GetStepsPerFrame() {
-    return LCD_SCANLINES_TOTAL;
+void CoreSM83::SetStepsPerFrame(int& _steps, int& _substeps) {
+    _steps =  LCD_SCANLINES_TOTAL;
+    _substeps = LCD_MODES_PER_SCANLINE;
 }
 
 // check if cpu executed machinecycles per frame
 bool CoreSM83::CheckStep() {
-    if (machineCycleScanlineCounter >= machineCyclesPerScanline * machine_ctx->currentSpeed) {
-        machineCycleScanlineCounter -= machineCyclesPerScanline * machine_ctx->currentSpeed;
+    int substep = graphics_ctx->current_step;
+    if (machineCycleCounter >= substep * machine_ctx->currentSpeed) {
+        machineCycleCounter -= substep * machine_ctx->currentSpeed;
         return true;
     } else {
         return false;
     }
-}
-
-void CoreSM83::ResetStep() {
-    machineCycleScanlineCounter -= machineCyclesPerScanline * machine_ctx->currentSpeed;
 }
 
 // return clock cycles per second
@@ -452,6 +450,7 @@ void CoreSM83::GetCurrentProgramCounter() {
 CoreSM83::CoreSM83(machine_information& _machine_info) : CoreBase(_machine_info) {
     mem_instance = MemorySM83::getInstance();
     machine_ctx = mem_instance->GetMachineContext();
+    graphics_ctx = mem_instance->GetGraphicsContext();
 
     InitCpu();
 
@@ -527,8 +526,6 @@ void CoreSM83::GetCurrentMiscValues() const {
 // initial cpu state
 void CoreSM83::InitCpu() {
     InitRegisterStates();
-
-    machineCyclesPerScanline = (((BASE_CLOCK_CPU / 4) * pow(10, 6)) / DISPLAY_FREQUENCY) / LCD_SCANLINES_TOTAL;
 }
 
 // initial register states
@@ -567,23 +564,33 @@ void CoreSM83::RunCycles() {
             stopped = false;
         }
     } else if (halted) {
-        while (machineCycleScanlineCounter < (machineCyclesPerScanline * machine_ctx->currentSpeed)) {
-            SimulateInstruction();
-
-            // check pending and enabled interrupts
-            if (machine_ctx->IE & mem_instance->GetIORef(IF_ADDR)) {
-                halted = false;
-                break;
-            }
-        }
+        ProcessHALT();
     } else {
         if (machineInfo.instruction_debug_enabled) {
             NextInstruction();
             machineInfo.pause_execution = true;
         } else {
-            while ((machineCycleScanlineCounter < (machineCyclesPerScanline * machine_ctx->currentSpeed)) && !halted && !stopped) {
+            int substep = graphics_ctx->current_step;
+            while ((machineCycleCounter < (substep * machine_ctx->currentSpeed)) && !halted && !stopped) {
                 NextInstruction();
             }
+
+            if (halted) {
+                ProcessHALT();
+            }
+        }
+    }
+}
+
+void CoreSM83::ProcessHALT() {
+    int substep = graphics_ctx->current_step;
+    while (machineCycleCounter < (substep * machine_ctx->currentSpeed)) {
+        SimulateInstruction();
+
+        // check pending and enabled interrupts
+        if (machine_ctx->IE & mem_instance->GetIORef(IF_ADDR)) {
+            halted = false;
+            break;
         }
     }
 }
@@ -593,14 +600,14 @@ void CoreSM83::NextInstruction() {
     if (!CheckInterrupts()) {
         ExecuteInstruction();
     }
-    machineCycleScanlineCounter += currentMachineCycles;
+    machineCycleCounter += currentMachineCycles;
     machineCycleClockCounter += currentMachineCycles;
 }
 
 void CoreSM83::SimulateInstruction() {
     currentMachineCycles = 0;
     TickTimers();
-    machineCycleScanlineCounter += currentMachineCycles;
+    machineCycleCounter += currentMachineCycles;
     machineCycleClockCounter += currentMachineCycles;
 }
 

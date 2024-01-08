@@ -16,7 +16,7 @@ public:
 	friend class GraphicsUnitBase;
 
 	// members
-	bool ProcessGPU() override;
+	bool ProcessGPU(const int& _substep) override;
 
 private:
 	// constructor
@@ -66,4 +66,6 @@ private:
 	u8 tileDataCur[PPU_TILE_SIZE_SCANLINE];
 
 	bool drawWindow = false;
+
+	int mode3Dots;
 };

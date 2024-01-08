@@ -41,7 +41,7 @@ VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _mac
 
     // returns the time per frame in ns
     timePerFrame = core_instance->GetDelayTime();
-    stepsPerFrame = core_instance->GetStepsPerFrame();
+    core_instance->SetStepsPerFrame(stepsPerFrame, substepsPerStep);
 
     core_instance->GetCurrentHardwareState();
     core_instance->GetCurrentRegisterValues();
@@ -90,11 +90,13 @@ void VHardwareMgr::ProcessHardware() {
 }
 
 void VHardwareMgr::RunHardware() {
-    core_instance->RunCycles();
+    for (int i = 0; i < substepsPerStep; i++) {
+        core_instance->RunCycles();
 
-    if (core_instance->CheckStep() && graphics_instance->ProcessGPU()) {
-        _graphics_mgr->UpdateGpuData();
-        frameCounter++;
+        if (core_instance->CheckStep() && graphics_instance->ProcessGPU(i)) {
+            _graphics_mgr->UpdateGpuData();
+            frameCounter++;
+        }
     }
 }
 

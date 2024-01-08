@@ -25,7 +25,7 @@ public:
 	GraphicsUnitBase& operator=(GraphicsUnitBase&&) = delete;
 
 	// members
-	virtual bool ProcessGPU() = 0;
+	virtual bool ProcessGPU(const int& _substep) = 0;
 
 protected:
 	// constructor

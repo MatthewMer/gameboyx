@@ -190,11 +190,13 @@
 #define OCPS_OBPI_ADDR              0xFF6A              // RW
 #define OCPD_OBPD_ADDR              0xFF6B              // RW
 
+#define CGB_COLOR_CHANNEL_MASK      0x1F
+
 // OBJECT PRIORITY MODE
 #define CGB_OBJ_PRIO_ADDR           0xFF6C              // RW
 #define PRIO_MODE                   0x01
-#define PRIO_OAM                    0x00
-#define PRIO_COORD                  0x01
+#define CGB_OBJ_PRIO_MODE           0x00
+#define DMG_OBJ_PRIO_MODE           0x01
 
 // WRAM BANK SELECT
 #define CGB_WRAM_SELECT_ADDR        0xFF70              // RW
@@ -250,6 +252,16 @@
 // lcd
 #define LCD_SCANLINES_VBLANK        144
 #define LCD_SCANLINES_TOTAL         154
+#define LCD_MODES_PER_SCANLINE      3
+
+#define PPU_DOTS_PER_SCANLINE       456
+#define PPU_DOTS_MODE_2             80
+#define PPU_DOTS_MODE_3_MIN         172
+#define PPU_DOTS_MODE_3_0           376
+#define PPU_DOTS_MODE_3_WIN_FETCH   6
+
+#define PPU_DOTS_MODE_3             230
+#define PPU_DOTS_MODE_0             146
 
 // VRAM Tile data
 #define PPU_VRAM_TILE_SIZE          16                  // Bytes
@@ -285,6 +297,8 @@
 #define OBJ_ATTR_X_FLIP             0x20
 #define OBJ_ATTR_Y_FLIP             0x40
 #define OBJ_ATTR_PRIO               0x80
+
+#define PPU_PALETTE_RAM_SIZE_CGB    64
 
 // screen
 #define PPU_TILES_HORIZONTAL        20

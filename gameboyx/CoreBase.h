@@ -32,11 +32,10 @@ public:
 	virtual void NextInstruction() = 0;
 
 	virtual int GetDelayTime() = 0;
-	virtual int GetStepsPerFrame() = 0;
+	virtual void SetStepsPerFrame(int& _steps, int& _substeps) = 0;
 	virtual void GetCurrentHardwareState() const = 0;
 	virtual u32 GetCurrentClockCycles() = 0;
 	virtual bool CheckStep() = 0;
-	virtual void ResetStep() = 0;
 
 	virtual void GetCurrentProgramCounter() = 0;
 	virtual void InitMessageBufferProgram() = 0;
@@ -61,7 +60,6 @@ protected:
 	MmuBase* mmu_instance;
 
 	// members
-	int machineCyclesPerScanline = 0;					// threshold
 	int machineCycleClockCounter = 0;				// counter
 
 	virtual void ExecuteInstruction() = 0;
