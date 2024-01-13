@@ -10,6 +10,7 @@
 
 #include "Cartridge.h"
 #include "MmuBase.h"
+#include "GraphicsUnitBase.h"
 #include "information_structs.h"
 #include <chrono>
 using namespace std::chrono;
@@ -18,7 +19,7 @@ class CoreBase
 {
 public:
 	// get/reset instance
-	static CoreBase* getInstance(machine_information& _machine_info);
+	static CoreBase* getInstance(machine_information& _machine_info, graphics_information& _graphics_info, VulkanMgr* _graphics_mgr);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -29,13 +30,10 @@ public:
 
 	// public members
 	virtual void RunCycles() = 0;
-	virtual void NextInstruction() = 0;
+	virtual void RunCycle() = 0;
 
-	virtual int GetDelayTime() = 0;
-	virtual void SetStepsPerFrame(int& _steps, int& _substeps) = 0;
 	virtual void GetCurrentHardwareState() const = 0;
 	virtual u32 GetCurrentClockCycles() = 0;
-	virtual bool CheckStep() = 0;
 
 	virtual void GetCurrentProgramCounter() = 0;
 	virtual void InitMessageBufferProgram() = 0;
@@ -51,21 +49,26 @@ public:
 
 protected:
 	// constructor
-	explicit CoreBase(machine_information& _machine_info) : machineInfo(_machine_info) {
+	explicit CoreBase(machine_information& _machine_info, graphics_information& _graphics_info, VulkanMgr* _graphics_mgr) : machineInfo(_machine_info) {
 		mmu_instance = MmuBase::getInstance(_machine_info);
+		graphics_instance = GraphicsUnitBase::getInstance(_graphics_info, _graphics_mgr);
 	};
 
 	~CoreBase() = default;
 
 	MmuBase* mmu_instance;
+	GraphicsUnitBase* graphics_instance;
 
 	// members
 	int machineCycleClockCounter = 0;				// counter
 
+	int currentTicks = 0;
+	int ticksPerFrame = 0;
+	u32 tickCounter = 0;
+
 	virtual void ExecuteInstruction() = 0;
 	virtual bool CheckInterrupts() = 0;
 
-	virtual void InitCpu() = 0;
 	virtual void InitRegisterStates() = 0;
 
 	machine_information& machineInfo;

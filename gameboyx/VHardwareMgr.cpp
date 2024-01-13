@@ -20,7 +20,6 @@ VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, machine_info
 void VHardwareMgr::resetInstance() {
     if (instance != nullptr) {
         CoreBase::resetInstance();
-        GraphicsUnitBase::resetInstance();
         ControllerBase::resetInstance();
         Cartridge::resetInstance();
         delete instance;
@@ -28,20 +27,19 @@ void VHardwareMgr::resetInstance() {
     }
 }
 
-VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) : _graphics_mgr(_graphics_mgr), machineInfo(_machine_info) {
+VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info) : machineInfo(_machine_info) {
     cart_instance = Cartridge::getInstance(_game_ctx);
     if (cart_instance == nullptr) {
         LOG_ERROR("Couldn't create virtual cartridge");
         return;
     }
 
-    core_instance = CoreBase::getInstance(_machine_info);
-    graphics_instance = GraphicsUnitBase::getInstance(_graphics_info);
+    core_instance = CoreBase::getInstance(_machine_info, _graphics_info, _graphics_mgr);
+    graphics_instance = GraphicsUnitBase::getInstance();
     control_instance = ControllerBase::getInstance(_machine_info);
 
     // returns the time per frame in ns
-    timePerFrame = core_instance->GetDelayTime();
-    core_instance->SetStepsPerFrame(stepsPerFrame, substepsPerStep);
+    timePerFrame = graphics_instance->GetDelayTime();
 
     core_instance->GetCurrentHardwareState();
     core_instance->GetCurrentRegisterValues();
@@ -61,15 +59,14 @@ void VHardwareMgr::ProcessHardware() {
 
     if (machineInfo.instruction_debug_enabled) {
         if (!machineInfo.pause_execution) {
-            RunHardware();
+            core_instance->RunCycle();
+            machineInfo.pause_execution = true;
         }
     }
     else {
         if (CheckDelay()) {
             for (int j = 0; j < machineInfo.emulation_speed; j++) {
-                for (int i = 0; i < stepsPerFrame; i++) {
-                    RunHardware();
-                }
+                core_instance->RunCycles();
             }
         }
     }
@@ -86,17 +83,6 @@ void VHardwareMgr::ProcessHardware() {
         core_instance->GetCurrentMiscValues();
         core_instance->GetCurrentFlagsAndISR();
         core_instance->GetCurrentProgramCounter();
-    }
-}
-
-void VHardwareMgr::RunHardware() {
-    for (int i = 0; i < substepsPerStep; i++) {
-        core_instance->RunCycles();
-
-        if (core_instance->CheckStep() && graphics_instance->ProcessGPU(i)) {
-            _graphics_mgr->UpdateGpuData();
-            frameCounter++;
-        }
     }
 }
 
@@ -124,8 +110,7 @@ void VHardwareMgr::CheckFPSandClock() {
     if (accumulatedTime > nsPerSThreshold) {
         machineInfo.current_frequency = ((float)core_instance->GetCurrentClockCycles() / (accumulatedTime / pow(10,3)));
 
-        machineInfo.current_framerate = frameCounter / (accumulatedTime / pow(10,9));
-        frameCounter = 0;
+        machineInfo.current_framerate = graphics_instance->GetFrames() / (accumulatedTime / pow(10,9));
 
         accumulatedTime = 0;
     }

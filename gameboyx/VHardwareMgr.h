@@ -9,7 +9,6 @@
 
 #include "Cartridge.h"
 #include "CoreBase.h"
-#include "GraphicsUnitBase.h"
 #include "ControllerBase.h"
 #include "information_structs.h"
 #include "SDL.h"
@@ -41,14 +40,11 @@ private:
 	static VHardwareMgr* instance;
 	~VHardwareMgr() = default;
 
-	void RunHardware();
-
 	// hardware instances
 	CoreBase* core_instance;
 	GraphicsUnitBase* graphics_instance;
 	ControllerBase* control_instance;
 	Cartridge* cart_instance;
-	VulkanMgr* _graphics_mgr;
 
 	// execution time
 	u32 timePerFrame = 0;
@@ -65,10 +61,6 @@ private:
 	steady_clock::time_point timeSecondCur;
 	u32 accumulatedTime = 0;
 	void CheckFPSandClock();
-
-	int stepsPerFrame = 0;
-	int substepsPerStep = 0;
-	int frameCounter = 0;
 
 	// message fifo
 	machine_information& machineInfo;

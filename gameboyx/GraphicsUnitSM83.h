@@ -16,29 +16,38 @@ public:
 	friend class GraphicsUnitBase;
 
 	// members
-	bool ProcessGPU(const int& _substep) override;
+	void ProcessGPU(const int& _ticks) override;
 
 private:
 	// constructor
-	GraphicsUnitSM83(graphics_information& _graphics_info) : graphicsInfo(_graphics_info) {
+	GraphicsUnitSM83(graphics_information& _graphics_info, VulkanMgr* _graphics_mgr) : graphicsInfo(_graphics_info) {
 		memInstance = MemorySM83::getInstance();
 		graphicsCtx = memInstance->GetGraphicsContext();
 		machineCtx = memInstance->GetMachineContext();
+		graphicsMgr = _graphics_mgr;
 
 		SetGraphicsParameters();
 	}
 	// destructor
 	~GraphicsUnitSM83() = default;
 
+	int GetDelayTime() const override;
+	int GetTicksPerFrame(const float& _clock) const override;
+	int GetFrames() override;
 	void SetGraphicsParameters();
 
 	// memory access
 	MemorySM83* memInstance;
 	graphics_context* graphicsCtx;
-	machine_state_context* machineCtx;
+	machine_context* machineCtx;
 	graphics_information& graphicsInfo;
 
 	// members
+	void EnterMode2();
+	void EnterMode3();
+	void EnterMode0();
+	void EnterMode1();
+
 	typedef void (GraphicsUnitSM83::* scanline_draw_function)(const u8& _ly);
 	scanline_draw_function DrawScanline;
 	void DrawScanlineDMG(const u8& _ly);
@@ -57,6 +66,13 @@ private:
 	bool objPrio1DMG[PPU_SCREEN_X];
 	int OAMPrio0DMG[10];
 	int numOAMEntriesPrio0DMG = 0;
+
+	int modeTickCounter = 0;
+	int modeTickTarget = 0;
+	int oamOffset = 0;
+
+	int mode3scxPause = 0;
+	bool mode3scxPauseEn = false;
 
 	void SearchOAM(const u8& _ly);
 	void FetchTileDataOBJ(u8& _tile_offset, const int& _tile_sub_offset);

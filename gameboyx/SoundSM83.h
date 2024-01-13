@@ -22,6 +22,6 @@ private:
 	// memory access
 	MemorySM83* memInstance;
 	sound_context* soundCtx;
-	machine_state_context* machineCtx;
+	machine_context* machineCtx;
 	machine_information& machineInfo;
 };

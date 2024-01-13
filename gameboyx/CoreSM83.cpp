@@ -368,31 +368,10 @@ void CoreSM83::InitMessageBufferProgramTmp() {
 /* ***********************************************************************************************************
     ACCESS CPU STATUS
 *********************************************************************************************************** */
-// return delta t per frame in nanoseconds
-int CoreSM83::GetDelayTime() {
-    return (1.f / DISPLAY_FREQUENCY) * pow(10, 9);
-}
-
-void CoreSM83::SetStepsPerFrame(int& _steps, int& _substeps) {
-    _steps =  LCD_SCANLINES_TOTAL;
-    _substeps = LCD_MODES_PER_SCANLINE;
-}
-
-// check if cpu executed machinecycles per frame
-bool CoreSM83::CheckStep() {
-    int substep = graphics_ctx->current_substeps;
-    if (machineCycleCounter >= substep * machine_ctx->currentSpeed) {
-        machineCycleCounter -= substep * machine_ctx->currentSpeed;
-        return true;
-    } else {
-        return false;
-    }
-}
-
 // return clock cycles per second
 u32 CoreSM83::GetCurrentClockCycles() {
-    u32 result = machineCycleClockCounter * 4;
-    machineCycleClockCounter = 0;
+    u32 result = tickCounter;
+    tickCounter = 0;
     return result;
 }
 
@@ -447,87 +426,21 @@ void CoreSM83::GetCurrentProgramCounter() {
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
-CoreSM83::CoreSM83(machine_information& _machine_info) : CoreBase(_machine_info) {
+CoreSM83::CoreSM83(machine_information& _machine_info, graphics_information& _graphics_info, VulkanMgr* _graphics_mgr) : CoreBase(_machine_info, _graphics_info, _graphics_mgr) {
     mem_instance = MemorySM83::getInstance();
     machine_ctx = mem_instance->GetMachineContext();
     graphics_ctx = mem_instance->GetGraphicsContext();
 
-    InitCpu();
+    InitRegisterStates();
+    ticksPerFrame = graphics_instance->GetTicksPerFrame(BASE_CLOCK_CPU * pow(10, 6));
 
     setupLookupTable();
     setupLookupTableCB();
 }
 
 /* ***********************************************************************************************************
-    ACCESS HARDWARE STATUS
-*********************************************************************************************************** */
-// get current hardware status (currently mapped memory banks, etc.)
-void CoreSM83::GetCurrentHardwareState() const {
-    machineInfo.hardware_info.clear();
-
-    machineInfo.hardware_info.emplace_back("Speedmode", format("{:d}", machine_ctx->currentSpeed));
-    machineInfo.hardware_info.emplace_back("ROM banks", format("{:d}", machine_ctx->rom_bank_num));
-    machineInfo.hardware_info.emplace_back("ROM selected", format("{:d}", machine_ctx->rom_bank_selected + 1));
-    machineInfo.hardware_info.emplace_back("RAM banks", format("{:d}", machine_ctx->ram_bank_num));
-    machineInfo.hardware_info.emplace_back("RAM selected", format("{:d}", machine_ctx->ram_bank_selected));
-    machineInfo.hardware_info.emplace_back("WRAM banks", format("{:d}", machine_ctx->wram_bank_num));
-    machineInfo.hardware_info.emplace_back("WRAM selected", format("{:d}", machine_ctx->wram_bank_selected + 1));
-    machineInfo.hardware_info.emplace_back("VRAM banks", format("{:d}", machine_ctx->vram_bank_num));
-    machineInfo.hardware_info.emplace_back("VRAM selected", format("{:d}", machine_ctx->vram_bank_selected));
-}
-
-void CoreSM83::GetCurrentRegisterValues() const {
-    machineInfo.register_values.clear();
-
-    machineInfo.register_values.emplace_back(register_names.at(A) + register_names.at(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
-    machineInfo.register_values.emplace_back(register_names.at(BC), format("{:04x}", Regs.BC));
-    machineInfo.register_values.emplace_back(register_names.at(DE), format("{:04x}", Regs.DE));
-    machineInfo.register_values.emplace_back(register_names.at(HL), format("{:04x}", Regs.HL));
-    machineInfo.register_values.emplace_back(register_names.at(SP), format("{:04x}", Regs.SP));
-    machineInfo.register_values.emplace_back(register_names.at(PC), format("{:04x}", Regs.PC));
-    machineInfo.register_values.emplace_back(register_names.at(IE), format("{:02x}", machine_ctx->IE));
-    machineInfo.register_values.emplace_back(register_names.at(IF), format("{:02x}", mem_instance->GetIORef(IF_ADDR)));
-}
-
-void CoreSM83::GetCurrentFlagsAndISR() const {
-    machineInfo.flag_values.clear();
-
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_H), format("{:01b}", (Regs.F & FLAG_HCARRY) >> 5));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_IME), format("{:01b}", ime ? 1 : 0));
-    u8 isr_requested = mem_instance->GetIORef(IF_ADDR);
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_SERIAL), format("{:01b}", (isr_requested & IRQ_SERIAL) >> 3));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
-}
-
-void CoreSM83::GetCurrentMiscValues() const {
-    machineInfo.misc_values.clear();
-
-    machineInfo.misc_values.emplace_back("LCDC", format("{:02x}", mem_instance->GetIORef(LCDC_ADDR)));
-    machineInfo.misc_values.emplace_back("STAT", format("{:02x}", mem_instance->GetIORef(STAT_ADDR)));
-    machineInfo.misc_values.emplace_back("WRAM", format("{:02x}", mem_instance->GetIORef(CGB_WRAM_SELECT_ADDR)));
-    machineInfo.misc_values.emplace_back("VRAM", format("{:02x}", mem_instance->GetIORef(CGB_VRAM_SELECT_ADDR)));
-    machineInfo.misc_values.emplace_back("LY", format("{:02x}", mem_instance->GetIORef(LY_ADDR)));
-    machineInfo.misc_values.emplace_back("LYC", format("{:02x}", mem_instance->GetIORef(LYC_ADDR)));
-    machineInfo.misc_values.emplace_back("SCX", format("{:02x}", mem_instance->GetIORef(SCX_ADDR)));
-    machineInfo.misc_values.emplace_back("SCY", format("{:02x}", mem_instance->GetIORef(SCY_ADDR)));
-    machineInfo.misc_values.emplace_back("WX", format("{:02x}", mem_instance->GetIORef(WX_ADDR)));
-    machineInfo.misc_values.emplace_back("WY", format("{:02x}", mem_instance->GetIORef(WY_ADDR)));
-}
-
-/* ***********************************************************************************************************
     INIT CPU
 *********************************************************************************************************** */
-// initial cpu state
-void CoreSM83::InitCpu() {
-    InitRegisterStates();
-}
-
 // initial register states
 void CoreSM83::InitRegisterStates() {
     Regs = registers();
@@ -558,57 +471,35 @@ void CoreSM83::InitRegisterStates() {
     RUN CPU
 *********************************************************************************************************** */
 void CoreSM83::RunCycles() {
-    if (stopped) {
-        // check button press
-        if (mem_instance->GetIORef(IF_ADDR) & IRQ_JOYPAD) {
-            stopped = false;
-        }
-    } else if (halted) {
-        ProcessHALT();
-    } else {
-        if (machineInfo.instruction_debug_enabled) {
-            NextInstruction();
-            machineInfo.pause_execution = true;
+    currentTicks = 0;
+
+    while ((currentTicks < (ticksPerFrame * machine_ctx->currentSpeed))) {
+        if (stopped) {
+            // check button press
+            if (mem_instance->GetIORef(IF_ADDR) & IRQ_JOYPAD) {
+                stopped = false;
+            } else {
+                return;
+            }
+            
+        } else if (halted) {
+            TickTimers();
+
+            // check pending and enabled interrupts
+            if (machine_ctx->IE & mem_instance->GetIORef(IF_ADDR)) {
+                halted = false;
+            }
         } else {
-            int substep = graphics_ctx->current_substeps;
-            while ((machineCycleCounter < (substep * machine_ctx->currentSpeed)) && !halted && !stopped) {
-                NextInstruction();
-            }
-
-            if (halted) {
-                ProcessHALT();
-            }
+            CheckInterrupts();
+            ExecuteInstruction();
         }
     }
+
+    tickCounter += currentTicks;
 }
 
-void CoreSM83::ProcessHALT() {
-    int substep = graphics_ctx->current_substeps;
-    while (machineCycleCounter < (substep * machine_ctx->currentSpeed)) {
-        SimulateInstruction();
+void CoreSM83::RunCycle() {
 
-        // check pending and enabled interrupts
-        if (machine_ctx->IE & mem_instance->GetIORef(IF_ADDR)) {
-            halted = false;
-            break;
-        }
-    }
-}
-
-void CoreSM83::NextInstruction() {
-    currentMachineCycles = 0;
-    if (!CheckInterrupts()) {
-        ExecuteInstruction();
-    }
-    machineCycleCounter += currentMachineCycles;
-    machineCycleClockCounter += currentMachineCycles;
-}
-
-void CoreSM83::SimulateInstruction() {
-    currentMachineCycles = 0;
-    TickTimers();
-    machineCycleCounter += currentMachineCycles;
-    machineCycleClockCounter += currentMachineCycles;
 }
 
 void CoreSM83::ExecuteInstruction() {
@@ -674,13 +565,11 @@ void CoreSM83::TickTimers() {
         div = mem_instance->GetIORef(TMA_ADDR);
         if (!machine_ctx->tima_reload_if_write) {
             mem_instance->RequestInterrupts(IRQ_TIMER);
-        }
-        else {
+        } else {
             machine_ctx->tima_reload_if_write = false;
         }
         machine_ctx->tima_reload_cycle = false;
-    }
-    else if (machine_ctx->tima_overflow_cycle) {
+    } else if (machine_ctx->tima_overflow_cycle) {
         machine_ctx->tima_reload_cycle = true;
         machine_ctx->tima_overflow_cycle = false;
     }
@@ -691,19 +580,16 @@ void CoreSM83::TickTimers() {
 
             if (div == 0xFF) {
                 div = 0x00;
-            }
-            else {
+            } else {
                 div++;
             }
-        }
-        else {
+        } else {
             machine_ctx->div_low_byte++;
         }
 
         if (div_low_byte_selected) {
             timaEnAndDivOverflowCur = tima_enabled && (machine_ctx->div_low_byte & machine_ctx->timaDivMask ? true : false);
-        }
-        else {
+        } else {
             timaEnAndDivOverflowCur = tima_enabled && (div & (machine_ctx->timaDivMask >> 8) ? true : false);
         }
 
@@ -713,7 +599,10 @@ void CoreSM83::TickTimers() {
         timaEnAndDivOverflowPrev = timaEnAndDivOverflowCur;
     }
 
-    currentMachineCycles++;
+    currentTicks += TICKS_PER_MC;
+
+    // PPU directly bound to CPUs timer system (master clock), not affected by speed mode
+    graphics_instance->ProcessGPU(TICKS_PER_MC / machine_ctx->currentSpeed);
 }
 
 void CoreSM83::IncrementTIMA() {
@@ -773,6 +662,68 @@ u16 CoreSM83::Read16Bit(const u16& _addr) {
     data |= (((u16)mmu_instance->Read8Bit(_addr + 1)) << 8);
     TickTimers();
     return data;
+}
+
+/* ***********************************************************************************************************
+    ACCESS HARDWARE STATUS
+*********************************************************************************************************** */
+// get current hardware status (currently mapped memory banks, etc.)
+void CoreSM83::GetCurrentHardwareState() const {
+    machineInfo.hardware_info.clear();
+
+    machineInfo.hardware_info.emplace_back("Speedmode", format("{:d}", machine_ctx->currentSpeed));
+    machineInfo.hardware_info.emplace_back("ROM banks", format("{:d}", machine_ctx->rom_bank_num));
+    machineInfo.hardware_info.emplace_back("ROM selected", format("{:d}", machine_ctx->rom_bank_selected + 1));
+    machineInfo.hardware_info.emplace_back("RAM banks", format("{:d}", machine_ctx->ram_bank_num));
+    machineInfo.hardware_info.emplace_back("RAM selected", format("{:d}", machine_ctx->ram_bank_selected));
+    machineInfo.hardware_info.emplace_back("WRAM banks", format("{:d}", machine_ctx->wram_bank_num));
+    machineInfo.hardware_info.emplace_back("WRAM selected", format("{:d}", machine_ctx->wram_bank_selected + 1));
+    machineInfo.hardware_info.emplace_back("VRAM banks", format("{:d}", machine_ctx->vram_bank_num));
+    machineInfo.hardware_info.emplace_back("VRAM selected", format("{:d}", machine_ctx->vram_bank_selected));
+}
+
+void CoreSM83::GetCurrentRegisterValues() const {
+    machineInfo.register_values.clear();
+
+    machineInfo.register_values.emplace_back(register_names.at(A) + register_names.at(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
+    machineInfo.register_values.emplace_back(register_names.at(BC), format("{:04x}", Regs.BC));
+    machineInfo.register_values.emplace_back(register_names.at(DE), format("{:04x}", Regs.DE));
+    machineInfo.register_values.emplace_back(register_names.at(HL), format("{:04x}", Regs.HL));
+    machineInfo.register_values.emplace_back(register_names.at(SP), format("{:04x}", Regs.SP));
+    machineInfo.register_values.emplace_back(register_names.at(PC), format("{:04x}", Regs.PC));
+    machineInfo.register_values.emplace_back(register_names.at(IE), format("{:02x}", machine_ctx->IE));
+    machineInfo.register_values.emplace_back(register_names.at(IF), format("{:02x}", mem_instance->GetIORef(IF_ADDR)));
+}
+
+void CoreSM83::GetCurrentFlagsAndISR() const {
+    machineInfo.flag_values.clear();
+
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_H), format("{:01b}", (Regs.F & FLAG_HCARRY) >> 5));
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_IME), format("{:01b}", ime ? 1 : 0));
+    u8 isr_requested = mem_instance->GetIORef(IF_ADDR);
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_SERIAL), format("{:01b}", (isr_requested & IRQ_SERIAL) >> 3));
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
+}
+
+void CoreSM83::GetCurrentMiscValues() const {
+    machineInfo.misc_values.clear();
+
+    machineInfo.misc_values.emplace_back("LCDC", format("{:02x}", mem_instance->GetIORef(LCDC_ADDR)));
+    machineInfo.misc_values.emplace_back("STAT", format("{:02x}", mem_instance->GetIORef(STAT_ADDR)));
+    machineInfo.misc_values.emplace_back("WRAM", format("{:02x}", mem_instance->GetIORef(CGB_WRAM_SELECT_ADDR)));
+    machineInfo.misc_values.emplace_back("VRAM", format("{:02x}", mem_instance->GetIORef(CGB_VRAM_SELECT_ADDR)));
+    machineInfo.misc_values.emplace_back("LY", format("{:02x}", mem_instance->GetIORef(LY_ADDR)));
+    machineInfo.misc_values.emplace_back("LYC", format("{:02x}", mem_instance->GetIORef(LYC_ADDR)));
+    machineInfo.misc_values.emplace_back("SCX", format("{:02x}", mem_instance->GetIORef(SCX_ADDR)));
+    machineInfo.misc_values.emplace_back("SCY", format("{:02x}", mem_instance->GetIORef(SCY_ADDR)));
+    machineInfo.misc_values.emplace_back("WX", format("{:02x}", mem_instance->GetIORef(WX_ADDR)));
+    machineInfo.misc_values.emplace_back("WY", format("{:02x}", mem_instance->GetIORef(WY_ADDR)));
 }
 
 /* ***********************************************************************************************************

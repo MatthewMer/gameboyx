@@ -30,110 +30,170 @@ void GraphicsUnitSM83::SetGraphicsParameters() {
 	}
 }
 
-#define SET_MODE(stat, mode) stat = (stat & PPU_STAT_WRITEABLE_BITS) | mode 
+// return delta t per frame in nanoseconds
+int GraphicsUnitSM83::GetDelayTime() const {
+	return (1.f / DISPLAY_FREQUENCY) * pow(10, 9);
+}
 
-bool GraphicsUnitSM83::ProcessGPU(const int& _substep) {
+int GraphicsUnitSM83::GetTicksPerFrame(const float& _clock) const {
+	return _clock / DISPLAY_FREQUENCY;
+}
+
+int GraphicsUnitSM83::GetFrames() {
+	int frames = frameCounter;
+	frameCounter = 0;
+	return frames;
+}
+
+void GraphicsUnitSM83::ProcessGPU(const int& _ticks) {
 	if (graphicsCtx->ppu_enable) {
-		u8 interrupts = 0;
+		tickCounter += _ticks;
 
 		u8& ly = memInstance->GetIORef(LY_ADDR);
 		const u8& lyc = memInstance->GetIORef(LYC_ADDR);
 		u8& stat = memInstance->GetIORef(STAT_ADDR);
+		int mode = graphicsCtx->mode;
 
-		bool next_frame = false;
-
-		switch (graphicsCtx->mode) {
-			// DRAWING PIXELS -----
-		case PPU_MODE_2:
-			graphicsCtx->mode = PPU_MODE_3;
-			SET_MODE(stat, PPU_MODE_3);
-
-			mode3Dots = PPU_DOTS_MODE_3_MIN;
-			(this->*DrawScanline)(ly);
-			graphicsCtx->current_substeps = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_3;
-			break;
-			// HBLANK -----
-		case PPU_MODE_3:
-			graphicsCtx->mode = PPU_MODE_0;
-			SET_MODE(stat, PPU_MODE_0);
-
-			if (graphicsCtx->mode_0_int_sel) {
-				interrupts |= IRQ_LCD_STAT;
-			}
-
-			graphicsCtx->current_substeps = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_0;
-			break;
-			// VBLANK or OAM Scan
-		case PPU_MODE_0:
-			ly++;
-
-			if (ly == LCD_SCANLINES_VBLANK) {
-				graphicsCtx->mode = PPU_MODE_1;
-				SET_MODE(stat, PPU_MODE_1);
-
-				if (graphicsCtx->mode_1_int_sel) {
-					interrupts |= (IRQ_VBLANK | IRQ_LCD_STAT);
-				} else {
-					interrupts |= IRQ_VBLANK;
-				}
-
-				drawWindow = false;
-				next_frame = true;
-
-				graphicsCtx->current_substeps = MC_PER_SCANLINE;
-			} else {
-				graphicsCtx->mode = PPU_MODE_2;
-				SET_MODE(stat, PPU_MODE_2);
-
-				if (graphicsCtx->mode_2_int_sel) {
-					interrupts |= IRQ_LCD_STAT;
-				}
-
-				SearchOAM(ly);
-				graphicsCtx->current_substeps = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_2;
-			}
-			break;
-			// OAM Scan (at scanline 153 -> 0 transition)
+		switch (mode) {
 		case PPU_MODE_1:
-			if (_substep == LCD_MODES_PER_SCANLINE - 1) {
+			if (tickCounter > PPU_DOTS_PER_SCANLINE) {
+				tickCounter -= PPU_DOTS_PER_SCANLINE;
 				ly++;
+				if (ly == lyc) {
+					stat |= PPU_STAT_LYC_FLAG;
 
-				if (ly == LCD_SCANLINES_TOTAL) {
-					ly = 0x00;
-
-					graphicsCtx->mode = PPU_MODE_2;
-					SET_MODE(stat, PPU_MODE_2);
-
-					if (graphicsCtx->mode_2_int_sel) {
-						interrupts |= IRQ_LCD_STAT;
+					if (graphicsCtx->lyc_ly_int_sel) {
+						memInstance->RequestInterrupts(IRQ_LCD_STAT);
 					}
-
-					SearchOAM(ly);
-					graphicsCtx->current_substeps = (MC_PER_SCANLINE / PPU_DOTS_PER_SCANLINE) * PPU_DOTS_MODE_2;
+				} else {
+					stat &= ~PPU_STAT_LYC_FLAG;
 				}
-			} else if (_substep == 0){
-				graphicsCtx->current_substeps = MC_PER_SCANLINE;
+			}
+			if (ly == LCD_SCANLINES_TOTAL) {
+				ly = 0;
+				EnterMode2();
+				graphicsMgr->UpdateGpuData();
+				frameCounter++;
+			}
+			break;
+		case PPU_MODE_2:
+			while (modeTickCounter < tickCounter) {
+				if (modeTickCounter > PPU_DOTS_MODE_2) {
+					EnterMode3();
+					break;
+				}
+				SearchOAM(ly);
+				modeTickCounter += PPU_DOTS_PER_OAM_ENTRY;
+			}
+			break;
+		case PPU_MODE_3:
+			/*
+			if (mode3scxPauseEn) {
+				while (modeTickCounter < mode3scxPause) {
+					modeTickCounter += _ticks;
+					if (modeTickCounter > mode3scxPause) {
+						modeTickCounter -= mode3scxPause;
+						mode3scxPauseEn = false;
+					}
+				}
+			}
+			if (!mode3scxPauseEn) {
+
+			}
+			*/
+			if (modeTickCounter < modeTickTarget) {
+				modeTickCounter += _ticks;
 			} else {
-				graphicsCtx->current_substeps = 0;
+				EnterMode0();
+			}
+			break;
+		case PPU_MODE_0:
+			if (tickCounter > PPU_DOTS_PER_SCANLINE) {
+				tickCounter -= PPU_DOTS_PER_SCANLINE;
+				ly++;
+				if (ly == lyc) {
+					stat |= PPU_STAT_LYC_FLAG;
+
+					if (graphicsCtx->lyc_ly_int_sel) {
+						memInstance->RequestInterrupts(IRQ_LCD_STAT);
+					}
+				} else {
+					stat &= ~PPU_STAT_LYC_FLAG;
+				}
+			}
+			if (ly == LCD_SCANLINES_VBLANK) {
+				EnterMode1();
+			} else {
+				EnterMode2();
 			}
 			break;
 		}
-
-		if (ly == lyc) {
-			stat |= PPU_STAT_LYC_FLAG;
-
-			if (graphicsCtx->lyc_ly_int_sel) {
-				interrupts |= (IRQ_LCD_STAT);
-			}
-		} else {
-			stat &= ~PPU_STAT_LYC_FLAG;
-		}
-
-		memInstance->RequestInterrupts(interrupts);
-		return next_frame;
-	} else {
-		return false;
 	}
+}
+
+
+#define SET_MODE(stat, mode) stat = (stat & PPU_STAT_WRITEABLE_BITS) | mode 
+
+void GraphicsUnitSM83::EnterMode2() {
+	memset(objPrio1DMG, false, PPU_SCREEN_X);
+
+	u8& stat = memInstance->GetIORef(STAT_ADDR);
+
+	graphicsCtx->mode = PPU_MODE_2;
+	SET_MODE(stat, PPU_MODE_2);
+
+	modeTickCounter = 0;
+	oamOffset = 0;
+
+	numOAMEntriesPrio0DMG = 0;
+	numOAMEntriesPrio1DMG = 0;
+
+	if (graphicsCtx->mode_2_int_sel) {
+		memInstance->RequestInterrupts(IRQ_LCD_STAT);
+	}
+}
+
+void GraphicsUnitSM83::EnterMode3() {
+	u8& stat = memInstance->GetIORef(STAT_ADDR);
+	u8& ly = memInstance->GetIORef(LY_ADDR);
+
+	graphicsCtx->mode = PPU_MODE_3;
+	SET_MODE(stat, PPU_MODE_3);
+
+	/*
+	mode3scxPause = memInstance->GetIORef(SCX_ADDR) % 8;
+	if (mode3scxPause) { mode3scxPauseEn = true; }
+	*/
+	modeTickCounter = 0;
+	modeTickTarget = 168 + (numOAMEntriesPrio0DMG + numOAMEntriesPrio1DMG) * 10;
+
+	(this->*DrawScanline)(ly);
+}
+
+void GraphicsUnitSM83::EnterMode0() {
+	u8& stat = memInstance->GetIORef(STAT_ADDR);
+
+	graphicsCtx->mode = PPU_MODE_0;
+	SET_MODE(stat, PPU_MODE_0);
+
+	if (graphicsCtx->mode_0_int_sel) {
+		memInstance->RequestInterrupts(IRQ_LCD_STAT);
+	}
+}
+
+void GraphicsUnitSM83::EnterMode1() {
+	u8& stat = memInstance->GetIORef(STAT_ADDR);
+
+	graphicsCtx->mode = PPU_MODE_1;
+	SET_MODE(stat, PPU_MODE_1);
+
+	if (graphicsCtx->mode_1_int_sel) {
+		memInstance->RequestInterrupts(IRQ_VBLANK | IRQ_LCD_STAT);
+	} else {
+		memInstance->RequestInterrupts(IRQ_VBLANK);
+	}
+
+	drawWindow = false;
 }
 
 void GraphicsUnitSM83::DrawScanlineDMG(const u8& _ly) {
@@ -369,36 +429,31 @@ void GraphicsUnitSM83::DrawScanlineCGB(const u8& _ly) {
 }
 
 void GraphicsUnitSM83::SearchOAM(const u8& _ly) {
-	numOAMEntriesPrio0DMG = 0;
-	numOAMEntriesPrio1DMG = 0;
-
-	memset(objPrio1DMG, false, PPU_SCREEN_X);
-
 	if (graphicsCtx->obj_enable) {
 		int y_pos;
 		int ly = _ly;
 		bool prio;
 		bool add_entry = false;
 
-		for (int oam_offset = 0; oam_offset < OAM_SIZE; oam_offset += PPU_OBJ_ATTR_BYTES) {
-			y_pos = (int)graphicsCtx->OAM[oam_offset + OBJ_ATTR_Y];
+		y_pos = (int)graphicsCtx->OAM[oamOffset + OBJ_ATTR_Y];
 
-			add_entry =
-				(graphicsCtx->obj_size_16 && ((y_pos - ly) > 0 && (y_pos - _ly) < (16 + 1))) ||
-				((y_pos - ly) > 8 && (y_pos - _ly) < (16 + 1));
+		add_entry =
+			(graphicsCtx->obj_size_16 && ((y_pos - ly) > 0 && (y_pos - _ly) < (16 + 1))) ||
+			((y_pos - ly) > 8 && (y_pos - _ly) < (16 + 1));
 
-			if (add_entry) {
-				prio = (graphicsCtx->OAM[oam_offset + OBJ_ATTR_FLAGS] & OBJ_ATTR_PRIO) ? true : false;
+		if (add_entry) {
+			prio = (graphicsCtx->OAM[oamOffset + OBJ_ATTR_FLAGS] & OBJ_ATTR_PRIO) ? true : false;
 
-				if (prio && numOAMEntriesPrio1DMG < 10) {
-					OAMPrio1DMG[numOAMEntriesPrio1DMG] = oam_offset;
-					numOAMEntriesPrio1DMG++;
-				} else if (numOAMEntriesPrio0DMG < 10) {
-					OAMPrio0DMG[numOAMEntriesPrio0DMG] = oam_offset;
-					numOAMEntriesPrio0DMG++;
-				}
+			if (prio && numOAMEntriesPrio1DMG < 10) {
+				OAMPrio1DMG[numOAMEntriesPrio1DMG] = oamOffset;
+				numOAMEntriesPrio1DMG++;
+			} else if (numOAMEntriesPrio0DMG < 10) {
+				OAMPrio0DMG[numOAMEntriesPrio0DMG] = oamOffset;
+				numOAMEntriesPrio0DMG++;
 			}
 		}
+
+		oamOffset += PPU_OBJ_ATTR_BYTES;
 	}
 }
 

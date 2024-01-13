@@ -109,8 +109,8 @@ public:
 	friend class CoreBase;
 
 	void RunCycles() override;
+	void RunCycle() override;
 	void GetCurrentHardwareState() const override;
-	bool CheckStep() override;
 	u32 GetCurrentClockCycles() override;
 
 	void GetCurrentProgramCounter() override;
@@ -122,7 +122,7 @@ public:
 
 private:
 	// constructor
-	explicit CoreSM83(machine_information& _machine_info);
+	explicit CoreSM83(machine_information& _machine_info, graphics_information& _graphics_info, VulkanMgr* _graphics_mgr);
 	// destructor
 	~CoreSM83() = default;
 
@@ -130,8 +130,6 @@ private:
 	u8 opcode;
 	u16 data;
 
-	void NextInstruction() override;
-	void SimulateInstruction();
 	void ExecuteInstruction() override;
 	bool CheckInterrupts() override;
 	void TickTimers();
@@ -151,7 +149,6 @@ private:
 	// internals
 	registers Regs = registers();
 	void InitRegisterStates() override;
-	void InitCpu() override;
 
 	// cpu states and checks
 	bool halted = false;
@@ -176,14 +173,11 @@ private:
 	using instr_tuple = std::tuple <const u8, const instruction, const std::string, const cgb_data_types, const cgb_data_types>;
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
-	int machineCycleCounter = 0;
-	int currentMachineCycles = 0;
-	int GetDelayTime() override;
-	void SetStepsPerFrame(int& _steps, int& _substeps) override;
+
 	void DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num);
 	void DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num, const std::string& _bank_name);
 
-	machine_state_context* machine_ctx;
+	machine_context* machine_ctx;
 	graphics_context* graphics_ctx;
 	MemorySM83* mem_instance;
 

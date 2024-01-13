@@ -41,7 +41,7 @@ void MemorySM83::resetInstance() {
 /* ***********************************************************************************************************
     HARDWARE ACCESS
 *********************************************************************************************************** */
-machine_state_context* MemorySM83::GetMachineContext() {
+machine_context* MemorySM83::GetMachineContext() {
     return &machine_ctx;
 }
 
@@ -662,11 +662,9 @@ void MemorySM83::WriteIORegister(const u8& _data, const u16& _addr) {
     default:
         IO[_addr - IO_OFFSET] = _data;
         // TODO: remove, only for testing with blargg's instruction test rom
-        /*
         if (_addr == SERIAL_DATA) {
             printf("%c", (char)IO[_addr - IO_OFFSET]);
         }
-        */
         break;
     }
 }
@@ -828,6 +826,19 @@ void MemorySM83::SetControlValues(const u8& _data) {
         IO[JOYP_ADDR - IO_OFFSET] = data;
     } else {
         IO[JOYP_ADDR - IO_OFFSET] = (_data & JOYP_SELECT_MASK) | JOYP_RESET_BUTTONS;
+    }
+}
+
+void MemorySM83::SetButton(const u8& _bit, const bool& _is_button) {
+    if ((control_ctx.buttons_selected && _is_button) || (control_ctx.dpad_selected && !_is_button)) {
+        IO[JOYP_ADDR - IO_OFFSET] &= ~_bit;
+        RequestInterrupts(IRQ_JOYPAD);
+    }
+}
+
+void MemorySM83::UnsetButton(const u8& _bit, const bool& _is_button) {
+    if ((control_ctx.buttons_selected && _is_button) || (control_ctx.dpad_selected && !_is_button)) {
+        IO[JOYP_ADDR - IO_OFFSET] |= _bit;
     }
 }
 

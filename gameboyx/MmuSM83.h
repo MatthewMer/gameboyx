@@ -36,7 +36,7 @@ protected:
 	MemorySM83* mem_instance;
 
 	// hardware info and access
-	machine_state_context* machine_ctx;
+	machine_context* machine_ctx;
 
 	void ReadSave() override {
 		auto save_files = std::vector<std::string>();

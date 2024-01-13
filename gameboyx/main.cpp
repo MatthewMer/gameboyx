@@ -7,7 +7,7 @@
 #include <SDL.h>
 #include <vector>
 
-#include "ImGuiGameboyX.h"
+#include "GuiController.h"
 #include "logger.h"
 #include "general_config.h"
 #include "Cartridge.h"
@@ -76,7 +76,7 @@ int main(int, char**)
     if (!sdl_graphics_start(graphics_mgr)) { return -2; }
     if (!imgui_init(graphics_mgr)) { return -3; }
 
-    ImGuiGameboyX* gbx_gui = ImGuiGameboyX::getInstance(machine_info, game_stat, graphics_info);
+    GuiController* gbx_gui = GuiController::getInstance(machine_info, game_stat, graphics_info);
     VHardwareMgr* vhwmgr_obj = nullptr;
 
     graphics_mgr->EnumerateShaders();

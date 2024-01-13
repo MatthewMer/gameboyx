@@ -5,10 +5,14 @@
 
 GraphicsUnitBase* GraphicsUnitBase::instance = nullptr;
 
-GraphicsUnitBase* GraphicsUnitBase::getInstance(graphics_information& _graphics_info) {
+GraphicsUnitBase* GraphicsUnitBase::getInstance(graphics_information& _graphics_info, VulkanMgr* _graphics_mgr) {
 	resetInstance();
+	instance = new GraphicsUnitSM83(_graphics_info, _graphics_mgr);
 
-	instance = new GraphicsUnitSM83(_graphics_info);
+	return instance;
+}
+
+GraphicsUnitBase* GraphicsUnitBase::getInstance() {
 	return instance;
 }
 

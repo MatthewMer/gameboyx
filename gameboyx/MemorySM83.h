@@ -13,7 +13,7 @@
 #include "defs.h"
 #include "information_structs.h"
 
-struct machine_state_context {
+struct machine_context {
 	// interrupt
 	u8 IE;
 
@@ -193,7 +193,7 @@ public:
 	void WriteHRAM(const u8& _data, const u16& _addr);
 	void WriteIE(const u8& _data);
 
-	machine_state_context* GetMachineContext();
+	machine_context* GetMachineContext();
 	graphics_context* GetGraphicsContext();
 	sound_context* GetSoundContext();
 	control_context* GetControlContext();
@@ -205,6 +205,9 @@ public:
 	void CopyDataFromRAM(std::vector<char>& _data) const;
 
 	std::vector<std::pair<int, std::vector<u8>>> GetProgramData() const override;
+
+	void SetButton(const u8& _bit, const bool& _is_button);
+	void UnsetButton(const u8& _bit, const bool& _is_button);
 
 	// actual memory
 	std::vector<u8> ROM_0;
@@ -234,14 +237,14 @@ private:
 
 	void AllocateMemory() override;
 
+	// controller
+	void SetControlValues(const u8& _data);
+
 	// IO *****************
 	void WriteIORegister(const u8& _data, const u16& _addr);
 	u8 ReadIORegister(const u16& _addr);
 	void VRAM_DMA(const u8& _data);
 	void OAM_DMA();
-
-	// controller
-	void SetControlValues(const u8& _data);
 
 	// speed switch
 	void SwitchSpeed(const u8& _data);
@@ -259,7 +262,7 @@ private:
 	void SetWRAMBank(const u8& _data);
 
 	// memory cpu context
-	machine_state_context machine_ctx = machine_state_context();
+	machine_context machine_ctx = machine_context();
 	graphics_context graphics_ctx = graphics_context();
 	sound_context sound_ctx = sound_context();
 	control_context control_ctx = control_context();

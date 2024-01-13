@@ -21,7 +21,7 @@
     <ClCompile Include="Cartridge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ImGuiGameboyX.cpp">
+    <ClCompile Include="GuiController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="data_io.cpp">
@@ -86,7 +86,7 @@
     <ClInclude Include="defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ImGuiGameboyX.h">
+    <ClInclude Include="GuiController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="data_io.h">

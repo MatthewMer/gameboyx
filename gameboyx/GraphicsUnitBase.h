@@ -15,7 +15,8 @@ class GraphicsUnitBase
 {
 public:
 	// get/reset instance
-	static GraphicsUnitBase* getInstance(graphics_information& _graphics_info);
+	static GraphicsUnitBase* getInstance(graphics_information& _graphics_info, VulkanMgr* _graphics_mgr);
+	static GraphicsUnitBase* getInstance();
 	static void resetInstance();
 
 	// clone/assign protection
@@ -25,7 +26,10 @@ public:
 	GraphicsUnitBase& operator=(GraphicsUnitBase&&) = delete;
 
 	// members
-	virtual bool ProcessGPU(const int& _substep) = 0;
+	virtual void ProcessGPU(const int& _ticks) = 0;
+	virtual int GetDelayTime() const = 0;
+	virtual int GetTicksPerFrame(const float& _clock) const = 0;
+	virtual int GetFrames() = 0;
 
 protected:
 	// constructor
@@ -33,6 +37,11 @@ protected:
 	~GraphicsUnitBase() = default;
 
 	virtual void SetGraphicsParameters() = 0;
+
+	int frameCounter = 0;
+	int tickCounter = 0;
+
+	VulkanMgr* graphicsMgr;
 
 private:
 	static GraphicsUnitBase* instance;
