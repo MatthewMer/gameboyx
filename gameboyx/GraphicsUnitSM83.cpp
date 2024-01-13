@@ -126,6 +126,7 @@ void GraphicsUnitSM83::ProcessGPU(const int& _ticks) {
 
 void GraphicsUnitSM83::EnterMode2() {
 	memset(objPrio1DMG, false, PPU_SCREEN_X);
+	memset(objOverlap, false, PPU_SCREEN_X);
 
 	u8& stat = memInstance->GetIO(STAT_ADDR);
 
@@ -252,7 +253,10 @@ void GraphicsUnitSM83::DrawWindowDMG(const u8& _ly) {
 }
 
 void GraphicsUnitSM83::DrawObjectsDMG(const u8& _ly, const int* _objects, const int& _num_objects, const bool& _prio) {
-	for (int i = 0; i < _num_objects; i++) {
+	// TODO: due to drawing objects stored in _objects from last to first element, priority ('z fighting', even though there is no z-axis) gets resolved like on CGB.
+	// on DMG this is actually done by comparing the x coordinate of the objects in oam. the smaller value wins
+
+	for (int i = _num_objects - 1; i > -1; i--) {
 		int oam_offset = _objects[i];
 
 		int y_pos = (int)graphicsCtx->OAM[oam_offset + OBJ_ATTR_Y];
@@ -380,9 +384,6 @@ void GraphicsUnitSM83::DrawTileBGWINDMG(const int& _x, const int& _y, const u32*
 void GraphicsUnitSM83::DrawScanlineCGB(const u8& _ly) {
 	if (graphicsCtx->obj_enable) {
 		DrawObjectsDMG(_ly, OAMPrio1DMG, numOAMEntriesPrio1DMG, true);
-	} else {
-		numOAMEntriesPrio0DMG = 0;
-		numOAMEntriesPrio1DMG = 0;
 	}
 
 	//if (graphicsCtx->bg_win_enable) {
@@ -414,12 +415,14 @@ void GraphicsUnitSM83::SearchOAM(const u8& _ly) {
 		if (add_entry) {
 			prio = (graphicsCtx->OAM[oamOffset + OBJ_ATTR_FLAGS] & OBJ_ATTR_PRIO) ? true : false;
 
-			if (prio && numOAMEntriesPrio1DMG < 10) {
-				OAMPrio1DMG[numOAMEntriesPrio1DMG] = oamOffset;
-				numOAMEntriesPrio1DMG++;
-			} else if (numOAMEntriesPrio0DMG < 10) {
-				OAMPrio0DMG[numOAMEntriesPrio0DMG] = oamOffset;
-				numOAMEntriesPrio0DMG++;
+			if (numOAMEntriesPrio1DMG + numOAMEntriesPrio0DMG < 10) {
+				if (prio) {
+					OAMPrio1DMG[numOAMEntriesPrio1DMG] = oamOffset;
+					numOAMEntriesPrio1DMG++;
+				} else {
+					OAMPrio0DMG[numOAMEntriesPrio0DMG] = oamOffset;
+					numOAMEntriesPrio0DMG++;
+				}
 			}
 		}
 

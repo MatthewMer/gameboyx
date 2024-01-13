@@ -107,7 +107,7 @@ void VHardwareMgr::CheckFPSandClock() {
     accumulatedTime += duration_cast<nanoseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
-    if (accumulatedTime > nsPerSThreshold) {
+    if (accumulatedTime > 999999999) {
         machineInfo.current_frequency = ((float)core_instance->GetCurrentClockCycles() / (accumulatedTime / pow(10,3)));
 
         machineInfo.current_framerate = graphics_instance->GetFrames() / (accumulatedTime / pow(10,9));

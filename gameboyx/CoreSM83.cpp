@@ -280,7 +280,35 @@ void CoreSM83::RunCycles() {
 }
 
 void CoreSM83::RunCycle() {
+    currentTicks = 0;
 
+    if (stopped) {
+        // check button press
+        if (mem_instance->GetIO(IF_ADDR) & IRQ_JOYPAD) {
+            stopped = false;
+        } else {
+            return;
+        }
+
+    } else if (halted) {
+        while (halted) {
+            // exit loop after ticks per frame have passed, otherwise application would just stall forever in case no interrupts have been enabled
+            if (currentTicks >= ticksPerFrame) { break; }
+
+            TickTimers();
+
+            // check pending and enabled interrupts
+            if (machine_ctx->IE & mem_instance->GetIO(IF_ADDR)) {
+                halted = false;
+            }
+        }
+    } else {
+        if (!CheckInterrupts()) {
+            ExecuteInstruction();
+        }
+    }
+
+    tickCounter += currentTicks;
 }
 
 void CoreSM83::ExecuteInstruction() {
@@ -306,21 +334,21 @@ bool CoreSM83::CheckInterrupts() {
             ime = false;
 
             isr_push(ISR_VBLANK_HANDLER_ADDR);
-            isr_requested &= ~IRQ_VBLANK;
+            mem_instance->SetIO(IF_ADDR, isr_requested & ~IRQ_VBLANK);
             return true;
         }
         else if ((isr_requested & IRQ_LCD_STAT) && (machine_ctx->IE & IRQ_LCD_STAT)) {
             ime = false;
 
             isr_push(ISR_LCD_STAT_HANDLER_ADDR);
-            isr_requested &= ~IRQ_LCD_STAT;
+            mem_instance->SetIO(IF_ADDR, isr_requested & ~IRQ_LCD_STAT);
             return true;
         }
         else if ((isr_requested & IRQ_TIMER) && (machine_ctx->IE & IRQ_TIMER)) {
             ime = false;
 
             isr_push(ISR_TIMER_HANDLER_ADDR);
-            isr_requested &= ~IRQ_TIMER;
+            mem_instance->SetIO(IF_ADDR, isr_requested & ~IRQ_TIMER);
             return true;
         }
         /*if (machine_ctx->IF & IRQ_SERIAL) {
@@ -330,7 +358,7 @@ bool CoreSM83::CheckInterrupts() {
             ime = false;
 
             isr_push(ISR_JOYPAD_HANDLER_ADDR);
-            isr_requested &= ~IRQ_JOYPAD;
+            mem_instance->SetIO(IF_ADDR, isr_requested & ~IRQ_JOYPAD);
             return true;
         }
     }

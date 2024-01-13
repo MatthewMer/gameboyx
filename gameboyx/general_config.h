@@ -164,7 +164,9 @@ inline const float OVERLAY_DISTANCE = 10.0f;
 inline const std::unordered_map<int, std::string> EMULATION_SPEEDS = {
     {1, "x1"},
     {2, "x2"},
-    {3, "x3"}
+    {3, "x3"},
+    {4, "x4"},
+    {5, "x5"}
 };
 
 inline const ImGuiWindowFlags MAIN_WIN_FLAGS =

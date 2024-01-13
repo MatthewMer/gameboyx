@@ -58,7 +58,6 @@ private:
 	void DrawObjectsDMG(const u8& _ly, const int* _objects, const int& _num_objects, const bool& _prio);
 
 	void DrawTileOBJDMG(const int& _x, const int& _y, const u32* _color_palette, const bool& _prio, const bool& _x_flip);
-
 	void DrawTileBGWINDMG(const int& _x, const int& _y, const u32* _color_palette);
 
 	int OAMPrio1DMG[10];
@@ -66,6 +65,7 @@ private:
 	bool objPrio1DMG[PPU_SCREEN_X];
 	int OAMPrio0DMG[10];
 	int numOAMEntriesPrio0DMG = 0;
+	bool objOverlap[PPU_SCREEN_X];
 
 	int modeTickCounter = 0;
 	int modeTickTarget = 0;

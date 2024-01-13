@@ -1,5 +1,6 @@
 #pragma once
 #include "information_structs.h"
+#include <SDL_audio.h>
 
 class SoundBase {
 public:
@@ -20,6 +21,13 @@ protected:
 	// constructor
 	SoundBase() = default;
 	~SoundBase() = default;
+
+	// sdl audio
+	SDL_AudioSpec specWant;
+	SDL_AudioSpec specHave;
+	SDL_AudioDeviceID device;
+
+	void InitSound();
 
 private:
 	static SoundBase* instance;

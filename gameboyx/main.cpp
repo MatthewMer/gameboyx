@@ -72,6 +72,10 @@ int main(int, char**)
 
     SDL_SetWindowMinimumSize(window, GUI_WIN_WIDTH_MIN, GUI_WIN_HEIGHT_MIN);
 
+    SDL_AudioSpec want, have;
+    SDL_AudioDeviceID dev;
+
+
     auto* graphics_mgr = VulkanMgr::getInstance(window, graphics_info, game_stat);
     if (!sdl_graphics_start(graphics_mgr)) { return -2; }
     if (!imgui_init(graphics_mgr)) { return -3; }
@@ -86,6 +90,8 @@ int main(int, char**)
         graphics_mgr->CompileNextShader();
     }
     */
+
+
 
     // Main loop
     LOG_INFO("[emu] Initialization completed");
