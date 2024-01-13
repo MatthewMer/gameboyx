@@ -48,7 +48,7 @@ struct graphics_context {
 	std::vector<std::vector<u8>> VRAM_N;
 	std::vector<u8> OAM;
 
-	int current_substeps;
+	bool vblank_if_write = false;
 
 	// TODO: chekc initial register states
 	// LCD Control
@@ -200,7 +200,8 @@ public:
 
 	// direct hardware access
 	void RequestInterrupts(const u8& _isr_flags) override;
-	u8& GetIORef(const u16& _addr);
+	u8& GetIO(const u16& _addr);
+	void SetIO(const u16& _addr, const u8& _data);
 	void CopyDataToRAM(const std::vector<char>& _data);
 	void CopyDataFromRAM(std::vector<char>& _data) const;
 

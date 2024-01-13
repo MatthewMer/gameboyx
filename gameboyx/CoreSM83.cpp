@@ -183,189 +183,6 @@ void data_enums_to_string(const int& _bank, u16 _addr, const u16& _base_ptr, con
 }
 
 /* ***********************************************************************************************************
-    PREPARE DEBUG DATA (DISASSEMBLED INSTRUCTIONS)
-*********************************************************************************************************** */
-void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num) {
-    u16 data = 0;
-    bool cb = false;
-
-    _program_buffer.clear();
-
-    const auto& base_ptr = _bank_data.first;
-    const auto& rom_bank = _bank_data.second;
-
-    auto current_entry = ScrollableTableEntry<debug_instr_data>();
-
-    for (u16 addr = 0, i = 0; addr < rom_bank.size(); i++) {
-
-        current_entry = ScrollableTableEntry<debug_instr_data>();
-
-        // print rom header info
-        if (addr == ROM_HEAD_LOGO && _bank_num == 0) {
-            get<ST_ENTRY_ADDRESS>(current_entry) = addr;
-            get<ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr);
-            get<ST_ENTRY_DATA>(current_entry).second = "- HEADER INFO -";
-            addr = ROM_HEAD_END + 1;
-            _program_buffer.emplace_back(current_entry);
-        } else {
-            u8 opcode = rom_bank[addr];
-            get<ST_ENTRY_ADDRESS>(current_entry) = addr + base_ptr;
-
-            instr_tuple* instr_ptr;
-
-            if (cb) { instr_ptr = &(instrMapCB[opcode]); } else { instr_ptr = &(instrMap[opcode]); }
-            cb = opcode == 0xCB;
-
-            string raw_data;
-            raw_data = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr + base_ptr);
-            addr++;
-
-            raw_data += format("{:02x} ", opcode);
-
-            // arguments
-            instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
-            instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
-            get<ST_ENTRY_DATA>(current_entry).first = raw_data;
-
-            // instruction to assembly
-            string args;
-            data_enums_to_string(_bank_num, addr, base_ptr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
-
-            get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
-            if (args.compare("") != 0) {
-                get<ST_ENTRY_DATA>(current_entry).second += " " + args;
-            }
-
-            _program_buffer.emplace_back(current_entry);
-        }
-    }
-}
-
-void CoreSM83::InitMessageBufferProgram() {
-    const auto rom_data = mem_instance->GetProgramData();
-    machineInfo.program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
-    auto next_bank_table = ScrollableTableBuffer<debug_instr_data>();
-
-    for (int bank_num = 0; const auto & bank_data : rom_data) {
-        next_bank_table = ScrollableTableBuffer<debug_instr_data>();
-
-        DecodeRomBankContent(next_bank_table, bank_data, bank_num++);
-
-        machineInfo.program_buffer.AddMemoryArea(next_bank_table);
-    }
-}
-
-void CoreSM83::DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num, const string& _bank_name) {
-    u16 data = 0;
-    bool cb = false;
-
-    _program_buffer.clear();
-
-    const auto& base_ptr = _bank_data.first;
-    const auto& bank = _bank_data.second;
-
-    auto current_entry = ScrollableTableEntry<debug_instr_data>();
-
-    for (u16 addr = 0, i = 0; addr < bank.size(); i++) {
-
-        current_entry = ScrollableTableEntry<debug_instr_data>();
-
-        u8 opcode = bank[addr];
-        get<ST_ENTRY_ADDRESS>(current_entry) = addr + base_ptr;
-
-        instr_tuple* instr_ptr;
-
-        if (cb) { instr_ptr = &(instrMapCB[opcode]); } else { instr_ptr = &(instrMap[opcode]); }
-        cb = opcode == 0xCB;
-
-        string raw_data;
-        raw_data = _bank_name + to_string(_bank_num) + ": " + format("{:04x}  ", addr + base_ptr);
-        addr++;
-
-        raw_data += format("{:02x} ", opcode);
-
-        // arguments
-        instruction_args_to_string(addr, bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
-        instruction_args_to_string(addr, bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
-        get<ST_ENTRY_DATA>(current_entry).first = raw_data;
-
-        // instruction to assembly
-        string args;
-        data_enums_to_string(_bank_num, addr, base_ptr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
-
-        get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
-        if (args.compare("") != 0) {
-            get<ST_ENTRY_DATA>(current_entry).second += " " + args;
-        }
-
-        _program_buffer.emplace_back(current_entry);
-    }
-}
-
-void CoreSM83::InitMessageBufferProgramTmp() {
-    auto bank_table = ScrollableTableBuffer<debug_instr_data>();
-    int bank_num;
-
-    if (Regs.PC >= VRAM_N_OFFSET && Regs.PC < RAM_N_OFFSET) {
-        if (machineInfo.current_rom_bank != -1) {
-            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
-            graphics_context* graphics_ctx = mem_instance->GetGraphicsContext();
-            bank_num = mem_instance->GetIORef(CGB_VRAM_SELECT_ADDR);
-            DecodeBankContent(bank_table, pair(VRAM_N_OFFSET, graphics_ctx->VRAM_N[bank_num]), bank_num, "VRAM");
-            machineInfo.current_rom_bank = -1;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
-        }
-    } else if (Regs.PC >= RAM_N_OFFSET && Regs.PC < WRAM_0_OFFSET) {
-        if (machineInfo.current_rom_bank != -2) {
-            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
-            bank_num = machine_ctx->ram_bank_selected;
-            DecodeBankContent(bank_table, pair(RAM_N_OFFSET, mem_instance->RAM_N[bank_num]), bank_num, "RAM");
-            machineInfo.current_rom_bank = -2;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
-        }
-    } else if (Regs.PC >= WRAM_0_OFFSET && Regs.PC < WRAM_N_OFFSET) {
-        if (machineInfo.current_rom_bank != -3) {
-            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
-            bank_num = 0;
-            DecodeBankContent(bank_table, pair(WRAM_0_OFFSET, mem_instance->WRAM_0), bank_num, "WRAM");
-            machineInfo.current_rom_bank = -3;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
-        }
-    } else if (Regs.PC >= WRAM_N_OFFSET && Regs.PC < MIRROR_WRAM_OFFSET) {
-        if (machineInfo.current_rom_bank != -4) {
-            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
-            bank_num = machine_ctx->wram_bank_selected;
-            DecodeBankContent(bank_table, pair(WRAM_N_OFFSET, mem_instance->WRAM_N[bank_num]), bank_num + 1, "WRAM");
-            machineInfo.current_rom_bank = -4;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
-        }
-    } else if (Regs.PC >= HRAM_OFFSET && Regs.PC < IE_OFFSET) {
-        if (machineInfo.current_rom_bank != -5) {
-            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
-            bank_num = 0;
-            DecodeBankContent(bank_table, pair(HRAM_OFFSET, mem_instance->HRAM), bank_num, "HRAM");
-            machineInfo.current_rom_bank = -5;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
-        }
-    } else {
-        // TODO
-    }
-}
-
-
-
-/* ***********************************************************************************************************
     ACCESS CPU STATUS
 *********************************************************************************************************** */
 // return clock cycles per second
@@ -386,42 +203,6 @@ void CoreSM83::GetCurrentProgramCounter() {
         InitMessageBufferProgramTmp();
     }
 }
-
-/* ***********************************************************************************************************
-    FLAG/BIT DEFINES
-*********************************************************************************************************** */
-#define FLAG_CARRY			0x10
-#define FLAG_HCARRY			0x20
-#define FLAG_SUB			0x40
-#define FLAG_ZERO			0x80
-
-#define MSB                 0x80
-#define LSB                 0x01
-
-/* ***********************************************************************************************************
-    FLAG SET DEFINES
-*********************************************************************************************************** */
-#define RESET_FLAGS(flags, f) {f &= ~(flags);}
-#define SET_FLAGS(flags, f) {f |= (flags);}
-#define RESET_ALL_FLAGS(f) {f = 0x00;}
-
-#define ADD_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= (((u16)(d & 0xFF) + (s & 0xFF)) > 0xFF ? FLAG_CARRY : 0); f |= (((d & 0xF) + (s & 0xF)) > 0xF ? FLAG_HCARRY : 0);}
-#define ADD_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= (((u16)(d & 0xFF) + (s & 0xFF)) > 0xFF ? FLAG_CARRY : 0);}
-#define ADD_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f |= (((d & 0xF) + (s & 0xF)) > 0xF ? FLAG_HCARRY : 0);}
-
-#define ADC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((((u16)(d & 0xFF)) + ((u16)(s & 0xFF)) + c) > 0xFF ? FLAG_CARRY : 0);}
-#define ADC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= (((d & 0xF) + (s & 0xF) + c) > 0xF ? FLAG_HCARRY : 0);}
-
-#define ADD_16_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= ((((u32)(d & 0xFFFF)) + (s & 0xFFFF)) > 0xFFFF ? FLAG_CARRY : 0); f |= ((((u16)(d & 0xFFF)) + (s & 0xFFF)) > 0xFFF ? FLAG_HCARRY : 0);}
-
-#define SUB_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= (((d & 0xFF) < (s & 0xFF)) ? FLAG_CARRY : 0); f |= (((d & 0xF) < (s & 0xF)) ? FLAG_HCARRY : 0);}
-#define SUB_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= (((d & 0xFF) < (s & 0xFF)) ? FLAG_CARRY : 0);}
-#define SUB_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f|= (((d & 0xF) < (s & 0xF)) ? FLAG_HCARRY : 0);}
-
-#define SBC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((((u16)(d & 0xFF)) < (((u16)s & 0xFF) + c)) ? FLAG_CARRY : 0);}
-#define SBC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= (((d & 0xF) < ((s & 0xF) + c)) ? FLAG_HCARRY : 0);}
-
-#define ZERO_FLAG(x, f) {f &= ~FLAG_ZERO; f |= (((x) == 0) ? FLAG_ZERO : 0x00);}
 
 /* ***********************************************************************************************************
     CONSTRUCTOR
@@ -476,7 +257,7 @@ void CoreSM83::RunCycles() {
     while ((currentTicks < (ticksPerFrame * machine_ctx->currentSpeed))) {
         if (stopped) {
             // check button press
-            if (mem_instance->GetIORef(IF_ADDR) & IRQ_JOYPAD) {
+            if (mem_instance->GetIO(IF_ADDR) & IRQ_JOYPAD) {
                 stopped = false;
             } else {
                 return;
@@ -486,7 +267,7 @@ void CoreSM83::RunCycles() {
             TickTimers();
 
             // check pending and enabled interrupts
-            if (machine_ctx->IE & mem_instance->GetIORef(IF_ADDR)) {
+            if (machine_ctx->IE & mem_instance->GetIO(IF_ADDR)) {
                 halted = false;
             }
         } else {
@@ -520,7 +301,7 @@ void CoreSM83::ExecuteInstruction() {
 
 bool CoreSM83::CheckInterrupts() {
     if (ime) {
-        u8& isr_requested = mem_instance->GetIORef(IF_ADDR);
+        u8& isr_requested = mem_instance->GetIO(IF_ADDR);
         if ((isr_requested & IRQ_VBLANK) && (machine_ctx->IE & IRQ_VBLANK)) {
             ime = false;
 
@@ -558,11 +339,11 @@ bool CoreSM83::CheckInterrupts() {
 
 void CoreSM83::TickTimers() {
     bool div_low_byte_selected = machine_ctx->timaDivMask < 0x100;
-    u8& div = mem_instance->GetIORef(DIV_ADDR);
-    bool tima_enabled = mem_instance->GetIORef(TAC_ADDR) & TAC_CLOCK_ENABLE;
+    u8& div = mem_instance->GetIO(DIV_ADDR);
+    bool tima_enabled = mem_instance->GetIO(TAC_ADDR) & TAC_CLOCK_ENABLE;
 
     if (machine_ctx->tima_reload_cycle) {
-        div = mem_instance->GetIORef(TMA_ADDR);
+        div = mem_instance->GetIO(TMA_ADDR);
         if (!machine_ctx->tima_reload_if_write) {
             mem_instance->RequestInterrupts(IRQ_TIMER);
         } else {
@@ -606,7 +387,7 @@ void CoreSM83::TickTimers() {
 }
 
 void CoreSM83::IncrementTIMA() {
-    u8& tima = mem_instance->GetIORef(TIMA_ADDR);
+    u8& tima = mem_instance->GetIO(TIMA_ADDR);
     if (tima == 0xFF) {
         tima = 0x00;
         machine_ctx->tima_overflow_cycle = true;
@@ -665,66 +446,40 @@ u16 CoreSM83::Read16Bit(const u16& _addr) {
 }
 
 /* ***********************************************************************************************************
-    ACCESS HARDWARE STATUS
+    FLAG/BIT DEFINES
 *********************************************************************************************************** */
-// get current hardware status (currently mapped memory banks, etc.)
-void CoreSM83::GetCurrentHardwareState() const {
-    machineInfo.hardware_info.clear();
+#define FLAG_CARRY			0x10
+#define FLAG_HCARRY			0x20
+#define FLAG_SUB			0x40
+#define FLAG_ZERO			0x80
 
-    machineInfo.hardware_info.emplace_back("Speedmode", format("{:d}", machine_ctx->currentSpeed));
-    machineInfo.hardware_info.emplace_back("ROM banks", format("{:d}", machine_ctx->rom_bank_num));
-    machineInfo.hardware_info.emplace_back("ROM selected", format("{:d}", machine_ctx->rom_bank_selected + 1));
-    machineInfo.hardware_info.emplace_back("RAM banks", format("{:d}", machine_ctx->ram_bank_num));
-    machineInfo.hardware_info.emplace_back("RAM selected", format("{:d}", machine_ctx->ram_bank_selected));
-    machineInfo.hardware_info.emplace_back("WRAM banks", format("{:d}", machine_ctx->wram_bank_num));
-    machineInfo.hardware_info.emplace_back("WRAM selected", format("{:d}", machine_ctx->wram_bank_selected + 1));
-    machineInfo.hardware_info.emplace_back("VRAM banks", format("{:d}", machine_ctx->vram_bank_num));
-    machineInfo.hardware_info.emplace_back("VRAM selected", format("{:d}", machine_ctx->vram_bank_selected));
-}
+#define MSB                 0x80
+#define LSB                 0x01
 
-void CoreSM83::GetCurrentRegisterValues() const {
-    machineInfo.register_values.clear();
+/* ***********************************************************************************************************
+    FLAG SET DEFINES
+*********************************************************************************************************** */
+#define RESET_FLAGS(flags, f) {f &= ~(flags);}
+#define SET_FLAGS(flags, f) {f |= (flags);}
+#define RESET_ALL_FLAGS(f) {f = 0x00;}
 
-    machineInfo.register_values.emplace_back(register_names.at(A) + register_names.at(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
-    machineInfo.register_values.emplace_back(register_names.at(BC), format("{:04x}", Regs.BC));
-    machineInfo.register_values.emplace_back(register_names.at(DE), format("{:04x}", Regs.DE));
-    machineInfo.register_values.emplace_back(register_names.at(HL), format("{:04x}", Regs.HL));
-    machineInfo.register_values.emplace_back(register_names.at(SP), format("{:04x}", Regs.SP));
-    machineInfo.register_values.emplace_back(register_names.at(PC), format("{:04x}", Regs.PC));
-    machineInfo.register_values.emplace_back(register_names.at(IE), format("{:02x}", machine_ctx->IE));
-    machineInfo.register_values.emplace_back(register_names.at(IF), format("{:02x}", mem_instance->GetIORef(IF_ADDR)));
-}
+#define ADD_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= (((u16)(d & 0xFF) + (s & 0xFF)) > 0xFF ? FLAG_CARRY : 0); f |= (((d & 0xF) + (s & 0xF)) > 0xF ? FLAG_HCARRY : 0);}
+#define ADD_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= (((u16)(d & 0xFF) + (s & 0xFF)) > 0xFF ? FLAG_CARRY : 0);}
+#define ADD_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f |= (((d & 0xF) + (s & 0xF)) > 0xF ? FLAG_HCARRY : 0);}
 
-void CoreSM83::GetCurrentFlagsAndISR() const {
-    machineInfo.flag_values.clear();
+#define ADC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((((u16)(d & 0xFF)) + ((u16)(s & 0xFF)) + c) > 0xFF ? FLAG_CARRY : 0);}
+#define ADC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= (((d & 0xF) + (s & 0xF) + c) > 0xF ? FLAG_HCARRY : 0);}
 
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_H), format("{:01b}", (Regs.F & FLAG_HCARRY) >> 5));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_IME), format("{:01b}", ime ? 1 : 0));
-    u8 isr_requested = mem_instance->GetIORef(IF_ADDR);
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_SERIAL), format("{:01b}", (isr_requested & IRQ_SERIAL) >> 3));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
-}
+#define ADD_16_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= ((((u32)(d & 0xFFFF)) + (s & 0xFFFF)) > 0xFFFF ? FLAG_CARRY : 0); f |= ((((u16)(d & 0xFFF)) + (s & 0xFFF)) > 0xFFF ? FLAG_HCARRY : 0);}
 
-void CoreSM83::GetCurrentMiscValues() const {
-    machineInfo.misc_values.clear();
+#define SUB_8_FLAGS(d, s, f) {f &= ~(FLAG_CARRY | FLAG_HCARRY); f |= (((d & 0xFF) < (s & 0xFF)) ? FLAG_CARRY : 0); f |= (((d & 0xF) < (s & 0xF)) ? FLAG_HCARRY : 0);}
+#define SUB_8_C(d, s, f) {f &= ~FLAG_CARRY; f |= (((d & 0xFF) < (s & 0xFF)) ? FLAG_CARRY : 0);}
+#define SUB_8_HC(d, s, f) {f &= ~FLAG_HCARRY; f|= (((d & 0xF) < (s & 0xF)) ? FLAG_HCARRY : 0);}
 
-    machineInfo.misc_values.emplace_back("LCDC", format("{:02x}", mem_instance->GetIORef(LCDC_ADDR)));
-    machineInfo.misc_values.emplace_back("STAT", format("{:02x}", mem_instance->GetIORef(STAT_ADDR)));
-    machineInfo.misc_values.emplace_back("WRAM", format("{:02x}", mem_instance->GetIORef(CGB_WRAM_SELECT_ADDR)));
-    machineInfo.misc_values.emplace_back("VRAM", format("{:02x}", mem_instance->GetIORef(CGB_VRAM_SELECT_ADDR)));
-    machineInfo.misc_values.emplace_back("LY", format("{:02x}", mem_instance->GetIORef(LY_ADDR)));
-    machineInfo.misc_values.emplace_back("LYC", format("{:02x}", mem_instance->GetIORef(LYC_ADDR)));
-    machineInfo.misc_values.emplace_back("SCX", format("{:02x}", mem_instance->GetIORef(SCX_ADDR)));
-    machineInfo.misc_values.emplace_back("SCY", format("{:02x}", mem_instance->GetIORef(SCY_ADDR)));
-    machineInfo.misc_values.emplace_back("WX", format("{:02x}", mem_instance->GetIORef(WX_ADDR)));
-    machineInfo.misc_values.emplace_back("WY", format("{:02x}", mem_instance->GetIORef(WY_ADDR)));
-}
+#define SBC_8_C(d, s, c, f) {f &= ~FLAG_CARRY; f |= ((((u16)(d & 0xFF)) < (((u16)s & 0xFF) + c)) ? FLAG_CARRY : 0);}
+#define SBC_8_HC(d, s, c, f) {f &= ~FLAG_HCARRY; f |= (((d & 0xF) < ((s & 0xF) + c)) ? FLAG_HCARRY : 0);}
+
+#define ZERO_FLAG(x, f) {f &= ~FLAG_ZERO; f |= (((x) == 0) ? FLAG_ZERO : 0x00);}
 
 /* ***********************************************************************************************************
 *
@@ -1046,7 +801,7 @@ void CoreSM83::NOP() {
 
 // stopped
 void CoreSM83::STOP() {
-    u8 isr_requested = mem_instance->GetIORef(IF_ADDR);
+    u8 isr_requested = mem_instance->GetIO(IF_ADDR);
 
     bool joyp = (isr_requested & IRQ_JOYPAD);
     bool two_byte = false;
@@ -3883,8 +3638,244 @@ void CoreSM83::SET7() {
 }
 
 /* ***********************************************************************************************************
-*
-*   GAMEBOY (COLOR) CORESM83 FUNCTIONALITY
-*
+    ACCESS HARDWARE STATUS
 *********************************************************************************************************** */
+// get current hardware status (currently mapped memory banks, etc.)
+void CoreSM83::GetCurrentHardwareState() const {
+    machineInfo.hardware_info.clear();
 
+    machineInfo.hardware_info.emplace_back("Speedmode", format("{:d}", machine_ctx->currentSpeed));
+    machineInfo.hardware_info.emplace_back("ROM banks", format("{:d}", machine_ctx->rom_bank_num));
+    machineInfo.hardware_info.emplace_back("ROM selected", format("{:d}", machine_ctx->rom_bank_selected + 1));
+    machineInfo.hardware_info.emplace_back("RAM banks", format("{:d}", machine_ctx->ram_bank_num));
+    machineInfo.hardware_info.emplace_back("RAM selected", format("{:d}", machine_ctx->ram_bank_selected));
+    machineInfo.hardware_info.emplace_back("WRAM banks", format("{:d}", machine_ctx->wram_bank_num));
+    machineInfo.hardware_info.emplace_back("WRAM selected", format("{:d}", machine_ctx->wram_bank_selected + 1));
+    machineInfo.hardware_info.emplace_back("VRAM banks", format("{:d}", machine_ctx->vram_bank_num));
+    machineInfo.hardware_info.emplace_back("VRAM selected", format("{:d}", machine_ctx->vram_bank_selected));
+}
+
+void CoreSM83::GetCurrentRegisterValues() const {
+    machineInfo.register_values.clear();
+
+    machineInfo.register_values.emplace_back(register_names.at(A) + register_names.at(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
+    machineInfo.register_values.emplace_back(register_names.at(BC), format("{:04x}", Regs.BC));
+    machineInfo.register_values.emplace_back(register_names.at(DE), format("{:04x}", Regs.DE));
+    machineInfo.register_values.emplace_back(register_names.at(HL), format("{:04x}", Regs.HL));
+    machineInfo.register_values.emplace_back(register_names.at(SP), format("{:04x}", Regs.SP));
+    machineInfo.register_values.emplace_back(register_names.at(PC), format("{:04x}", Regs.PC));
+    machineInfo.register_values.emplace_back(register_names.at(IE), format("{:02x}", machine_ctx->IE));
+    machineInfo.register_values.emplace_back(register_names.at(IF), format("{:02x}", mem_instance->GetIO(IF_ADDR)));
+}
+
+void CoreSM83::GetCurrentFlagsAndISR() const {
+    machineInfo.flag_values.clear();
+
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_H), format("{:01b}", (Regs.F & FLAG_HCARRY) >> 5));
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
+    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_IME), format("{:01b}", ime ? 1 : 0));
+    u8 isr_requested = mem_instance->GetIO(IF_ADDR);
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_SERIAL), format("{:01b}", (isr_requested & IRQ_SERIAL) >> 3));
+    machineInfo.flag_values.emplace_back(flag_names.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
+}
+
+void CoreSM83::GetCurrentMiscValues() const {
+    machineInfo.misc_values.clear();
+
+    machineInfo.misc_values.emplace_back("LCDC", format("{:02x}", mem_instance->GetIO(LCDC_ADDR)));
+    machineInfo.misc_values.emplace_back("STAT", format("{:02x}", mem_instance->GetIO(STAT_ADDR)));
+    machineInfo.misc_values.emplace_back("WRAM", format("{:02x}", mem_instance->GetIO(CGB_WRAM_SELECT_ADDR)));
+    machineInfo.misc_values.emplace_back("VRAM", format("{:02x}", mem_instance->GetIO(CGB_VRAM_SELECT_ADDR)));
+    machineInfo.misc_values.emplace_back("LY", format("{:02x}", mem_instance->GetIO(LY_ADDR)));
+    machineInfo.misc_values.emplace_back("LYC", format("{:02x}", mem_instance->GetIO(LYC_ADDR)));
+    machineInfo.misc_values.emplace_back("SCX", format("{:02x}", mem_instance->GetIO(SCX_ADDR)));
+    machineInfo.misc_values.emplace_back("SCY", format("{:02x}", mem_instance->GetIO(SCY_ADDR)));
+    machineInfo.misc_values.emplace_back("WX", format("{:02x}", mem_instance->GetIO(WX_ADDR)));
+    machineInfo.misc_values.emplace_back("WY", format("{:02x}", mem_instance->GetIO(WY_ADDR)));
+}
+
+/* ***********************************************************************************************************
+    PREPARE DEBUG DATA (DISASSEMBLED INSTRUCTIONS)
+*********************************************************************************************************** */
+void CoreSM83::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num) {
+    u16 data = 0;
+    bool cb = false;
+
+    _program_buffer.clear();
+
+    const auto& base_ptr = _bank_data.first;
+    const auto& rom_bank = _bank_data.second;
+
+    auto current_entry = ScrollableTableEntry<debug_instr_data>();
+
+    for (u16 addr = 0, i = 0; addr < rom_bank.size(); i++) {
+
+        current_entry = ScrollableTableEntry<debug_instr_data>();
+
+        // print rom header info
+        if (addr == ROM_HEAD_LOGO && _bank_num == 0) {
+            get<ST_ENTRY_ADDRESS>(current_entry) = addr;
+            get<ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr);
+            get<ST_ENTRY_DATA>(current_entry).second = "- HEADER INFO -";
+            addr = ROM_HEAD_END + 1;
+            _program_buffer.emplace_back(current_entry);
+        } else {
+            u8 opcode = rom_bank[addr];
+            get<ST_ENTRY_ADDRESS>(current_entry) = addr + base_ptr;
+
+            instr_tuple* instr_ptr;
+
+            if (cb) { instr_ptr = &(instrMapCB[opcode]); } else { instr_ptr = &(instrMap[opcode]); }
+            cb = opcode == 0xCB;
+
+            string raw_data;
+            raw_data = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr + base_ptr);
+            addr++;
+
+            raw_data += format("{:02x} ", opcode);
+
+            // arguments
+            instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
+            instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
+            get<ST_ENTRY_DATA>(current_entry).first = raw_data;
+
+            // instruction to assembly
+            string args;
+            data_enums_to_string(_bank_num, addr, base_ptr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
+
+            get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
+            if (args.compare("") != 0) {
+                get<ST_ENTRY_DATA>(current_entry).second += " " + args;
+            }
+
+            _program_buffer.emplace_back(current_entry);
+        }
+    }
+}
+
+void CoreSM83::InitMessageBufferProgram() {
+    const auto rom_data = mem_instance->GetProgramData();
+    machineInfo.program_buffer = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+    auto next_bank_table = ScrollableTableBuffer<debug_instr_data>();
+
+    for (int bank_num = 0; const auto & bank_data : rom_data) {
+        next_bank_table = ScrollableTableBuffer<debug_instr_data>();
+
+        DecodeRomBankContent(next_bank_table, bank_data, bank_num++);
+
+        machineInfo.program_buffer.AddMemoryArea(next_bank_table);
+    }
+}
+
+void CoreSM83::DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num, const string& _bank_name) {
+    u16 data = 0;
+    bool cb = false;
+
+    _program_buffer.clear();
+
+    const auto& base_ptr = _bank_data.first;
+    const auto& bank = _bank_data.second;
+
+    auto current_entry = ScrollableTableEntry<debug_instr_data>();
+
+    for (u16 addr = 0, i = 0; addr < bank.size(); i++) {
+
+        current_entry = ScrollableTableEntry<debug_instr_data>();
+
+        u8 opcode = bank[addr];
+        get<ST_ENTRY_ADDRESS>(current_entry) = addr + base_ptr;
+
+        instr_tuple* instr_ptr;
+
+        if (cb) { instr_ptr = &(instrMapCB[opcode]); } else { instr_ptr = &(instrMap[opcode]); }
+        cb = opcode == 0xCB;
+
+        string raw_data;
+        raw_data = _bank_name + to_string(_bank_num) + ": " + format("{:04x}  ", addr + base_ptr);
+        addr++;
+
+        raw_data += format("{:02x} ", opcode);
+
+        // arguments
+        instruction_args_to_string(addr, bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
+        instruction_args_to_string(addr, bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
+        get<ST_ENTRY_DATA>(current_entry).first = raw_data;
+
+        // instruction to assembly
+        string args;
+        data_enums_to_string(_bank_num, addr, base_ptr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
+
+        get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
+        if (args.compare("") != 0) {
+            get<ST_ENTRY_DATA>(current_entry).second += " " + args;
+        }
+
+        _program_buffer.emplace_back(current_entry);
+    }
+}
+
+void CoreSM83::InitMessageBufferProgramTmp() {
+    auto bank_table = ScrollableTableBuffer<debug_instr_data>();
+    int bank_num;
+
+    if (Regs.PC >= VRAM_N_OFFSET && Regs.PC < RAM_N_OFFSET) {
+        if (machineInfo.current_rom_bank != -1) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            graphics_context* graphics_ctx = mem_instance->GetGraphicsContext();
+            bank_num = mem_instance->GetIO(CGB_VRAM_SELECT_ADDR);
+            DecodeBankContent(bank_table, pair(VRAM_N_OFFSET, graphics_ctx->VRAM_N[bank_num]), bank_num, "VRAM");
+            machineInfo.current_rom_bank = -1;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    } else if (Regs.PC >= RAM_N_OFFSET && Regs.PC < WRAM_0_OFFSET) {
+        if (machineInfo.current_rom_bank != -2) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            bank_num = machine_ctx->ram_bank_selected;
+            DecodeBankContent(bank_table, pair(RAM_N_OFFSET, mem_instance->RAM_N[bank_num]), bank_num, "RAM");
+            machineInfo.current_rom_bank = -2;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    } else if (Regs.PC >= WRAM_0_OFFSET && Regs.PC < WRAM_N_OFFSET) {
+        if (machineInfo.current_rom_bank != -3) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            bank_num = 0;
+            DecodeBankContent(bank_table, pair(WRAM_0_OFFSET, mem_instance->WRAM_0), bank_num, "WRAM");
+            machineInfo.current_rom_bank = -3;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    } else if (Regs.PC >= WRAM_N_OFFSET && Regs.PC < MIRROR_WRAM_OFFSET) {
+        if (machineInfo.current_rom_bank != -4) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            bank_num = machine_ctx->wram_bank_selected;
+            DecodeBankContent(bank_table, pair(WRAM_N_OFFSET, mem_instance->WRAM_N[bank_num]), bank_num + 1, "WRAM");
+            machineInfo.current_rom_bank = -4;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    } else if (Regs.PC >= HRAM_OFFSET && Regs.PC < IE_OFFSET) {
+        if (machineInfo.current_rom_bank != -5) {
+            machineInfo.program_buffer_tmp = ScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+
+            bank_num = 0;
+            DecodeBankContent(bank_table, pair(HRAM_OFFSET, mem_instance->HRAM), bank_num, "HRAM");
+            machineInfo.current_rom_bank = -5;
+
+            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
+        }
+    } else {
+        // TODO
+    }
+}

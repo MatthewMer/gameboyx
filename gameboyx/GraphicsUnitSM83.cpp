@@ -21,8 +21,6 @@ void GraphicsUnitSM83::SetGraphicsParameters() {
 	graphicsInfo.lcd_width = PPU_SCREEN_X;
 	graphicsInfo.lcd_height = PPU_SCREEN_Y;
 
-	graphicsCtx->current_substeps = MC_PER_SCANLINE;
-
 	if (machineCtx->isCgb) {
 		DrawScanline = &GraphicsUnitSM83::DrawScanlineCGB;
 	} else {
@@ -49,85 +47,77 @@ void GraphicsUnitSM83::ProcessGPU(const int& _ticks) {
 	if (graphicsCtx->ppu_enable) {
 		tickCounter += _ticks;
 
-		u8& ly = memInstance->GetIORef(LY_ADDR);
-		const u8& lyc = memInstance->GetIORef(LYC_ADDR);
-		u8& stat = memInstance->GetIORef(STAT_ADDR);
-		int mode = graphicsCtx->mode;
+		u8& ly = memInstance->GetIO(LY_ADDR);
+		const u8& lyc = memInstance->GetIO(LYC_ADDR);
+		u8& stat = memInstance->GetIO(STAT_ADDR);
+		bool ly_lyc = false;
 
-		switch (mode) {
-		case PPU_MODE_1:
-			if (tickCounter > PPU_DOTS_PER_SCANLINE) {
-				tickCounter -= PPU_DOTS_PER_SCANLINE;
-				ly++;
-				if (ly == lyc) {
-					stat |= PPU_STAT_LYC_FLAG;
+		if (ly == lyc) {
+			stat |= PPU_STAT_LYC_FLAG;
+			ly_lyc = graphicsCtx->lyc_ly_int_sel;
+		} else {
+			stat &= ~PPU_STAT_LYC_FLAG;
+		}
 
-					if (graphicsCtx->lyc_ly_int_sel) {
-						memInstance->RequestInterrupts(IRQ_LCD_STAT);
-					}
-				} else {
-					stat &= ~PPU_STAT_LYC_FLAG;
-				}
-			}
-			if (ly == LCD_SCANLINES_TOTAL) {
-				ly = 0;
-				EnterMode2();
-				graphicsMgr->UpdateGpuData();
-				frameCounter++;
-			}
-			break;
+		switch (graphicsCtx->mode) {
 		case PPU_MODE_2:
-			while (modeTickCounter < tickCounter) {
-				if (modeTickCounter > PPU_DOTS_MODE_2) {
-					EnterMode3();
-					break;
-				}
+			statSignal = ly_lyc || graphicsCtx->mode_2_int_sel;
+			for (; modeTickCounter < tickCounter; modeTickCounter += 2) {
 				SearchOAM(ly);
-				modeTickCounter += PPU_DOTS_PER_OAM_ENTRY;
+			}
+			if (tickCounter == PPU_DOTS_MODE_2) {
+				EnterMode3();
 			}
 			break;
 		case PPU_MODE_3:
-			/*
-			if (mode3scxPauseEn) {
-				while (modeTickCounter < mode3scxPause) {
-					modeTickCounter += _ticks;
-					if (modeTickCounter > mode3scxPause) {
-						modeTickCounter -= mode3scxPause;
-						mode3scxPauseEn = false;
-					}
-				}
-			}
-			if (!mode3scxPauseEn) {
+			statSignal = ly_lyc;
 
-			}
-			*/
-			if (modeTickCounter < modeTickTarget) {
-				modeTickCounter += _ticks;
-			} else {
+			if (tickCounter > modeTickTarget) {
+				(this->*DrawScanline)(ly);
 				EnterMode0();
 			}
 			break;
 		case PPU_MODE_0:
-			if (tickCounter > PPU_DOTS_PER_SCANLINE) {
-				tickCounter -= PPU_DOTS_PER_SCANLINE;
-				ly++;
-				if (ly == lyc) {
-					stat |= PPU_STAT_LYC_FLAG;
+			statSignal = ly_lyc || graphicsCtx->mode_0_int_sel;
 
-					if (graphicsCtx->lyc_ly_int_sel) {
-						memInstance->RequestInterrupts(IRQ_LCD_STAT);
-					}
+			if (tickCounter == PPU_DOTS_PER_SCANLINE) {
+				tickCounter = 0;
+				ly++;
+
+				if (ly == LCD_SCANLINES_VBLANK) {
+					graphicsMgr->UpdateGpuData();
+					frameCounter++;
+					EnterMode1();
 				} else {
-					stat &= ~PPU_STAT_LYC_FLAG;
+					EnterMode2();
 				}
 			}
-			if (ly == LCD_SCANLINES_VBLANK) {
-				EnterMode1();
-			} else {
-				EnterMode2();
+			break;
+		case PPU_MODE_1:
+			statSignal = ly_lyc || graphicsCtx->mode_1_int_sel || graphicsCtx->mode_2_int_sel;
+			
+			if (tickCounter == PPU_DOTS_PER_SCANLINE) {
+				tickCounter = 0;
+				ly++;
+				if (ly == LCD_SCANLINES_TOTAL) {
+					ly = 0x00;
+					EnterMode2();
+				}
 			}
 			break;
 		}
+
+		if (statSignal && !statSignalPrev) {
+			memInstance->RequestInterrupts(IRQ_LCD_STAT);
+		}
+		statSignalPrev = statSignal;
+
+		graphicsCtx->vblank_if_write = false;
+
+		//LOG_INFO("LY: ", format("{:02x}", ly), " -> ", format("{:d}: {:d}", graphicsCtx->mode, tickCounter));
+	} else {
+		statSignal = false;
+		statSignalPrev = false;
 	}
 }
 
@@ -137,7 +127,7 @@ void GraphicsUnitSM83::ProcessGPU(const int& _ticks) {
 void GraphicsUnitSM83::EnterMode2() {
 	memset(objPrio1DMG, false, PPU_SCREEN_X);
 
-	u8& stat = memInstance->GetIORef(STAT_ADDR);
+	u8& stat = memInstance->GetIO(STAT_ADDR);
 
 	graphicsCtx->mode = PPU_MODE_2;
 	SET_MODE(stat, PPU_MODE_2);
@@ -147,51 +137,34 @@ void GraphicsUnitSM83::EnterMode2() {
 
 	numOAMEntriesPrio0DMG = 0;
 	numOAMEntriesPrio1DMG = 0;
-
-	if (graphicsCtx->mode_2_int_sel) {
-		memInstance->RequestInterrupts(IRQ_LCD_STAT);
-	}
 }
 
 void GraphicsUnitSM83::EnterMode3() {
-	u8& stat = memInstance->GetIORef(STAT_ADDR);
-	u8& ly = memInstance->GetIORef(LY_ADDR);
+	u8& stat = memInstance->GetIO(STAT_ADDR);
+	u8& ly = memInstance->GetIO(LY_ADDR);
 
 	graphicsCtx->mode = PPU_MODE_3;
 	SET_MODE(stat, PPU_MODE_3);
 
-	/*
-	mode3scxPause = memInstance->GetIORef(SCX_ADDR) % 8;
-	if (mode3scxPause) { mode3scxPauseEn = true; }
-	*/
-	modeTickCounter = 0;
-	modeTickTarget = 168 + (numOAMEntriesPrio0DMG + numOAMEntriesPrio1DMG) * 10;
+	//mode3scxPause = memInstance->GetIO(SCX_ADDR) % 8;
 
-	(this->*DrawScanline)(ly);
+	modeTickTarget = (tickCounter + 168 + (numOAMEntriesPrio0DMG + numOAMEntriesPrio1DMG) * 10) - 1;
 }
 
 void GraphicsUnitSM83::EnterMode0() {
-	u8& stat = memInstance->GetIORef(STAT_ADDR);
+	u8& stat = memInstance->GetIO(STAT_ADDR);
 
 	graphicsCtx->mode = PPU_MODE_0;
 	SET_MODE(stat, PPU_MODE_0);
-
-	if (graphicsCtx->mode_0_int_sel) {
-		memInstance->RequestInterrupts(IRQ_LCD_STAT);
-	}
 }
 
 void GraphicsUnitSM83::EnterMode1() {
-	u8& stat = memInstance->GetIORef(STAT_ADDR);
+	u8& stat = memInstance->GetIO(STAT_ADDR);
 
 	graphicsCtx->mode = PPU_MODE_1;
 	SET_MODE(stat, PPU_MODE_1);
 
-	if (graphicsCtx->mode_1_int_sel) {
-		memInstance->RequestInterrupts(IRQ_VBLANK | IRQ_LCD_STAT);
-	} else {
-		memInstance->RequestInterrupts(IRQ_VBLANK);
-	}
+	memInstance->RequestInterrupts(IRQ_VBLANK);
 
 	drawWindow = false;
 }
@@ -199,9 +172,6 @@ void GraphicsUnitSM83::EnterMode1() {
 void GraphicsUnitSM83::DrawScanlineDMG(const u8& _ly) {
 	if (graphicsCtx->obj_enable) {
 		DrawObjectsDMG(_ly, OAMPrio1DMG, numOAMEntriesPrio1DMG, true);
-	} else {
-		numOAMEntriesPrio0DMG = 0;
-		numOAMEntriesPrio1DMG = 0;
 	}
 
 	if (graphicsCtx->bg_win_enable) {
@@ -222,8 +192,8 @@ void GraphicsUnitSM83::DrawBackgroundDMG(const u8& _ly) {
 	auto tilemap_offset = (int)graphicsCtx->bg_tilemap_offset;
 	int ly = _ly;
 
-	auto scx = (int)memInstance->GetIORef(SCX_ADDR);
-	auto scy = (int)memInstance->GetIORef(SCY_ADDR);
+	auto scx = (int)memInstance->GetIO(SCX_ADDR);
+	auto scy = (int)memInstance->GetIO(SCY_ADDR);
 	int scy_ = (scy + ly) % PPU_TILEMAP_SIZE_1D_PIXELS;
 	int scx_;
 
@@ -250,8 +220,8 @@ void GraphicsUnitSM83::DrawBackgroundDMG(const u8& _ly) {
 void GraphicsUnitSM83::DrawWindowDMG(const u8& _ly) {
 	int ly = _ly;
 
-	auto wx = ((int)memInstance->GetIORef(WX_ADDR));
-	auto wy = (int)memInstance->GetIORef(WY_ADDR);
+	auto wx = ((int)memInstance->GetIO(WX_ADDR));
+	auto wy = (int)memInstance->GetIO(WY_ADDR);
 	auto wx_ = wx - 7;
 
 	if (!drawWindow && (wy == ly) && (wx_ > -8 && wx_ < PPU_SCREEN_X)) {

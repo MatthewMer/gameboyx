@@ -71,6 +71,9 @@ private:
 	int modeTickTarget = 0;
 	int oamOffset = 0;
 
+	bool statSignal = false;
+	bool statSignalPrev = false;
+
 	int mode3scxPause = 0;
 	bool mode3scxPauseEn = false;
 
