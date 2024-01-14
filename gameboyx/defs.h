@@ -6,6 +6,11 @@
 #include <stdint.h>
 #include <string>
 
+#define N_A                         "N/A"
+
+#define PARAMETER_TRUE              "true"
+#define PARAMETER_FALSE             "false"
+
 using u8 = uint8_t;
 using u16 = uint16_t;
 using u32 = uint32_t;

@@ -52,7 +52,7 @@
 #define VRAM_N_OFFSET                   0x8000              // CGB mode: switchable (0-1)
 #define VRAM_N_SIZE                     0x2000
 
-#define RAM_N_OFFSET                    0xA000              // external (Cartridge)
+#define RAM_N_OFFSET                    0xA000              // external (GameboyCartridge)
 #define RAM_N_SIZE                      0x2000
 
 #define WRAM_0_OFFSET                   0xC000

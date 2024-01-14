@@ -13,6 +13,11 @@
 #include <string>
 #include <unordered_map>
 
+// uncomment this define to output graphics backend error messages and to activate the debug callback
+#ifndef GRAPHICS_DEBUG
+//#define GRAPHICS_DEBUG
+#endif
+
 /* ***********************************************************************************************************
     STORAGE DEFINES
 *********************************************************************************************************** */
@@ -37,7 +42,7 @@ inline const std::string SAVE_EXT = ".sav";
 inline const u16 ID_NVIDIA = 0x10DE;
 inline const u16 ID_AMD = 0x1002;
 
-inline const std::vector<std::pair<u32, std::string>> VENDOR_IDS = {
+inline const std::unordered_map<u32, std::string> VENDOR_IDS = {
     {0x1002, "AMD"},
     {0x10DE, "NVIDIA"},
     {0x1043, "ASUS"},
@@ -61,14 +66,6 @@ inline const std::vector<std::pair<u32, std::string>> VENDOR_IDS = {
     {0x104D, "Sony"},
     {0x1179, "Toshiba"}
 };
-
-inline std::string get_vendor(const u16& _ven_id) {
-    for (const auto& n : VENDOR_IDS) {
-        if (n.first == _ven_id) { return n.second; }
-    }
-
-    return "";
-}
 
 #define TEX2D_CHANNELS			    4
 
@@ -221,3 +218,9 @@ inline const ImGuiInputTextFlags INPUT_INT_HEX_FLAGS =
 inline const ImGuiInputTextFlags INPUT_INT_FLAGS = ImGuiInputTextFlags_EnterReturnsTrue;
 
 inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumns;
+
+#define SOUND_SAMPLING_RATE         48000
+#define SOUND_BUFFER_SIZE           4096
+#define SOUND_STEREO                2
+#define SOUND_5_1                   6
+#define SOUND_7_1                   8

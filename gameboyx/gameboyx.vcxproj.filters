@@ -18,10 +18,10 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Cartridge.cpp">
+    <ClCompile Include="GameboyCartridge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GuiController.cpp">
+    <ClCompile Include="GuiMgr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="data_io.cpp">
@@ -36,48 +36,57 @@
     <ClCompile Include="helper_functions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CoreBase.cpp">
+    <ClCompile Include="BaseCPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MmuBase.cpp">
+    <ClCompile Include="BaseMMU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MemorySM83.cpp">
+    <ClCompile Include="GameboyMEM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GraphicsUnitBase.cpp">
+    <ClCompile Include="BaseGPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CoreSM83.cpp">
+    <ClCompile Include="GameboyCPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MmuSM83.cpp">
+    <ClCompile Include="GameboyMMU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GraphicsUnitSM83.cpp">
+    <ClCompile Include="GameboyGPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="VHardwareMgr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="VulkanMgr.cpp">
+    <ClCompile Include="GraphicsVulkan.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SoundBase.cpp">
+    <ClCompile Include="BaseAPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SoundSM83.cpp">
+    <ClCompile Include="GameboyAPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ControllerSM83.cpp">
+    <ClCompile Include="GameboyCTRL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ControllerBase.cpp">
+    <ClCompile Include="BaseCTRL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioMgr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GraphicsMgr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioOpenAL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Cartridge.h">
+    <ClInclude Include="GameboyCartridge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gameboy_defines.h">
@@ -86,7 +95,7 @@
     <ClInclude Include="defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GuiController.h">
+    <ClInclude Include="GuiMgr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="data_io.h">
@@ -101,55 +110,64 @@
     <ClInclude Include="general_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CoreBase.h">
+    <ClInclude Include="BaseCPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MmuBase.h">
+    <ClInclude Include="BaseMMU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MemorySM83.h">
+    <ClInclude Include="GameboyMEM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GraphicsUnitBase.h">
+    <ClInclude Include="BaseGPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CoreSM83.h">
+    <ClInclude Include="GameboyCPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MmuSM83.h">
+    <ClInclude Include="GameboyMMU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryBase.h">
+    <ClInclude Include="BaseMEM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GraphicsUnitSM83.h">
+    <ClInclude Include="GameboyGPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="VHardwareMgr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="information_structs.h">
+    <ClInclude Include="data_containers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ScrollableTable.h">
+    <ClInclude Include="GuiScrollableTable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VulkanMgr.h">
+    <ClInclude Include="GraphicsVulkan.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_info.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SoundBase.h">
+    <ClInclude Include="BaseAPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SoundSM83.h">
+    <ClInclude Include="GameboyAPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ControllerSM83.h">
+    <ClInclude Include="GameboyCTRL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ControllerBase.h">
+    <ClInclude Include="BaseCTRL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioMgr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphicsMgr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioOpenAL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -7,18 +7,17 @@
 *	passed by the GUI object and passes it to the constructors of the hardware classes. 
 */
 
-#include "Cartridge.h"
-#include "CoreBase.h"
-#include "ControllerBase.h"
-#include "information_structs.h"
-#include "SDL.h"
-
-#include "VulkanMgr.h"
+#include "GameboyCartridge.h"
+#include "BaseCPU.h"
+#include "BaseCTRL.h"
+#include "data_containers.h"
+#include <SDL.h>
+#include "GraphicsMgr.h"
 
 class VHardwareMgr
 {
 public:
-	static VHardwareMgr* getInstance(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info);
+	static VHardwareMgr* getInstance(const game_info& _game_ctx, machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -36,15 +35,15 @@ public:
 
 private:
 	// constructor
-	VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, VulkanMgr* _graphics_mgr, graphics_information& _graphics_info);
+	VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info);
 	static VHardwareMgr* instance;
 	~VHardwareMgr() = default;
 
 	// hardware instances
-	CoreBase* core_instance;
-	GraphicsUnitBase* graphics_instance;
-	ControllerBase* control_instance;
-	Cartridge* cart_instance;
+	BaseCPU* core_instance;
+	BaseGPU* graphics_instance;
+	BaseCTRL* control_instance;
+	GameboyCartridge* cart_instance;
 
 	// execution time
 	u32 timePerFrame = 0;

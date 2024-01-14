@@ -1,19 +1,20 @@
 /* ***********************************************************************************************************
     INCLUDES
 *********************************************************************************************************** */
-#include "imgui.h"
+#include <imgui.h>
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
 #include <SDL.h>
 #include <vector>
 
-#include "GuiController.h"
+#include "GuiMgr.h"
 #include "logger.h"
 #include "general_config.h"
-#include "Cartridge.h"
+#include "GameboyCartridge.h"
 #include "VHardwareMgr.h"
-#include "information_structs.h"
-#include "VulkanMgr.h"
+#include "data_containers.h"
+#include "GraphicsMgr.h"
+#include "AudioMgr.h"
 #include "data_io.h"
 
 using namespace std;
@@ -26,14 +27,14 @@ using namespace std;
 /* ***********************************************************************************************************
     PROTOTYPES
 *********************************************************************************************************** */
-bool sdl_graphics_start(VulkanMgr* _graphics_mgr);
-void sdl_graphics_shutdown(VulkanMgr* _graphics_mgr);
+bool sdl_graphics_start(GraphicsMgr* _graphics_mgr);
+void sdl_graphics_shutdown(GraphicsMgr* _graphics_mgr);
 
 void sdl_toggle_full_screen(SDL_Window* _window);
 
-bool imgui_init(VulkanMgr* _graphics_mgr);
-void imgui_shutdown(VulkanMgr* _graphics_mgr);
-void imgui_nextframe(VulkanMgr* _graphics_mgr);
+bool imgui_init(GraphicsMgr* _graphics_mgr);
+void imgui_shutdown(GraphicsMgr* _graphics_mgr);
+void imgui_nextframe(GraphicsMgr* _graphics_mgr);
 
 void create_fs_hierarchy();
 
@@ -51,7 +52,7 @@ int main(int, char**)
 
     // init sdl
     SDL_Window* window = nullptr;
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
         LOG_ERROR("[SDL]", SDL_GetError());
         return -1;
     }
@@ -76,11 +77,13 @@ int main(int, char**)
     SDL_AudioDeviceID dev;
 
 
-    auto* graphics_mgr = VulkanMgr::getInstance(window, graphics_info, game_stat);
+    auto* graphics_mgr = GraphicsMgr::getInstance(window, graphics_info, game_stat);
     if (!sdl_graphics_start(graphics_mgr)) { return -2; }
     if (!imgui_init(graphics_mgr)) { return -3; }
 
-    GuiController* gbx_gui = GuiController::getInstance(machine_info, game_stat, graphics_info);
+    auto* sound_mgr = AudioMgr::getInstance(machine_info);
+
+    GuiMgr* gbx_gui = GuiMgr::getInstance(machine_info, game_stat, graphics_info);
     VHardwareMgr* vhwmgr_obj = nullptr;
 
     graphics_mgr->EnumerateShaders();
@@ -90,8 +93,6 @@ int main(int, char**)
         graphics_mgr->CompileNextShader();
     }
     */
-
-
 
     // Main loop
     LOG_INFO("[emu] Initialization completed");
@@ -234,13 +235,13 @@ int main(int, char**)
 /* ***********************************************************************************************************
     SDL FUNCTIONS
 *********************************************************************************************************** */
-bool sdl_graphics_start(VulkanMgr* _graphics_mgr) {
+bool sdl_graphics_start(GraphicsMgr* _graphics_mgr) {
     if (!_graphics_mgr->InitGraphics()) { return false; }
     if (!_graphics_mgr->StartGraphics()) { return false; }
     return true;
 }
 
-void sdl_graphics_shutdown(VulkanMgr* _graphics_mgr) {
+void sdl_graphics_shutdown(GraphicsMgr* _graphics_mgr) {
     _graphics_mgr->StopGraphics();
     _graphics_mgr->ExitGraphics();
 }
@@ -257,19 +258,19 @@ void sdl_toggle_full_screen(SDL_Window* _window) {
 /* ***********************************************************************************************************
     IMGUI FUNCTIONS
 *********************************************************************************************************** */
-bool imgui_init(VulkanMgr* _graphics_mgr) {
+bool imgui_init(GraphicsMgr* _graphics_mgr) {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
     return _graphics_mgr->InitImgui();
 }
 
-void imgui_shutdown(VulkanMgr* _graphics_mgr) {
+void imgui_shutdown(GraphicsMgr* _graphics_mgr) {
     _graphics_mgr->DestroyImgui();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 }
 
-void imgui_nextframe(VulkanMgr* _graphics_mgr) {
+void imgui_nextframe(GraphicsMgr* _graphics_mgr) {
     _graphics_mgr->NextFrameImGui();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
@@ -284,5 +285,5 @@ void create_fs_hierarchy() {
     check_and_create_log_folders();
     check_and_create_shader_folders();
     check_and_create_save_folders();
-    Cartridge::check_and_create_rom_folder();
+    GameboyCartridge::check_and_create_rom_folder();
 }

@@ -16,10 +16,6 @@ inline const std::vector<std::vector<std::string>> FILE_EXTS = {
 };
 
 inline const std::string OLD_LIC = "Old licensee";
-inline const std::string N_A = "N/A";
-
-inline const std::string PARAMETER_TRUE = "true";
-inline const std::string PARAMETER_FALSE = "false";
 
 enum info_types {
     NONE_INFO_TYPE,
