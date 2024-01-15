@@ -22,12 +22,10 @@ void AudioMgr::resetInstance() {
 }
 
 void AudioMgr::InitSound() {
-	/*
 	alcDev = alcOpenDevice(nullptr);				// nullptr returns the default audio device
 	alcCtx = alcCreateContext(alcDev, nullptr);
 
 	alcMakeContextCurrent(alcCtx);
-	*/
 }
 
 void audio_callback(void* userdata, u8* stream, int len) {

@@ -1,5 +1,7 @@
 #pragma once
 #include "data_containers.h"
+#include "al.h"
+#include "alc.h"
 
 class AudioMgr {
 public:
@@ -25,12 +27,10 @@ protected:
 
 	machine_information& machineInfo;
 
-	/*
 	ALCdevice* alcDev;
 	ALCcontext* alcCtx;
 	std::vector<ALshort> data;
 	ALuint buffer, source;
-	*/
 
 private:
 	static AudioMgr* instance;

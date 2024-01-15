@@ -738,7 +738,7 @@ bool GraphicsVulkan::InitSwapchain(VkImageUsageFlags _flags) {
 		surface_capabilites.maxImageCount = 8;
 	}
 
-	presentMode = VK_PRESENT_MODE_FIFO_KHR;
+	presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // VK_PRESENT_MODE_FIFO_KHR;
 	minImageCount = 3;
 
 	// TODO: look into swapchain settings
