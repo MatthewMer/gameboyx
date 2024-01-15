@@ -15,15 +15,12 @@ public:
 	AudioMgr& operator=(AudioMgr const&) = delete;
 	AudioMgr& operator=(AudioMgr&&) = delete;
 
-	// public members
-	virtual void ProcessSound() = 0;
-
 protected:
 	// constructor
 	AudioMgr(machine_information& _machine_info) : machineInfo(_machine_info) {}
 	~AudioMgr() = default;
 
-	virtual void InitSound() = 0;
+	virtual void InitAudio() = 0;
 
 	machine_information& machineInfo;
 

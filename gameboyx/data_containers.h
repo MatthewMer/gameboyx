@@ -117,3 +117,7 @@ struct graphics_information {
 	int y_offset = 0;
 	*/
 };
+
+struct audio_information {
+
+};

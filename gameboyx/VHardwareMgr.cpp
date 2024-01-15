@@ -10,10 +10,10 @@ using namespace std;
 *********************************************************************************************************** */
 VHardwareMgr* VHardwareMgr::instance = nullptr;
 
-VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info) {
+VHardwareMgr* VHardwareMgr::getInstance(const game_info& _game_ctx, machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info, AudioMgr* _audio_mgr, audio_information& _audio_info) {
     VHardwareMgr::resetInstance();
 
-    instance = new VHardwareMgr(_game_ctx, _machine_info, _graphics_mgr, _graphics_info);
+    instance = new VHardwareMgr(_game_ctx, _machine_info, _graphics_mgr, _graphics_info, _audio_mgr, _audio_info);
     return instance;
 }
 
@@ -27,15 +27,16 @@ void VHardwareMgr::resetInstance() {
     }
 }
 
-VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info) : machineInfo(_machine_info) {
+VHardwareMgr::VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info, AudioMgr* _audio_mgr, audio_information& _audio_info) : machineInfo(_machine_info) {
     cart_instance = GameboyCartridge::getInstance(_game_ctx);
     if (cart_instance == nullptr) {
         LOG_ERROR("Couldn't create virtual cartridge");
         return;
     }
 
-    core_instance = BaseCPU::getInstance(_machine_info, _graphics_info, _graphics_mgr);
+    core_instance = BaseCPU::getInstance(_machine_info, _graphics_info, _graphics_mgr, _audio_info, _audio_mgr);
     graphics_instance = BaseGPU::getInstance();
+    sound_instance = BaseAPU::getInstance();
     control_instance = BaseCTRL::getInstance(_machine_info);
 
     // returns the time per frame in ns

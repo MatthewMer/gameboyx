@@ -1,10 +1,13 @@
 #pragma once
 #include "data_containers.h"
 
+#include "AudioMgr.h"
+
 class BaseAPU {
 public:
 	// get/reset instance
-	static BaseAPU* getInstance(machine_information& _machine_info);
+	static BaseAPU* getInstance(audio_information& _audio_info, AudioMgr* audioMgr);
+	static BaseAPU* getInstance();
 	static void resetInstance();
 
 	// clone/assign protection
@@ -14,21 +17,16 @@ public:
 	BaseAPU& operator=(BaseAPU&&) = delete;
 
 	// public members
-	virtual void ProcessSound() = 0;
+	virtual void ProcessAPU(const int& _ticks) = 0;
 
 protected:
 	// constructor
-	BaseAPU(machine_information& _machine_info) : machineInfo(_machine_info) {}
+	BaseAPU(audio_information& _audio_info, AudioMgr* _audio_mgr) : soundInfo(_audio_info), audioMgr(_audio_mgr) {}
 	~BaseAPU() = default;
 
-	machine_information& machineInfo;
+	audio_information& soundInfo;
 
-	/*
-	ALCdevice* alcDev;
-	ALCcontext* alcCtx;
-	std::vector<ALshort> data;
-	ALuint buffer, source;
-	*/
+	AudioMgr* audioMgr;
 
 private:
 	static BaseAPU* instance;

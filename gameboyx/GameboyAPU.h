@@ -6,11 +6,11 @@ public:
 	friend class BaseAPU;
 
 	// members
-	void ProcessSound() override;
+	void ProcessAPU(const int& _ticks) override;
 
 private:
 	// constructor
-	GameboyAPU(machine_information& _machine_info) : BaseAPU(_machine_info) {}
+	GameboyAPU(audio_information& _audio_info, AudioMgr* _audio_mgr) : BaseAPU(_audio_info, _audio_mgr) {}
 	// destructor
 	~GameboyAPU() = default;
 };

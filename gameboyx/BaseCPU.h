@@ -11,6 +11,7 @@
 #include "GameboyCartridge.h"
 #include "BaseMMU.h"
 #include "BaseGPU.h"
+#include "BaseAPU.h"
 #include "data_containers.h"
 #include <chrono>
 using namespace std::chrono;
@@ -19,7 +20,7 @@ class BaseCPU
 {
 public:
 	// get/reset instance
-	static BaseCPU* getInstance(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr);
+	static BaseCPU* getInstance(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr, audio_information& _audio_info, AudioMgr* _audio_mgr);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -49,15 +50,17 @@ public:
 
 protected:
 	// constructor
-	explicit BaseCPU(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr) : machineInfo(_machine_info) {
+	explicit BaseCPU(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr, audio_information& _audio_info, AudioMgr* _audio_mgr) : machineInfo(_machine_info) {
 		mmu_instance = BaseMMU::getInstance(_machine_info);
 		graphics_instance = BaseGPU::getInstance(_graphics_info, _graphics_mgr);
+		sound_instance = BaseAPU::getInstance(_audio_info, _audio_mgr);
 	};
 
 	~BaseCPU() = default;
 
 	BaseMMU* mmu_instance;
 	BaseGPU* graphics_instance;
+	BaseAPU* sound_instance;
 
 	// members
 	int machineCycleClockCounter = 0;				// counter

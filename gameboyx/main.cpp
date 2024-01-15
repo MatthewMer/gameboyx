@@ -49,6 +49,7 @@ int main(int, char**)
     auto machine_info = machine_information();
     auto game_stat = game_status();
     auto graphics_info = graphics_information();
+    auto audio_info = audio_information();
 
     // init sdl
     SDL_Window* window = nullptr;
@@ -77,7 +78,7 @@ int main(int, char**)
     if (!sdl_graphics_start(graphics_mgr)) { return -2; }
     if (!imgui_init(graphics_mgr)) { return -3; }
 
-    auto* sound_mgr = AudioMgr::getInstance(machine_info);
+    auto* audio_mgr = AudioMgr::getInstance(machine_info);
 
     GuiMgr* gbx_gui = GuiMgr::getInstance(machine_info, game_stat, graphics_info);
     VHardwareMgr* vhwmgr_obj = nullptr;
@@ -170,7 +171,7 @@ int main(int, char**)
             machine_info.reset_machine_information();
 
             VHardwareMgr::resetInstance();
-            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), machine_info, graphics_mgr, graphics_info);
+            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), machine_info, graphics_mgr, graphics_info, audio_mgr, audio_info);
 
             if (game_stat.pending_game_start) {
                 if (graphics_info.is2d) {

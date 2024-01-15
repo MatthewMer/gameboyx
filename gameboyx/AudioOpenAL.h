@@ -8,13 +8,10 @@ class AudioOpenAL : AudioMgr {
 public:
 	friend class AudioMgr;
 
-	void ProcessSound() override;
-
 protected:
 	AudioOpenAL(machine_information& _machine_info) : AudioMgr(_machine_info){}
 
 private:
-
-	void InitSound() override;
+	void InitAudio() override;
 };
 

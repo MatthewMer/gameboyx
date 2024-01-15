@@ -6,11 +6,15 @@
 
 BaseAPU* BaseAPU::instance = nullptr;
 
-BaseAPU* BaseAPU::getInstance(machine_information& _machine_info) {
+BaseAPU* BaseAPU::getInstance(audio_information& _audio_info, AudioMgr* _audio_mgr) {
 	resetInstance();
 
-	instance = new GameboyAPU(_machine_info);
+	instance = new GameboyAPU(_audio_info, _audio_mgr);
 
+	return instance;
+}
+
+BaseAPU* BaseAPU::getInstance() {
 	return instance;
 }
 

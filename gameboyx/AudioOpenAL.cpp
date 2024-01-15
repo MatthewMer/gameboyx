@@ -1,10 +1,5 @@
 #include "AudioOpenAL.h"
 
-
-void AudioOpenAL::ProcessSound() {
-
-}
-
-void AudioOpenAL::InitSound() {
+void AudioOpenAL::InitAudio() {
 
 }

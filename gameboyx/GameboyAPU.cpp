@@ -1,5 +1,5 @@
 #include "GameboyAPU.h"
 
-void GameboyAPU::ProcessSound() {
-
+void GameboyAPU::ProcessAPU(const int& _ticks) {
+	
 }

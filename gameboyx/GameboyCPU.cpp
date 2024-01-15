@@ -207,10 +207,11 @@ void GameboyCPU::GetCurrentProgramCounter() {
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
-GameboyCPU::GameboyCPU(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr) : BaseCPU(_machine_info, _graphics_info, _graphics_mgr) {
+GameboyCPU::GameboyCPU(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr, audio_information& _audio_info, AudioMgr* _audio_mgr) : BaseCPU(_machine_info, _graphics_info, _graphics_mgr, _audio_info, _audio_mgr) {
     mem_instance = GameboyMEM::getInstance();
     machine_ctx = mem_instance->GetMachineContext();
     graphics_ctx = mem_instance->GetGraphicsContext();
+    sound_ctx = mem_instance->GetSoundContext();
 
     InitRegisterStates();
     ticksPerFrame = graphics_instance->GetTicksPerFrame(BASE_CLOCK_CPU * pow(10, 6));
@@ -410,8 +411,9 @@ void GameboyCPU::TickTimers() {
 
     currentTicks += TICKS_PER_MC;
 
-    // PPU directly bound to CPUs timer system (master clock), not affected by speed mode
+    // peripherals directly bound to CPUs timer system (master clock) (PPU not affected by speed mode)
     graphics_instance->ProcessGPU(TICKS_PER_MC / machine_ctx->currentSpeed);
+    sound_instance->ProcessAPU(TICKS_PER_MC);
 }
 
 void GameboyCPU::IncrementTIMA() {

@@ -122,7 +122,7 @@ public:
 
 private:
 	// constructor
-	explicit GameboyCPU(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr);
+	explicit GameboyCPU(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr, audio_information& _audio_info, AudioMgr* _audio_mgr);
 	// destructor
 	~GameboyCPU() = default;
 
@@ -179,6 +179,7 @@ private:
 
 	machine_context* machine_ctx;
 	graphics_context* graphics_ctx;
+	sound_context* sound_ctx;
 	GameboyMEM* mem_instance;
 
 	// basic instructions
