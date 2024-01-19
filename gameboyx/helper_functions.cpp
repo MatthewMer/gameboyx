@@ -9,7 +9,7 @@
 using namespace std;
 namespace fs = filesystem;
 
-const string WHITESPACE = " \n\r\t\f\v";
+const string WHITESPACE = " \n\r\t\f\v" + (char)0x00;
 
 vector<string> split_string(const string& _in_string, const string& _delimiter) {
     vector<string> vec_in_string;

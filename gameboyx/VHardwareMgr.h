@@ -19,7 +19,7 @@
 class VHardwareMgr
 {
 public:
-	static VHardwareMgr* getInstance(const game_info& _game_ctx, machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info, AudioMgr* _audio_mgr, audio_information& _audio_info);
+	static VHardwareMgr* getInstance(machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info, AudioMgr* _audio_mgr, audio_information& _audio_info);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -37,7 +37,7 @@ public:
 
 private:
 	// constructor
-	VHardwareMgr(const game_info& _game_ctx, machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info, AudioMgr* _audio_mgr, audio_information& _audio_info);
+	VHardwareMgr(machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info, AudioMgr* _audio_mgr, audio_information& _audio_info);
 	static VHardwareMgr* instance;
 	~VHardwareMgr() = default;
 

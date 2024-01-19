@@ -15,12 +15,13 @@
 #include "defs.h"
 #include "GuiScrollableTable.h"
 #include "general_config.h"
+#include "BaseCartridge.h"
 
 template <class T> using MemoryBufferEntry = std::pair<std::string, std::vector<T>>;	// memory buffer: type, vector<Table>
 template <class T> using MemoryBuffer = std::vector<MemoryBufferEntry<T>>;				// memory buffer: type, vector<Table>
 
 struct machine_information {
-	std::string title;
+	BaseCartridge* cartridge;
 
 	bool instruction_debug_enabled = false;
 	// index, address, raw data, resolved data
@@ -54,7 +55,7 @@ struct machine_information {
 	std::unordered_map<SDL_Keycode, int> key_map = std::unordered_map<SDL_Keycode, int>();
 
 	void reset_machine_information() {
-		title = "";
+		cartridge = nullptr;
 
 		program_buffer = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
 		program_buffer_tmp = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);

@@ -12,7 +12,7 @@
 #include <vector>
 #include <array>
 #include <queue>
-#include "game_info.h"
+#include "BaseCartridge.h"
 #include "data_containers.h"
 #include "helper_functions.h"
 #include "GuiScrollableTable.h"
@@ -42,11 +42,11 @@ public:
 	void EventKeyUp(const SDL_Keycode& _key);
 	void EventMouseWheel(const Sint32& _wheel_y);
 
-	// main gets game context
-	game_info& GetGameStartContext();
 	// main reenables gui
 	void GameStopped();
 	void GameStarted();
+
+	void SetGameToStart();
 
 private:
 	// constructor
@@ -64,7 +64,7 @@ private:
 	bool sdlScrollUp = false;
 
 	// MAIN WINDOW GAME SELECT
-	std::vector<game_info> games = std::vector<game_info>();
+	std::vector<BaseCartridge*> games = std::vector<BaseCartridge*>();
 	std::vector<bool> gamesSelected = std::vector<bool>();
 	int gameSelectedIndex = 0;
 	bool deleteGames = false;
@@ -139,9 +139,8 @@ private:
 	void ActionSetEmulationSpeed(const int& _index);
 
 	// helpers
-	void AddGameGuiCtx(const game_info& _game_ctx);
-	std::vector<game_info> DeleteGamesGuiCtx(const std::vector<int>& _index);
-	void InitGamesGuiCtx();
+	void AddGameGuiCtx(BaseCartridge* _game_ctx);
+	void ReloadGamesGuiCtx();
 	void ResetDebugInstr(); 
 	void ResetMemInspector();
 	bool CheckCurrentPCAutoScroll();

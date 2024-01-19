@@ -78,7 +78,7 @@ int main(int, char**)
     if (!sdl_graphics_start(graphics_mgr)) { return -2; }
     if (!imgui_init(graphics_mgr)) { return -3; }
 
-    auto* audio_mgr = AudioMgr::getInstance(machine_info);
+    auto* audio_mgr = AudioMgr::getInstance(audio_info);
 
     GuiMgr* gbx_gui = GuiMgr::getInstance(machine_info, game_stat, graphics_info);
     VHardwareMgr* vhwmgr_obj = nullptr;
@@ -169,9 +169,10 @@ int main(int, char**)
         // game start/stop
         if (game_stat.pending_game_start || game_stat.request_reset) {
             machine_info.reset_machine_information();
+            gbx_gui->SetGameToStart();
 
             VHardwareMgr::resetInstance();
-            vhwmgr_obj = VHardwareMgr::getInstance(gbx_gui->GetGameStartContext(), machine_info, graphics_mgr, graphics_info, audio_mgr, audio_info);
+            vhwmgr_obj = VHardwareMgr::getInstance(machine_info, graphics_mgr, graphics_info, audio_mgr, audio_info);
 
             if (game_stat.pending_game_start) {
                 if (graphics_info.is2d) {
@@ -282,5 +283,5 @@ void create_fs_hierarchy() {
     check_and_create_log_folders();
     check_and_create_shader_folders();
     check_and_create_save_folders();
-    GameboyCartridge::check_and_create_rom_folder();
+    check_and_create_rom_folder();
 }

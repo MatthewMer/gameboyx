@@ -46,8 +46,11 @@ void GuiMgr::resetInstance() {
 GuiMgr::GuiMgr(machine_information& _machine_info, game_status& _game_status, graphics_information& _graphics_info) 
     : machineInfo(_machine_info), gameState(_game_status), graphicsInfo(_graphics_info){
     NFD_Init();
-    if (read_games_from_config(this->games, CONFIG_FOLDER + GAMES_CONFIG_FILE)) {
-        InitGamesGuiCtx();
+    if (read_games_from_config(games)) {
+        gamesSelected.clear();
+        for (const auto& n : games) {
+            gamesSelected.push_back(false);
+        }
     }
     graphicsFPSavg = GUI_IO.Framerate;
     graphicsFPScount = 1;
@@ -79,7 +82,6 @@ void GuiMgr::ProcessGUI() {
 
         // actions
         if (deleteGames) { ActionDeleteGames(); }
-        if (gameState.pending_game_start) { ActionStartGame(gameSelectedIndex); }
 
         // special functions
         ProcessMainMenuKeys();
@@ -522,8 +524,9 @@ void GuiMgr::ShowNewGameDialog() {
     string s_path_rom_folder = current_path + ROM_FOLDER;
 
     auto filter_items = new nfdfilteritem_t[FILE_EXTS.size()];
-    for (int i = 0; i < FILE_EXTS.size(); i++) {
-        filter_items[i] = { FILE_EXTS[i][0].c_str(), FILE_EXTS[i][1].c_str() };
+    for (int i = 0; const auto & [key, value] : FILE_EXTS) {
+        filter_items[i] = { value.first.c_str(), value.second.c_str() };
+        i++;
     }
 
     nfdchar_t* out_path = nullptr;
@@ -574,7 +577,7 @@ void GuiMgr::ShowGameSelect() {
                 // TODO: icon
                 ImGui::TableNextColumn();
 
-                ImGui::Selectable((game.is_cgb ? GAMES_CONSOLES[1].c_str() : GAMES_CONSOLES[0].c_str()), gamesSelected[i], SEL_FLAGS);
+                ImGui::Selectable(FILE_EXTS.at(game->console).first.c_str(), gamesSelected[i], SEL_FLAGS);
 
                 if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
                     for (int j = 0; j < gamesSelected.size(); j++) {
@@ -614,14 +617,14 @@ void GuiMgr::ShowGameSelect() {
                 }
 
                 ImGui::TableNextColumn();
-                ImGui::TextUnformatted(game.title.c_str());
-                ImGui::SetItemTooltip(game.title.c_str());
+                ImGui::TextUnformatted(game->title.c_str());
+                ImGui::SetItemTooltip(game->title.c_str());
                 ImGui::TableNextColumn();
-                ImGui::TextUnformatted(game.file_path.c_str());
-                ImGui::SetItemTooltip(game.file_path.c_str());
+                ImGui::TextUnformatted(game->filePath.c_str());
+                ImGui::SetItemTooltip(game->filePath.c_str());
                 ImGui::TableNextColumn();
-                ImGui::TextUnformatted(game.file_name.c_str());
-                ImGui::SetItemTooltip(game.file_name.c_str());
+                ImGui::TextUnformatted(game->fileName.c_str());
+                ImGui::SetItemTooltip(game->fileName.c_str());
 
                 i++;
             }
@@ -710,46 +713,50 @@ void GuiMgr::ShowGraphicsOverlay() {
 
 // ***** ADD/REMOVE GAMES *****
 bool GuiMgr::ActionAddGame(const string& _path_to_rom) {
-    auto game_ctx = game_info();
-
-    if (!GameboyCartridge::read_new_game(game_ctx, _path_to_rom)) {
-        showNewGameDialog = false;
-        LOG_ERROR("[emu] error while reading game file ", _path_to_rom);
+    auto cartridge = BaseCartridge::new_game(_path_to_rom);
+    if (cartridge == nullptr) {
         return false;
     }
 
-    for (const auto& n : games) {
-        if (game_ctx == n) {
-            LOG_WARN("[emu] Game already added ! Process aborted");
-            showNewGameDialog = false;
-            return false;
-        }
+    if (cartridge->console == CONSOLE_NONE) {
+        LOG_ERROR("[emu] Console type not recognized");
+        delete cartridge;
+        showNewGameDialog = false;
+        return false;
     }
 
-    if (const vector<game_info> new_game = { game_ctx }; !write_games_to_config(new_game, CONFIG_FOLDER + GAMES_CONFIG_FILE, false)) {
+    if (!cartridge->ReadRom()) {
+        showNewGameDialog = false;
+        LOG_ERROR("[emu] error while reading rom ", _path_to_rom);
+        delete cartridge;
+        return false;
+    }
+
+    cartridge->CopyToRomFolder();
+    cartridge->ClearRom();
+
+    if (!write_games_to_config({ cartridge }, false)) {
         showNewGameDialog = false;
         LOG_ERROR("[emu] couldn't write new game to config");
+        delete cartridge;
         return false;
     }
 
-    AddGameGuiCtx(game_ctx);
+    AddGameGuiCtx(cartridge);
     return true;
 }
 
 void GuiMgr::ActionDeleteGames() {
-    auto index = vector<int>();
+    auto games_to_delete = vector<BaseCartridge*>();
     for (int i = 0; const auto & n : gamesSelected) {
-        if (n) index.push_back(i);
+        if (n) games_to_delete.push_back(games[i]);
         i++;
     }
 
-    auto games_delete = DeleteGamesGuiCtx(index);
-
-    if (games_delete.size() > 0) {
-        delete_games_from_config(games_delete, CONFIG_FOLDER + GAMES_CONFIG_FILE);
+    if (games_to_delete.size() > 0) {
+        delete_games_from_config(games_to_delete);
+        ReloadGamesGuiCtx();
     }
-
-    InitGamesGuiCtx();
 
     deleteGames = false;
 }
@@ -758,6 +765,7 @@ void GuiMgr::ActionDeleteGames() {
 void GuiMgr::ActionStartGame(int _index) {
     gameState.pending_game_start = true;
     gameState.game_to_start = _index;
+    machineInfo.cartridge = games[_index];
     firstInstruction = true;
 }
 
@@ -815,8 +823,8 @@ void GuiMgr::ActionSetEmulationSpeed(const int& _index) {
 *********************************************************************************************************** */
 
 // ***** MANAGE GAME ENTRIES OF GUI OBJECT *****
-void GuiMgr::AddGameGuiCtx(const game_info& _game_ctx) {
-    games.push_back(_game_ctx);
+void GuiMgr::AddGameGuiCtx(BaseCartridge* _game_ctx) {
+    games.emplace_back(_game_ctx);
     gamesSelected.clear();
     for (const auto& game : games) {
         gamesSelected.push_back(false);
@@ -825,24 +833,15 @@ void GuiMgr::AddGameGuiCtx(const game_info& _game_ctx) {
     gameSelectedIndex = gamesSelected.size() - 1;
 }
 
-vector<game_info> GuiMgr::DeleteGamesGuiCtx(const vector<int>& _index) {
-    auto result = vector<game_info>();
-
-    for (int i = _index.size() - 1; i >= 0; i--) {
-        const game_info game_ctx = games[_index[i]];
-        result.push_back(game_ctx);
-        games.erase(games.begin() + _index[i]);
-        gamesSelected.erase(gamesSelected.begin() + _index[i]);
+void GuiMgr::ReloadGamesGuiCtx() {
+    for (int i = games.size() - 1; i > -1; i--) {
+        delete games[i];
+        games.erase(games.begin() + i);
     }
 
-    if (result.size() > 0) {
-        gameSelectedIndex = 0;
-    }
+    read_games_from_config(games);
 
-    return result;
-}
-
-void GuiMgr::InitGamesGuiCtx() {
+    gamesSelected.clear();
     for (const auto& n : games) {
         gamesSelected.push_back(false);
     }
@@ -949,12 +948,6 @@ void GuiMgr::SetupMemInspectorIndex() {
 /* ***********************************************************************************************************
     MAIN DIRECT COMMUNICATION
 *********************************************************************************************************** */
-game_info& GuiMgr::GetGameStartContext() {
-    //game_running = true;
-    //pending_game_start = false;
-    return games[gameState.game_to_start];
-}
-
 void GuiMgr::GameStopped() {
     ActionEndGame();
 
@@ -966,6 +959,10 @@ void GuiMgr::GameStarted() {
     SetupMemInspectorIndex();
 
     showGameSelect = false;
+}
+
+void GuiMgr::SetGameToStart() {
+    machineInfo.cartridge = games[gameSelectedIndex];
 }
 
 /* ***********************************************************************************************************

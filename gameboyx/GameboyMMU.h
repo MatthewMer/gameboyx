@@ -24,7 +24,7 @@ public:
 	void Write16Bit(const u16& _data, const u16& _addr) override {};
 	u8 Read8Bit(const u16& _addr) override { return 0xFF; };
 
-	static GameboyMMU* getInstance(machine_information& _machine_info, const std::vector<u8>& _vec_rom);
+	static GameboyMMU* getInstance(machine_information& _machine_info);
 
 protected:
 
@@ -39,40 +39,30 @@ protected:
 	machine_context* machine_ctx;
 
 	void ReadSave() override {
-		auto save_files = std::vector<std::string>();
-		get_files_in_path(save_files, SAVE_FOLDER);
+		std::string save_file = SAVE_FOLDER + machineInfo.cartridge->title + SAVE_EXT;
 
-		const std::string save_file = SAVE_FOLDER + machineInfo.title + SAVE_EXT;
+		if (check_file_exists(save_file)) {
+			auto data = std::vector<char>();
 
-		for (const auto& file : save_files) {
-			auto found_file_path = split_string(file, "/");
-			std::string found_file = "/" + found_file_path[found_file_path.size() - 2] + "/" + found_file_path[found_file_path.size() - 1];
-
-			if (found_file.compare(save_file) == 0) {
-				auto data = std::vector<char>();
-
-				if (read_data(data, save_file, true)) {
-					mem_instance->CopyDataToRAM(data);
-					LOG_INFO("[emu] loaded from ", save_file);
-				} else {
-					LOG_ERROR("[emu] reading save file ", save_file);
-				}
-
-				return;
+			if (read_data(data, save_file)) {
+				mem_instance->CopyDataToRAM(data);
+				LOG_INFO("[emu] loaded from ", save_file);
+			} else {
+				LOG_ERROR("[emu] reading save file ", save_file);
 			}
+		} else {
+			LOG_INFO("[emu] no save file found");
 		}
-
-		LOG_INFO("[emu] no save file found");
 	}
 
 	void WriteSave() const override {
-		const std::string save_file = SAVE_FOLDER + machineInfo.title + SAVE_EXT;
+		const std::string save_file = SAVE_FOLDER + machineInfo.cartridge->title + SAVE_EXT;
 
-		check_and_create_file(save_file, true);
+		check_and_create_file(save_file);
 		auto data = std::vector<char>();
 		mem_instance->CopyDataFromRAM(data);
 
-		write_data(data, save_file, true, true);
+		write_data(data, save_file, true);
 	}
 };
 

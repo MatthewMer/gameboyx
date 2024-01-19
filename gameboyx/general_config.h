@@ -13,32 +13,36 @@
 #include <string>
 #include <unordered_map>
 
-// uncomment this define to output graphics backend error messages and to activate the debug callback
-#ifndef GRAPHICS_DEBUG
-//#define GRAPHICS_DEBUG
-#endif
-
 /* ***********************************************************************************************************
     STORAGE DEFINES
 *********************************************************************************************************** */
-inline const std::string ROM_FOLDER = "/rom/";
+inline const std::string ROM_FOLDER = "rom/";
 
-inline const std::string CONFIG_FOLDER = "/config/";
+inline const std::string CONFIG_FOLDER = "config/";
 inline const std::string GAMES_CONFIG_FILE = "games.ini";
 
-inline const std::string LOG_FOLDER = "/logs/";
+inline const std::string LOG_FOLDER = "logs/";
 inline const std::string DEBUG_INSTR_LOG = "_instructions.log";
 
-inline const std::string SHADER_FOLDER = "/shader/";
-inline const std::string SPIR_V_FOLDER = "/shader/spir_v/";
+inline const std::string SHADER_FOLDER = "shader/";
+inline const std::string SPIR_V_FOLDER = "shader/spir_v/";
 
-inline const std::string SAVE_FOLDER = "/save/";
+inline const std::string SAVE_FOLDER = "save/";
 
 inline const std::string SAVE_EXT = ".sav";
 
 /* ***********************************************************************************************************
     GRAPHICS BACKEND
 *********************************************************************************************************** */
+// uncomment this define to output graphics backend error messages and to activate the debug callback
+#ifndef GRAPHICS_DEBUG
+//#define GRAPHICS_DEBUG
+#endif
+
+#ifdef GRAPHICS_DEBUG
+#define VK_VALIDATION "VK_LAYER_KHRONOS_validation"
+#endif
+
 inline const u16 ID_NVIDIA = 0x10DE;
 inline const u16 ID_AMD = 0x1002;
 
@@ -86,6 +90,17 @@ inline const std::unordered_map<u32, std::string> VENDOR_IDS = {
 #define GUI_WIN_HEIGHT_MIN          480
 
 inline const std::string APP_TITLE = "GameboyX";
+
+enum console_ids {
+    CONSOLE_NONE,
+    GB,
+    GBC
+};
+
+inline const std::unordered_map<console_ids, std::pair<std::string, std::string>> FILE_EXTS = {
+    { GB, {"Gameboy", "gb"} },
+    { GBC, { "Gameboy Color", "gbc"} }
+};
 
 inline const std::vector<std::pair<std::string, float>> GAMES_COLUMNS = { 
     {"", 1 / 12.f},

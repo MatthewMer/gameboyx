@@ -14,62 +14,22 @@
 *********************************************************************************************************** */
 #include <vector>
 
+#include "BaseCartridge.h"
 #include "defs.h"
-#include "game_info.h"
 
 /* ***********************************************************************************************************
 	CLASSES
 *********************************************************************************************************** */
-class GameboyCartridge
-{
+class GameboyCartridge : protected BaseCartridge {
 public:
-	// singleton instance access
-	static GameboyCartridge* getInstance(const game_info& _game_ctx);
-	static GameboyCartridge* getInstance();
-	static void resetInstance();
-
-	// clone/assign protection
-	GameboyCartridge(GameboyCartridge const&) = delete;
-	GameboyCartridge(GameboyCartridge&&) = delete;
-	GameboyCartridge& operator=(GameboyCartridge const&) = delete;
-	GameboyCartridge& operator=(GameboyCartridge&&) = delete;
-
-	// static members
-	static bool read_basic_header_info(game_info& _game_info, std::vector<u8>& _vec_rom);
-	static bool read_rom_to_buffer(const game_info& _game_info, std::vector<u8>& _vec_rom);
-	static bool copy_rom_to_rom_folder(game_info& _game_info, std::vector<u8>& _vec_rom, const std::string& _new_file_path);
-	static bool read_new_game(game_info& _game_ctx, const std::string& _path_to_rom);
-	static void check_and_create_rom_folder();
-
-	// getter
-	constexpr const game_info& GetGameInfo() const {
-		return gameCtx;
-	}
-
-	constexpr const std::vector<u8>& GetRomVector() const {
-		return vecRom;
-	}
-
-	constexpr const bool& GetIsCgb() const {
-		return isCgb;
-	}
-
-private:
+	friend class BaseCartridge;
 	// constructor
-	static GameboyCartridge* instance;
-	explicit GameboyCartridge(const game_info& _game_ctx) : gameCtx(_game_ctx) {
-		ReadData();
-	};
+	explicit GameboyCartridge(const console_ids& _id, const std::string& _file) : BaseCartridge(_id, _file) {};
 	// destructor
 	~GameboyCartridge() = default;
 
-	// basic game context and read buffer
-	std::vector<u8> vecRom = std::vector<u8>();
-	const game_info& gameCtx;
+	bool ReadRom() override;
 
-	bool isCgb = false;
-
-	// member functions
-	bool ReadData();
-	bool ReadHeaderConsole();
+private:
+	
 };

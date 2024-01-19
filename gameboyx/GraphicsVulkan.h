@@ -162,7 +162,7 @@ private:
 	void DestroyTex2dSampler();
 	bool InitTex2dDescriptorSets();
 
-	glm::mat4 tex2dModelMat;
+	glm::mat4 tex2dScaleMat;
 	float tex2dScaleX = 1.f;
 	float tex2dScaleY = 1.f;
 

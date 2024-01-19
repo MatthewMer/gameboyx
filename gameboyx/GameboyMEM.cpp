@@ -65,11 +65,9 @@ void GameboyMEM::RequestInterrupts(const u8& _isr_flags) {
     INITIALIZE MEMORY
 *********************************************************************************************************** */
 void GameboyMEM::InitMemory() {
-    GameboyCartridge* cart_obj = GameboyCartridge::getInstance();
+    const auto& vec_rom = machineInfo.cartridge->GetRomVector();
 
-    const auto& vec_rom = cart_obj->GetRomVector();
-
-    machine_ctx.isCgb = cart_obj->GetIsCgb();
+    machine_ctx.isCgb = vec_rom[ROM_HEAD_CGBFLAG] & 0x80 ? true : false;
     machine_ctx.wram_bank_num = (machine_ctx.isCgb ? 8 : 2);
     machine_ctx.vram_bank_num = (machine_ctx.isCgb ? 2 : 1);
 
@@ -184,16 +182,7 @@ void GameboyMEM::InitMemoryState() {
 bool GameboyMEM::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
     if (_vec_rom.size() < ROM_HEAD_ADDR + ROM_HEAD_SIZE) { return false; }
 
-    u8 value;
-
-    // get rom info
-    machineInfo.title = "";
-    int title_size_max = (machine_ctx.isCgb ? ROM_HEAD_TITLE_SIZE_CGB : ROM_HEAD_TITLE_SIZE_GB);
-    for (int i = 0; _vec_rom[ROM_HEAD_TITLE + i] != 0x00 && i < title_size_max; i++) {
-        machineInfo.title += (char)_vec_rom[ROM_HEAD_TITLE + i];
-    }
-
-    value = _vec_rom[ROM_HEAD_ROMSIZE];
+    u8 value = _vec_rom[ROM_HEAD_ROMSIZE];
 
     if (value != 0x52 && value != 0x53 && value != 0x54) {                          // TODO: these values are used for special variations
         int total_rom_size = ROM_BASE_SIZE * (1 << _vec_rom[ROM_HEAD_ROMSIZE]);

@@ -9,7 +9,7 @@ public:
 	friend class AudioMgr;
 
 protected:
-	AudioOpenAL(machine_information& _machine_info) : AudioMgr(_machine_info){}
+	AudioOpenAL(audio_information& _audio_info) : AudioMgr(_audio_info) {}
 
 private:
 	void InitAudio() override;

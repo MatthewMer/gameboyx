@@ -6,7 +6,7 @@
 class AudioMgr {
 public:
 	// get/reset instance
-	static AudioMgr* getInstance(machine_information& _machine_info);
+	static AudioMgr* getInstance(audio_information& _audio_info);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -17,12 +17,12 @@ public:
 
 protected:
 	// constructor
-	AudioMgr(machine_information& _machine_info) : machineInfo(_machine_info) {}
+	AudioMgr(audio_information& _audio_info) : audioInfo(_audio_info) {}
 	~AudioMgr() = default;
 
 	virtual void InitAudio() = 0;
 
-	machine_information& machineInfo;
+	audio_information& audioInfo;
 
 	ALCdevice* alcDev;
 	ALCcontext* alcCtx;

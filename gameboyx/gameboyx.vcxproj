@@ -169,6 +169,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BaseCartridge.cpp" />
     <ClCompile Include="GameboyCartridge.cpp" />
     <ClCompile Include="BaseCTRL.cpp" />
     <ClCompile Include="GameboyCTRL.cpp" />
@@ -181,7 +182,6 @@
     <ClCompile Include="helper_functions.cpp" />
     <ClCompile Include="include\simple_logger.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="game_info.cpp" />
     <ClCompile Include="GuiMgr.cpp" />
     <ClCompile Include="GameboyMEM.cpp" />
     <ClCompile Include="BaseMMU.cpp" />
@@ -194,6 +194,7 @@
     <ClCompile Include="GraphicsVulkan.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BaseCartridge.h" />
     <ClInclude Include="GameboyCartridge.h" />
     <ClInclude Include="BaseCTRL.h" />
     <ClInclude Include="GameboyCTRL.h" />
@@ -202,7 +203,6 @@
     <ClInclude Include="gameboy_defines.h" />
     <ClInclude Include="data_io.h" />
     <ClInclude Include="defs.h" />
-    <ClInclude Include="game_info.h" />
     <ClInclude Include="GraphicsMgr.h" />
     <ClInclude Include="BaseGPU.h" />
     <ClInclude Include="GameboyGPU.h" />

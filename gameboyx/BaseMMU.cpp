@@ -31,8 +31,6 @@ void BaseMMU::resetInstance() {
 }
 
 BaseMMU* BaseMMU::getNewMmuInstance(machine_information& _machine_info) {
-	const vector<u8>& vec_rom = GameboyCartridge::getInstance()->GetRomVector();
-
-	return GameboyMMU::getInstance(_machine_info, vec_rom);
+	return GameboyMMU::getInstance(_machine_info);
 }
 

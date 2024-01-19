@@ -6,10 +6,10 @@ void audio_callback(void* userdata, uint8_t* stream, int len);
 
 AudioMgr* AudioMgr::instance = nullptr;
 
-AudioMgr* AudioMgr::getInstance(machine_information& _machine_info) {
+AudioMgr* AudioMgr::getInstance(audio_information& _audio_info) {
 	resetInstance();
 
-	instance = new AudioOpenAL(_machine_info);
+	instance = new AudioOpenAL(_audio_info);
 
 	return instance;
 }
@@ -19,13 +19,6 @@ void AudioMgr::resetInstance() {
 		delete instance;
 		instance = nullptr;
 	}
-}
-
-void AudioMgr::InitSound() {
-	alcDev = alcOpenDevice(nullptr);				// nullptr returns the default audio device
-	alcCtx = alcCreateContext(alcDev, nullptr);
-
-	alcMakeContextCurrent(alcCtx);
 }
 
 void audio_callback(void* userdata, u8* stream, int len) {

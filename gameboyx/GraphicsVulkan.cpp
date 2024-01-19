@@ -406,14 +406,14 @@ void GraphicsVulkan::UpdateDummy() {
 void GraphicsVulkan::BindPipelines2d(VkCommandBuffer& _command_buffer) {
 	//glm::mat4 translate = glm::translate(glm::mat4(1.f), glm::vec3(.0f, .0f, .0f));
 	//glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(tex2dScaleX, tex2dScaleY, 1.f));
-	tex2dModelMat = glm::scale(glm::mat4(1.f), glm::vec3(tex2dScaleX, tex2dScaleY, 1.f));
+	tex2dScaleMat = glm::scale(glm::mat4(1.f), glm::vec3(tex2dScaleX, tex2dScaleY, 1.f));
 
 	vkCmdBindPipeline(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipeline);
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(_command_buffer, 0, 1, &tex2dVertexBuffer.buffer, &offset);
 	vkCmdBindIndexBuffer(_command_buffer, tex2dIndexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdBindDescriptorSets(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipelineLayout, 0, 1, &tex2dDescSet, 0, nullptr);
-	vkCmdPushConstants(_command_buffer, tex2dPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &tex2dModelMat);
+	vkCmdPushConstants(_command_buffer, tex2dPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &tex2dScaleMat);
 	vkCmdSetViewport(_command_buffer, 0, 1, &viewport);
 	vkCmdSetScissor(_command_buffer, 0, 1, &scissor);
 	vkCmdDrawIndexed(_command_buffer, sizeof(indexData) / sizeof(u32), 1, 0, 0, 0);
@@ -1731,7 +1731,7 @@ VkDebugUtilsMessengerEXT GraphicsVulkan::RegisterDebugCallback() {
 
 bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file, const shaderc_compiler_t& _compiler, const shaderc_compile_options_t& _options) {
 	auto source_text_vec = vector<char>();
-	if (!read_data(source_text_vec, _shader_source_file, false)) {
+	if (!read_data(source_text_vec, _shader_source_file)) {
 		LOG_ERROR("[vulkan] read shader source ", _shader_source_file);
 		return false;
 	}
@@ -1761,7 +1761,7 @@ bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file,
 	auto byte_code_vec = vector<char>(byte_code, byte_code + size);
 	auto file_name_parts = split_string(file_name_str, ".");
 	string out_file_path = SPIR_V_FOLDER + file_name_parts.front() + "_" + file_name_parts.back() + "." + SPIRV_EXT;
-	write_data(byte_code_vec, out_file_path, true, true);
+	write_data(byte_code_vec, out_file_path, true);
 	shaderc_result_release(result);
 
 	LOG_INFO("[vulkan] ", file_name_str, " compiled");

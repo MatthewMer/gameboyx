@@ -71,8 +71,9 @@ const unordered_map<u8, gameboy_mapper_types> gameboy_mapper_map{
 	{0xFF, HuC1_RAM_BATTERY}
 };
 
-GameboyMMU* GameboyMMU::getInstance(machine_information& _machine_info, const vector<u8>& _vec_rom) {
-	u8 type_code = _vec_rom[ROM_HEAD_HW_TYPE];
+GameboyMMU* GameboyMMU::getInstance(machine_information& _machine_info) {
+	const auto vec_rom = _machine_info.cartridge->GetRomVector();
+	u8 type_code = vec_rom[ROM_HEAD_HW_TYPE];
 
 	if (gameboy_mapper_map.find(type_code) != gameboy_mapper_map.end()) {
 
