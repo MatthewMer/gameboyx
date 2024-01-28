@@ -7,8 +7,7 @@
 *   or overrall information that doesn't change and could be used multiple times without being directly tied to a specific source file
 */
 
-#define _USE_MATH_DEFINES
-#include <cmath>
+#include <SDL.h>
 
 #include "imgui.h"
 #include "defs.h"
@@ -248,17 +247,17 @@ inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumn
 #define SOUND_7_1                   8
 
 inline const std::vector<float> SOUND_7_1_ANGLES = {
-    22.5f,               // front-right
-    85.f,                // center-right
-    140.f,               // rear-right
-    220.f,               // rear-left
-    275.f,               // center-left
-    337.5f               // front-left
+    22.5f * (M_PI / 180.f),               // front-right
+    85.f * (M_PI / 180.f),                // center-right
+    140.f * (M_PI / 180.f),               // rear-right
+    220.f * (M_PI / 180.f),               // rear-left
+    275.f * (M_PI / 180.f),               // center-left
+    337.5f * (M_PI / 180.f)               // front-left
 };
 
 inline const std::vector<float> SOUND_5_1_ANGLES = {
-    22.5f,               // front-right
-    140.f,               // rear-right
-    220.f,               // rear-left
-    337.5f               // front-left
+    22.5f * (M_PI / 180.f),               // front-right
+    140.f * (M_PI / 180.f),               // rear-right
+    220.f * (M_PI / 180.f),               // rear-left
+    337.5f * (M_PI / 180.f)               // front-left
 };

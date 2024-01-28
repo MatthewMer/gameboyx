@@ -54,15 +54,18 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 	callbackData.write_cursor = audioInfo.channels * callbackData.format_size;
 
 	// only for testing, doesnt sound good because the wave gets cut at some point and starts again at 0
-	float sound_pos = 90.f;	// sound source rotated by X degree to the right around the listener
-	for (int i = 0, j = 0; i < callbackData.buffer.size(); i+=audioInfo.channels) {
+	float x = .5f;
+	float sound_pos = x * M_PI;	// sound source rotated by X degree in rad to the right around the listener
+	float D = 1.2f;		// gain
+	float a = 2.f;		// tighten/stretch e function -> the higher the value the more 'specific' will be the position of the source
+						// setting it to 0 will keep the input amplitude as the output amplitude on all speakers
+
+	for (int i = 0, j = 0; i < callbackData.buffer.size(); i+=audioInfo.channels, j++) {
 		// plays a simple chord: A, C#, E
 		// distortion: atan, tanh
-		float D = 1.2f;		// gain
-		float a = 1.8f;		// tighten/stretch e function
-		float sample = tanh(D * sin(2 * M_PI * 220.f * ((float)(i / audioInfo.channels) / audioInfo.sampling_rate)));
-		sample += tanh(D * sin(2 * M_PI * 138.59f * ((float)(i / audioInfo.channels) / audioInfo.sampling_rate)));
-		sample += tanh(D * sin(2 * M_PI * 164.81f * ((float)(i / audioInfo.channels) / audioInfo.sampling_rate)));
+		float sample = tanh(D * sin(2 * M_PI * 220.f * ((float)j / audioInfo.sampling_rate)));
+		sample += tanh(D * sin(2 * M_PI * 138.59f * ((float)j / audioInfo.sampling_rate)));
+		sample += tanh(D * sin(2 * M_PI * 164.81f * ((float)j / audioInfo.sampling_rate)));
 
 		// fills for 5.1 and 7.1 surround the samples for the front-left/-right speaker
 		switch (audioInfo.channels) {
