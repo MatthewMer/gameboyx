@@ -4,10 +4,14 @@
 
 struct audio_callback_data {
 	std::vector<float> buffer;
+	int buffer_size = 0;
+
 	int read_cursor = 0;
 	int write_cursor = 0;
+
+	bool format_signed = false;
+	bool format_float = false;
 	int format_size = 0;
-	int buffer_size = 0;
 };
 
 class AudioMgr {
@@ -31,10 +35,6 @@ protected:
 	~AudioMgr() = default;
 
 	audio_information& audioInfo;
-
-	int samplingRate = 0;
-	bool formatSigned = false;
-	bool formatFloat = false;
 
 	audio_callback_data callbackData = audio_callback_data();
 
