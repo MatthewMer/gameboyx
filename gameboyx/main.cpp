@@ -53,7 +53,7 @@ int main(int, char**)
 
     // init sdl
     SDL_Window* window = nullptr;
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
         LOG_ERROR("[SDL]", SDL_GetError());
         return -1;
     }
@@ -78,12 +78,18 @@ int main(int, char**)
     if (!sdl_graphics_start(graphics_mgr)) { return -2; }
     if (!imgui_init(graphics_mgr)) { return -3; }
 
-    auto* audio_mgr = AudioMgr::getInstance(audio_info);
+    graphics_mgr->EnumerateShaders();
+
+    AudioMgr* audio_mgr = AudioMgr::getInstance(audio_info);
+    if (audio_mgr != nullptr) {
+        audio_mgr->CheckAudio();
+        audio_mgr->InitAudio(false);
+    } else {
+        LOG_ERROR("[emu] initialize audio backend");
+    }
 
     GuiMgr* gbx_gui = GuiMgr::getInstance(machine_info, game_stat, graphics_info);
     VHardwareMgr* vhwmgr_obj = nullptr;
-
-    graphics_mgr->EnumerateShaders();
 
     /*
     while (!graphics_info.shaders_compilation_finished) {               // gets probably changed to get done when application is up and running -> output loading bar
@@ -92,7 +98,7 @@ int main(int, char**)
     */
 
     // Main loop
-    LOG_INFO("[emu] Initialization completed");
+    LOG_INFO("[emu] application up and running");
 
     u32 win_min;
 
@@ -174,22 +180,26 @@ int main(int, char**)
             VHardwareMgr::resetInstance();
             vhwmgr_obj = VHardwareMgr::getInstance(machine_info, graphics_mgr, graphics_info, audio_mgr, audio_info);
 
-            if (game_stat.pending_game_start) {
-                if (graphics_info.is2d) {
-                    graphics_mgr->Init2dGraphicsBackend();
+            if (VHardwareMgr::GetErrors() != 0x00) {
+                game_stat.pending_game_stop = true;
+                LOG_WARN("[emu] resetting hardware");
+            } else {
+                if (game_stat.pending_game_start) {
+                    if (graphics_info.is2d) {
+                        graphics_mgr->Init2dGraphicsBackend();
+                    }
+                }
+
+                if (vhwmgr_obj) {
+                    gbx_gui->GameStarted();
+                    game_stat.game_running = true;
+                } else {
+                    game_stat.pending_game_stop = true;
                 }
             }
 
             game_stat.request_reset = false;
             game_stat.pending_game_start = false;
-
-            game_stat.game_running = true;
-
-            if (vhwmgr_obj) {
-                gbx_gui->GameStarted();
-            } else {
-                game_stat.pending_game_stop = true;
-            }
         }
         if (game_stat.pending_game_stop) {
             VHardwareMgr::resetInstance();

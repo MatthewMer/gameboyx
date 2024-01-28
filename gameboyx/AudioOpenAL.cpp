@@ -1,5 +1,5 @@
 #include "AudioOpenAL.h"
 
-void AudioOpenAL::InitAudio() {
+void AudioOpenAL::InitAudio(const bool& _reinit) {
 
 }

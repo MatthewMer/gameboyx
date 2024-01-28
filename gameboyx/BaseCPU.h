@@ -20,7 +20,7 @@ class BaseCPU
 {
 public:
 	// get/reset instance
-	static BaseCPU* getInstance(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr, audio_information& _audio_info, AudioMgr* _audio_mgr);
+	static BaseCPU* getInstance(machine_information& _machine_info);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -48,12 +48,12 @@ public:
 	virtual u8 Read8Bit(const u16& _addr) = 0;
 	virtual u16 Read16Bit(const u16& _addr) = 0;
 
+	virtual void SetHardwareInstances() = 0;
+
 protected:
 	// constructor
-	explicit BaseCPU(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr, audio_information& _audio_info, AudioMgr* _audio_mgr) : machineInfo(_machine_info) {
+	explicit BaseCPU(machine_information& _machine_info) : machineInfo(_machine_info) {
 		mmu_instance = BaseMMU::getInstance(_machine_info);
-		graphics_instance = BaseGPU::getInstance(_graphics_info, _graphics_mgr);
-		sound_instance = BaseAPU::getInstance(_audio_info, _audio_mgr);
 	};
 
 	~BaseCPU() = default;

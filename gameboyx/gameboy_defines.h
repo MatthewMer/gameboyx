@@ -9,10 +9,10 @@
 /* ***********************************************************************************************************
     FREQUENCIES
 *********************************************************************************************************** */
-#define DIV_FREQUENCY                   16384               // Hz
-#define BASE_CLOCK_CPU                  4.20f               // MHz
-#define DISPLAY_FREQUENCY               60                  // Hz
-#define TICKS_PER_MC                    4                   // clock cycles per machine cycle
+#define DIV_FREQUENCY                   16384                                                       // Hz
+#define BASE_CLOCK_CPU                  ((4.f * pow(2, 20)) / pow(10, 6))                           // MHz
+#define DISPLAY_FREQUENCY               60                                                          // Hz
+#define TICKS_PER_MC                    4                                                           // clock cycles per machine cycle
 
 /* ***********************************************************************************************************
     PROCESSOR AND ROM DEFINES
@@ -318,9 +318,21 @@
 #define DMG_COLOR_DARKGREY_ALT          0x787890FF
 #define DMG_COLOR_BLACK_ALT             0x000000FF
 
-#define PPU_DOTS_PER_SCANLINE           456
+#define PPU_DOTS_PER_FRAME              70224
+#define PPU_DOTS_PER_SCANLINE           (PPU_DOTS_PER_FRAME / LCD_SCANLINES_TOTAL)
 #define PPU_DOTS_MODE_2                 80
 #define PPU_DOTS_PER_OAM_ENTRY          2
+
+/* ***********************************************************************************************************
+    AUDIO DEFINES
+*********************************************************************************************************** */
+#define DIV_APU_SINGLESPEED_BIT         0x10
+#define DIV_APU_DOUBLESPEED_BIT         0x20
+
+#define APU_ENABLE_BIT                  0x80
+
+#define MASTER_VOLUME_RIGHT             0x07
+#define MASTER_VOLUME_LEFT              0x70
 
 /* ***********************************************************************************************************
     REGISTERS INITIAL STATES

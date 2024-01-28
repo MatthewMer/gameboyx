@@ -120,5 +120,10 @@ struct graphics_information {
 };
 
 struct audio_information {
+	int max_channels = 0;
+	int max_sampling_rate = 0;
 
+	float volume = 1.f;
+	int channels = 0;
+	int sampling_rate = 0;
 };

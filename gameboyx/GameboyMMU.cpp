@@ -359,8 +359,10 @@ void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (ramEnable && machineInfo.ramPresent) {
-			mem_instance->WriteRAM_N(_data, _addr);
+		if (machineInfo.ramPresent) {
+			if (ramEnable) {
+				mem_instance->WriteRAM_N(_data, _addr);
+			}
 		} else {
 			LOG_ERROR("[emu] tried to access nonpresent RAM");
 		}
@@ -542,18 +544,17 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// RAM 0-n -> RTC Registers 08-0C
 	else if (_addr < WRAM_0_OFFSET) {
-		if (timerRamEnable) {
-			int ramBankNumber = machine_ctx->ram_bank_selected;
-			if (ramBankNumber < 0x04) {
-				if (machineInfo.ramPresent) {
+		if(machineInfo.ramPresent){
+			if (timerRamEnable) {
+				int ramBankNumber = machine_ctx->ram_bank_selected;
+				if (ramBankNumber < 0x04) {
 					mem_instance->WriteRAM_N(_data, _addr);
-				} else {
-					LOG_ERROR("[emu] tried to access nonpresent RAM");
+				} else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
+					WriteClock(_data);
 				}
 			}
-			else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
-				WriteClock(_data);
-			}
+		} else {
+			LOG_ERROR("[emu] tried to access nonpresent RAM");
 		}
 	}
 	// WRAM 0
@@ -611,7 +612,7 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (timerRamEnable) {
+		if (timerRamEnable && machineInfo.ramPresent) {
 			int ramBankNumber = machine_ctx->ram_bank_selected;
 			if (ramBankNumber < 0x04) {
 				return mem_instance->ReadRAM_N(_addr);
@@ -619,6 +620,8 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 			else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
 				return ReadClock();
 			}
+		} else {
+			return 0xFF;
 		}
 	}
 	// WRAM 0

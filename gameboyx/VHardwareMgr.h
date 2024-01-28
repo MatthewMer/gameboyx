@@ -16,6 +16,8 @@
 #include "GraphicsMgr.h"
 #include "AudioMgr.h"
 
+#define VHWMGR_ERR_READ_ROM		0x01
+
 class VHardwareMgr
 {
 public:
@@ -34,6 +36,10 @@ public:
 	// SDL
 	bool EventKeyDown(const SDL_Keycode& _key);
 	bool EventKeyUp(const SDL_Keycode& _key);
+
+	static u8 GetErrors() {
+		return errors;
+	}	
 
 private:
 	// constructor
@@ -65,5 +71,7 @@ private:
 
 	// message fifo
 	machine_information& machineInfo;
+
+	static u8 errors;
 };
 

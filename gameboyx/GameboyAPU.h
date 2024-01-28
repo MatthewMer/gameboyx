@@ -13,4 +13,6 @@ private:
 	GameboyAPU(audio_information& _audio_info, AudioMgr* _audio_mgr) : BaseAPU(_audio_info, _audio_mgr) {}
 	// destructor
 	~GameboyAPU() = default;
+
+	u8 divApuCounter = 0;
 };

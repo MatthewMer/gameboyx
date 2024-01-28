@@ -48,7 +48,7 @@ protected:
 
 	// sdl
 	SDL_Window* window;
-	virtual void RecalcModelMatrixInput() = 0;
+	virtual void RecalcTex2dScaleMatrixInput() = 0;
 	float aspectRatio;
 
 	bool resizableBar = false;

@@ -207,14 +207,13 @@ void GameboyCPU::GetCurrentProgramCounter() {
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
-GameboyCPU::GameboyCPU(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr, audio_information& _audio_info, AudioMgr* _audio_mgr) : BaseCPU(_machine_info, _graphics_info, _graphics_mgr, _audio_info, _audio_mgr) {
+GameboyCPU::GameboyCPU(machine_information& _machine_info) : BaseCPU(_machine_info) {
     mem_instance = GameboyMEM::getInstance();
     machine_ctx = mem_instance->GetMachineContext();
     graphics_ctx = mem_instance->GetGraphicsContext();
     sound_ctx = mem_instance->GetSoundContext();
 
     InitRegisterStates();
-    ticksPerFrame = graphics_instance->GetTicksPerFrame(BASE_CLOCK_CPU * pow(10, 6));
 
     setupLookupTable();
     setupLookupTableCB();
@@ -248,6 +247,12 @@ void GameboyCPU::InitRegisterStates() {
     }
 }
 
+void GameboyCPU::SetHardwareInstances() {
+    graphics_instance = BaseGPU::getInstance();
+    sound_instance = BaseAPU::getInstance();
+
+    ticksPerFrame = graphics_instance->GetTicksPerFrame(BASE_CLOCK_CPU * pow(10, 6));
+}
 
 /* ***********************************************************************************************************
     RUN CPU
@@ -393,6 +398,8 @@ void GameboyCPU::TickTimers() {
             } else {
                 div++;
             }
+
+            //sound_ctx->divApuBitHigh = (div & sound_ctx->divApuBitMask ? true : false);
         } else {
             machine_ctx->div_low_byte++;
         }
@@ -407,13 +414,20 @@ void GameboyCPU::TickTimers() {
             IncrementTIMA();
         }
         timaEnAndDivOverflowPrev = timaEnAndDivOverflowCur;
+
+        /*  Would be more precise, but not necessary
+        if (sound_ctx->divApuBitWasHigh && !sound_ctx->divApuBitHigh) {
+            sound_instance->ProcessAPU(1);
+        }
+        */
     }
 
     currentTicks += TICKS_PER_MC;
 
     // peripherals directly bound to CPUs timer system (master clock) (PPU not affected by speed mode)
-    graphics_instance->ProcessGPU(TICKS_PER_MC / machine_ctx->currentSpeed);
-    sound_instance->ProcessAPU(TICKS_PER_MC);
+    int ticks = TICKS_PER_MC / machine_ctx->currentSpeed;
+    graphics_instance->ProcessGPU(ticks);
+    sound_instance->ProcessAPU(ticks);
 }
 
 void GameboyCPU::IncrementTIMA() {
@@ -890,6 +904,18 @@ void GameboyCPU::STOP() {
     if (machine_ctx->speed_switch_requested) {
         machine_ctx->currentSpeed ^= 3;
         machine_ctx->speed_switch_requested = false;
+
+        /*
+        // set new APU bitmask
+        switch (machine_ctx->currentSpeed) {
+        case 1:
+            sound_ctx->divApuBitMask = DIV_APU_SINGLESPEED_BIT;
+            break;
+        case 2:
+            sound_ctx->divApuBitMask = DIV_APU_DOUBLESPEED_BIT;
+            break;
+        }
+        */
     }
 }
 

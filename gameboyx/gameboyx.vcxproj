@@ -169,6 +169,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AudioSDL.cpp" />
     <ClCompile Include="BaseCartridge.cpp" />
     <ClCompile Include="GameboyCartridge.cpp" />
     <ClCompile Include="BaseCTRL.cpp" />
@@ -194,6 +195,7 @@
     <ClCompile Include="GraphicsVulkan.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AudioSDL.h" />
     <ClInclude Include="BaseCartridge.h" />
     <ClInclude Include="GameboyCartridge.h" />
     <ClInclude Include="BaseCTRL.h" />

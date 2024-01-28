@@ -309,7 +309,7 @@ void GraphicsVulkan::RenderFrame() {
 	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphore, nullptr, &image_index); result != VK_SUCCESS) {
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 			RebuildSwapchain();
-			RecalcModelMatrixInput();
+			RecalcTex2dScaleMatrixInput();
 		}
 		else {
 			LOG_ERROR("[vulkan] acquire image from swapchain");
@@ -419,7 +419,7 @@ void GraphicsVulkan::BindPipelines2d(VkCommandBuffer& _command_buffer) {
 	vkCmdDrawIndexed(_command_buffer, sizeof(indexData) / sizeof(u32), 1, 0, 0, 0);
 }
 
-void GraphicsVulkan::RecalcModelMatrixInput() {
+void GraphicsVulkan::RecalcTex2dScaleMatrixInput() {
 	if (aspectRatio > graphicsInfo.aspect_ratio) {
 		tex2dScaleX = graphicsInfo.aspect_ratio / aspectRatio;
 		tex2dScaleY = 1.f;
@@ -1402,7 +1402,7 @@ bool GraphicsVulkan::InitTex2dRenderTarget() {
 
 	}
 
-	RecalcModelMatrixInput();
+	RecalcTex2dScaleMatrixInput();
 
 	//UpdateTex2dProjMatrix();
 

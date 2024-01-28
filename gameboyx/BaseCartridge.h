@@ -44,8 +44,6 @@ public:
 	~BaseCartridge() = default;
 
 protected:
-	std::vector<u8> vecRom;
-
 	// constructor
 	explicit BaseCartridge(const console_ids& _id, const std::string& _file) : console(_id) {
 		std::string file;
@@ -66,6 +64,7 @@ protected:
 		fileName = file_split.back();
 	}
 
+	std::vector<u8> vecRom;
+
 private:
-	
 };

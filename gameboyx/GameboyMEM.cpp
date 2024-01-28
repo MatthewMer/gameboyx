@@ -218,6 +218,8 @@ bool GameboyMEM::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
         return false;
         break;
     }
+
+    return true;
 }
 
 /* ***********************************************************************************************************
@@ -488,6 +490,12 @@ void GameboyMEM::WriteIORegister(const u8& _data, const u16& _addr) {
             IO[LY_ADDR - IO_OFFSET] = _data;
         }
         break;
+    case NR52_ADDR:
+        SetAPUMasterControl(_data);
+        break;
+    case NR51_ADDR:
+        SetAPUChannelPanning(_data);
+        break;
     default:
         IO[_addr - IO_OFFSET] = _data;
         // TODO: remove, only for testing with blargg's instruction test rom
@@ -510,6 +518,10 @@ void GameboyMEM::SetIO(const u16& _addr, const u8& _data) {
     }
 
     IO[_addr - IO_OFFSET] = _data;
+}
+
+u8* GameboyMEM::GetIOPtr(const u16& _addr) {
+    return IO.data() + (_addr - IO_OFFSET);
 }
 
 void GameboyMEM::CopyDataToRAM(const vector<char>& _data) {
@@ -822,19 +834,44 @@ void GameboyMEM::SetVRAMBank(const u8& _data) {
         IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x01;
         machine_ctx.vram_bank_selected = IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET];
     }
-    else {
-        IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET] = 0x00;
-        machine_ctx.vram_bank_selected = 0;
-    }
 }
 
 void GameboyMEM::SetWRAMBank(const u8& _data) {
-    IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x07;
-    if (IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] == 0) IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = 1;
     if (machine_ctx.isCgb) {
+        IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x07;
+        if (IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] == 0) IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = 1;
+
         machine_ctx.wram_bank_selected = IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] - 1;
     }
 }
+
+/* ***********************************************************************************************************
+    APU CONTROL
+*********************************************************************************************************** */
+void GameboyMEM::SetAPUMasterControl(const u8& _data) {
+    IO[NR52_ADDR - IO_OFFSET] = (IO[NR52_ADDR - IO_OFFSET] & ~APU_ENABLE_BIT) | (_data & APU_ENABLE_BIT);
+    sound_ctx.apuEnable = _data & APU_ENABLE_BIT ? true : false;
+}
+
+void GameboyMEM::SetAPUChannelPanning(const u8& _data) {
+    IO[NR51_ADDR - IO_OFFSET] = _data;
+
+    u8 data = _data;
+    for (int i = 0; i < 8; i++) {
+        sound_ctx.channelPanning[i] = (data & 0x01 ? true : false);
+        data >>= 1;
+    }
+}
+
+void GameboyMEM::SetAPUMasterVolume(const u8& _data) {
+    IO[NR50_ADDR - IO_OFFSET] = _data;
+
+    sound_ctx.masterVolumeRight = VOLUME_MAP.at(_data & MASTER_VOLUME_RIGHT);
+    sound_ctx.masterVolumeLeft = VOLUME_MAP.at((_data & MASTER_VOLUME_LEFT) >> 4);
+}
+
+// channel 1
+
 
 /* ***********************************************************************************************************
     MEMORY DEBUGGER

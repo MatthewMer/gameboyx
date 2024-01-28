@@ -78,7 +78,7 @@ private:
 	explicit GraphicsVulkan(SDL_Window* _window, graphics_information& _graphics_info, game_status& _game_stat) : GraphicsMgr(_window, _graphics_info, _game_stat) {};
 	~GraphicsVulkan() = default;
 
-	void RecalcModelMatrixInput() override;
+	void RecalcTex2dScaleMatrixInput() override;
 
 	// graphics Queue
 	VkQueue queue = VK_NULL_HANDLE;

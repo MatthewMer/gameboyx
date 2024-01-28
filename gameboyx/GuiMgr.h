@@ -93,7 +93,8 @@ private:
 	bool dbgMemCellHovered = false;
 	bool dbgMemCellAnyHovered = false;
 
-	bool graphicsShowOverlay = false;
+	bool showGraphicsOverlay = false;
+	bool showGraphicsMenu = false;
 	int graphicsOverlayCorner = 1;
 	float graphicsFPSsamples[FPS_SAMPLES_NUM];
 	std::queue<float> graphicsFPSfifo = std::queue<float>();
@@ -114,7 +115,8 @@ private:
 	bool showMemoryInspector = false;
 	bool showImGuiDebug = false;
 	bool showGraphicsInfo = false;
-	bool showEmulationSpeedSelect = false;
+	bool showEmulationMenu = false;
+	bool showEmulationSpeed = false;
 
 	// gui functions
 	void ShowMainMenuBar();

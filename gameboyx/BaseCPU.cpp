@@ -7,10 +7,10 @@
 
 BaseCPU* BaseCPU::instance = nullptr;
 
-BaseCPU* BaseCPU::getInstance(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr, audio_information& _audio_info, AudioMgr* _audio_mgr) {
+BaseCPU* BaseCPU::getInstance(machine_information& _machine_info) {
 	resetInstance();
 
-	instance = new GameboyCPU(_machine_info, _graphics_info, _graphics_mgr, _audio_info, _audio_mgr);
+	instance = new GameboyCPU(_machine_info);
 
 	return instance;
 }
@@ -18,7 +18,6 @@ BaseCPU* BaseCPU::getInstance(machine_information& _machine_info, graphics_infor
 void BaseCPU::resetInstance() {
 	if (instance != nullptr) {
 		BaseMMU::resetInstance();
-		BaseGPU::resetInstance();
 		delete instance;
 		instance = nullptr;
 	}

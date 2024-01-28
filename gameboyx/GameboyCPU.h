@@ -119,10 +119,11 @@ public:
 	void GetCurrentRegisterValues() const  override;
 	void GetCurrentMiscValues() const override;
 	void GetCurrentFlagsAndISR() const override;
+	void SetHardwareInstances() override;
 
 private:
 	// constructor
-	explicit GameboyCPU(machine_information& _machine_info, graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr, audio_information& _audio_info, AudioMgr* _audio_mgr);
+	explicit GameboyCPU(machine_information& _machine_info);
 	// destructor
 	~GameboyCPU() = default;
 

@@ -62,9 +62,9 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 		switch (graphicsCtx->mode) {
 		case PPU_MODE_2:
 			statSignal = ly_lyc || graphicsCtx->mode_2_int_sel;
-			for (; modeTickCounter < tickCounter; modeTickCounter += 2) {
-				SearchOAM(ly);
-			}
+			SearchOAM(ly);
+			SearchOAM(ly);
+
 			if (tickCounter == PPU_DOTS_MODE_2) {
 				EnterMode3();
 			}

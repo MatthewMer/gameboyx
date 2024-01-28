@@ -137,8 +137,36 @@ struct graphics_context {
 	};
 };
 
-struct sound_context {
+inline const std::unordered_map<u8, float> VOLUME_MAP = {
+	{0, 1.f / 8},
+	{1, 2.f / 8},
+	{2, 3.f / 8},
+	{3, 4.f / 8},
+	{4, 5.f / 8},
+	{5, 6.f / 8},
+	{6, 7.f / 8},
+	{7, 8.f / 8}
+};
 
+struct sound_context {
+	// master control
+	bool apuEnable = true;
+	bool ch1PulseEnable = false;
+	bool ch2PulseEnable = false;
+	bool ch3WaveEnable = false;
+	bool ch4NoiseEnable = false;
+
+	// channel panning
+	bool channelPanning[8];				// CH1 right, CH2 right, ..., CH3 left, CH4 left
+
+	// volume
+	float masterVolumeRight = 1.f;
+	float masterVolumeLeft = 1.f;
+
+	//u8 divApuBitMask = DIV_APU_SINGLESPEED_BIT;
+	//u8 divApuCounter = 0;
+	//bool divApuBitWasHigh = false;
+	//bool divApuBitHigh = false;
 };
 
 struct control_context {
@@ -202,6 +230,7 @@ public:
 	void RequestInterrupts(const u8& _isr_flags) override;
 	u8& GetIO(const u16& _addr);
 	void SetIO(const u16& _addr, const u8& _data);
+	u8* GetIOPtr(const u16& _addr);
 	void CopyDataToRAM(const std::vector<char>& _data);
 	void CopyDataFromRAM(std::vector<char>& _data) const;
 
@@ -233,7 +262,6 @@ private:
 
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;
 	bool CopyRom(const std::vector<u8>& _vec_rom) override;
-	void InitTimers();
 	void ProcessTAC();
 
 	void AllocateMemory() override;
@@ -261,6 +289,11 @@ private:
 
 	void SetVRAMBank(const u8& _data);
 	void SetWRAMBank(const u8& _data);
+
+	// apu
+	void SetAPUMasterControl(const u8& _data);
+	void SetAPUChannelPanning(const u8& _data);
+	void SetAPUMasterVolume(const u8& _data);
 
 	// memory cpu context
 	machine_context machine_ctx = machine_context();

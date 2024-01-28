@@ -73,7 +73,7 @@ void GuiMgr::ProcessGUI() {
     if (showMemoryInspector) { ShowDebugMemoryInspector(); }
     if (showImGuiDebug) { ImGui::ShowDebugLogWindow(&showImGuiDebug); }
     if (showGraphicsInfo) { ShowGraphicsInfo(); }
-    if (graphicsShowOverlay) { ShowGraphicsOverlay(); }
+    if (showGraphicsOverlay) { ShowGraphicsOverlay(); }
 
     if(!gameState.game_running) {
         // gui elements
@@ -108,24 +108,30 @@ void GuiMgr::ShowMainMenuBar() {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Settings")) {
-            ImGui::MenuItem("Show menu bar", nullptr, &showMainMenuBar);
-            if (ImGui::BeginMenu("Emulation speed", &showEmulationSpeedSelect)) {
-                for (int index = 0; const auto& [key, value] : EMULATION_SPEEDS) {
+            // Emulation
+            if (ImGui::BeginMenu("Emulation", &showEmulationMenu)) {
+                if(ImGui::BeginMenu("Speed", &showEmulationSpeed)){
+                    for (int index = 0; const auto & [key, value] : EMULATION_SPEEDS) {
 
-                    bool& speed = emulationSpeedsEnabled[index].value;
-                    ImGui::MenuItem(value.c_str(), nullptr, &speed);
+                        bool& speed = emulationSpeedsEnabled[index].value;
+                        ImGui::MenuItem(value.c_str(), nullptr, &speed);
 
-                    if (speed && currentSpeedIndex != index) {
-                        ActionSetEmulationSpeed(index);
+                        if (speed && currentSpeedIndex != index) {
+                            ActionSetEmulationSpeed(index);
+                        }
+                        index++;
                     }
-                    index++;
+                    ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
             }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Graphics")) {
-            ImGui::MenuItem("Graphics Overlay", nullptr, &graphicsShowOverlay);
+            // Graphics
+            if (ImGui::BeginMenu("Graphics", &showGraphicsMenu)) {
+                ImGui::MenuItem("Overlay", nullptr, &showGraphicsOverlay);
+                ImGui::EndMenu();
+            }
+            // basic
+            ImGui::MenuItem("Show menu bar", nullptr, &showMainMenuBar);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
@@ -675,7 +681,7 @@ void GuiMgr::ShowGraphicsOverlay() {
         if (graphicsFPSsamples[i] > graphicsFPSmax) { graphicsFPSmax = graphicsFPSsamples[i]; }
     }
 
-    if (ImGui::Begin("graphics_overlay", &graphicsShowOverlay, WIN_OVERLAY_FLAGS))
+    if (ImGui::Begin("graphics_overlay", &showGraphicsOverlay, WIN_OVERLAY_FLAGS))
     {
         if (ImGui::IsWindowHovered()) {
             if (ImGui::BeginTooltip()) {
@@ -699,7 +705,7 @@ void GuiMgr::ShowGraphicsOverlay() {
             if (ImGui::MenuItem("Top-right", nullptr, graphicsOverlayCorner == 1)) graphicsOverlayCorner = 1;
             if (ImGui::MenuItem("Bottom-left", nullptr, graphicsOverlayCorner == 2)) graphicsOverlayCorner = 2;
             if (ImGui::MenuItem("Bottom-right", nullptr, graphicsOverlayCorner == 3)) graphicsOverlayCorner = 3;
-            if (graphicsShowOverlay && ImGui::MenuItem("Close")) graphicsShowOverlay = false;
+            if (showGraphicsOverlay && ImGui::MenuItem("Close")) showGraphicsOverlay = false;
             ImGui::EndPopup();
         }
 

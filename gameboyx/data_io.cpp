@@ -53,6 +53,10 @@ string check_and_create_file(const string& _path_to_file) {
     return _path_to_file;
 }
 
+bool check_file(const string& _path_to_file) {
+    return fs::exists(_path_to_file);
+}
+
 bool check_file_exists(const string& _path_to_file) {
     return fs::exists(_path_to_file);
 }
@@ -129,15 +133,19 @@ bool read_data(vector<string>& _input, const string& _file_path) {
 }
 
 bool read_data(std::vector<char>& _input, const std::string& _file_path) {
-    string file_path = check_and_create_file(_file_path);
+    if (check_file(_file_path)) {
+        ifstream is(_file_path, ios::beg | ios::binary);
+        if (!is) {
+            LOG_WARN("[emu] Couldn't open ", _file_path);
+            return false;
+        }
 
-    ifstream is(file_path, ios::beg | ios::binary);
-    if (!is) {
-        LOG_WARN("[emu] Couldn't open ", file_path);
+        _input = vector<char>(istreambuf_iterator<char>(is), istreambuf_iterator<char>());
+        return true;
+    } else {
+        LOG_ERROR("[emu] file ", _file_path, " does not exist");
         return false;
     }
-
-    _input = vector<char>(istreambuf_iterator<char>(is), istreambuf_iterator<char>());
 }
 
 bool write_data(const vector<string>& _output, const string& _file_path, const bool& _rewrite) {

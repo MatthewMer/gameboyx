@@ -234,8 +234,12 @@ inline const ImGuiInputTextFlags INPUT_INT_FLAGS = ImGuiInputTextFlags_EnterRetu
 
 inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumns;
 
+/* ***********************************************************************************************************
+    AUDIO
+*********************************************************************************************************** */
 #define SOUND_SAMPLING_RATE         48000
 #define SOUND_BUFFER_SIZE           4096
+#define SOUND_MONO                  1
 #define SOUND_STEREO                2
 #define SOUND_5_1                   6
 #define SOUND_7_1                   8
