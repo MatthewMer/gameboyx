@@ -9,7 +9,7 @@
 using namespace std;
 
 void audio_callback(void* userdata, u8* _device_buffer, int _length);
-static int audio_thread(void* _user_data);
+void audio_thread(audio_env* _audio_env, audio_samples* _audio_samples);
 void sample_into_audio_buffer(audio_samples* _samples, const apu_data& _apu_data, const int& _region_1_size, const int& _region_2_size);
 
 void AudioSDL::CheckAudio() {
@@ -43,7 +43,7 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 	want.channels = (u8)audioInfo.channels;
 	want.samples = SOUND_BUFFER_SIZE;
 	want.callback = audio_callback;
-	want.userdata = &audioData.samples;
+	want.userdata = &audioSamples;
 	device = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
 
 	// audio info (settings)
@@ -51,30 +51,35 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 	audioInfo.channels = (int)have.channels;
 
 	// audio samples (audio api data)
-	audioData.samples.buffer = std::vector<float>(SOUND_BUFFER_SIZE * audioInfo.channels, .0f);
-	audioData.samples.format_size = SDL_AUDIO_BITSIZE(have.format) / 8;
-	audioData.samples.buffer_size = (int)audioData.samples.buffer.size() * audioData.samples.format_size;
-	audioData.samples.read_cursor = 0;
-	audioData.samples.write_cursor = audioInfo.channels * audioData.samples.format_size;
+	int format_size = SDL_AUDIO_BITSIZE(have.format) / 8;
+	if (format_size != sizeof(float)) {
+		LOG_ERROR("[SDL] audio format not supported");
+		SDL_CloseAudioDevice(device);
+		return;
+	}
+	audioSamples.buffer = std::vector<float>(SOUND_BUFFER_SIZE * audioInfo.channels, .0f);
+	audioSamples.buffer_size = (int)audioSamples.buffer.size() * sizeof(float);
+	audioSamples.read_cursor = 0;
+	audioSamples.write_cursor = audioInfo.channels * sizeof(float);
 
 	// finish audio data
-	audioData.device = (void*)&device;
-	audioData.audio_info = &audioInfo;
+	audioEnv.device = (void*)&device;
+	audioEnv.audio_info = &audioInfo;
 
 	SDL_PauseAudioDevice(device, 0);
 	LOG_INFO("[SDL] audio set: ", format("{:d} channels @ {:d}Hz", audioInfo.channels, audioInfo.sampling_rate));
 }
 
 void AudioSDL::InitAudioBackend(BaseAPU* _sound_instance) {
-	audioData.sound_instance = _sound_instance;
-	audioData.audio_running = true;
+	audioEnv.sound_instance = _sound_instance;
+	audioEnv.audio_running = true;
 
-	thread = SDL_CreateThread(audio_thread, "audio thread", (void*)&audioData);
+	audioThread = thread(audio_thread, &audioEnv, &audioSamples);
 	LOG_INFO("[SDL] audio backend initialized");
 }
 
 void AudioSDL::DestroyAudioBackend() {
-	audioData.audio_running = false;
+	audioEnv.audio_running = false;
 	LOG_INFO("[SDL] audio backend stopped");
 }
 
@@ -100,25 +105,20 @@ void audio_callback(void* _user_data, u8* _device_buffer, int _length) {
 	samples->read_cursor = (samples->read_cursor + _length) % samples->buffer_size;
 }
 
-static int audio_thread(void* _user_data) {
-	audio_data* data = (audio_data*)_user_data;
-	audio_samples* samples = &data->samples;
-
-	SDL_AudioDeviceID* device = (SDL_AudioDeviceID*)data->device;
-
-	audio_information* audio_info = data->audio_info;
-
-	BaseAPU* sound_instance = data->sound_instance;
+void audio_thread(audio_env* _audio_env, audio_samples* _audio_samples) {
+	SDL_AudioDeviceID* device = (SDL_AudioDeviceID*)_audio_env->device;
+	audio_information* audio_info = _audio_env->audio_info;
+	BaseAPU* sound_instance = _audio_env->sound_instance;
 
 	const apu_data& apu_data_ref = sound_instance->GetApuData();
 
-	while (data->audio_running) {
+	while (_audio_env->audio_running) {
 		// sizes in bytes
-		int region_1_size = samples->read_cursor - samples->write_cursor;
+		int region_1_size = _audio_samples->read_cursor - _audio_samples->write_cursor;
 		int region_2_size = 0;
-		if (samples->read_cursor < samples->write_cursor) {
-			region_1_size = samples->buffer_size - samples->write_cursor;
-			region_2_size = samples->read_cursor;
+		if (_audio_samples->read_cursor < _audio_samples->write_cursor) {
+			region_1_size = _audio_samples->buffer_size - _audio_samples->write_cursor;
+			region_2_size = _audio_samples->read_cursor;
 		}
 
 		// sizes in samples
@@ -127,11 +127,9 @@ static int audio_thread(void* _user_data) {
 
 		sound_instance->SampleApuData(region_1_samples + region_2_samples, audio_info->sampling_rate);
 		SDL_LockAudioDevice(*device);
-		sample_into_audio_buffer(samples, apu_data_ref, region_1_size, region_2_size);
+		sample_into_audio_buffer(_audio_samples, apu_data_ref, region_1_size, region_2_size);
 		SDL_UnlockAudioDevice(*device);
 	}
-
-	return 0;
 }
 
 void sample_into_audio_buffer(audio_samples* _samples, const apu_data& _apu_data, const int& _region_1_size, const int& _region_2_size) {

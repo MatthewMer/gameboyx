@@ -1,27 +1,22 @@
 #pragma once
 #include "data_containers.h"
 #include "general_config.h"
-#include "SDL.h"
+#include <thread>
 
 class BaseAPU;
 
 struct audio_samples {
 	std::vector<float> buffer;
-	int format_size = 0;
 	int buffer_size = 0;
 
 	int read_cursor = 0;
 	int write_cursor = 0;
 };
 
-struct audio_data {
-	audio_samples samples = {};
+struct audio_env {
 	void* device = nullptr;
-
 	audio_information* audio_info = nullptr;
-
 	bool audio_running = true;
-
 	BaseAPU* sound_instance = nullptr;
 };
 
@@ -49,8 +44,9 @@ protected:
 	~AudioMgr() = default;
 
 	audio_information& audioInfo;
-	audio_data audioData = audio_data();
-	SDL_Thread* thread = nullptr;
+	audio_env audioEnv = audio_env();
+	audio_samples audioSamples = audio_samples();
+	std::thread audioThread;
 
 private:
 	static AudioMgr* instance;
