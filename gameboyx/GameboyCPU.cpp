@@ -251,7 +251,7 @@ void GameboyCPU::SetHardwareInstances() {
     graphics_instance = BaseGPU::getInstance();
     sound_instance = BaseAPU::getInstance();
 
-    ticksPerFrame = graphics_instance->GetTicksPerFrame(BASE_CLOCK_CPU * pow(10, 6));
+    ticksPerFrame = graphics_instance->GetTicksPerFrame((float)(BASE_CLOCK_CPU * pow(10, 6)));
 }
 
 /* ***********************************************************************************************************
@@ -1006,28 +1006,28 @@ void GameboyCPU::LDd8() {
 
     switch (opcode) {
     case 0x06:
-        Regs.BC_.B = data;
+        Regs.BC_.B = (u8)data;
         break;
     case 0x16:
-        Regs.DE_.D = data;
+        Regs.DE_.D = (u8)data;
         break;
     case 0x26:
-        Regs.HL_.H = data;
+        Regs.HL_.H = (u8)data;
         break;
     case 0x36:
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x0E:
-        Regs.BC_.C = data;
+        Regs.BC_.C = (u8)data;
         break;
     case 0x1E:
-        Regs.DE_.E = data;
+        Regs.DE_.E = (u8)data;
         break;
     case 0x2E:
-        Regs.HL_.L = data;
+        Regs.HL_.L = (u8)data;
         break;
     case 0x3E:
-        Regs.A = data;
+        Regs.A = (u8)data;
         break;
     }
 }
@@ -1444,7 +1444,7 @@ void GameboyCPU::INC8() {
         ADD_8_HC(data, 1, Regs.F);
         data = ((data + 1) & 0xFF);
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x3c:
         ADD_8_HC(Regs.A, 1, Regs.F);
@@ -1513,7 +1513,7 @@ void GameboyCPU::DEC8() {
         SUB_8_HC(data, 1, Regs.F);
         data -= 1;
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x3d:
         SUB_8_HC(Regs.A, 1, Regs.F);
@@ -2513,7 +2513,7 @@ void GameboyCPU::RLC() {
         data = (data << 1) & 0xFF;
         data |= (Regs.F & FLAG_CARRY ? LSB : 0x00);
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
@@ -2571,7 +2571,7 @@ void GameboyCPU::RRC() {
         data = (data >> 1) & 0xFF;
         data |= (Regs.F & FLAG_CARRY ? MSB : 0x00);
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
@@ -2630,7 +2630,7 @@ void GameboyCPU::RL() {
         data = (data << 1) & 0xFF;
         data |= (carry ? LSB : 0x00);
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
@@ -2689,7 +2689,7 @@ void GameboyCPU::RR() {
         data = (data >> 1) & 0xFF;
         data |= (carry ? MSB : 0x00);
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
@@ -2740,7 +2740,7 @@ void GameboyCPU::SLA() {
         Regs.F |= (data & MSB ? FLAG_CARRY : 0x00);
         data = (data << 1) & 0xFF;
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & MSB ? FLAG_CARRY : 0x00);
@@ -2805,7 +2805,7 @@ void GameboyCPU::SRA() {
         data >>= 1;
         data |= msb;
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         msb = (Regs.A & MSB);
@@ -2850,7 +2850,7 @@ void GameboyCPU::SWAP() {
         data = Read8Bit(Regs.HL);
         data = (data >> 4) | ((data << 4) & 0xF0);
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A = (Regs.A >> 4) | (Regs.A << 4);
@@ -2899,7 +2899,7 @@ void GameboyCPU::SRL() {
         Regs.F |= (data & LSB ? FLAG_CARRY : 0x00);
         data = (data >> 1) & 0xFF;
         ZERO_FLAG(data, Regs.F);
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.F |= (Regs.A & LSB ? FLAG_CARRY : 0x00);
@@ -3205,7 +3205,7 @@ void GameboyCPU::RES0() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data &= ~0x01;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x01;
@@ -3237,7 +3237,7 @@ void GameboyCPU::RES1() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data &= ~0x02;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x02;
@@ -3269,7 +3269,7 @@ void GameboyCPU::RES2() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data &= ~0x04;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x04;
@@ -3301,7 +3301,7 @@ void GameboyCPU::RES3() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data &= ~0x08;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x08;
@@ -3333,7 +3333,7 @@ void GameboyCPU::RES4() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data &= ~0x10;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x10;
@@ -3365,7 +3365,7 @@ void GameboyCPU::RES5() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data &= ~0x20;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x20;
@@ -3397,7 +3397,7 @@ void GameboyCPU::RES6() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data &= ~0x40;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x40;
@@ -3429,7 +3429,7 @@ void GameboyCPU::RES7() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data &= ~0x80;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A &= ~0x80;
@@ -3461,7 +3461,7 @@ void GameboyCPU::SET0() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data |= 0x01;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x01;
@@ -3493,7 +3493,7 @@ void GameboyCPU::SET1() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data |= 0x02;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x02;
@@ -3525,7 +3525,7 @@ void GameboyCPU::SET2() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data |= 0x04;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x04;
@@ -3557,7 +3557,7 @@ void GameboyCPU::SET3() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data |= 0x08;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x08;
@@ -3589,7 +3589,7 @@ void GameboyCPU::SET4() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data |= 0x10;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x10;
@@ -3621,7 +3621,7 @@ void GameboyCPU::SET5() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data |= 0x20;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x20;
@@ -3653,7 +3653,7 @@ void GameboyCPU::SET6() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data |= 0x40;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x40;
@@ -3685,7 +3685,7 @@ void GameboyCPU::SET7() {
     case 0x06:
         data = Read8Bit(Regs.HL);
         data |= 0x80;
-        Write8Bit(data, Regs.HL);
+        Write8Bit((u8)data, Regs.HL);
         break;
     case 0x07:
         Regs.A |= 0x80;

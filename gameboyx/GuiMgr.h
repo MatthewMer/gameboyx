@@ -68,7 +68,7 @@ private:
 	std::vector<bool> gamesSelected = std::vector<bool>();
 	int gameSelectedIndex = 0;
 	bool deleteGames = false;
-	const int mainColNum = GAMES_COLUMNS.size();
+	const int mainColNum = (int)GAMES_COLUMNS.size();
 
 	// debug instructions
 	bank_index dbgInstrInstructionIndex = bank_index(0, 0);					// bank, index
@@ -80,15 +80,15 @@ private:
 	bool dbgInstrAutorun = false;
 	int dbgInstrLastPC = -1;
 	debug_instr_data dbgInstrCurrentEntry;
-	const int dbgInstrColNum = DEBUG_INSTR_COLUMNS.size();
-	const int dbgInstrColNumRegs = DEBUG_REGISTER_COLUMNS.size();
-	const int dbgInstrColNumFlags = DEBUG_FLAG_COLUMNS.size();
+	const int dbgInstrColNum = (int)DEBUG_INSTR_COLUMNS.size();
+	const int dbgInstrColNumRegs = (int)DEBUG_REGISTER_COLUMNS.size();
+	const int dbgInstrColNumFlags = (int)DEBUG_FLAG_COLUMNS.size();
 	bool dbgInstrWasEnabled = false;
 
 	// memory inspector
 	std::vector<int> dbgMemBankIndex = std::vector<int>();
 	memory_data dbgMemCurrentEntry;
-	int dbgMemColNum = DEBUG_MEM_COLUMNS.size();
+	int dbgMemColNum = (int)DEBUG_MEM_COLUMNS.size();
 	Vec2 dbgMemCursorPos = Vec2(-1, -1);
 	bool dbgMemCellHovered = false;
 	bool dbgMemCellAnyHovered = false;
@@ -103,7 +103,7 @@ private:
 	int graphicsFPScount = 0;
 	float graphicsFPScur = .0f;
 
-	const int hwInfoColNum = HW_INFO_COLUMNS.size();
+	const int hwInfoColNum = (int)HW_INFO_COLUMNS.size();
 
 	int currentSpeedIndex = 0;
 	std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(EMULATION_SPEEDS.size(), { false });

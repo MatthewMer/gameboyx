@@ -103,7 +103,7 @@ public:
             int elements = 0;
 
             for (const auto& n : buffer) {
-                elements += n.size();
+                elements += (int)n.size();
                 if (elements >= maxSize) {
                     elementsToShow = maxSize;
                     maxSizeSet = true;
@@ -157,7 +157,7 @@ template <class T> void GuiScrollableTable<T>::ScrollUp(const int& _num) {
             }
             else {
                 startIndex.bank--;
-                startIndex.index += buffer[startIndex.bank].size();
+                startIndex.index += (int)buffer[startIndex.bank].size();
             }
         }
 
@@ -165,7 +165,7 @@ template <class T> void GuiScrollableTable<T>::ScrollUp(const int& _num) {
             endIndex.index -= _num;
             if (endIndex.index < 1) {
                 endIndex.bank--;
-                endIndex.index += buffer[endIndex.bank].size();
+                endIndex.index += (int)buffer[endIndex.bank].size();
             }
         }
         else {
@@ -178,24 +178,24 @@ template <class T> void GuiScrollableTable<T>::ScrollUp(const int& _num) {
 
 template <class T> void GuiScrollableTable<T>::ScrollDown(const int& _num) {
     bool full_scroll = true;
-    int current_buf_size_end = buffer[endIndex.bank].size();
+    int current_buf_size_end = (int)buffer[endIndex.bank].size();
 
     if (endIndex.bank < bufferSize - 1 || endIndex.index < current_buf_size_end) {
         endIndex.index += _num;
-        if (endIndex.index > buffer[endIndex.bank].size()) {
+        if (endIndex.index > (int)buffer[endIndex.bank].size()) {
             if (endIndex.bank == bufferSize - 1) {
-                endIndex.index = buffer[endIndex.bank].size();
+                endIndex.index = (int)buffer[endIndex.bank].size();
                 full_scroll = false;
             }
             else {
-                endIndex.index -= buffer[endIndex.bank].size();
+                endIndex.index -= (int)buffer[endIndex.bank].size();
                 endIndex.bank++;
             }
         }
 
 
         if (full_scroll) {
-            int current_buf_size_start = buffer[startIndex.bank].size();
+            int current_buf_size_start = (int)buffer[startIndex.bank].size();
 
             startIndex.index += _num;
             if (startIndex.index >= current_buf_size_start) {
@@ -288,7 +288,7 @@ template <class T> bank_index GuiScrollableTable<T>::GetCurrentIndexCentre() {
     bank_index index = startIndex;
     index.index += elementsToShow / 2;
 
-    int current_bank_size = buffer[index.bank].size();
+    int current_bank_size = (int)buffer[index.bank].size();
 
     if (index.index >= current_bank_size) {
         index.index -= current_bank_size;

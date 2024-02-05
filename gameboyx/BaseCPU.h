@@ -58,9 +58,9 @@ protected:
 
 	~BaseCPU() = default;
 
-	BaseMMU* mmu_instance;
-	BaseGPU* graphics_instance;
-	BaseAPU* sound_instance;
+	BaseMMU* mmu_instance = nullptr;
+	BaseGPU* graphics_instance = nullptr;
+	BaseAPU* sound_instance = nullptr;
 
 	// members
 	int machineCycleClockCounter = 0;				// counter

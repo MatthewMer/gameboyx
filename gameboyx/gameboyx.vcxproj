@@ -100,10 +100,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -121,7 +122,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -140,6 +141,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -169,7 +171,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AudioSDL.cpp" />
+    <ClCompile Include="AudioSDL.cpp">
+      <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
     <ClCompile Include="BaseCartridge.cpp" />
     <ClCompile Include="GameboyCartridge.cpp" />
     <ClCompile Include="BaseCTRL.cpp" />
@@ -188,7 +193,10 @@
     <ClCompile Include="BaseMMU.cpp" />
     <ClCompile Include="GameboyMMU.cpp" />
     <ClCompile Include="BaseAPU.cpp" />
-    <ClCompile Include="AudioMgr.cpp" />
+    <ClCompile Include="AudioMgr.cpp">
+      <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
     <ClCompile Include="AudioOpenAL.cpp" />
     <ClCompile Include="GameboyAPU.cpp" />
     <ClCompile Include="VHardwareMgr.cpp" />

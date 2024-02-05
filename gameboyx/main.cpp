@@ -172,7 +172,7 @@ int main(int, char**)
             }
         }
 
-        // game start/stop
+        // start/reset game
         if (game_stat.pending_game_start || game_stat.request_reset) {
             machine_info.reset_machine_information();
             gbx_gui->SetGameToStart();
@@ -181,36 +181,27 @@ int main(int, char**)
             vhwmgr_obj = VHardwareMgr::getInstance(machine_info, graphics_mgr, graphics_info, audio_mgr, audio_info);
 
             if (VHardwareMgr::GetErrors() != 0x00) {
+                LOG_ERROR("[emu] initializing virtual hardware");
                 game_stat.pending_game_stop = true;
-                LOG_WARN("[emu] resetting hardware");
+            } else if (vhwmgr_obj) {
+                gbx_gui->GameStarted();
+                game_stat.game_running = true;
             } else {
-                if (game_stat.pending_game_start) {
-                    if (graphics_info.is2d) {
-                        graphics_mgr->Init2dGraphicsBackend();
-                    }
-                }
-
-                if (vhwmgr_obj) {
-                    gbx_gui->GameStarted();
-                    game_stat.game_running = true;
-                } else {
-                    game_stat.pending_game_stop = true;
-                }
+                LOG_ERROR("[emu] unexpected error");
+                game_stat.pending_game_stop = true;
             }
 
             game_stat.request_reset = false;
             game_stat.pending_game_start = false;
         }
+
+        // stop game
         if (game_stat.pending_game_stop) {
             VHardwareMgr::resetInstance();
 
             game_stat.game_running = false;
             game_stat.pending_game_stop = false;
             machine_info.reset_machine_information();
-
-            if (graphics_info.is2d) {
-                graphics_mgr->Destroy2dGraphicsBackend();
-            }
 
             gbx_gui->GameStopped();
         }

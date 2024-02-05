@@ -24,3 +24,7 @@ void BaseAPU::resetInstance() {
 		instance = nullptr;
 	}
 }
+
+const apu_data& BaseAPU::GetApuData() {
+	return apuData;
+}

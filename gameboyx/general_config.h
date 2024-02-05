@@ -239,7 +239,7 @@ inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumn
 /* ***********************************************************************************************************
     AUDIO
 *********************************************************************************************************** */
-#define SOUND_SAMPLING_RATE         48000
+#define SOUND_SAMPLING_RATE_MAX     96000
 #define SOUND_BUFFER_SIZE           512
 #define SOUND_MONO                  1
 #define SOUND_STEREO                2
@@ -247,17 +247,17 @@ inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumn
 #define SOUND_7_1                   8
 
 inline const std::vector<float> SOUND_7_1_ANGLES = {
-    22.5f * (M_PI / 180.f),               // front-right
-    85.f * (M_PI / 180.f),                // center-right
-    140.f * (M_PI / 180.f),               // rear-right
-    220.f * (M_PI / 180.f),               // rear-left
-    275.f * (M_PI / 180.f),               // center-left
-    337.5f * (M_PI / 180.f)               // front-left
+    (float)(22.5f * (M_PI / 180.f)),               // front-right
+    (float)(85.f * (M_PI / 180.f)),                // center-right
+    (float)(140.f * (M_PI / 180.f)),               // rear-right
+    (float)(220.f * (M_PI / 180.f)),               // rear-left
+    (float)(275.f * (M_PI / 180.f)),               // center-left
+    (float)(337.5f * (M_PI / 180.f))               // front-left
 };
 
 inline const std::vector<float> SOUND_5_1_ANGLES = {
-    22.5f * (M_PI / 180.f),               // front-right
-    140.f * (M_PI / 180.f),               // rear-right
-    220.f * (M_PI / 180.f),               // rear-left
-    337.5f * (M_PI / 180.f)               // front-left
+    (float)(22.5f * (M_PI / 180.f)),               // front-right
+    (float)(140.f * (M_PI / 180.f)),               // rear-right
+    (float)(220.f * (M_PI / 180.f)),               // rear-left
+    (float)(337.5f * (M_PI / 180.f))               // front-left
 };

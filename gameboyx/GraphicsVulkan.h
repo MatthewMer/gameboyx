@@ -83,20 +83,20 @@ private:
 	// graphics Queue
 	VkQueue queue = VK_NULL_HANDLE;
 	uint32_t familyIndex = (uint32_t) - 1;
-	VkPhysicalDeviceMemoryProperties devMemProps;
+	VkPhysicalDeviceMemoryProperties devMemProps = {};
 
 	// swapchain
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE;
-	VkFormat swapchainFormat;
-	VkColorSpaceKHR colorSpace;
+	VkFormat swapchainFormat = {};
+	VkColorSpaceKHR colorSpace = {};
 	std::vector<VkImage> images;
-	uint32_t minImageCount;
-	VkPresentModeKHR presentMode;
+	uint32_t minImageCount = 0;
+	VkPresentModeKHR presentMode = {};
 	std::vector<VkImageView> imageViews;
 
 	// context
-	VkSurfaceKHR surface;
+	VkSurfaceKHR surface = {};
 	VkInstance vulkanInstance = VK_NULL_HANDLE;
 	VkDevice device = VK_NULL_HANDLE;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -104,23 +104,23 @@ private:
 	VkDebugUtilsMessengerEXT debugCallback;
 
 	// renderpass
-	VkRenderPass renderPass;
+	VkRenderPass renderPass = {};
 	VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT;
 
 	// buffers
 	std::vector<VkFramebuffer> frameBuffers;
-	VkCommandBuffer commandBuffers[FRAMES_IN_FLIGHT];
-	VkCommandPool commandPools[FRAMES_IN_FLIGHT];
+	VkCommandBuffer commandBuffers[FRAMES_IN_FLIGHT] = {};
+	VkCommandPool commandPools[FRAMES_IN_FLIGHT] = {};
 
-	VkBufferUsageFlags bufferUsageFlags;
-	VkMemoryPropertyFlags memoryPropertyFlags;
+	VkBufferUsageFlags bufferUsageFlags = {};
+	VkMemoryPropertyFlags memoryPropertyFlags = {};
 
 	typedef void (GraphicsVulkan::* update_function)();
-	update_function updateFunction;
+	update_function updateFunction = nullptr;
 	void UpdateDummy();
 
 	typedef void (GraphicsVulkan::* render_function)(VkCommandBuffer& _command_buffer);
-	render_function bindPipelines;
+	render_function bindPipelines = nullptr;
 	void BindPipelinesDummy(VkCommandBuffer& _command_buffer);
 
 	// render target 2d texture
@@ -142,15 +142,15 @@ private:
 	std::vector<VkCommandBuffer> tex2dCommandBuffer = std::vector<VkCommandBuffer>(2);
 	std::vector<VkFence> tex2dUpdateFence = std::vector<VkFence>(2);
 
-	VkDescriptorPool tex2dDescPool;
-	VkDescriptorSet tex2dDescSet;
+	VkDescriptorPool tex2dDescPool = {};
+	VkDescriptorSet tex2dDescSet = {};
 	std::vector<VkDescriptorSetLayout> tex2dDescSetLayout = std::vector<VkDescriptorSetLayout>(1);
 
-	VkSampler samplerTex2d;
+	VkSampler samplerTex2d = {};
 
 	std::vector<void*> mappedImageData = std::vector<void*>(2);
 
-	u64 currentSize;
+	u64 currentSize = {};
 
 	bool InitTex2dRenderTarget();
 	void DestroyTex2dRenderTarget();
@@ -162,29 +162,27 @@ private:
 	void DestroyTex2dSampler();
 	bool InitTex2dDescriptorSets();
 
-	glm::mat4 tex2dScaleMat;
+	glm::mat4 tex2dScaleMat = {};
 	float tex2dScaleX = 1.f;
 	float tex2dScaleY = 1.f;
 
-	void UpdateGraphicsInfo();
-
 	// sync
-	VkFence renderFence;
-	VkSemaphore acquireSemaphore;
-	VkSemaphore releaseSemaphore;
+	VkFence renderFence = {};
+	VkSemaphore acquireSemaphore = {};
+	VkSemaphore releaseSemaphore = {};
 	VkPipelineStageFlags waitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;				// swapchain
 
 	// graphics pipeline
 	std::vector<std::string> enumeratedShaderFiles;										// contains all shader source files
 	std::vector<std::pair<std::string, std::string>> shaderSourceFiles;					// contains the vertex and fragment shaders in groups of two
-	shaderc_compiler_t compiler;
-	shaderc_compile_options_t options;
+	shaderc_compiler_t compiler = {};
+	shaderc_compile_options_t options = {};
 	std::vector<std::pair<VkPipelineLayout, VkPipeline>> pipelines;
-	VkViewport viewport;
-	VkRect2D scissor;
+	VkViewport viewport = {};
+	VkRect2D scissor = {};
 
 	// imgui
-	VkDescriptorPool imguiDescriptorPool;
+	VkDescriptorPool imguiDescriptorPool = {};
 
 	// misc
 	VkClearValue clearColor = { 0.f, 0.f, 0.f, 1.f };

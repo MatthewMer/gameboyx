@@ -1,5 +1,7 @@
 #include "AudioSDL.h"
 #include "format"
+//#include "AudioMgr.h"
+#include "BaseAPU.h"
 
 #define _USE_MATH_DEFINES
 #include <cmath>
@@ -7,12 +9,14 @@
 using namespace std;
 
 void audio_callback(void* userdata, u8* _device_buffer, int _length);
+static int audio_thread(void* _user_data);
+void sample_into_audio_buffer(audio_samples* _samples, const apu_data& _apu_data, const int& _region_1_size, const int& _region_2_size);
 
 void AudioSDL::CheckAudio() {
 	SDL_memset(&want, 0, sizeof(want));
 	SDL_memset(&have, 0, sizeof(have));
 
-	want.freq = SOUND_SAMPLING_RATE;
+	want.freq = SOUND_SAMPLING_RATE_MAX;
 	want.format = AUDIO_F32;
 	want.channels = SOUND_7_1;
 	want.samples = SOUND_BUFFER_SIZE;
@@ -39,75 +43,51 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 	want.channels = (u8)audioInfo.channels;
 	want.samples = SOUND_BUFFER_SIZE;
 	want.callback = audio_callback;
-	want.userdata = &callbackData;
+	want.userdata = &audioData.samples;
 	device = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
 
+	// audio info (settings)
 	audioInfo.sampling_rate = have.freq;
 	audioInfo.channels = (int)have.channels;
 
-	callbackData.buffer = std::vector<float>(SOUND_BUFFER_SIZE * audioInfo.channels * 2000, .0f);		// 2000 multiplier currently only for testing to get rid of crackling noise
-	callbackData.format_float = SDL_AUDIO_ISFLOAT(have.format);
-	callbackData.format_signed = SDL_AUDIO_ISSIGNED(have.format);
-	callbackData.format_size = SDL_AUDIO_BITSIZE(have.format) / 8;
-	callbackData.buffer_size = callbackData.buffer.size() * callbackData.format_size;
-	callbackData.read_cursor = 0;
-	callbackData.write_cursor = audioInfo.channels * callbackData.format_size;
+	// audio samples (audio api data)
+	audioData.samples.buffer = std::vector<float>(SOUND_BUFFER_SIZE * audioInfo.channels, .0f);
+	audioData.samples.format_size = SDL_AUDIO_BITSIZE(have.format) / 8;
+	audioData.samples.buffer_size = (int)audioData.samples.buffer.size() * audioData.samples.format_size;
+	audioData.samples.read_cursor = 0;
+	audioData.samples.write_cursor = audioInfo.channels * audioData.samples.format_size;
 
-	// only for testing, doesnt sound good because the wave gets cut at some point and starts again at 0
-	float x = .5f;
-	float sound_pos = x * M_PI;	// sound source rotated by X degree in rad to the right around the listener
-	float D = 1.2f;		// gain
-	float a = 2.f;		// tighten/stretch e function -> the higher the value the more 'specific' will be the position of the source
-						// setting it to 0 will keep the input amplitude as the output amplitude on all speakers
-
-	for (int i = 0, j = 0; i < callbackData.buffer.size(); i+=audioInfo.channels, j++) {
-		// plays a simple chord: A, C#, E
-		// distortion: atan, tanh
-		float sample = tanh(D * sin(2 * M_PI * 220.f * ((float)j / audioInfo.sampling_rate)));
-		sample += tanh(D * sin(2 * M_PI * 138.59f * ((float)j / audioInfo.sampling_rate)));
-		sample += tanh(D * sin(2 * M_PI * 164.81f * ((float)j / audioInfo.sampling_rate)));
-
-		// fills for 5.1 and 7.1 surround the samples for the front-left/-right speaker
-		switch (audioInfo.channels) {
-		case SOUND_MONO:
-			callbackData.buffer[i] = sample;
-			break;
-		case SOUND_STEREO:
-			callbackData.buffer[i] = sample;
-			callbackData.buffer[i + 1] = sample;
-			break;
-		case SOUND_5_1:
-			callbackData.buffer[i] = sample * exp(a * (.5f * cos(sound_pos - SOUND_5_1_ANGLES[3]) - .5f));			// front left
-			callbackData.buffer[i + 1] = sample * exp(a * (.5f * cos(sound_pos - SOUND_5_1_ANGLES[0]) - .5f));		// front right
-			callbackData.buffer[i + 2] = sample * exp(a * (.5f * cos(sound_pos - SOUND_5_1_ANGLES[2]) - .5f));		// rear left
-			callbackData.buffer[i + 3] = sample * exp(a * (.5f * cos(sound_pos - SOUND_5_1_ANGLES[1]) - .5f));		// rear right
-			break;
-		case SOUND_7_1:
-			callbackData.buffer[i] = sample * exp(a * (.5f * cos(sound_pos - SOUND_7_1_ANGLES[5]) - .5f));			// front left
-			callbackData.buffer[i + 1] = sample * exp(a * (.5f * cos(sound_pos - SOUND_7_1_ANGLES[0]) - .5f));		// front right
-			callbackData.buffer[i + 4] = sample * exp(a * (.5f * cos(sound_pos - SOUND_7_1_ANGLES[4]) - .5f));		// center left
-			callbackData.buffer[i + 5] = sample * exp(a * (.5f * cos(sound_pos - SOUND_7_1_ANGLES[1]) - .5f));		// center right
-			callbackData.buffer[i + 6] = sample * exp(a * (.5f * cos(sound_pos - SOUND_7_1_ANGLES[3]) - .5f));		// rear left
-			callbackData.buffer[i + 7] = sample * exp(a * (.5f * cos(sound_pos - SOUND_7_1_ANGLES[2]) - .5f));		// rear right
-			break;
-		}
-	}
+	// finish audio data
+	audioData.device = (void*)&device;
+	audioData.audio_info = &audioInfo;
 
 	SDL_PauseAudioDevice(device, 0);
-
 	LOG_INFO("[SDL] audio set: ", format("{:d} channels @ {:d}Hz", audioInfo.channels, audioInfo.sampling_rate));
+}
+
+void AudioSDL::InitAudioBackend(BaseAPU* _sound_instance) {
+	audioData.sound_instance = _sound_instance;
+	audioData.audio_running = true;
+
+	thread = SDL_CreateThread(audio_thread, "audio thread", (void*)&audioData);
+	LOG_INFO("[SDL] audio backend initialized");
+}
+
+void AudioSDL::DestroyAudioBackend() {
+	audioData.audio_running = false;
+	LOG_INFO("[SDL] audio backend stopped");
 }
 
 // _user_data: struct passed to audiospec, _device_buffer: the audio buffer snippet that needs to be filled, _length: length of this buffer snippet
 void audio_callback(void* _user_data, u8* _device_buffer, int _length) {
-	audio_callback_data* callback_data = (audio_callback_data*)_user_data;
+	audio_samples* samples = (audio_samples*)_user_data;
 
-	u8* region_2_buffer = (u8*)callback_data->buffer.data();
-	u8* region_1_buffer = region_2_buffer + callback_data->read_cursor;
+	u8* region_2_buffer = (u8*)samples->buffer.data();
+	u8* region_1_buffer = region_2_buffer + samples->read_cursor;
 
 	int region_1_size, region_2_size;
-	if (callback_data->read_cursor + _length > callback_data->buffer_size) {
-		region_1_size = callback_data->buffer_size - callback_data->read_cursor;
+	if (samples->read_cursor + _length > samples->buffer_size) {
+		region_1_size = samples->buffer_size - samples->read_cursor;
 		region_2_size = _length - region_1_size;
 	} else {
 		region_1_size = _length;
@@ -117,5 +97,46 @@ void audio_callback(void* _user_data, u8* _device_buffer, int _length) {
 	SDL_memcpy(_device_buffer, region_1_buffer, region_1_size);
 	SDL_memcpy(_device_buffer + region_1_size, region_2_buffer, region_2_size);
 
-	callback_data->read_cursor = (callback_data->read_cursor + _length) % callback_data->buffer_size;
+	samples->read_cursor = (samples->read_cursor + _length) % samples->buffer_size;
+}
+
+static int audio_thread(void* _user_data) {
+	audio_data* data = (audio_data*)_user_data;
+	audio_samples* samples = &data->samples;
+
+	SDL_AudioDeviceID* device = (SDL_AudioDeviceID*)data->device;
+
+	audio_information* audio_info = data->audio_info;
+
+	BaseAPU* sound_instance = data->sound_instance;
+
+	const apu_data& apu_data_ref = sound_instance->GetApuData();
+
+	while (data->audio_running) {
+		// sizes in bytes
+		int region_1_size = samples->read_cursor - samples->write_cursor;
+		int region_2_size = 0;
+		if (samples->read_cursor < samples->write_cursor) {
+			region_1_size = samples->buffer_size - samples->write_cursor;
+			region_2_size = samples->read_cursor;
+		}
+
+		// sizes in samples
+		int region_1_samples = (region_1_size / sizeof(float)) / audio_info->channels;
+		int region_2_samples = (region_2_size / sizeof(float)) / audio_info->channels;
+
+		sound_instance->SampleApuData(region_1_samples + region_2_samples, audio_info->sampling_rate);
+		SDL_LockAudioDevice(*device);
+		sample_into_audio_buffer(samples, apu_data_ref, region_1_size, region_2_size);
+		SDL_UnlockAudioDevice(*device);
+	}
+
+	return 0;
+}
+
+void sample_into_audio_buffer(audio_samples* _samples, const apu_data& _apu_data, const int& _region_1_size, const int& _region_2_size) {
+	float* buffer = _samples->buffer.data() + _samples->write_cursor;
+	
+
+	_samples->write_cursor = (_samples->write_cursor + _region_1_size + _region_2_size) % _samples->buffer_size;
 }

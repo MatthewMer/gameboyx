@@ -18,6 +18,7 @@ private:
 	ALCdevice* alcDev;
 	ALCcontext* alcCtx;
 	std::vector<ALshort> data;
-	ALuint buffer, source;
+	ALuint buffer;
+	ALuint source;
 };
 

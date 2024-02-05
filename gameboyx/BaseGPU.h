@@ -34,14 +34,12 @@ public:
 protected:
 	// constructor
 	BaseGPU() = default;
-	~BaseGPU() = default;
-
-	virtual void SetGraphicsParameters() = 0;
+	virtual ~BaseGPU() = default;
 
 	int frameCounter = 0;
 	int tickCounter = 0;
 
-	GraphicsMgr* graphicsMgr;
+	GraphicsMgr* graphicsMgr = nullptr;
 
 private:
 	static BaseGPU* instance;

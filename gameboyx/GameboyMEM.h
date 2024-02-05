@@ -15,7 +15,7 @@
 
 struct machine_context {
 	// interrupt
-	u8 IE;
+	u8 IE = 0x00;
 
 	// speed switch
 	int currentSpeed = 1;
@@ -111,8 +111,8 @@ struct graphics_context {
 	// CGB
 	bool obj_prio_mode_cgb = false;
 
-	u8 cgb_obp_palette_ram[PPU_PALETTE_RAM_SIZE_CGB];
-	u8 cgb_bgp_palette_ram[PPU_PALETTE_RAM_SIZE_CGB];
+	u8 cgb_obp_palette_ram[PPU_PALETTE_RAM_SIZE_CGB] = {};
+	u8 cgb_bgp_palette_ram[PPU_PALETTE_RAM_SIZE_CGB] = {};
 
 	u32 cgb_obp_color_palettes[8][4] = {
 		{DMG_COLOR_WHITE_ALT, DMG_COLOR_LIGHTGREY_ALT, DMG_COLOR_DARKGREY_ALT, DMG_COLOR_BLACK_ALT},
@@ -157,7 +157,7 @@ struct sound_context {
 	bool ch4NoiseEnable = false;
 
 	// channel panning
-	bool channelPanning[8];				// CH1 right, CH2 right, ..., CH3 left, CH4 left
+	bool channelPanning[8] = {};				// CH1 right, CH2 right, ..., CH3 left, CH4 left
 
 	// volume
 	float masterVolumeRight = 1.f;

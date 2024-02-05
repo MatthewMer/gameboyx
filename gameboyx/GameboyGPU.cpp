@@ -14,27 +14,13 @@ using namespace std;
 
 #define MC_PER_SCANLINE		(((BASE_CLOCK_CPU / 4) * 1000000) / DISPLAY_FREQUENCY) / LCD_SCANLINES_TOTAL
 
-void GameboyGPU::SetGraphicsParameters() {
-	graphicsInfo.is2d = graphicsInfo.en2d = true;
-	graphicsInfo.image_data = vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * TEX2D_CHANNELS);
-	graphicsInfo.aspect_ratio = LCD_ASPECT_RATIO;
-	graphicsInfo.lcd_width = PPU_SCREEN_X;
-	graphicsInfo.lcd_height = PPU_SCREEN_Y;
-
-	if (machineCtx->isCgb) {
-		DrawScanline = &GameboyGPU::DrawScanlineCGB;
-	} else {
-		DrawScanline = &GameboyGPU::DrawScanlineDMG;
-	}
-}
-
 // return delta t per frame in nanoseconds
 int GameboyGPU::GetDelayTime() const {
-	return (1.f / DISPLAY_FREQUENCY) * pow(10, 9);
+	return (int)((1.f / DISPLAY_FREQUENCY) * pow(10, 9));
 }
 
 int GameboyGPU::GetTicksPerFrame(const float& _clock) const {
-	return _clock / DISPLAY_FREQUENCY;
+	return (int)(_clock / DISPLAY_FREQUENCY);
 }
 
 int GameboyGPU::GetFrames() {

@@ -30,7 +30,7 @@ bool write_games_to_config(const vector<BaseCartridge*>& _games, const bool& _re
     games_to_string(_games, config_games);
 
     if (write_data(config_games, CONFIG_FOLDER + GAMES_CONFIG_FILE, _rewrite)) {
-        if (!_rewrite) LOG_INFO("[emu] ", _games.size(), " game(s) added to ." + CONFIG_FOLDER + GAMES_CONFIG_FILE);
+        if (!_rewrite) LOG_INFO("[emu] ", (int)_games.size(), " game(s) added to ." + CONFIG_FOLDER + GAMES_CONFIG_FILE);
         return true;
     }
 
@@ -87,7 +87,7 @@ bool delete_games_from_config(vector<BaseCartridge*>& _games) {
         return false;
     }
 
-    for (int i = games.size() - 1; i >= 0; i--) {
+    for (int i = (int)games.size() - 1; i >= 0; i--) {
         for (const auto& m : _games) {
             if ((games[i]->filePath + games[i]->fileName).compare(m->filePath + m->fileName) == 0) {
                 delete games[i];
@@ -100,7 +100,7 @@ bool delete_games_from_config(vector<BaseCartridge*>& _games) {
         return false;
     }
 
-    LOG_INFO("[emu] ", _games.size(), " game(s) removed from .", CONFIG_FOLDER + GAMES_CONFIG_FILE);
+    LOG_INFO("[emu] ", (int)_games.size(), " game(s) removed from .", CONFIG_FOLDER + GAMES_CONFIG_FILE);
 
     return true;
 }
@@ -228,7 +228,7 @@ void games_from_string(vector<BaseCartridge*>& _games, const vector<string>& _co
 
     bool entries_found = false;
 
-    for (int i = 0; i < _config_games.size(); i++) {
+    for (int i = 0; i < (int)_config_games.size(); i++) {
         if (_config_games[i].compare("") == 0) { continue; }
         line = trim(_config_games[i]);
 
@@ -247,7 +247,7 @@ void games_from_string(vector<BaseCartridge*>& _games, const vector<string>& _co
         else if(_config_games[i].compare("") != 0 && entries_found) {
             auto parameter = split_string(line, "=");
 
-            if (parameter.size() != 2) {
+            if ((int)parameter.size() != 2) {
                 LOG_WARN("[emu] Error in line ", (i + 1));
                 continue;
             }

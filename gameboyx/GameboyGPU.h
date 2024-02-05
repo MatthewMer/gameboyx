@@ -26,10 +26,24 @@ private:
 		machineCtx = memInstance->GetMachineContext();
 		graphicsMgr = _graphics_mgr;
 
-		SetGraphicsParameters();
+		graphicsInfo.is2d = graphicsInfo.en2d = true;
+		graphicsInfo.image_data = std::vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * TEX2D_CHANNELS);
+		graphicsInfo.aspect_ratio = LCD_ASPECT_RATIO;
+		graphicsInfo.lcd_width = PPU_SCREEN_X;
+		graphicsInfo.lcd_height = PPU_SCREEN_Y;
+
+		if (machineCtx->isCgb) {
+			DrawScanline = &GameboyGPU::DrawScanlineCGB;
+		} else {
+			DrawScanline = &GameboyGPU::DrawScanlineDMG;
+		}
+
+		graphicsMgr->Init2dGraphicsBackend();
 	}
 	// destructor
-	~GameboyGPU() = default;
+	~GameboyGPU() override {
+		graphicsMgr->Destroy2dGraphicsBackend();
+	}
 
 	int GetDelayTime() const override;
 	int GetTicksPerFrame(const float& _clock) const override;
@@ -37,9 +51,9 @@ private:
 	void SetGraphicsParameters();
 
 	// memory access
-	GameboyMEM* memInstance;
-	graphics_context* graphicsCtx;
-	machine_context* machineCtx;
+	GameboyMEM* memInstance = nullptr;
+	graphics_context* graphicsCtx = nullptr;
+	machine_context* machineCtx = nullptr;
 	graphics_information& graphicsInfo;
 
 	// members

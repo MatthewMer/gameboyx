@@ -111,13 +111,13 @@ bool VHardwareMgr::CheckDelay() {
 // get core frequency once per second to stabilize output
 void VHardwareMgr::CheckFPSandClock() {
     timeSecondCur = high_resolution_clock::now();
-    accumulatedTime += duration_cast<nanoseconds>(timeSecondCur - timeSecondPrev).count();
+    accumulatedTime += (u32)duration_cast<nanoseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
     if (accumulatedTime > 999999999) {
-        machineInfo.current_frequency = ((float)core_instance->GetCurrentClockCycles() / (accumulatedTime / pow(10,3)));
+        machineInfo.current_frequency = ((float)core_instance->GetCurrentClockCycles() / (accumulatedTime / (float)pow(10,3)));
 
-        machineInfo.current_framerate = graphics_instance->GetFrames() / (accumulatedTime / pow(10,9));
+        machineInfo.current_framerate = graphics_instance->GetFrames() / (accumulatedTime / (float)pow(10,9));
 
         accumulatedTime = 0;
     }

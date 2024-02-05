@@ -47,15 +47,15 @@ protected:
 	~GraphicsMgr() = default;
 
 	// sdl
-	SDL_Window* window;
+	SDL_Window* window = nullptr;
 	virtual void RecalcTex2dScaleMatrixInput() = 0;
-	float aspectRatio;
+	float aspectRatio = 1.f;
 
 	bool resizableBar = false;
 
 	// gpu info
-	std::string vendor;
-	std::string driverVersion;
+	std::string vendor = "";
+	std::string driverVersion = "";
 
 	graphics_information& graphicsInfo;
 	game_status& gameStat;

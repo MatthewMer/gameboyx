@@ -11,7 +11,7 @@ using namespace std;
 /* ***********************************************************************************************************
     DEFINES
 *********************************************************************************************************** */
-#define LINE_NUM(x)     ((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE)
+#define LINE_NUM(x)     (((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE))
 
 /* ***********************************************************************************************************
     CONSTRUCTOR AND (DE)INIT
@@ -453,6 +453,7 @@ void GameboyMEM::WriteIORegister(const u8& _data, const u16& _addr) {
         break;
     case CGB_SPEED_SWITCH_ADDR:
         SwitchSpeed(_data);
+        break;
     case LCDC_ADDR:
         SetLCDCValues(_data);
         break;
@@ -866,8 +867,8 @@ void GameboyMEM::SetAPUChannelPanning(const u8& _data) {
 void GameboyMEM::SetAPUMasterVolume(const u8& _data) {
     IO[NR50_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.masterVolumeRight = VOLUME_MAP.at(_data & MASTER_VOLUME_RIGHT);
-    sound_ctx.masterVolumeLeft = VOLUME_MAP.at((_data & MASTER_VOLUME_LEFT) >> 4);
+    sound_ctx.masterVolumeRight = (float)VOLUME_MAP.at(_data & MASTER_VOLUME_RIGHT);
+    sound_ctx.masterVolumeLeft = (float)VOLUME_MAP.at((_data & MASTER_VOLUME_LEFT) >> 4);
 }
 
 // channel 1
@@ -879,8 +880,8 @@ void GameboyMEM::SetAPUMasterVolume(const u8& _data) {
 inline void setup_bank_access(ScrollableTableBuffer<memory_data>& _table_buffer, vector<u8>& _bank, const int& _offset) {
     auto data = memory_data();
 
-    int size = _bank.size();
-    int line_num = LINE_NUM(size);
+    int size = (int)_bank.size();
+    int line_num = (int)LINE_NUM(size);
     int index;
 
     _table_buffer = ScrollableTableBuffer<memory_data>(line_num);

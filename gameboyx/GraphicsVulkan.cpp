@@ -306,7 +306,7 @@ void GraphicsVulkan::RenderFrame() {
 	u32 image_index = 0;
 	static u32 frame_index = 0;
 
-	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphore, nullptr, &image_index); result != VK_SUCCESS) {
+	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphore, 0, &image_index); result != VK_SUCCESS) {
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 			RebuildSwapchain();
 			RecalcTex2dScaleMatrixInput();
@@ -1012,9 +1012,9 @@ bool GraphicsVulkan::InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule
 
 	VkPipelineVertexInputStateCreateInfo vertex_input_state = {};
 	vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertex_input_state.vertexAttributeDescriptionCount = _info.attrDesc.size();
+	vertex_input_state.vertexAttributeDescriptionCount = (u32)_info.attrDesc.size();
 	vertex_input_state.pVertexAttributeDescriptions = _info.attrDesc.data();
-	vertex_input_state.vertexBindingDescriptionCount = _info.bindDesc.size();
+	vertex_input_state.vertexBindingDescriptionCount = (u32)_info.bindDesc.size();
 	vertex_input_state.pVertexBindingDescriptions = _info.bindDesc.data();
 
 	VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {};
@@ -1053,9 +1053,9 @@ bool GraphicsVulkan::InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule
 
 	VkPipelineLayoutCreateInfo layout_info = {};
 	layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	layout_info.setLayoutCount = _set_layouts.size();
+	layout_info.setLayoutCount = (u32)_set_layouts.size();
 	layout_info.pSetLayouts = _set_layouts.data();
-	layout_info.pushConstantRangeCount = _push_constants.size();
+	layout_info.pushConstantRangeCount = (u32)_push_constants.size();
 	layout_info.pPushConstantRanges = _push_constants.data();
 	if (vkCreatePipelineLayout(device, &layout_info, nullptr, &_layout) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] create pipeline layout");
@@ -1084,7 +1084,7 @@ bool GraphicsVulkan::InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule
 	pipeline_info.renderPass = renderPass;					// currently only one render pass, postprocessing probably more or multiple subpasses
 	pipeline_info.subpass = 0;
 	pipeline_info.pDynamicState = &dynamic_state;
-	if (vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_info, nullptr, &_pipeline) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(device, 0, 1, &pipeline_info, nullptr, &_pipeline) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] create graphics pipeline");
 	}
 

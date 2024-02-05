@@ -390,7 +390,7 @@ void GuiMgr::ShowDebugMemoryInspector() {
             if (int i = 0; gameState.game_running) {
                 for (auto& [name, tables] : machineInfo.memory_buffer) {
                     if (ImGui::BeginTabItem(name.c_str())) {
-                        int tables_num = tables.size() - 1;
+                        int tables_num = (int)tables.size() - 1;
                         dbgMemCellAnyHovered = false;
 
                         if (tables_num > 0) {
@@ -501,7 +501,7 @@ void GuiMgr::ShowHardwareInfo() {
             ImGui::TableNextColumn();
             ImGui::TextUnformatted((to_string(machineInfo.current_frequency) + " MHz").c_str());
 
-            int length = machineInfo.hardware_info.size();
+            int length = (int)machineInfo.hardware_info.size();
             if (length > 0) { ImGui::TableNextRow(); }
             
             length--;
@@ -536,7 +536,7 @@ void GuiMgr::ShowNewGameDialog() {
     }
 
     nfdchar_t* out_path = nullptr;
-    const auto result = NFD_OpenDialog(&out_path, filter_items, FILE_EXTS.size(), s_path_rom_folder.c_str());
+    const auto result = NFD_OpenDialog(&out_path, filter_items, (nfdfiltersize_t)FILE_EXTS.size(), s_path_rom_folder.c_str());
     delete[] filter_items;
 
     if (result == NFD_OKAY) {
@@ -836,11 +836,11 @@ void GuiMgr::AddGameGuiCtx(BaseCartridge* _game_ctx) {
         gamesSelected.push_back(false);
     }
     gamesSelected.back() = true;
-    gameSelectedIndex = gamesSelected.size() - 1;
+    gameSelectedIndex = (int)gamesSelected.size() - 1;
 }
 
 void GuiMgr::ReloadGamesGuiCtx() {
-    for (int i = games.size() - 1; i > -1; i--) {
+    for (int i = (int)games.size() - 1; i > -1; i--) {
         delete games[i];
         games.erase(games.begin() + i);
     }
