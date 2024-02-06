@@ -82,7 +82,6 @@ int main(int, char**)
 
     AudioMgr* audio_mgr = AudioMgr::getInstance(audio_info);
     if (audio_mgr != nullptr) {
-        audio_mgr->CheckAudio();
         audio_mgr->InitAudio(false);
     } else {
         LOG_ERROR("[emu] initialize audio backend");

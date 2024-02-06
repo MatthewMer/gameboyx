@@ -26,7 +26,6 @@ public:
 	static AudioMgr* getInstance(audio_information& _audio_info);
 	static void resetInstance();
 
-	virtual void CheckAudio() = 0;
 	virtual void InitAudio(const bool& _reinit) = 0;
 
 	virtual void InitAudioBackend(BaseAPU* _sound_instance) = 0;
@@ -40,9 +39,13 @@ public:
 
 protected:
 	// constructor
-	explicit AudioMgr(audio_information& _audio_info) : audioInfo(_audio_info) {}
+	explicit AudioMgr(audio_information& _audio_info) : audioInfo(_audio_info) {
+		audioInfo.channels_max = SOUND_7_1;
+		audioInfo.sampling_rate_max = SOUND_SAMPLING_RATE_MAX;
+	}
 	~AudioMgr() = default;
 
+	char* name;
 	audio_information& audioInfo;
 	audio_env audioEnv = audio_env();
 	audio_samples audioSamples = audio_samples();

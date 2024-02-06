@@ -74,8 +74,6 @@ void GameboyMEM::InitMemory() {
     if (!ReadRomHeaderInfo(vec_rom)) { 
         LOG_ERROR("Couldn't acquire memory information");
         return; 
-    } else {
-        LOG_INFO("[emu] memory initialized");
     }
 
     AllocateMemory();

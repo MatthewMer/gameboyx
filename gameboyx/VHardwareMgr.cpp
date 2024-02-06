@@ -20,10 +20,6 @@ VHardwareMgr* VHardwareMgr::getInstance(machine_information& _machine_info, Grap
 
 void VHardwareMgr::resetInstance() {
     if (instance != nullptr) {
-        BaseCPU::resetInstance();
-        BaseCTRL::resetInstance();
-        BaseGPU::resetInstance();
-        BaseAPU::resetInstance();
         delete instance;
         instance = nullptr;
     }
@@ -95,7 +91,7 @@ void VHardwareMgr::ProcessHardware() {
 
 bool VHardwareMgr::CheckDelay() {
     timeFrameCur = high_resolution_clock::now();
-    currentTimePerFrame = (u32)duration_cast<nanoseconds>(timeFrameCur - timeFramePrev).count();
+    currentTimePerFrame = (u32)duration_cast<milliseconds>(timeFrameCur - timeFramePrev).count();
 
     if (currentTimePerFrame >= timePerFrame) {
         timeFramePrev = timeFrameCur;

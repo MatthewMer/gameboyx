@@ -45,7 +45,13 @@ private:
 	// constructor
 	VHardwareMgr(machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info, AudioMgr* _audio_mgr, audio_information& _audio_info);
 	static VHardwareMgr* instance;
-	~VHardwareMgr() = default;
+	~VHardwareMgr() {
+		BaseCPU::resetInstance();
+		BaseCTRL::resetInstance();
+		BaseGPU::resetInstance();
+		BaseAPU::resetInstance();
+		LOG_INFO("[emu] hardware for ", machineInfo.cartridge->title, " stopped");
+	}
 
 	// hardware instances
 	BaseCPU* core_instance;

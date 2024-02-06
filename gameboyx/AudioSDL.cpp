@@ -12,26 +12,6 @@ void audio_callback(void* userdata, u8* _device_buffer, int _length);
 void audio_thread(audio_env* _audio_env, audio_samples* _audio_samples);
 void sample_into_audio_buffer(audio_samples* _samples, const apu_data& _apu_data, const int& _region_1_size, const int& _region_2_size);
 
-void AudioSDL::CheckAudio() {
-	SDL_memset(&want, 0, sizeof(want));
-	SDL_memset(&have, 0, sizeof(have));
-
-	want.freq = SOUND_SAMPLING_RATE_MAX;
-	want.format = AUDIO_F32;
-	want.channels = SOUND_7_1;
-	want.samples = SOUND_BUFFER_SIZE;
-	want.callback = audio_callback;
-	device = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
-
-	audioInfo.max_channels = have.channels;
-	audioInfo.max_sampling_rate = have.freq;
-	audioInfo.channels = audioInfo.max_channels;
-	audioInfo.sampling_rate = audioInfo.max_sampling_rate;
-
-	SDL_CloseAudioDevice(device);
-	LOG_INFO("[SDL] audio supported: ", format("{:d} channels @ {:d}Hz", audioInfo.max_channels, audioInfo.max_sampling_rate));
-}
-
 void AudioSDL::InitAudio(const bool& _reinit) {
 	if (_reinit) { SDL_CloseAudioDevice(device); }
 
@@ -41,7 +21,7 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 	want.freq = audioInfo.sampling_rate;
 	want.format = AUDIO_F32;
 	want.channels = (u8)audioInfo.channels;
-	want.samples = SOUND_BUFFER_SIZE;
+	want.samples = SOUND_BUFFER_SIZE;				// buffer size per channel
 	want.callback = audio_callback;
 	want.userdata = &audioSamples;
 	device = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
@@ -52,7 +32,8 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 
 	// audio samples (audio api data)
 	int format_size = SDL_AUDIO_BITSIZE(have.format) / 8;
-	if (format_size != sizeof(float)) {
+	bool is_float = SDL_AUDIO_ISFLOAT(have.format);
+	if (format_size != sizeof(float) || !is_float) {
 		LOG_ERROR("[SDL] audio format not supported");
 		SDL_CloseAudioDevice(device);
 		return;
@@ -67,7 +48,7 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 	audioEnv.audio_info = &audioInfo;
 
 	SDL_PauseAudioDevice(device, 0);
-	LOG_INFO("[SDL] audio set: ", format("{:d} channels @ {:d}Hz", audioInfo.channels, audioInfo.sampling_rate));
+	LOG_INFO("[SDL] ", name, " set: ", format("{:d} channels @ {:.1f}kHz", audioInfo.channels, audioInfo.sampling_rate / pow(10, 3)));
 }
 
 void AudioSDL::InitAudioBackend(BaseAPU* _sound_instance) {

@@ -239,7 +239,7 @@ inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumn
 /* ***********************************************************************************************************
     AUDIO
 *********************************************************************************************************** */
-#define SOUND_SAMPLING_RATE_MAX     96000
+#define SOUND_SAMPLING_RATE_MAX     44100
 #define SOUND_BUFFER_SIZE           512
 #define SOUND_MONO                  1
 #define SOUND_STEREO                2
