@@ -287,8 +287,7 @@ bool GraphicsVulkan::Init2dGraphicsBackend() {
 	if (InitTex2dRenderTarget()) {
 		UpdateTex2d();
 		return true;
-	}
-	else {
+	} else {
 		return false;
 	}
 }
@@ -309,9 +308,8 @@ void GraphicsVulkan::RenderFrame() {
 	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphore, 0, &image_index); result != VK_SUCCESS) {
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 			RebuildSwapchain();
-			RecalcTex2dScaleMatrixInput();
-		}
-		else {
+			RecalcTex2dScaleMatrix();
+		} else {
 			LOG_ERROR("[vulkan] acquire image from swapchain");
 		}
 		return;
@@ -383,7 +381,7 @@ void GraphicsVulkan::RenderFrame() {
 	present_info.pImageIndices = &image_index;
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores = &releaseSemaphore;
-	
+
 	if (VkResult result = vkQueuePresentKHR(queue, &present_info); result != VK_SUCCESS) {
 		/*
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
@@ -404,30 +402,27 @@ void GraphicsVulkan::UpdateDummy() {
 }
 
 void GraphicsVulkan::BindPipelines2d(VkCommandBuffer& _command_buffer) {
-	//glm::mat4 translate = glm::translate(glm::mat4(1.f), glm::vec3(.0f, .0f, .0f));
-	//glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(tex2dScaleX, tex2dScaleY, 1.f));
-	tex2dScaleMat = glm::scale(glm::mat4(1.f), glm::vec3(tex2dScaleX, tex2dScaleY, 1.f));
-
-	vkCmdBindPipeline(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipeline);
+	vkCmdBindPipeline(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dData.pipeline);
 	VkDeviceSize offset = 0;
-	vkCmdBindVertexBuffers(_command_buffer, 0, 1, &tex2dVertexBuffer.buffer, &offset);
-	vkCmdBindIndexBuffer(_command_buffer, tex2dIndexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdBindDescriptorSets(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dPipelineLayout, 0, 1, &tex2dDescSet, 0, nullptr);
-	vkCmdPushConstants(_command_buffer, tex2dPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &tex2dScaleMat);
+	vkCmdBindVertexBuffers(_command_buffer, 0, 1, &tex2dData.vertex_buffer.buffer, &offset);
+	vkCmdBindIndexBuffer(_command_buffer, tex2dData.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindDescriptorSets(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tex2dData.pipeline_layout, 0, 1, &tex2dData.descriptor_set, 0, nullptr);
+	vkCmdPushConstants(_command_buffer, tex2dData.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &tex2dData.scale_matrix);
 	vkCmdSetViewport(_command_buffer, 0, 1, &viewport);
 	vkCmdSetScissor(_command_buffer, 0, 1, &scissor);
 	vkCmdDrawIndexed(_command_buffer, sizeof(indexData) / sizeof(u32), 1, 0, 0, 0);
 }
 
-void GraphicsVulkan::RecalcTex2dScaleMatrixInput() {
+void GraphicsVulkan::RecalcTex2dScaleMatrix() {
 	if (aspectRatio > graphicsInfo.aspect_ratio) {
-		tex2dScaleX = graphicsInfo.aspect_ratio / aspectRatio;
-		tex2dScaleY = 1.f;
+		tex2dData.scale_x = graphicsInfo.aspect_ratio / aspectRatio;
+		tex2dData.scale_y = 1.f;
+	} else {
+		tex2dData.scale_x = 1.f;
+		tex2dData.scale_y = (1.f / graphicsInfo.aspect_ratio) / (1.f / aspectRatio);
 	}
-	else {
-		tex2dScaleX = 1.f;
-		tex2dScaleY = (1.f / graphicsInfo.aspect_ratio) / (1.f / aspectRatio);
-	}
+
+	tex2dData.scale_matrix = glm::scale(glm::mat4(1.f), glm::vec3(tex2dData.scale_x, tex2dData.scale_y, 1.f));
 }
 
 void GraphicsVulkan::UpdateGpuData() {
@@ -435,22 +430,24 @@ void GraphicsVulkan::UpdateGpuData() {
 }
 
 void GraphicsVulkan::UpdateTex2d() {
-	if (vkWaitForFences(device, 1, &tex2dUpdateFence[tex2dUpdateIndex], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+	int& update_index = tex2dData.update_index;
+
+	if (vkWaitForFences(device, 1, &tex2dData.update_fence[update_index], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] wait for texture2d update fence");
 	}
-	if (vkResetFences(device, 1, &tex2dUpdateFence[tex2dUpdateIndex]) != VK_SUCCESS) {
+	if (vkResetFences(device, 1, &tex2dData.update_fence[update_index]) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] reset texture2d update fence");
 	}
 
-	memcpy(mappedImageData[tex2dUpdateIndex], graphicsInfo.image_data.data(), graphicsInfo.image_data.size());
-	
-	if (vkResetCommandPool(device, tex2dCommandPool[tex2dUpdateIndex], 0) != VK_SUCCESS) {
+	memcpy(tex2dData.mapped_image_data[update_index], graphicsInfo.image_data.data(), graphicsInfo.image_data.size());
+
+	if (vkResetCommandPool(device, tex2dData.command_pool[update_index], 0) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] reset texture2d command pool");
 	}
 
 	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	if (vkBeginCommandBuffer(tex2dCommandBuffer[tex2dUpdateIndex], &beginInfo) != VK_SUCCESS) {
+	if (vkBeginCommandBuffer(tex2dData.command_buffer[update_index], &beginInfo) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] begin command buffer texture2d update");
 	}
 
@@ -462,20 +459,20 @@ void GraphicsVulkan::UpdateTex2d() {
 		imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imageBarrier.image = tex2dImage.image;
+		imageBarrier.image = tex2dData.image.image;
 		imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		imageBarrier.subresourceRange.levelCount = 1;
 		imageBarrier.subresourceRange.layerCount = 1;
 		imageBarrier.srcAccessMask = VK_ACCESS_NONE;
 		imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		vkCmdPipelineBarrier(tex2dCommandBuffer[tex2dUpdateIndex], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+		vkCmdPipelineBarrier(tex2dData.command_buffer[update_index], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 	}
 
 	VkBufferImageCopy region = {};
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.layerCount = 1;
 	region.imageExtent = { graphicsInfo.lcd_width, graphicsInfo.lcd_height, 1 };
-	vkCmdCopyBufferToImage(tex2dCommandBuffer[tex2dUpdateIndex], tex2dStagingBuffer[tex2dUpdateIndex].buffer, tex2dImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	vkCmdCopyBufferToImage(tex2dData.command_buffer[update_index], tex2dData.staging_buffer[update_index].buffer, tex2dData.image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 	{
 		VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
@@ -483,27 +480,27 @@ void GraphicsVulkan::UpdateTex2d() {
 		imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imageBarrier.image = tex2dImage.image;
+		imageBarrier.image = tex2dData.image.image;
 		imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		imageBarrier.subresourceRange.levelCount = 1;
 		imageBarrier.subresourceRange.layerCount = 1;
 		imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		vkCmdPipelineBarrier(tex2dCommandBuffer[tex2dUpdateIndex], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+		vkCmdPipelineBarrier(tex2dData.command_buffer[update_index], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 	}
 
-	if (vkEndCommandBuffer(tex2dCommandBuffer[tex2dUpdateIndex]) != VK_SUCCESS) {
+	if (vkEndCommandBuffer(tex2dData.command_buffer[update_index]) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] end command buffer texture2d update");
 	}
 
 	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &tex2dCommandBuffer[tex2dUpdateIndex];
-	if (vkQueueSubmit(queue, 1, &submitInfo, tex2dUpdateFence[tex2dUpdateIndex]) != VK_SUCCESS) {
+	submitInfo.pCommandBuffers = &tex2dData.command_buffer[update_index];
+	if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[update_index]) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] queue submit texture2d update");
 	}
 
-	++tex2dUpdateIndex %= 2;
+	++update_index %= 2;
 }
 
 bool GraphicsVulkan::InitVulkanInstance(std::vector<const char*>& _sdl_extensions) {
@@ -565,8 +562,7 @@ bool GraphicsVulkan::InitVulkanInstance(std::vector<const char*>& _sdl_extension
 #ifdef GRAPHICS_DEBUG
 		if (strcmp(n, VK_VALIDATION) == 0) {
 			LOG_WARN("[vulkan] ", n, " layer enabled");
-		}
-		else {
+		} else {
 			LOG_INFO("[vulkan] ", n, " layer enabled");
 		}
 #else
@@ -614,8 +610,7 @@ bool GraphicsVulkan::InitPhysicalDevice() {
 	if (discrete_device_index > -1) {
 		physicalDevice = vk_physical_devices[discrete_device_index];
 		vkGetPhysicalDeviceProperties(vk_physical_devices[discrete_device_index], &physicalDeviceProperties);
-	}
-	else {
+	} else {
 		LOG_INFO("[vulkan] fallback to first entry");
 		physicalDevice = vk_physical_devices[0];
 		vkGetPhysicalDeviceProperties(vk_physical_devices[0], &physicalDeviceProperties);
@@ -636,7 +631,7 @@ bool GraphicsVulkan::InitLogicalDevice(std::vector<const char*>& _device_extensi
 	u32 graphics_queue_index = 0;
 	for (u32 i = 0; const auto & n : queue_family_properties) {
 		if ((n.queueCount > 0) && (n.queueFlags & (VK_QUEUE_GRAPHICS_BIT & VK_QUEUE_TRANSFER_BIT))) {
-			graphics_queue_index = i; 
+			graphics_queue_index = i;
 		}
 		i++;
 	}
@@ -687,8 +682,7 @@ void GraphicsVulkan::SetGPUInfo() {
 	// TODO: doesn't work properly for AMD cards, will get fixed in the future
 	else if (vendor_id == ID_AMD) {
 		driverVersion = std::format("{}.{}", driver >> 14, driver & 0x3fff);
-	}
-	else {
+	} else {
 		driverVersion = N_A;
 	}
 }
@@ -697,8 +691,7 @@ bool GraphicsVulkan::InitSurface() {
 	if (!SDL_Vulkan_CreateSurface(window, vulkanInstance, &surface)) {
 		LOG_ERROR("[vulkan] ", SDL_GetError());
 		return false;
-	}
-	else {
+	} else {
 		return true;
 	}
 }
@@ -767,7 +760,7 @@ bool GraphicsVulkan::InitSwapchain(VkImageUsageFlags _flags) {
 
 	graphicsInfo.win_width = surface_capabilites.currentExtent.width;
 	graphicsInfo.win_height = surface_capabilites.currentExtent.height;
-	viewport = { .0f, .0f, (float)graphicsInfo.win_width, (float)graphicsInfo.win_height, .0f, 1.f};
+	viewport = { .0f, .0f, (float)graphicsInfo.win_width, (float)graphicsInfo.win_height, .0f, 1.f };
 	scissor = { {0, 0}, {graphicsInfo.win_width, graphicsInfo.win_height} };
 
 	u32 image_num = 0;
@@ -775,7 +768,7 @@ bool GraphicsVulkan::InitSwapchain(VkImageUsageFlags _flags) {
 		LOG_ERROR("[vulkan] couldn't acquire image count");
 		return false;
 	}
-	
+
 	images.clear();
 	images.resize(image_num);
 	if (vkGetSwapchainImagesKHR(device, swapchain, &image_num, images.data()) != VK_SUCCESS) { return false; }
@@ -988,7 +981,7 @@ bool GraphicsVulkan::InitShaderModule(const vector<char>& _byte_code, VkShaderMo
 	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	shader_info.pCode = (u32*)byte_code.data();
 	shader_info.codeSize = byte_code.size();
-	
+
 	if (vkCreateShaderModule(device, &shader_info, nullptr, &_shader) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] create shader module");
 		return false;
@@ -1094,7 +1087,7 @@ bool GraphicsVulkan::InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule
 	return true;
 }
 
-bool GraphicsVulkan::InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties) {
+bool GraphicsVulkan::InitBuffer(vulkan_buffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties) {
 	VkBufferCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	create_info.size = _size;
@@ -1129,16 +1122,15 @@ bool GraphicsVulkan::InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageF
 	return true;
 }
 
-bool GraphicsVulkan::LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size) {
+bool GraphicsVulkan::LoadBuffer(vulkan_buffer& _buffer, void* _data, u64 _size) {
 	if (resizableBar) {
 		void* data;
 		if (vkMapMemory(device, _buffer.memory, 0, _size, 0, &data) != VK_SUCCESS) {
 			return false;
 		}
 		memcpy(data, _data, _size);
-	}
-	else {
-		VulkanBuffer staging_buffer = {};
+	} else {
+		vulkan_buffer staging_buffer = {};
 		if (!InitBuffer(staging_buffer, _size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
 			LOG_ERROR("[vulkan] init staging buffer");
 			return false;
@@ -1203,7 +1195,7 @@ bool GraphicsVulkan::LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size) {
 	return true;
 }
 
-bool GraphicsVulkan::InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling) {
+bool GraphicsVulkan::InitImage(vulkan_image& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling) {
 	VkImageCreateInfo image_info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	image_info.imageType = VK_IMAGE_TYPE_2D;
 	image_info.extent.width = _width;
@@ -1266,8 +1258,7 @@ void GraphicsVulkan::DestroySwapchain(const bool& _rebuild) {
 	WaitIdle();
 	if (_rebuild) {
 		vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
-	}
-	else {
+	} else {
 		for (auto& n : imageViews) {
 			vkDestroyImageView(device, n, nullptr);
 		}
@@ -1318,13 +1309,13 @@ void GraphicsVulkan::DestroyPipelines() {
 	pipelines.clear();
 }
 
-void GraphicsVulkan::DestroyBuffer(VulkanBuffer& _buffer) {
+void GraphicsVulkan::DestroyBuffer(vulkan_buffer& _buffer) {
 	WaitIdle();
 	vkDestroyBuffer(device, _buffer.buffer, nullptr);
 	vkFreeMemory(device, _buffer.memory, nullptr);
 }
 
-void GraphicsVulkan::DestroyImage(VulkanImage& _image) {
+void GraphicsVulkan::DestroyImage(vulkan_image& _image) {
 	WaitIdle();
 	vkDestroyImageView(device, _image.image_view, nullptr);
 	vkDestroyImage(device, _image.image, nullptr);
@@ -1336,39 +1327,39 @@ void GraphicsVulkan::DestroySemaphore(VkSemaphore& _semaphore) {
 }
 
 bool GraphicsVulkan::InitTex2dRenderTarget() {
-	for (int i = 0; i < tex2dCommandPool.size(); i++) {
+	for (int i = 0; i < tex2dData.command_pool.size(); i++) {
 		VkCommandPoolCreateInfo cmd_pool_info = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 		cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 		cmd_pool_info.queueFamilyIndex = familyIndex;
-		if (vkCreateCommandPool(device, &cmd_pool_info, nullptr, &tex2dCommandPool[i]) != VK_SUCCESS) {
+		if (vkCreateCommandPool(device, &cmd_pool_info, nullptr, &tex2dData.command_pool[i]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] create command pool for tex2d update");
 		}
 
 		VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-		alloc_info.commandPool = tex2dCommandPool[i];
+		alloc_info.commandPool = tex2dData.command_pool[i];
 		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		alloc_info.commandBufferCount = 1;
-		if (vkAllocateCommandBuffers(device, &alloc_info, &tex2dCommandBuffer[i]) != VK_SUCCESS) {
+		if (vkAllocateCommandBuffers(device, &alloc_info, &tex2dData.command_buffer[i]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] init command buffer for tex2d update");
 		}
 	}
 
 	// vertex buffer for triangle
-	if (!InitBuffer(tex2dVertexBuffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
+	if (!InitBuffer(tex2dData.vertex_buffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
 		LOG_ERROR("[vulkan] init vertex buffer");
 		return false;
 	}
-	if (!LoadBuffer(tex2dVertexBuffer, vertexData, sizeof(vertexData))) {
+	if (!LoadBuffer(tex2dData.vertex_buffer, vertexData, sizeof(vertexData))) {
 		LOG_ERROR("[vulkan] copy data to vertex buffer");
 		return false;
 	}
 
 	// index buffer for triangle
-	if (!InitBuffer(tex2dIndexBuffer, sizeof(indexData), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
+	if (!InitBuffer(tex2dData.index_buffer, sizeof(indexData), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
 		LOG_ERROR("[vulkan] init index buffer");
 		return false;
 	}
-	if (!LoadBuffer(tex2dIndexBuffer, indexData, sizeof(indexData))) {
+	if (!LoadBuffer(tex2dData.index_buffer, indexData, sizeof(indexData))) {
 		LOG_ERROR("[vulkan] copy data to index buffer");
 		return false;
 	}
@@ -1376,8 +1367,8 @@ bool GraphicsVulkan::InitTex2dRenderTarget() {
 	VkFenceCreateInfo fence_info = {};
 	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	if (vkCreateFence(device, &fence_info, nullptr, &tex2dUpdateFence[0]) != VK_SUCCESS ||
-		vkCreateFence(device, &fence_info, nullptr, &tex2dUpdateFence[1]) != VK_SUCCESS) {
+	if (vkCreateFence(device, &fence_info, nullptr, &tex2dData.update_fence[0]) != VK_SUCCESS ||
+		vkCreateFence(device, &fence_info, nullptr, &tex2dData.update_fence[1]) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] create tex2dUpdateFence");
 		return false;
 	}
@@ -1397,12 +1388,11 @@ bool GraphicsVulkan::InitTex2dRenderTarget() {
 	if (graphicsInfo.en2d) {
 		bindPipelines = &GraphicsVulkan::BindPipelines2d;
 		updateFunction = &GraphicsVulkan::UpdateTex2d;
-	}
-	else {
+	} else {
 
 	}
 
-	RecalcTex2dScaleMatrixInput();
+	RecalcTex2dScaleMatrix();
 
 	//UpdateTex2dProjMatrix();
 
@@ -1425,7 +1415,7 @@ bool GraphicsVulkan::InitTex2dSampler() {
 	create_info.minLod = .0f;
 	create_info.maxLod = .0f;
 
-	if (vkCreateSampler(device, &create_info, nullptr, &samplerTex2d) != VK_SUCCESS) {
+	if (vkCreateSampler(device, &create_info, nullptr, &tex2dData.sampler) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] create sampler for Texture2d");
 		return false;
 	}
@@ -1442,7 +1432,7 @@ bool GraphicsVulkan::InitTex2dDescriptorSets() {
 		createInfo.maxSets = 1;
 		createInfo.poolSizeCount = sizeof(poolSizes) / sizeof(poolSizes[0]);
 		createInfo.pPoolSizes = poolSizes;
-		if (vkCreateDescriptorPool(device, &createInfo, nullptr, &tex2dDescPool) != VK_SUCCESS) {
+		if (vkCreateDescriptorPool(device, &createInfo, nullptr, &tex2dData.descriptor_pool) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] create descriptor pool");
 			return false;
 		}
@@ -1456,25 +1446,25 @@ bool GraphicsVulkan::InitTex2dDescriptorSets() {
 		VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 		createInfo.bindingCount = sizeof(bindings) / sizeof(bindings[0]);
 		createInfo.pBindings = bindings;
-		if (vkCreateDescriptorSetLayout(device, &createInfo, nullptr, tex2dDescSetLayout.data()) != VK_SUCCESS) {
+		if (vkCreateDescriptorSetLayout(device, &createInfo, nullptr, tex2dData.descriptor_set_layout.data()) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] create descriptor pool layout");
 			return false;
 		}
 
 		VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-		allocateInfo.descriptorPool = tex2dDescPool;
-		allocateInfo.descriptorSetCount = (u32)tex2dDescSetLayout.size();
-		allocateInfo.pSetLayouts = tex2dDescSetLayout.data();
-		if (vkAllocateDescriptorSets(device, &allocateInfo, &tex2dDescSet) != VK_SUCCESS) {
+		allocateInfo.descriptorPool = tex2dData.descriptor_pool;
+		allocateInfo.descriptorSetCount = (u32)tex2dData.descriptor_set_layout.size();
+		allocateInfo.pSetLayouts = tex2dData.descriptor_set_layout.data();
+		if (vkAllocateDescriptorSets(device, &allocateInfo, &tex2dData.descriptor_set) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] allocate descriptor sets");
 			return false;
 		}
 
 		// info for descriptor of texture2d to sample from -> fragment shader
-		VkDescriptorImageInfo imageInfo = { samplerTex2d, tex2dImage.image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+		VkDescriptorImageInfo imageInfo = { tex2dData.sampler, tex2dData.image.image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 		auto descriptorWrites = std::vector<VkWriteDescriptorSet>(1);
 		descriptorWrites[0] = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-		descriptorWrites[0].dstSet = tex2dDescSet;
+		descriptorWrites[0].dstSet = tex2dData.descriptor_set;
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1487,22 +1477,22 @@ bool GraphicsVulkan::InitTex2dDescriptorSets() {
 
 bool GraphicsVulkan::InitTex2dBuffers() {
 	// staging buffer for texture upload
-	currentSize = graphicsInfo.lcd_width * graphicsInfo.lcd_height * TEX2D_CHANNELS;
-	for(auto& n : tex2dStagingBuffer){
-		if (!InitBuffer(n, currentSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+	tex2dData.size = graphicsInfo.lcd_width * graphicsInfo.lcd_height * TEX2D_CHANNELS;
+	for (auto& n : tex2dData.staging_buffer) {
+		if (!InitBuffer(n, tex2dData.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
 			LOG_ERROR("[vulkan] create staging buffer for main texture");
 			return false;
 		}
 	}
 
 	// image buffer for shader usage
-	if (!InitImage(tex2dImage, graphicsInfo.lcd_width, graphicsInfo.lcd_height, tex2dFormat, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, /*resizableBar ? VK_IMAGE_TILING_LINEAR :*/ VK_IMAGE_TILING_OPTIMAL)) {
+	if (!InitImage(tex2dData.image, graphicsInfo.lcd_width, graphicsInfo.lcd_height, tex2dData.format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, /*resizableBar ? VK_IMAGE_TILING_LINEAR :*/ VK_IMAGE_TILING_OPTIMAL)) {
 		LOG_ERROR("[vulkan] create target 2d texture for virtual hardware");
 		return false;
 	}
 
-	for (int i = 0; auto & n : tex2dStagingBuffer) {
-		if (vkMapMemory(device, n.memory, 0, currentSize, 0, &mappedImageData[i]) != VK_SUCCESS) {
+	for (int i = 0; auto & n : tex2dData.staging_buffer) {
+		if (vkMapMemory(device, n.memory, 0, tex2dData.size, 0, &tex2dData.mapped_image_data[i]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] map image memory");
 			return false;
 		}
@@ -1516,19 +1506,19 @@ void GraphicsVulkan::DestroyTex2dRenderTarget() {
 	WaitIdle();
 	DestroyTex2dSampler();
 	DestroyTex2dShader();
-	vkDestroyDescriptorPool(device, tex2dDescPool, nullptr);
-	vkDestroyDescriptorSetLayout(device, tex2dDescSetLayout[0], nullptr);
-	for (auto& n : tex2dStagingBuffer) {
+	vkDestroyDescriptorPool(device, tex2dData.descriptor_pool, nullptr);
+	vkDestroyDescriptorSetLayout(device, tex2dData.descriptor_set_layout[0], nullptr);
+	for (auto& n : tex2dData.staging_buffer) {
 		DestroyBuffer(n);
 	}
 	WaitIdle();
-	DestroyImage(tex2dImage);
-	DestroyBuffer(tex2dVertexBuffer);
-	DestroyBuffer(tex2dIndexBuffer);
-	for (auto& n : tex2dCommandPool) {
+	DestroyImage(tex2dData.image);
+	DestroyBuffer(tex2dData.vertex_buffer);
+	DestroyBuffer(tex2dData.index_buffer);
+	for (auto& n : tex2dData.command_pool) {
 		vkDestroyCommandPool(device, n, nullptr);
 	}
-	for (auto& n : tex2dUpdateFence) {
+	for (auto& n : tex2dData.update_fence) {
 		vkDestroyFence(device, n, nullptr);
 	}
 
@@ -1537,7 +1527,7 @@ void GraphicsVulkan::DestroyTex2dRenderTarget() {
 
 void GraphicsVulkan::DestroyTex2dSampler() {
 	WaitIdle();
-	vkDestroySampler(device, samplerTex2d, nullptr);
+	vkDestroySampler(device, tex2dData.sampler, nullptr);
 }
 
 bool GraphicsVulkan::InitTex2dPipeline() {
@@ -1571,19 +1561,18 @@ bool GraphicsVulkan::InitTex2dPipeline() {
 		push_constants[0].size = sizeof(glm::mat4);
 		push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		InitPipeline(vertex_shader, fragment_shader, tex2dPipelineLayout, tex2dPipeline, buffer_info, tex2dDescSetLayout, push_constants);
+		InitPipeline(vertex_shader, fragment_shader, tex2dData.pipeline_layout, tex2dData.pipeline, buffer_info, tex2dData.descriptor_set_layout, push_constants);
 
 		return true;
-	}
-	else {
+	} else {
 		return false;
 	}
 }
 
 void GraphicsVulkan::DestroyTex2dShader() {
 	WaitIdle();
-	vkDestroyPipeline(device, tex2dPipeline, nullptr);
-	vkDestroyPipelineLayout(device, tex2dPipelineLayout, nullptr);
+	vkDestroyPipeline(device, tex2dData.pipeline, nullptr);
+	vkDestroyPipelineLayout(device, tex2dData.pipeline_layout, nullptr);
 }
 
 void GraphicsVulkan::WaitIdle() {
@@ -1624,8 +1613,7 @@ void GraphicsVulkan::EnumerateShaders() {
 	if (shaderSourceFiles.empty()) {
 		graphicsInfo.shaders_compilation_finished = true;
 		return;
-	}
-	else {
+	} else {
 		graphicsInfo.shaders_compiled = 0;
 		graphicsInfo.shaders_total = (int)(shaderSourceFiles.size());
 		graphicsInfo.shaders_compilation_finished = false;
@@ -1639,7 +1627,7 @@ void GraphicsVulkan::EnumerateShaders() {
 void GraphicsVulkan::CompileNextShader() {
 	bool compiled = true;
 	vector<char> vertex_byte_code;
-	if(!compile_shader(vertex_byte_code, shaderSourceFiles[graphicsInfo.shaders_compiled].first, compiler, options)){
+	if (!compile_shader(vertex_byte_code, shaderSourceFiles[graphicsInfo.shaders_compiled].first, compiler, options)) {
 		compiled = false;
 	}
 	vector<char> fragment_byte_code;
@@ -1687,7 +1675,7 @@ void GraphicsVulkan::DetectResizableBar() {
 	VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 	for (uint32_t i = 0; i < devMemProps.memoryTypeCount; i++) {
-		if (float heap_size = devMemProps.memoryHeaps[devMemProps.memoryTypes[i].heapIndex].size / (float)pow(10, 9); 
+		if (float heap_size = devMemProps.memoryHeaps[devMemProps.memoryTypes[i].heapIndex].size / (float)pow(10, 9);
 			(devMemProps.memoryTypes[i].propertyFlags & flags) == flags && heap_size > .5f) {
 			resizableBar = true;
 			LOG_INFO(std::format("[vulkan] resizable bar enabled (Heap{:d}:{:.2f}GB)", devMemProps.memoryTypes[i].heapIndex, heap_size));
@@ -1704,8 +1692,7 @@ void GraphicsVulkan::DetectResizableBar() {
 VkBool32 VKAPI_CALL debug_report_callback(VkDebugUtilsMessageSeverityFlagBitsEXT _severity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* _callback_data, void* userData) {
 	if (_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 		LOG_ERROR(_callback_data->pMessage);
-	}
-	else {
+	} else {
 		LOG_WARN(_callback_data->pMessage);
 	}
 	return VK_FALSE;

@@ -34,30 +34,62 @@ struct VulkanPipelineBufferInfo {
 	std::vector<VkVertexInputBindingDescription> bindDesc;
 };
 
-struct VulkanBuffer {
+struct vulkan_buffer {
 	VkBuffer buffer;					// memory view (offset and size)
 	VkDeviceMemory memory;				// allocated memory
 };
 
-struct VulkanImage {
+struct vulkan_image {
 	VkImage image;
 	VkImageView image_view;
 	VkDeviceMemory memory;
 };
 
-class GraphicsVulkan : protected GraphicsMgr{
+struct tex2d_data {
+	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+
+	vulkan_buffer vertex_buffer = {};
+	vulkan_buffer index_buffer = {};
+	vulkan_image image = {};
+
+	u64 size = {};
+
+	VkPipelineLayout pipeline_layout;
+	VkPipeline pipeline;
+	std::vector<vulkan_buffer> staging_buffer = std::vector<vulkan_buffer>(2);
+
+	int update_index = 0;
+
+	std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>(2);
+	std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>(2);
+	std::vector<VkFence> update_fence = std::vector<VkFence>(2);
+
+	VkDescriptorPool descriptor_pool = {};
+	VkDescriptorSet descriptor_set = {};
+	std::vector<VkDescriptorSetLayout> descriptor_set_layout = std::vector<VkDescriptorSetLayout>(1);
+
+	VkSampler sampler = {};
+
+	std::vector<void*> mapped_image_data = std::vector<void*>(2);
+
+	float scale_x = 1.f;
+	float scale_y = 1.f;
+	glm::mat4 scale_matrix = {};
+};
+
+class GraphicsVulkan : protected GraphicsMgr {
 public:
 	friend class GraphicsMgr;
-	
+
 	// render
 	void RenderFrame() override;
 
-	// initialize
+	// (de)init
 	bool InitGraphics() override;
-	bool StartGraphics() override;
+	bool ExitGraphics() override;
 
 	// deinit
-	bool ExitGraphics() override;
+	bool StartGraphics() override;
 	void StopGraphics() override;
 
 	// shader compilation
@@ -69,20 +101,21 @@ public:
 	void DestroyImgui() override;
 	void NextFrameImGui() const override;
 
+	// update 3d/2d data
 	void UpdateGpuData() override;
 
+	// (de)init 2d render target
 	bool Init2dGraphicsBackend() override;
 	void Destroy2dGraphicsBackend() override;
 
 private:
+	// constructor/destructor
 	explicit GraphicsVulkan(SDL_Window* _window, graphics_information& _graphics_info, game_status& _game_stat) : GraphicsMgr(_window, _graphics_info, _game_stat) {};
 	~GraphicsVulkan() = default;
 
-	void RecalcTex2dScaleMatrixInput() override;
-
-	// graphics Queue
+	// graphics queue
 	VkQueue queue = VK_NULL_HANDLE;
-	uint32_t familyIndex = (uint32_t) - 1;
+	uint32_t familyIndex = (uint32_t)-1;
 	VkPhysicalDeviceMemoryProperties devMemProps = {};
 
 	// swapchain
@@ -107,70 +140,13 @@ private:
 	VkRenderPass renderPass = {};
 	VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT;
 
-	// buffers
+	// main buffers
 	std::vector<VkFramebuffer> frameBuffers;
 	VkCommandBuffer commandBuffers[FRAMES_IN_FLIGHT] = {};
 	VkCommandPool commandPools[FRAMES_IN_FLIGHT] = {};
 
 	VkBufferUsageFlags bufferUsageFlags = {};
 	VkMemoryPropertyFlags memoryPropertyFlags = {};
-
-	typedef void (GraphicsVulkan::* update_function)();
-	update_function updateFunction = nullptr;
-	void UpdateDummy();
-
-	typedef void (GraphicsVulkan::* render_function)(VkCommandBuffer& _command_buffer);
-	render_function bindPipelines = nullptr;
-	void BindPipelinesDummy(VkCommandBuffer& _command_buffer);
-
-	// render target 2d texture
-	void UpdateTex2d();
-
-	VkFormat tex2dFormat = VK_FORMAT_R8G8B8A8_UNORM;
-
-	VulkanBuffer tex2dVertexBuffer = {};
-	VulkanBuffer tex2dIndexBuffer = {};
-	VulkanImage tex2dImage = {};
-
-	VkPipelineLayout tex2dPipelineLayout;
-	VkPipeline tex2dPipeline;
-	std::vector<VulkanBuffer> tex2dStagingBuffer = std::vector<VulkanBuffer>(2);
-
-	int tex2dUpdateIndex = 0;
-
-	std::vector<VkCommandPool> tex2dCommandPool = std::vector<VkCommandPool>(2);
-	std::vector<VkCommandBuffer> tex2dCommandBuffer = std::vector<VkCommandBuffer>(2);
-	std::vector<VkFence> tex2dUpdateFence = std::vector<VkFence>(2);
-
-	VkDescriptorPool tex2dDescPool = {};
-	VkDescriptorSet tex2dDescSet = {};
-	std::vector<VkDescriptorSetLayout> tex2dDescSetLayout = std::vector<VkDescriptorSetLayout>(1);
-
-	VkSampler samplerTex2d = {};
-
-	std::vector<void*> mappedImageData = std::vector<void*>(2);
-
-	u64 currentSize = {};
-
-	bool InitTex2dRenderTarget();
-	void DestroyTex2dRenderTarget();
-	bool InitTex2dPipeline();
-	void DestroyTex2dShader();
-	void BindPipelines2d(VkCommandBuffer& _command_buffer);
-	bool InitTex2dBuffers();
-	bool InitTex2dSampler();
-	void DestroyTex2dSampler();
-	bool InitTex2dDescriptorSets();
-
-	glm::mat4 tex2dScaleMat = {};
-	float tex2dScaleX = 1.f;
-	float tex2dScaleY = 1.f;
-
-	// sync
-	VkFence renderFence = {};
-	VkSemaphore acquireSemaphore = {};
-	VkSemaphore releaseSemaphore = {};
-	VkPipelineStageFlags waitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;				// swapchain
 
 	// graphics pipeline
 	std::vector<std::string> enumeratedShaderFiles;										// contains all shader source files
@@ -181,11 +157,26 @@ private:
 	VkViewport viewport = {};
 	VkRect2D scissor = {};
 
+	// main sync
+	VkFence renderFence = {};
+	VkSemaphore acquireSemaphore = {};
+	VkSemaphore releaseSemaphore = {};
+	VkPipelineStageFlags waitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;				// swapchain
+
 	// imgui
 	VkDescriptorPool imguiDescriptorPool = {};
 
-	// misc
+	// clear color
 	VkClearValue clearColor = { 0.f, 0.f, 0.f, 1.f };
+
+	// render functions
+	typedef void (GraphicsVulkan::* update_function)();
+	update_function updateFunction = nullptr;
+	void UpdateDummy();
+
+	typedef void (GraphicsVulkan::* render_function)(VkCommandBuffer& _command_buffer);
+	render_function bindPipelines = nullptr;
+	void BindPipelinesDummy(VkCommandBuffer& _command_buffer);
 
 	// initialize
 	bool InitVulkanInstance(std::vector<const char*>& _sdl_extensions);
@@ -199,25 +190,41 @@ private:
 	bool InitShaderModule(const std::vector<char>& _byte_code, VkShaderModule& _shader);
 	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info, std::vector<VkDescriptorSetLayout>& _set_leyouts, std::vector<VkPushConstantRange>& _push_constants);
 	void SetGPUInfo();
-	bool InitBuffer(VulkanBuffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
-	bool InitImage(VulkanImage& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
+	bool InitBuffer(vulkan_buffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
+	bool InitImage(vulkan_image& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
 	bool InitSemaphore(VkSemaphore& _semaphore);
 
-	bool LoadBuffer(VulkanBuffer& _buffer, void* _data, u64 _size);
+	bool LoadBuffer(vulkan_buffer& _buffer, void* _data, u64 _size);
 
-	// deinit
+	// deinitialize
 	void DestroySwapchain(const bool& _rebuild);
 	void DestroySurface();
 	void DestroyRenderPass();
 	void DestroyFrameBuffers();
 	void DestroyCommandBuffer();
 	void DestroyPipelines();
-	void DestroyBuffer(VulkanBuffer& _buffer);
-	void DestroyImage(VulkanImage& _image);
+	void DestroyBuffer(vulkan_buffer& _buffer);
+	void DestroyImage(vulkan_image& _image);
 	void DestroySemaphore(VkSemaphore& _semaphore);
 
 	// rebuild -> resize window(surface/render area)
 	void RebuildSwapchain();
+
+	// render target 2d texture
+	tex2d_data tex2dData = {};
+
+	void UpdateTex2d() override;
+	void RecalcTex2dScaleMatrix() override;
+
+	bool InitTex2dRenderTarget();
+	void DestroyTex2dRenderTarget();
+	bool InitTex2dPipeline();
+	void DestroyTex2dShader();
+	void BindPipelines2d(VkCommandBuffer& _command_buffer);
+	bool InitTex2dBuffers();
+	bool InitTex2dSampler();
+	void DestroyTex2dSampler();
+	bool InitTex2dDescriptorSets();
 
 	u32 FindMemoryTypes(u32 _type_filter, VkMemoryPropertyFlags _mem_properties);
 	void DetectResizableBar() override;
