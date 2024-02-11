@@ -11,7 +11,7 @@ using namespace std;
 /* ***********************************************************************************************************
     DEFINES
 *********************************************************************************************************** */
-#define LINE_NUM(x)     (((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE))
+#define LINE_NUM_HEX(x)     (((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE))
 
 /* ***********************************************************************************************************
     CONSTRUCTOR AND (DE)INIT
@@ -86,7 +86,7 @@ void GameboyMEM::InitMemory() {
     }
     InitMemoryState();
 
-    SetupDebugMemoryAccess();
+    SetupMemoryDebugTables();
 }
 
 bool GameboyMEM::CopyRom(const vector<u8>& _vec_rom) {
@@ -875,17 +875,17 @@ void GameboyMEM::SetAPUMasterVolume(const u8& _data) {
 /* ***********************************************************************************************************
     MEMORY DEBUGGER
 *********************************************************************************************************** */
-inline void setup_bank_access(ScrollableTableBuffer<memory_data>& _table_buffer, vector<u8>& _bank, const int& _offset) {
+void GameboyMEM::FillMemoryDebugTable(TableSection<memory_data>& _table_section, vector<u8>* _bank_data, const int& _offset) {
     auto data = memory_data();
 
-    int size = (int)_bank.size();
-    int line_num = (int)LINE_NUM(size);
+    int size = (int)_bank_data->size();
+    int line_num = (int)LINE_NUM_HEX(size);
     int index;
 
-    _table_buffer = ScrollableTableBuffer<memory_data>(line_num);
+    _table_section = TableSection<memory_data>(line_num);
 
     for (int i = 0; i < line_num; i++) {
-        auto table_entry = ScrollableTableEntry<memory_data>();
+        auto table_entry = TableEntry<memory_data>();
 
         index = i * DEBUG_MEM_ELEM_PER_LINE;
         get<ST_ENTRY_ADDRESS>(table_entry) = _offset + index;
@@ -893,166 +893,144 @@ inline void setup_bank_access(ScrollableTableBuffer<memory_data>& _table_buffer,
         data = memory_data();
         get<MEM_ENTRY_ADDR>(data) = format("{:04x}", _offset + index);
         get<MEM_ENTRY_LEN>(data) = size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
-        get<MEM_ENTRY_REF>(data) = &_bank[index];
+        get<MEM_ENTRY_REF>(data) = &(*_bank_data)[index];
 
         get<ST_ENTRY_DATA>(table_entry) = data;
 
-        _table_buffer[i] = table_entry;
+        _table_section[i] = table_entry;
     }
 }
 
-void GameboyMEM::SetupDebugMemoryAccess() {
-    // access for memory inspector
-    machineInfo.memory_buffer.clear();
 
-    auto mem_type_table_buffer = MemoryBufferEntry<GuiScrollableTable<memory_data>>();
-    auto table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-    auto table_buffer = ScrollableTableBuffer<memory_data>();
+void GameboyMEM::SetupMemoryDebugTables() {
+    // access for memory inspector
+    machineInfo.memory_tables.clear();
 
     // ROM
     {
-        mem_type_table_buffer = MemoryBufferEntry<GuiScrollableTable<memory_data>>();
-        mem_type_table_buffer.first = "ROM";
+        // ROM 0
+        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        table.name = "ROM";
+        auto table_section = TableSection<memory_data>();
 
-        table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-        table_buffer = ScrollableTableBuffer<memory_data>();
+        FillMemoryDebugTable(table_section, &ROM_0, ROM_0_OFFSET);
 
-        setup_bank_access(table_buffer, ROM_0, ROM_0_OFFSET);
+        table.AddTableSectionDisposable(table_section);
 
-        table.AddMemoryArea(table_buffer);
-        mem_type_table_buffer.second.emplace_back(table);
-
+        // ROM n
         for (auto& n : ROM_N) {
-            table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-            table_buffer = ScrollableTableBuffer<memory_data>();
+            table_section = TableSection<memory_data>();
 
-            setup_bank_access(table_buffer, n, ROM_N_OFFSET);
+            FillMemoryDebugTable(table_section, &n, ROM_0_OFFSET);
 
-            table.AddMemoryArea(table_buffer);
-            mem_type_table_buffer.second.emplace_back(table);
+            table.AddTableSectionDisposable(table_section);
         }
 
-        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+        machineInfo.memory_tables.push_back(std::move(table));
     }
 
     // VRAM
     {
-        mem_type_table_buffer = MemoryBufferEntry<GuiScrollableTable<memory_data>>();
-        mem_type_table_buffer.first = "VRAM";
+        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        table.name = "VRAM";
+        auto table_section = TableSection<memory_data>();
 
         for (auto& n : graphics_ctx.VRAM_N) {
-            table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-            table_buffer = ScrollableTableBuffer<memory_data>();
+            table_section = TableSection<memory_data>();
 
-            setup_bank_access(table_buffer, n, VRAM_N_OFFSET);
+            FillMemoryDebugTable(table_section, &n, VRAM_N_OFFSET);
 
-            table.AddMemoryArea(table_buffer);
-            mem_type_table_buffer.second.emplace_back(table);
+            table.AddTableSectionDisposable(table_section);
         }
 
-        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+        machineInfo.memory_tables.push_back(std::move(table));
     }
 
     // RAM
     if (machine_ctx.ram_bank_num > 0) {
-        mem_type_table_buffer = MemoryBufferEntry<GuiScrollableTable<memory_data>>();
-        mem_type_table_buffer.first = "RAM";
+        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        table.name = "RAM";
+        auto table_section = TableSection<memory_data>();
 
         for (auto& n : RAM_N) {
-            table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-            table_buffer = ScrollableTableBuffer<memory_data>();
+            table_section = TableSection<memory_data>();
 
-            setup_bank_access(table_buffer, n, RAM_N_OFFSET);
+            FillMemoryDebugTable(table_section, &n, RAM_N_OFFSET);
 
-            table.AddMemoryArea(table_buffer);
-            mem_type_table_buffer.second.emplace_back(table);
+            table.AddTableSectionDisposable(table_section);
         }
 
-        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+        machineInfo.memory_tables.push_back(std::move(table));
     }
 
     // WRAM
     {
-        mem_type_table_buffer = MemoryBufferEntry<GuiScrollableTable<memory_data>>();
-        mem_type_table_buffer.first = "WRAM";
+        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        table.name = "WRAM";
+        auto table_section = TableSection<memory_data>();
 
-        table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-        table_buffer = ScrollableTableBuffer<memory_data>();
+        FillMemoryDebugTable(table_section, &WRAM_0, WRAM_0_OFFSET);
 
-        setup_bank_access(table_buffer, WRAM_0, WRAM_0_OFFSET);
+        table.AddTableSectionDisposable(table_section);
 
-        table.AddMemoryArea(table_buffer);
-        mem_type_table_buffer.second.emplace_back(table);
-
+        // WRAM n
         for (auto& n : WRAM_N) {
-            table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-            table_buffer = ScrollableTableBuffer<memory_data>();
+            table_section = TableSection<memory_data>();
 
-            setup_bank_access(table_buffer, n, WRAM_N_OFFSET);
+            FillMemoryDebugTable(table_section, &n, WRAM_N_OFFSET);
 
-            table.AddMemoryArea(table_buffer);
-            mem_type_table_buffer.second.emplace_back(table);
+            table.AddTableSectionDisposable(table_section);
         }
 
-        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+        machineInfo.memory_tables.push_back(std::move(table));
     }
 
     // OAM
     {
-        mem_type_table_buffer = MemoryBufferEntry<GuiScrollableTable<memory_data>>();
-        mem_type_table_buffer.first = "OAM";
+        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        table.name = "OAM";
+        auto table_section = TableSection<memory_data>();
 
-        table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-        table_buffer = ScrollableTableBuffer<memory_data>();
+        FillMemoryDebugTable(table_section, &graphics_ctx.OAM, OAM_OFFSET);
 
-        setup_bank_access(table_buffer, graphics_ctx.OAM, OAM_OFFSET);
+        table.AddTableSectionDisposable(table_section);
 
-        table.AddMemoryArea(table_buffer);
-        mem_type_table_buffer.second.emplace_back(table);
-
-        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+        machineInfo.memory_tables.push_back(std::move(table));
     }
 
     // IO
     {
-        mem_type_table_buffer = MemoryBufferEntry<GuiScrollableTable<memory_data>>();
-        mem_type_table_buffer.first = "IO";
+        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        table.name = "IO";
+        auto table_section = TableSection<memory_data>();
 
-        table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-        table_buffer = ScrollableTableBuffer<memory_data>();
+        FillMemoryDebugTable(table_section, &IO, IO_OFFSET);
 
-        setup_bank_access(table_buffer, IO, IO_OFFSET);
+        table.AddTableSectionDisposable(table_section);
 
-        table.AddMemoryArea(table_buffer);
-        mem_type_table_buffer.second.emplace_back(table);
-
-        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+        machineInfo.memory_tables.push_back(std::move(table));
     }
 
     // HRAM
     {
-        mem_type_table_buffer = MemoryBufferEntry<GuiScrollableTable<memory_data>>();
-        mem_type_table_buffer.first = "HRAM";
+        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        table.name = "HRAM";
+        auto table_section = TableSection<memory_data>();
 
-        table = GuiScrollableTable<memory_data>(DEBUG_MEM_LINES);
-        table_buffer = ScrollableTableBuffer<memory_data>();
+        FillMemoryDebugTable(table_section, &HRAM, HRAM_OFFSET);
 
-        setup_bank_access(table_buffer, HRAM, HRAM_OFFSET);
+        table.AddTableSectionDisposable(table_section);
 
-        table.AddMemoryArea(table_buffer);
-        mem_type_table_buffer.second.emplace_back(table);
-
-        machineInfo.memory_buffer.emplace_back(mem_type_table_buffer);
+        machineInfo.memory_tables.push_back(std::move(table));
     }
 }
 
-std::vector<std::pair<int, std::vector<u8>>> GameboyMEM::GetProgramData() const {
-    auto rom_data = vector<pair<int, vector<u8>>>(machine_ctx.rom_bank_num);
-
-    rom_data[0] = pair(ROM_0_OFFSET, ROM_0);
-    for (int i = 1; const auto & bank : ROM_N) {
-        rom_data[i++] = pair(ROM_N_OFFSET, bank);
+vector<u8>* GameboyMEM::GetProgramData(const int& _bank) const {
+    if (_bank == 0) {
+        return (vector<u8>*)&ROM_0;
+    } else if (_bank <= ROM_N.size()) {
+        return (vector<u8>*)&ROM_N[_bank - 1];
+    } else {
+        return nullptr;
     }
-
-    return rom_data;
 }

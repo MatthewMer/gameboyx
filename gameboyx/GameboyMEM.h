@@ -11,7 +11,6 @@
 #include "BaseMEM.h"
 #include "gameboy_defines.h"
 #include "defs.h"
-#include "data_containers.h"
 
 struct machine_context {
 	// interrupt
@@ -234,7 +233,7 @@ public:
 	void CopyDataToRAM(const std::vector<char>& _data);
 	void CopyDataFromRAM(std::vector<char>& _data) const;
 
-	std::vector<std::pair<int, std::vector<u8>>> GetProgramData() const override;
+	std::vector<u8>* GetProgramData(const int& _bank) const override;
 
 	void SetButton(const u8& _bit, const bool& _is_button);
 	void UnsetButton(const u8& _bit, const bool& _is_button);
@@ -258,7 +257,8 @@ private:
 	// members
 	void InitMemory() override;
 	void InitMemoryState() override;
-	void SetupDebugMemoryAccess() override;
+	void SetupMemoryDebugTables() override;
+	void FillMemoryDebugTable(TableSection<memory_data>& _table_section, std::vector<u8>* _bank_data, const int& _offset) override;
 
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;
 	bool CopyRom(const std::vector<u8>& _vec_rom) override;

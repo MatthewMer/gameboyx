@@ -4,7 +4,6 @@
 #include "al.h"
 #include "alc.h"
 
-#include "data_containers.h"
 
 class AudioOpenAL : AudioMgr {
 public:
@@ -12,13 +11,13 @@ public:
 	void InitAudio(const bool& _reinit) override;
 
 protected:
-	AudioOpenAL(audio_information& _audio_info) : AudioMgr(_audio_info) {}
+	AudioOpenAL() : AudioMgr() {}
 
 private:
-	ALCdevice* alcDev;
-	ALCcontext* alcCtx;
-	std::vector<ALshort> data;
-	ALuint buffer;
-	ALuint source;
+	ALCdevice* alcDev = nullptr;
+	ALCcontext* alcCtx = nullptr;
+	std::vector<ALshort> data = {};
+	ALuint buffer = 0;
+	ALuint source = 0;
 };
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "data_containers.h"
+
 #include "general_config.h"
 #include <thread>
 
@@ -23,7 +23,7 @@ struct audio_env {
 class AudioMgr {
 public:
 	// get/reset instance
-	static AudioMgr* getInstance(audio_information& _audio_info);
+	static AudioMgr* getInstance();
 	static void resetInstance();
 
 	virtual void InitAudio(const bool& _reinit) = 0;
@@ -39,17 +39,23 @@ public:
 
 protected:
 	// constructor
-	explicit AudioMgr(audio_information& _audio_info) : audioInfo(_audio_info) {
-		audioInfo.channels_max = SOUND_7_1;
-		audioInfo.sampling_rate_max = SOUND_SAMPLING_RATE_MAX;
+	explicit AudioMgr() {
+		audioChannelsMax = SOUND_7_1;
+		samplingRateMax = SOUND_SAMPLING_RATE_MAX;
+		audioChannels = 0;
+		samplingRate = 0;
 	}
 	~AudioMgr() = default;
 
-	char* name;
-	audio_information& audioInfo;
+	std::string name = "";
 	audio_env audioEnv = audio_env();
 	audio_samples audioSamples = audio_samples();
 	std::thread audioThread;
+
+	int audioChannelsMax;
+	int samplingRateMax;
+	int audioChannels;
+	int samplingRate;
 
 private:
 	static AudioMgr* instance;

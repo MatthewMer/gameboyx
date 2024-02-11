@@ -16,16 +16,6 @@
 #include "logger.h"
 #include "defs.h"
 
-using debug_instr_data = std::pair<std::string, std::string>;
-using misc_output_data = std::pair<std::string, std::string>;
-
-enum memory_data_types {
-    MEM_ENTRY_ADDR,
-    MEM_ENTRY_LEN,
-    MEM_ENTRY_REF
-};
-using memory_data = std::tuple<std::string, int, u8*>;
-
 struct bank_index {
     int bank;
     int index;
@@ -38,16 +28,16 @@ struct bank_index {
 };
 
 // index, address, data (T)
-template <class T> using ScrollableTableEntry = std::tuple<int, T>;
+template <class T> using TableEntry = std::tuple<int, T>;
 enum entry_content_types {
     ST_ENTRY_ADDRESS,
     ST_ENTRY_DATA
 };
 
 // size, vector<entries>
-template <class T> using ScrollableTableBuffer = std::vector<ScrollableTableEntry<T>>;
+template <class T> using TableSection = std::vector<TableEntry<T>>;
 
-class ScrollableTableBase {
+class TableBase {
 public:
 	virtual void ScrollUp(const int& _num) = 0;
 	virtual void ScrollDown(const int& _num) = 0;
@@ -59,62 +49,27 @@ public:
     virtual bank_index GetIndexByAddress(const int& _address) = 0;
     virtual void SearchAddress(int& _addr) = 0;
 
+    std::string name = "";
+    size_t size = 0;
+
 protected:
-	ScrollableTableBase() = default;
-	~ScrollableTableBase() = default;
+	TableBase() = default;
+	~TableBase() = default;
 };
 
-template <class T> class GuiScrollableTable : public ScrollableTableBase
+template <class T> class Table : public TableBase
 {
 public:
-	explicit constexpr GuiScrollableTable(const int& _elements_to_show) : maxSize(_elements_to_show) {
-        elementsToShow = 0;
+	explicit constexpr Table(const int& _elements_to_show) : visibleElements(_elements_to_show) {
+        currentlyVisibleElements = 0;
         SetElementsToShow();
 	};
-	constexpr ~GuiScrollableTable() noexcept {};
+	constexpr ~Table() noexcept = default;
 
-    constexpr void SetElementsToShow() {
-        startIndex = bank_index(0, 0);
-        endIndex = bank_index(0, startIndex.index + elementsToShow);
-        indexIterator = startIndex;
-    }
+    constexpr void SetElementsToShow();
+    constexpr Table& operator=(const Table& _right) noexcept;
 
-	constexpr GuiScrollableTable& operator=(const GuiScrollableTable& _right) noexcept {
-		if (this == addressof(_right)) { return *this; }
-		else {
-			buffer = std::vector<ScrollableTableBuffer<T>>(_right.buffer);
-			startIndex = _right.startIndex;
-			endIndex = _right.startIndex;
-			indexIterator = _right.indexIterator;
-			elementsToShow = _right.elementsToShow;
-			bufferSize = _right.bufferSize;
-            currentIndex = _right.currentIndex;
-            maxSizeSet = _right.maxSizeSet;
-            maxSize = _right.maxSize;
-			return *this;
-		}
-	}
-
-	void AddMemoryArea(ScrollableTableBuffer<T> _buffer) {
-		buffer.emplace_back(_buffer);
-		bufferSize++;
-
-        if(!maxSizeSet){
-            int elements = 0;
-
-            for (const auto& n : buffer) {
-                elements += (int)n.size();
-                if (elements >= maxSize) {
-                    elementsToShow = maxSize;
-                    maxSizeSet = true;
-                    break;
-                }
-            }
-
-            if (!maxSizeSet) { elementsToShow = elements; }
-            SetElementsToShow();
-        }
-	}
+    void AddTableSectionDisposable(TableSection<T>& _buffer);
 
 	void ScrollUp(const int& _num) override;
 	void ScrollDown(const int& _num) override;
@@ -134,18 +89,53 @@ public:
 private:
 
 	// size, offset <index, address,  template type T>
-	std::vector<ScrollableTableBuffer<T>> buffer = std::vector<ScrollableTableBuffer<T>>();
+	std::vector<TableSection<T>> tableSections = std::vector<TableSection<T>>();
 	bank_index startIndex = bank_index(0, 0);
 	bank_index endIndex = bank_index(0, 0);
 	bank_index indexIterator = bank_index(0, 0);
     bank_index currentIndex = bank_index(0, 0);
-	int bufferSize = 0;
-	int elementsToShow;
-    bool maxSizeSet = false;
-    int maxSize;
+	int visibleElements;
+    int currentlyVisibleElements;
 };
 
-template <class T> void GuiScrollableTable<T>::ScrollUp(const int& _num) {
+template <class T> constexpr Table<T>& Table<T>::operator=(const Table<T>& _right) noexcept {
+    if (this != &_right) {
+        tableSections = std::move(_right.tableSections);
+        startIndex = _right.startIndex;
+        endIndex = _right.startIndex;
+        indexIterator = _right.indexIterator;
+        visibleElements = _right.visibleElements;
+        currentIndex = _right.currentIndex;
+        currentlyVisibleElements = _right.currentlyVisibleElements;
+        size = _right.size;
+    }
+
+    return *this;
+}
+
+template <class T> constexpr void Table<T>::SetElementsToShow() {
+    int elements = 0;
+    for (const auto& n : tableSections) {
+        elements += (int)n.size();
+    }
+
+    if (elements > visibleElements) { currentlyVisibleElements = visibleElements; } 
+    else                            { currentlyVisibleElements = elements; }
+
+    startIndex = bank_index(0, 0);
+    endIndex = bank_index(0, startIndex.index + currentlyVisibleElements);
+    indexIterator = startIndex;
+}
+
+template <class T> void Table<T>::AddTableSectionDisposable(TableSection<T>& _buffer) {
+    tableSections.reserve(tableSections.size() + 1);
+    tableSections.emplace_back(std::move(_buffer));
+    size = tableSections.size();
+
+    SetElementsToShow();
+}
+
+template <class T> void Table<T>::ScrollUp(const int& _num) {
     bool full_scroll = true;
 
     if (startIndex.bank > 0 || startIndex.index > 0) {
@@ -156,46 +146,46 @@ template <class T> void GuiScrollableTable<T>::ScrollUp(const int& _num) {
                 full_scroll = false;
             }
             else {
-                startIndex.bank--;
-                startIndex.index += (int)buffer[startIndex.bank].size();
+                --startIndex.bank;
+                startIndex.index += (int)tableSections[startIndex.bank].size();
             }
         }
 
         if (full_scroll) {
             endIndex.index -= _num;
             if (endIndex.index < 1) {
-                endIndex.bank--;
-                endIndex.index += (int)buffer[endIndex.bank].size();
+                --endIndex.bank;
+                endIndex.index += (int)tableSections[endIndex.bank].size();
             }
         }
         else {
-            endIndex.index = startIndex.index + elementsToShow;
+            endIndex.index = startIndex.index + currentlyVisibleElements;
         }
     }
 
     indexIterator = startIndex;
 }
 
-template <class T> void GuiScrollableTable<T>::ScrollDown(const int& _num) {
+template <class T> void Table<T>::ScrollDown(const int& _num) {
     bool full_scroll = true;
-    int current_buf_size_end = (int)buffer[endIndex.bank].size();
+    int current_buf_size_end = (int)tableSections[endIndex.bank].size();
 
-    if (endIndex.bank < bufferSize - 1 || endIndex.index < current_buf_size_end) {
+    if (endIndex.bank < tableSections.size() - 1 || endIndex.index < current_buf_size_end) {
         endIndex.index += _num;
-        if (endIndex.index > (int)buffer[endIndex.bank].size()) {
-            if (endIndex.bank == bufferSize - 1) {
-                endIndex.index = (int)buffer[endIndex.bank].size();
+        if (endIndex.index > (int)tableSections[endIndex.bank].size()) {
+            if (endIndex.bank == tableSections.size() - 1) {
+                endIndex.index = (int)tableSections[endIndex.bank].size();
                 full_scroll = false;
             }
             else {
-                endIndex.index -= (int)buffer[endIndex.bank].size();
+                endIndex.index -= (int)tableSections[endIndex.bank].size();
                 endIndex.bank++;
             }
         }
 
 
         if (full_scroll) {
-            int current_buf_size_start = (int)buffer[startIndex.bank].size();
+            int current_buf_size_start = (int)tableSections[startIndex.bank].size();
 
             startIndex.index += _num;
             if (startIndex.index >= current_buf_size_start) {
@@ -204,33 +194,33 @@ template <class T> void GuiScrollableTable<T>::ScrollDown(const int& _num) {
             }
         }
         else {
-            startIndex.index = endIndex.index - elementsToShow;
+            startIndex.index = endIndex.index - currentlyVisibleElements;
         }
     }
 
     indexIterator = startIndex;
 }
 
-template <class T> void GuiScrollableTable<T>::ScrollUpPage() {
-    ScrollUp(elementsToShow);
+template <class T> void Table<T>::ScrollUpPage() {
+    ScrollUp(currentlyVisibleElements);
 }
 
-template <class T> void GuiScrollableTable<T>::ScrollDownPage() {
-    ScrollDown(elementsToShow);
+template <class T> void Table<T>::ScrollDownPage() {
+    ScrollDown(currentlyVisibleElements);
 }
 
-template <class T> void GuiScrollableTable<T>::SearchBank(int& _bank) {
+template <class T> void Table<T>::SearchBank(int& _bank) {
     if (_bank < 0) { _bank = 0; }
-    else if (_bank > bufferSize - 1) { _bank = bufferSize - 1; }
+    else if (_bank > tableSections.size() - 1) { _bank = tableSections.size() - 1; }
 
     startIndex = bank_index(_bank, 0);
-    endIndex = bank_index(_bank, elementsToShow);
+    endIndex = bank_index(_bank, currentlyVisibleElements);
 
     indexIterator = startIndex;
 }
 
-template <class T> void GuiScrollableTable<T>::SearchAddress(int& _addr) {
-    ScrollableTableBuffer<T>& current_bank = buffer[startIndex.bank];
+template <class T> void Table<T>::SearchAddress(int& _addr) {
+    TableSection<T>& current_bank = tableSections[startIndex.bank];
 
     int first_address = get<ST_ENTRY_ADDRESS>(current_bank.front());
     int last_address = get<ST_ENTRY_ADDRESS>(current_bank.back());
@@ -247,25 +237,25 @@ template <class T> void GuiScrollableTable<T>::SearchAddress(int& _addr) {
         }
     }
 
-    int index = i - elementsToShow / 2;
+    int index = i - visibleElements / 2;
     if (index < startIndex.index) { ScrollUp(startIndex.index - index); }
     else if (index > startIndex.index) { ScrollDown(index - startIndex.index); }
 
     indexIterator = startIndex;
 }
 
-template <class T> bool GuiScrollableTable<T>::GetNextEntry(T& _entry) {
+template <class T> bool Table<T>::GetNextEntry(T& _entry) {
     if (indexIterator == endIndex) {
         indexIterator = startIndex;
         return false;
     }
-    else if (indexIterator.index == buffer[indexIterator.bank].size()) {
+    else if (indexIterator.index == tableSections[indexIterator.bank].size()) {
         indexIterator.bank++;
         indexIterator.index = 0;
     }
 
-    ScrollableTableBuffer<T>& current_bank = buffer[indexIterator.bank];
-    ScrollableTableEntry<T>& current_entry = current_bank[indexIterator.index];
+    TableSection<T>& current_bank = tableSections[indexIterator.bank];
+    TableEntry<T>& current_entry = current_bank[indexIterator.index];
     _entry = get<ST_ENTRY_DATA>(current_entry);
     
     currentIndex = indexIterator;
@@ -274,21 +264,21 @@ template <class T> bool GuiScrollableTable<T>::GetNextEntry(T& _entry) {
     return true;
 }
 
-template <class T> T& GuiScrollableTable<T>::GetEntry(bank_index& _instr_index) {
-    ScrollableTableBuffer<T>& current_bank = buffer[_instr_index.bank];
-    ScrollableTableEntry<T>& current_entry = current_bank[_instr_index.index];
+template <class T> T& Table<T>::GetEntry(bank_index& _instr_index) {
+    TableSection<T>& current_bank = tableSections[_instr_index.bank];
+    TableEntry<T>& current_entry = current_bank[_instr_index.index];
     return get<ST_ENTRY_DATA>(current_entry);
 }
 
-template <class T> bank_index& GuiScrollableTable<T>::GetCurrentIndex() {
+template <class T> bank_index& Table<T>::GetCurrentIndex() {
     return currentIndex;
 }
 
-template <class T> bank_index GuiScrollableTable<T>::GetCurrentIndexCentre() {
+template <class T> bank_index Table<T>::GetCurrentIndexCentre() {
     bank_index index = startIndex;
-    index.index += elementsToShow / 2;
+    index.index += visibleElements / 2;
 
-    int current_bank_size = (int)buffer[index.bank].size();
+    int current_bank_size = (int)tableSections[index.bank].size();
 
     if (index.index >= current_bank_size) {
         index.index -= current_bank_size;
@@ -298,12 +288,14 @@ template <class T> bank_index GuiScrollableTable<T>::GetCurrentIndexCentre() {
     return index;
 }
 
-template <class T> int& GuiScrollableTable<T>::GetAddressByIndex(const bank_index& _index) {
-    return get<ST_ENTRY_ADDRESS>(buffer[_index.bank][_index.index]);
+// search address in current table section
+template <class T> int& Table<T>::GetAddressByIndex(const bank_index& _index) {
+    return get<ST_ENTRY_ADDRESS>(tableSections[_index.bank][_index.index]);
 }
 
-template <class T> bank_index GuiScrollableTable<T>::GetIndexByAddress(const int& _address) {
-    ScrollableTableBuffer<T>& current_bank = buffer[startIndex.bank];
+// search correcponding index(bank,index) by address in current table section
+template <class T> bank_index Table<T>::GetIndexByAddress(const int& _address) {
+    TableSection<T>& current_bank = tableSections[startIndex.bank];
 
     int first_address = get<ST_ENTRY_ADDRESS>(current_bank.front());
     int last_address = get<ST_ENTRY_ADDRESS>(current_bank.back());

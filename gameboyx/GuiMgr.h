@@ -12,10 +12,11 @@
 #include <vector>
 #include <array>
 #include <queue>
+
 #include "BaseCartridge.h"
-#include "data_containers.h"
 #include "helper_functions.h"
-#include "GuiScrollableTable.h"
+#include "GuiTable.h"
+#include "VHardwareMgr.h"
 
 // workaround for vector<bool> being a special type of stl container, which uses single bits
 // for beeleans and therefore no direct access by reference/pointer (google proxy reference object)
@@ -23,10 +24,43 @@ struct Bool{
 	bool value = false;
 };
 
+struct gui_instr_debugger_data {
+	bank_index instr_index = bank_index(0, 0);					// bank, index
+	int bank_sel = 0;
+	int addr_sel = 0;
+	std::list<bank_index> breakpoints = std::list<bank_index>();
+	std::list<bank_index> breakpoints_tmp = std::list<bank_index>();
+	bool pc_set_to_ram = false;
+	bool autorun = false;
+	int last_pc = -1;
+	bool pause_execution = false;
+	const int col_num = (int)DEBUG_INSTR_COLUMNS.size();
+	const int col_num_regs = (int)DEBUG_REGISTER_COLUMNS.size();
+	const int col_num_flags = (int)DEBUG_FLAG_COLUMNS.size();
+};
+
+struct gui_memory_inspector_data {
+	std::vector<int> dbgMemBankIndex = std::vector<int>();
+	int dbgMemColNum = (int)DEBUG_MEM_COLUMNS.size();
+	Vec2 dbgMemCursorPos = Vec2(-1, -1);
+	bool dbgMemCellHovered = false;
+	bool dbgMemCellAnyHovered = false;
+};
+
+struct gui_fps_data {
+	int graphicsOverlayCorner = 1;
+	float graphicsFPSsamples[FPS_SAMPLES_NUM];
+	std::queue<float> graphicsFPSfifo = std::queue<float>();
+	std::queue<float> graphicsFPSfifoCopy = std::queue<float>();
+	float graphicsFPSavg = .0f;
+	int graphicsFPScount = 0;
+	float graphicsFPScur = .0f;
+};
+
 class GuiMgr {
 public:
 	// singleton instance access
-	static GuiMgr* getInstance(machine_information& _machine_info, game_status& _game_status, graphics_information& _graphics_info);
+	static GuiMgr* getInstance();
 	static void resetInstance();
 
 	// clone/assign protection
@@ -36,7 +70,9 @@ public:
 	GuiMgr& operator=(GuiMgr&&) = delete;
 
 	// functions
+	void DrawGUI();
 	void ProcessGUI();
+
 	// sdl functions
 	void EventKeyDown(const SDL_Keycode& _key);
 	void EventKeyUp(const SDL_Keycode& _key);
@@ -50,9 +86,9 @@ public:
 
 private:
 	// constructor
-	GuiMgr(machine_information& _machine_info, game_status& _game_status, graphics_information& _graphics_info);
+	GuiMgr();
+	~GuiMgr();
 	static GuiMgr* instance;
-	~GuiMgr() = default;
 
 	// special keys
 	bool sdlkCtrlDown = false;
@@ -63,60 +99,69 @@ private:
 	bool sdlScrollDown = false;
 	bool sdlScrollUp = false;
 
-	// MAIN WINDOW GAME SELECT
-	std::vector<BaseCartridge*> games = std::vector<BaseCartridge*>();
-	std::vector<bool> gamesSelected = std::vector<bool>();
-	int gameSelectedIndex = 0;
+	// GUI elements to show -> DrawGUI()
+	bool showMainMenuBar = true;
+	bool showGameSelect = true;
+	bool showInstrDebugger = false;
+	bool showHardwareInfo = false;
+	bool showMemoryInspector = false;
+	bool showGraphicsOverlay = false;
+	bool showEmulationMenu = false;
+	bool showEmulationSpeed = false;
+	bool showWinAbout = false;
+	bool showNewGameDialog = false;
+
+	// control variables -> ProcessGUI()
+	bool gameRunning = false;
+	bool requestGameStart = false;
+	bool requestGameStop = false;
+	bool requestGameReset = false;
 	bool deleteGames = false;
+
+	// game select
+	int gameSelectedIndex = 0;
+	std::vector<bool> gamesSelected = std::vector<bool>();
+	std::vector<BaseCartridge*> games = std::vector<BaseCartridge*>();
 	const int mainColNum = (int)GAMES_COLUMNS.size();
 
 	// debug instructions
-	bank_index dbgInstrInstructionIndex = bank_index(0, 0);					// bank, index
-	int dbgInstrBank = 0;
-	int dbgInstrAddress = 0;
-	std::list<bank_index> dbgInstrBreakpoints = std::list<bank_index>();
-	std::list<bank_index> dbgInstrBreakpointsTmp = std::list<bank_index>();
-	bool dbgInstrPCoutOfRange = false;
-	bool dbgInstrAutorun = false;
-	int dbgInstrLastPC = -1;
-	debug_instr_data dbgInstrCurrentEntry;
-	const int dbgInstrColNum = (int)DEBUG_INSTR_COLUMNS.size();
-	const int dbgInstrColNumRegs = (int)DEBUG_REGISTER_COLUMNS.size();
-	const int dbgInstrColNumFlags = (int)DEBUG_FLAG_COLUMNS.size();
-	bool dbgInstrWasEnabled = false;
+	gui_instr_debugger_data debugInstrData = {};
+	Table<instr_entry> debugInstrTable = Table<instr_entry>(DEBUG_INSTR_LINES);
+	Table<instr_entry> debugInstrTableTmp = Table<instr_entry>(DEBUG_INSTR_LINES);
+	std::vector<reg_entry> regValues = std::vector<reg_entry>();
+	std::vector<reg_entry> flagValues = std::vector<reg_entry>();
+	std::vector<reg_entry> miscValues = std::vector<reg_entry>();
 
-	// memory inspector
-	std::vector<int> dbgMemBankIndex = std::vector<int>();
-	memory_data dbgMemCurrentEntry;
-	int dbgMemColNum = (int)DEBUG_MEM_COLUMNS.size();
-	Vec2 dbgMemCursorPos = Vec2(-1, -1);
-	bool dbgMemCellHovered = false;
-	bool dbgMemCellAnyHovered = false;
-
-	bool showGraphicsOverlay = false;
-	bool showGraphicsMenu = false;
-	int graphicsOverlayCorner = 1;
-	float graphicsFPSsamples[FPS_SAMPLES_NUM];
-	std::queue<float> graphicsFPSfifo = std::queue<float>();
-	std::queue<float> graphicsFPSfifoCopy = std::queue<float>();
-	float graphicsFPSavg = .0f;
-	int graphicsFPScount = 0;
-	float graphicsFPScur = .0f;
-
+	// hardware info
 	const int hwInfoColNum = (int)HW_INFO_COLUMNS.size();
 
+	// memory inspector
+	std::vector<Table<memory_entry>> debugMemoryTables = std::vector<Table<memory_entry>>(DEBUG_MEM_LINES);
+	
+
+	// graphics overlay (FPS)
+	
+	bool showGraphicsMenu = false;
+	gui_fps_data fpsData = {};
+
+	
+
+	// emulation speed multiplier
 	int currentSpeedIndex = 0;
 	std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(EMULATION_SPEEDS.size(), { false });
 
-	bool showMainMenuBar = true;
-	bool showWinAbout = false;
-	bool showNewGameDialog = false;
-	bool showGameSelect = true;
-	bool showMemoryInspector = false;
+	// help/about
+	
+
+	// new game dialog
+	
+
+	// callbacks
+	void InitCallback();
+	void UpdateCallback();
+	
 	bool showImGuiDebug = false;
 	bool showGraphicsInfo = false;
-	bool showEmulationMenu = false;
-	bool showEmulationSpeed = false;
 
 	// gui functions
 	void ShowMainMenuBar();
@@ -129,15 +174,27 @@ private:
 	void ShowGraphicsInfo();
 	void ShowGraphicsOverlay();
 
+	// main menur bar elements
+	void ShowEmulationSpeeds();
+
+	// instruction debugger components
+	void ShowDebugInstrButtonsHead();
+	void ShowDebugInstrTable();
+	void ShowDebugInstrSelect();
+	void ShowDebugInstrMiscData(const char* _title, const int& _col_num, const std::vector<float>& _columns, const std::vector<reg_entry>& _data);
+
+	// memory inspector components
+	void ShowDebugMemoryTab()
+
 	// actions
 	void ActionDeleteGames();
 	bool ActionAddGame(const std::string& _path_to_rom);
-	void ActionScrollToCurrentPC(ScrollableTableBase& _table_obj);
+	void ActionSetToCurrentPC(TableBase& _table_obj);
 	void ActionStartGame(int _index);
 	void ActionEndGame();
 	void ActionRequestReset();
-	void ActionBankSwitch(ScrollableTableBase& _table_obj, int& _bank);
-	void ActionSearchAddress(ScrollableTableBase& _table_obj, int& _address);
+	void ActionSetToBank(TableBase& _table_obj, int& _bank);
+	void ActionSetToAddress(TableBase& _table_obj, int& _address);
 	void ActionSetEmulationSpeed(const int& _index);
 
 	// helpers
@@ -145,26 +202,16 @@ private:
 	void ReloadGamesGuiCtx();
 	void ResetDebugInstr(); 
 	void ResetMemInspector();
-	bool CheckCurrentPCAutoScroll();
+	bool PCChanged();
 	void SetBreakPoint(const bank_index& _current_index);
 	void SetBreakPointTmp(const bank_index& _current_index);
 	void ResetEventMouseWheel();
-	void SetBankAndAddressScrollableTable(ScrollableTableBase& _tyble_obj, int& _bank, int& _address);
+	void SetBankAndAddressScrollableTable(TableBase& _tyble_obj, int& _bank, int& _address);
 	void SetupMemInspectorIndex();
 
-	bool CheckScroll(ScrollableTableBase& _table_obj);
+	bool CheckScroll(TableBase& _table_obj);
 
 	void ProcessMainMenuKeys();
-
-	// virtual hardware messages for debug
-	machine_information& machineInfo;
-	bool firstInstruction = true;
-
-	// game status variables
-	game_status& gameState;
-
-	// communication with graphics backend
-	graphics_information& graphicsInfo;
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();

@@ -8,8 +8,7 @@
 *	and expose the entire interals of the memory. This way CPU and MMU can interact with it much more efficiently.
 */
 
-#include "GameboyCartridge.h"
-#include "data_containers.h"
+#include "BaseCartridge.h"
 
 class BaseMEM
 {
@@ -22,13 +21,14 @@ protected:
 	virtual void InitMemoryState() = 0;
 	virtual bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) = 0;
 	virtual bool CopyRom(const std::vector<u8>& _vec_rom) = 0;
-	virtual void SetupDebugMemoryAccess() = 0;
+	virtual void SetupMemoryDebugTables() = 0;
+	virtual void FillMemoryDebugTable(TableSection<memory_data>& _table_section, std::vector<u8>* _bank_data, const int& _offset) = 0;
 
 	virtual void AllocateMemory() = 0;
 
 	virtual void RequestInterrupts(const u8& isr_flags) = 0;
 
-	virtual std::vector<std::pair<int, std::vector<u8>>> GetProgramData() const = 0;
+	virtual std::vector<u8>* GetProgramData(const int& _bank) const = 0;
 
 	machine_information& machineInfo;
 };

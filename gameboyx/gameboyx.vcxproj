@@ -185,6 +185,7 @@
     <ClCompile Include="GraphicsMgr.cpp" />
     <ClCompile Include="BaseGPU.cpp" />
     <ClCompile Include="GameboyGPU.cpp" />
+    <ClCompile Include="HardwareMgr.cpp" />
     <ClCompile Include="helper_functions.cpp" />
     <ClCompile Include="include\simple_logger.cpp" />
     <ClCompile Include="main.cpp" />
@@ -216,6 +217,7 @@
     <ClInclude Include="GraphicsMgr.h" />
     <ClInclude Include="BaseGPU.h" />
     <ClInclude Include="GameboyGPU.h" />
+    <ClInclude Include="HardwareMgr.h" />
     <ClInclude Include="helper_functions.h" />
     <ClInclude Include="GuiMgr.h" />
     <ClInclude Include="general_config.h" />
@@ -225,7 +227,7 @@
     <ClInclude Include="data_containers.h" />
     <ClInclude Include="BaseMMU.h" />
     <ClInclude Include="GameboyMMU.h" />
-    <ClInclude Include="GuiScrollableTable.h" />
+    <ClInclude Include="GuiTable.h" />
     <ClInclude Include="BaseAPU.h" />
     <ClInclude Include="AudioMgr.h" />
     <ClInclude Include="AudioOpenAL.h" />

@@ -7,7 +7,7 @@
 #include <format>
 #include "logger.h"
 #include "GameboyMEM.h"
-#include "GuiScrollableTable.h"
+#include "GuiTable.h"
 #include <unordered_map>
 
 #include <iostream>
@@ -25,7 +25,7 @@ enum instr_lookup_enums {
     INSTR_ARG_2
 };
 
-const unordered_map<cgb_flag_types, string> flag_names{
+const unordered_map<cgb_flag_types, string> FLAG_NAMES{
     {FLAG_Z, "ZERO"},
     {FLAG_N, "SUB"},
     {FLAG_H, "HALFCARRY"},
@@ -38,7 +38,7 @@ const unordered_map<cgb_flag_types, string> flag_names{
     {INT_JOYPAD, "JOYPAD"}
 };
 
-const unordered_map<cgb_data_types, string> register_names{
+const unordered_map<cgb_data_types, string> REGISTER_NAMES{
     {AF, "AF"},
     {A, "A"},
     {F, "F"},
@@ -57,7 +57,7 @@ const unordered_map<cgb_data_types, string> register_names{
     {IF, "IF"}
 };
 
-const unordered_map<cgb_data_types, string> data_names{
+const unordered_map<cgb_data_types, string> DATA_NAMES{
     {d8, "d8"},
     {d16, "d16"},
     {a8, "a8"},
@@ -73,114 +73,6 @@ const unordered_map<cgb_data_types, string> data_names{
     {SP_r8, "SP r8"},
     {C_ref, "(FF00+C)"},
 };
-
-/*
-*   Resolve enums to strings for log output (to compare actual instruction execution to debug window)
-*   probably no reason to keep the log output
-*/
-string get_arg_name(const cgb_data_types& _type) {
-    string result = register_names.at(_type);
-    if (result.compare("") == 0) {
-        result = register_names.at(_type);
-    }
-    return result;
-}
-
-/*
-*   Resolve enums to strings for program debugger
-*/
-string resolve_data_enum(const cgb_data_types& _type, const int& _addr, const u16& _data) {
-    string result = "";
-    u8 data;
-
-    switch (_type) {
-    case AF:
-    case A:
-    case F:
-    case BC:
-    case B:
-    case C:
-    case DE:
-    case D:
-    case E:
-    case HL:
-    case H:
-    case L:
-    case SP:
-    case PC:
-        result = register_names.at(_type);
-        break;
-    case d8:
-    case a8:
-        result = format("{:02x}", (u8)(_data & 0xFF));
-        break;
-    case d16:
-    case a16:
-        result = format("{:04x}", _data);
-        break;
-    case r8:
-        data = (u8)(_data & 0xFF);
-        result = format("{:04x}", _addr + *(i8*)&data);
-        break;
-    case a8_ref:
-        result = format("(FF00+{:02x})", (u8)(_data & 0xFF));
-        break;
-    case a16_ref:
-        result = format("({:04x})", _data);
-        break;
-    case SP_r8:
-        data = (u8)(_data & 0xFF);
-        result = format("SP+{:02x}", *(i8*)&data);
-        break;
-    case BC_ref:
-    case DE_ref:
-    case HL_ref:
-    case HL_INC_ref:
-    case HL_DEC_ref:
-    case C_ref:
-        result = data_names.at(_type);
-        break;
-    }
-
-    return result;
-}
-
-void instruction_args_to_string(u16& _addr, const vector<u8>& _bank, u16& _data, string& _raw_data, const cgb_data_types& _type) {
-    switch (_type) {
-    case d8:
-    case a8:
-    case a8_ref:
-        _data = _bank[_addr++];
-        _raw_data += format("{:02x} ", (u8)_data); 
-        break;
-    case r8:
-        _data = _bank[_addr++];
-        _raw_data += format("{:02x} ", (u8)_data + 0xFF00);
-        break;
-    case d16:
-    case a16:
-    case a16_ref:
-        _data = _bank[_addr++];
-        _data |= ((u16)_bank[_addr++]) << 8;
-        _raw_data += format("{:02x} ", (u8)(_data & 0xFF));
-        _raw_data += format("{:02x} ", (u8)((_data & 0xFF00) >> 8));
-        break;
-    default:
-        break;
-    }
-}
-
-void data_enums_to_string(const int& _bank, u16 _addr, const u16& _base_ptr, const u16& _data, string& _args, const cgb_data_types& _type_1, const cgb_data_types& _type_2) {
-    _addr += _base_ptr;
-
-    _args = "";
-    if (_type_1 != NO_DATA) {
-        _args = resolve_data_enum(_type_1, _addr, _data);
-    }
-    if (_type_2 != NO_DATA) {
-        _args += ", " + resolve_data_enum(_type_2, _addr, _data);
-    }
-}
 
 /* ***********************************************************************************************************
     ACCESS CPU STATUS
@@ -200,7 +92,7 @@ void GameboyCPU::GetCurrentProgramCounter() {
     } else if (Regs.PC < VRAM_N_OFFSET) {
         machineInfo.current_rom_bank = machine_ctx->rom_bank_selected + 1;
     } else {
-        InitMessageBufferProgramTmp();
+        SetupInstrDebugTablesTmp();
     }
 }
 
@@ -3714,30 +3606,30 @@ void GameboyCPU::GetCurrentHardwareState() const {
 void GameboyCPU::GetCurrentRegisterValues() const {
     machineInfo.register_values.clear();
 
-    machineInfo.register_values.emplace_back(register_names.at(A) + register_names.at(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
-    machineInfo.register_values.emplace_back(register_names.at(BC), format("{:04x}", Regs.BC));
-    machineInfo.register_values.emplace_back(register_names.at(DE), format("{:04x}", Regs.DE));
-    machineInfo.register_values.emplace_back(register_names.at(HL), format("{:04x}", Regs.HL));
-    machineInfo.register_values.emplace_back(register_names.at(SP), format("{:04x}", Regs.SP));
-    machineInfo.register_values.emplace_back(register_names.at(PC), format("{:04x}", Regs.PC));
-    machineInfo.register_values.emplace_back(register_names.at(IE), format("{:02x}", machine_ctx->IE));
-    machineInfo.register_values.emplace_back(register_names.at(IF), format("{:02x}", mem_instance->GetIO(IF_ADDR)));
+    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(A) + REGISTER_NAMES.at(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
+    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(BC), format("{:04x}", Regs.BC));
+    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(DE), format("{:04x}", Regs.DE));
+    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(HL), format("{:04x}", Regs.HL));
+    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(SP), format("{:04x}", Regs.SP));
+    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(PC), format("{:04x}", Regs.PC));
+    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(IE), format("{:02x}", machine_ctx->IE));
+    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(IF), format("{:02x}", mem_instance->GetIO(IF_ADDR)));
 }
 
 void GameboyCPU::GetCurrentFlagsAndISR() const {
     machineInfo.flag_values.clear();
 
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_H), format("{:01b}", (Regs.F & FLAG_HCARRY) >> 5));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
-    machineInfo.flag_values.emplace_back(flag_names.at(FLAG_IME), format("{:01b}", ime ? 1 : 0));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_H), format("{:01b}", (Regs.F & FLAG_HCARRY) >> 5));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_IME), format("{:01b}", ime ? 1 : 0));
     u8 isr_requested = mem_instance->GetIO(IF_ADDR);
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_SERIAL), format("{:01b}", (isr_requested & IRQ_SERIAL) >> 3));
-    machineInfo.flag_values.emplace_back(flag_names.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_SERIAL), format("{:01b}", (isr_requested & IRQ_SERIAL) >> 3));
+    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
 }
 
 void GameboyCPU::GetCurrentMiscValues() const {
@@ -3758,180 +3650,197 @@ void GameboyCPU::GetCurrentMiscValues() const {
 /* ***********************************************************************************************************
     PREPARE DEBUG DATA (DISASSEMBLED INSTRUCTIONS)
 *********************************************************************************************************** */
-void GameboyCPU::DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num) {
+void GameboyCPU::DecodeBankContent(TableSection<debug_instr_entry_contents>& _program_buffer, vector<u8>* _bank_data, const int& _offset, const int& _bank_num, const string& _bank_name) {
     u16 data = 0;
     bool cb = false;
 
     _program_buffer.clear();
+    auto current_entry = TableEntry<debug_instr_entry_contents>();                // a table entry consists of the address and a pair of two strings (left and right column of debugger)
+    u8* bank_data = _bank_data->data();
 
-    const auto& base_ptr = _bank_data.first;
-    const auto& rom_bank = _bank_data.second;
+    for (u16 addr = 0, i = 0; addr < _bank_data->size(); i++) {
+        current_entry = TableEntry<debug_instr_entry_contents>();
 
-    auto current_entry = ScrollableTableEntry<debug_instr_data>();
+        // get opcode and set entry address
+        u8 opcode = bank_data[addr];
+        get<ST_ENTRY_ADDRESS>(current_entry) = _offset + addr;          // set the entry address
 
-    for (u16 addr = 0, i = 0; addr < rom_bank.size(); i++) {
-
-        current_entry = ScrollableTableEntry<debug_instr_data>();
-
-        // print rom header info
-        if (addr == ROM_HEAD_LOGO && _bank_num == 0) {
-            get<ST_ENTRY_ADDRESS>(current_entry) = addr;
-            get<ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr);
-            get<ST_ENTRY_DATA>(current_entry).second = "- HEADER INFO -";
-            addr = ROM_HEAD_END + 1;
-            _program_buffer.emplace_back(current_entry);
-        } else {
-            u8 opcode = rom_bank[addr];
-            get<ST_ENTRY_ADDRESS>(current_entry) = addr + base_ptr;
-
+        {
             instr_tuple* instr_ptr;
 
-            if (cb) { instr_ptr = &(instrMapCB[opcode]); } else { instr_ptr = &(instrMap[opcode]); }
-            cb = opcode == 0xCB;
+            // check for default or CB instruction and add opcode to result
+            if (cb)     { instr_ptr = &(instrMapCB[opcode]); } 
+            else        { instr_ptr = &(instrMap[opcode]); }
+            cb = (opcode == 0xCB);
 
-            string raw_data;
-            raw_data = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr + base_ptr);
+            // proccess instruction mnemonic
+            string result_string = get<INSTR_MNEMONIC>(*instr_ptr);
+            string result_binary = _bank_name + format("{:d}: {:04x}  {:02x}", _bank_num, _offset + addr, opcode);
             addr++;
 
-            raw_data += format("{:02x} ", opcode);
+            // process instruction arguments
+            {
+                cgb_data_types arg1 = get<INSTR_ARG_1>(*instr_ptr);
+                cgb_data_types arg2 = get<INSTR_ARG_2>(*instr_ptr);
 
-            // arguments
-            instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
-            instruction_args_to_string(addr, rom_bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
-            get<ST_ENTRY_DATA>(current_entry).first = raw_data;
+                for (int i = 0; i < 2; i++) {
+                    cgb_data_types arg = (i == 0 ? arg1 : arg2);
 
-            // instruction to assembly
-            string args;
-            data_enums_to_string(_bank_num, addr, base_ptr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
+                    switch (arg) {
+                    case AF:
+                    case A:
+                    case F:
+                    case BC:
+                    case B:
+                    case C:
+                    case DE:
+                    case D:
+                    case E:
+                    case HL:
+                    case H:
+                    case L:
+                    case SP:
+                    case PC:
+                        result_string += (i == 0 ? "" : ",");
+                        result_string += " " + REGISTER_NAMES.at(arg);
+                        break;
+                    case d8:
+                    case a8:
+                    case a8_ref:
+                        data = bank_data[addr]; addr++;
 
-            get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
-            if (args.compare("") != 0) {
-                get<ST_ENTRY_DATA>(current_entry).second += " " + args;
+                        result_binary += format(" {:02x}", (u8)data);
+
+                        result_string += (i == 0 ? "" : ",");
+                        if (arg == a8_ref) {
+                            result_string += format(" (FF00+{:02x})", (u8)(data & 0xFF));
+                        } else {
+                            result_string += format(" {:02x}", (u8)(data & 0xFF));
+                        }
+                        break;
+                    case r8:
+                    {
+                        data = bank_data[addr];
+                        i8 signed_data = *(i8*)&data;
+
+                        result_binary += format(" {:02x}", data);
+
+                        result_string += (i == 0 ? "" : ",");
+                        result_string += format(" {:04x}", addr + signed_data);
+                        addr++;
+                    }
+                        break;
+                    case d16:
+                    case a16:
+                    case a16_ref:
+                        data = bank_data[addr];                 addr++;
+                        data |= ((u16)bank_data[addr]) << 8;    addr++;
+
+                        result_binary += format(" {:02x}", (u8)(data & 0xFF));
+                        result_binary += format(" {:02x}", (u8)((data & 0xFF00) >> 8));
+
+                        result_string += (i == 0 ? "" : ",");
+                        if (arg == a16_ref) {
+                            result_string = format(" ({:04x})", data);
+                        } else {
+                            result_string = format(" {:04x}", data);
+                        }
+                        break;
+                    case SP_r8:
+                    {
+                        data = bank_data[addr]; addr++;
+                        i8 signed_data = *(i8*)&data;
+
+                        result_binary += format(" {:0x2}", (u8)(data & 0xFF));
+
+                        result_string += (i == 0 ? "" : ",");
+                        result_string = format("SP+{:02x}", signed_data);
+                    }
+                        break;
+                    case BC_ref:
+                    case DE_ref:
+                    case HL_ref:
+                    case HL_INC_ref:
+                    case HL_DEC_ref:
+                    case C_ref:
+                        result_string = DATA_NAMES.at(arg);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+
+                get<ST_ENTRY_DATA>(current_entry).first = result_binary;
+                get<ST_ENTRY_DATA>(current_entry).second = result_string;
             }
-
-            _program_buffer.emplace_back(current_entry);
-        }
-    }
-}
-
-void GameboyCPU::InitMessageBufferProgram() {
-    const auto rom_data = mem_instance->GetProgramData();
-    machineInfo.program_buffer = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
-    auto next_bank_table = ScrollableTableBuffer<debug_instr_data>();
-
-    for (int bank_num = 0; const auto & bank_data : rom_data) {
-        next_bank_table = ScrollableTableBuffer<debug_instr_data>();
-
-        DecodeRomBankContent(next_bank_table, bank_data, bank_num++);
-
-        machineInfo.program_buffer.AddMemoryArea(next_bank_table);
-    }
-}
-
-void GameboyCPU::DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const pair<int, vector<u8>>& _bank_data, const int& _bank_num, const string& _bank_name) {
-    u16 data = 0;
-    bool cb = false;
-
-    _program_buffer.clear();
-
-    const auto& base_ptr = _bank_data.first;
-    const auto& bank = _bank_data.second;
-
-    auto current_entry = ScrollableTableEntry<debug_instr_data>();
-
-    for (u16 addr = 0, i = 0; addr < bank.size(); i++) {
-
-        current_entry = ScrollableTableEntry<debug_instr_data>();
-
-        u8 opcode = bank[addr];
-        get<ST_ENTRY_ADDRESS>(current_entry) = addr + base_ptr;
-
-        instr_tuple* instr_ptr;
-
-        if (cb) { instr_ptr = &(instrMapCB[opcode]); } else { instr_ptr = &(instrMap[opcode]); }
-        cb = opcode == 0xCB;
-
-        string raw_data;
-        raw_data = _bank_name + to_string(_bank_num) + ": " + format("{:04x}  ", addr + base_ptr);
-        addr++;
-
-        raw_data += format("{:02x} ", opcode);
-
-        // arguments
-        instruction_args_to_string(addr, bank, data, raw_data, get<INSTR_ARG_1>(*instr_ptr));
-        instruction_args_to_string(addr, bank, data, raw_data, get<INSTR_ARG_2>(*instr_ptr));
-        get<ST_ENTRY_DATA>(current_entry).first = raw_data;
-
-        // instruction to assembly
-        string args;
-        data_enums_to_string(_bank_num, addr, base_ptr, data, args, get<INSTR_ARG_1>(*instr_ptr), get<INSTR_ARG_2>(*instr_ptr));
-
-        get<ST_ENTRY_DATA>(current_entry).second = get<INSTR_MNEMONIC>(*instr_ptr);
-        if (args.compare("") != 0) {
-            get<ST_ENTRY_DATA>(current_entry).second += " " + args;
         }
 
         _program_buffer.emplace_back(current_entry);
     }
 }
 
-void GameboyCPU::InitMessageBufferProgramTmp() {
-    auto bank_table = ScrollableTableBuffer<debug_instr_data>();
+void GameboyCPU::SetupInstrDebugTables() {
+    machineInfo.debug_instr_table = Table<debug_instr_entry_contents>(DEBUG_INSTR_LINES);
+
+    int i = 0;
+
+    TableSection<debug_instr_entry_contents> current_table;
+    int offset = 0;
+
+    while (vector<u8>* rom_data = mem_instance->GetProgramData(i)) {
+        current_table = TableSection<debug_instr_entry_contents>();
+
+        if (i == 0)     { offset = ROM_0_OFFSET; } 
+        else            { offset = ROM_N_OFFSET; }
+
+        DecodeBankContent(current_table, rom_data, offset, i, "ROM");
+        machineInfo.debug_instr_table.AddTableSectionDisposable(current_table);
+
+        i++;
+    }
+}
+
+void GameboyCPU::SetupInstrDebugTablesTmp() {
+    auto bank_table = TableSection<debug_instr_entry_contents>();
     int bank_num;
+
+    machineInfo.debug_instr_table_tmp = Table<debug_instr_entry_contents>(DEBUG_INSTR_LINES);
 
     if (Regs.PC >= VRAM_N_OFFSET && Regs.PC < RAM_N_OFFSET) {
         if (machineInfo.current_rom_bank != -1) {
-            machineInfo.program_buffer_tmp = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
-            graphics_context* graphics_ctx = mem_instance->GetGraphicsContext();
             bank_num = mem_instance->GetIO(CGB_VRAM_SELECT_ADDR);
-            DecodeBankContent(bank_table, pair(VRAM_N_OFFSET, graphics_ctx->VRAM_N[bank_num]), bank_num, "VRAM");
+            DecodeBankContent(bank_table, &graphics_ctx->VRAM_N[bank_num], VRAM_N_OFFSET, bank_num, "VRAM");
             machineInfo.current_rom_bank = -1;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
         }
     } else if (Regs.PC >= RAM_N_OFFSET && Regs.PC < WRAM_0_OFFSET) {
         if (machineInfo.current_rom_bank != -2) {
-            machineInfo.program_buffer_tmp = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
             bank_num = machine_ctx->ram_bank_selected;
-            DecodeBankContent(bank_table, pair(RAM_N_OFFSET, mem_instance->RAM_N[bank_num]), bank_num, "RAM");
+            DecodeBankContent(bank_table, &mem_instance->RAM_N[bank_num], RAM_N_OFFSET, bank_num, "RAM");
             machineInfo.current_rom_bank = -2;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
         }
     } else if (Regs.PC >= WRAM_0_OFFSET && Regs.PC < WRAM_N_OFFSET) {
         if (machineInfo.current_rom_bank != -3) {
-            machineInfo.program_buffer_tmp = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
             bank_num = 0;
-            DecodeBankContent(bank_table, pair(WRAM_0_OFFSET, mem_instance->WRAM_0), bank_num, "WRAM");
+            DecodeBankContent(bank_table, &mem_instance->WRAM_0, WRAM_0_OFFSET, bank_num, "WRAM");
             machineInfo.current_rom_bank = -3;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
         }
     } else if (Regs.PC >= WRAM_N_OFFSET && Regs.PC < MIRROR_WRAM_OFFSET) {
         if (machineInfo.current_rom_bank != -4) {
-            machineInfo.program_buffer_tmp = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
             bank_num = machine_ctx->wram_bank_selected;
-            DecodeBankContent(bank_table, pair(WRAM_N_OFFSET, mem_instance->WRAM_N[bank_num]), bank_num + 1, "WRAM");
+            DecodeBankContent(bank_table, &mem_instance->WRAM_N[bank_num], WRAM_N_OFFSET, bank_num + 1, "WRAM");
             machineInfo.current_rom_bank = -4;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
         }
     } else if (Regs.PC >= HRAM_OFFSET && Regs.PC < IE_OFFSET) {
         if (machineInfo.current_rom_bank != -5) {
-            machineInfo.program_buffer_tmp = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-
             bank_num = 0;
-            DecodeBankContent(bank_table, pair(HRAM_OFFSET, mem_instance->HRAM), bank_num, "HRAM");
+            DecodeBankContent(bank_table, &mem_instance->HRAM, HRAM_OFFSET, bank_num, "HRAM");
             machineInfo.current_rom_bank = -5;
-
-            machineInfo.program_buffer_tmp.AddMemoryArea(bank_table);
         }
     } else {
         // TODO
+    }
+
+    if (bank_table.size() > 0) {
+        machineInfo.debug_instr_table_tmp.AddTableSectionDisposable(bank_table);
     }
 }

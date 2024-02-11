@@ -110,7 +110,17 @@ public:
 
 private:
 	// constructor/destructor
-	explicit GraphicsVulkan(SDL_Window* _window, graphics_information& _graphics_info, game_status& _game_stat) : GraphicsMgr(_window, _graphics_info, _game_stat) {};
+	explicit GraphicsVulkan(SDL_Window** _window) : GraphicsMgr() {
+		auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+		*_window = SDL_CreateWindow(APP_TITLE.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, GUI_WIN_WIDTH, GUI_WIN_HEIGHT, window_flags);
+		window = *_window;
+
+		if (!window) {
+			LOG_ERROR("[SDL]", SDL_GetError());
+		} else {
+			LOG_INFO("[SDL] window created");
+		}
+	};
 	~GraphicsVulkan() = default;
 
 	// graphics queue

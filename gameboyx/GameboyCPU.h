@@ -114,8 +114,8 @@ public:
 	u32 GetCurrentClockCycles() override;
 
 	void GetCurrentProgramCounter() override;
-	void InitMessageBufferProgram() override;
-	void InitMessageBufferProgramTmp() override;
+	void SetupInstrDebugTables() override;
+	void SetupInstrDebugTablesTmp() override;
 	void GetCurrentRegisterValues() const  override;
 	void GetCurrentMiscValues() const override;
 	void GetCurrentFlagsAndISR() const override;
@@ -175,8 +175,7 @@ private:
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
 
-	void DecodeRomBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num);
-	void DecodeBankContent(ScrollableTableBuffer<debug_instr_data>& _program_buffer, const std::pair<int, std::vector<u8>>& _bank_data, const int& _bank_num, const std::string& _bank_name);
+	void DecodeBankContent(TableSection<debug_instr_entry_contents>& _sub_table, std::vector<u8>* _bank_data, const int& _offset, const int& _bank_num, const std::string& _bank_name);
 
 	machine_context* machine_ctx;
 	graphics_context* graphics_ctx;

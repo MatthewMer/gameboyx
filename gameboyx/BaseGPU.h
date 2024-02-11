@@ -8,8 +8,8 @@
 *	specific internals.
 */
 
-#include "GameboyCartridge.h"
 #include "GraphicsMgr.h"
+#include "BaseCartridge.h"
 
 class BaseGPU
 {

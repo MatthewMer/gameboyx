@@ -4,8 +4,6 @@
 
 #include "AudioMgr.h"
 
-#include "data_containers.h"
-
 class AudioSDL : AudioMgr {
 public:
 	friend class AudioMgr;
@@ -15,22 +13,24 @@ public:
 	void DestroyAudioBackend() override;
 
 protected:
-	explicit AudioSDL(audio_information& _audio_info) : AudioMgr(_audio_info) {
+	explicit AudioSDL() : AudioMgr() {
 		SDL_AudioSpec dev_props;
-		SDL_GetDefaultAudioInfo(&name, &dev_props, 0);
+		char* c_name;
+		SDL_GetDefaultAudioInfo(&c_name, &dev_props, 0);
+		name = std::string(c_name);
 
-		if (audioInfo.sampling_rate_max > dev_props.freq) {
-			audioInfo.sampling_rate_max = dev_props.freq;
-			audioInfo.sampling_rate = dev_props.freq;
+		if (samplingRateMax > dev_props.freq) {
+			samplingRateMax = dev_props.freq;
+			samplingRate = dev_props.freq;
 		} else {
-			audioInfo.sampling_rate = audioInfo.sampling_rate_max;
+			samplingRate = samplingRateMax;
 		}
 
-		if (audioInfo.channels_max > dev_props.channels) {
-			audioInfo.channels_max = dev_props.channels;
-			audioInfo.channels = dev_props.channels;
+		if (audioChannelsMax > dev_props.channels) {
+			audioChannelsMax = dev_props.channels;
+			audioChannels = dev_props.channels;
 		} else {
-			audioInfo.channels = audioInfo.channels_max;
+			audioChannels = audioChannelsMax;
 		}
 
 		LOG_INFO("[SDL] ", name, " supports: ", std::format("{:d} channels @ {:.1f}kHz", dev_props.channels, dev_props.freq / pow(10, 3)));

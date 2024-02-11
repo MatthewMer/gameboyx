@@ -1,7 +1,6 @@
 #pragma once
 #include "SDL.h"
-
-#include "data_containers.h"
+#include "BaseCartridge.h"
 
 class BaseCTRL {
 public:

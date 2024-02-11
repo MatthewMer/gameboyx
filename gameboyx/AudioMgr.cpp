@@ -5,10 +5,10 @@
 
 AudioMgr* AudioMgr::instance = nullptr;
 
-AudioMgr* AudioMgr::getInstance(audio_information& _audio_info) {
+AudioMgr* AudioMgr::getInstance() {
 	resetInstance();
 
-	instance = new AudioSDL(_audio_info);
+	instance = new AudioSDL();
 
 	return instance;
 }

@@ -7,28 +7,25 @@
 *	passed by the GUI object and passes it to the constructors of the hardware classes. 
 */
 
-#include "GameboyCartridge.h"
-#include "BaseCPU.h"
-#include "BaseCTRL.h"
-#include "BaseAPU.h"
-#include "data_containers.h"
 #include <SDL.h>
-#include "GraphicsMgr.h"
-#include "AudioMgr.h"
 
-#define VHWMGR_ERR_READ_ROM		0x01
+#include "defs.h"
 
-class VHardwareMgr
+class BaseCartridge;
+
+#define VHWMGR_ERR_READ_ROM			0x01
+#define VHWMGR_ERR_INIT_THREAD		0x02
+#define VHWMGR_ERR_INIT_HW			0x04
+#define VHWMGR_ERR_CART_NULL		0x08
+#define VHWMGR_ERR_THREAD_RUNNING	0x10
+
+class GuiMgr;
+typedef void (GuiMgr::* gui_callback)();
+
+namespace VHardwareMgr
 {
-public:
-	static VHardwareMgr* getInstance(machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info, AudioMgr* _audio_mgr, audio_information& _audio_info);
-	static void resetInstance();
-
-	// clone/assign protection
-	VHardwareMgr(VHardwareMgr const&) = delete;
-	VHardwareMgr(VHardwareMgr&&) = delete;
-	VHardwareMgr& operator=(VHardwareMgr const&) = delete;
-	VHardwareMgr& operator=(VHardwareMgr&&) = delete;
+	u8 InitHardware(BaseCartridge* _cartridge);
+	void ShutdownHardware();
 
 	// members for running hardware
 	void ProcessHardware();
@@ -37,47 +34,12 @@ public:
 	bool EventKeyDown(const SDL_Keycode& _key);
 	bool EventKeyUp(const SDL_Keycode& _key);
 
-	static u8 GetErrors() {
-		return errors;
-	}	
-
-private:
-	// constructor
-	VHardwareMgr(machine_information& _machine_info, GraphicsMgr* _graphics_mgr, graphics_information& _graphics_info, AudioMgr* _audio_mgr, audio_information& _audio_info);
-	static VHardwareMgr* instance;
-	~VHardwareMgr() {
-		BaseCPU::resetInstance();
-		BaseCTRL::resetInstance();
-		BaseGPU::resetInstance();
-		BaseAPU::resetInstance();
-		LOG_INFO("[emu] hardware for ", machineInfo.cartridge->title, " stopped");
-	}
-
-	// hardware instances
-	BaseCPU* core_instance;
-	BaseAPU* sound_instance;
-	BaseGPU* graphics_instance;
-	BaseCTRL* control_instance;
-	GameboyCartridge* cart_instance;
-
-	// execution time
-	u32 timePerFrame = 0;
-	u32 currentTimePerFrame = 0;
-	steady_clock::time_point timeFramePrev;
-	steady_clock::time_point timeFrameCur;
-	bool CheckDelay();
-
-	void InitTime();
-
-	// timestamps for core frequency calculation
-	steady_clock::time_point timeSecondPrev;
-	steady_clock::time_point timeSecondCur;
-	u32 accumulatedTime = 0;
-	void CheckFPSandClock();
-
-	// message fifo
-	machine_information& machineInfo;
-
-	static u8 errors;
+	u8 SetInitialValues(const bool& _debug_enable, const bool& _pause_execution, const int& _emulation_speed);
+	void SetDebugEnabled(const bool& _debug_enabled);
+	void SetPauseExecution(const bool& _pause_execution);
+	void SetEmulationSpeed(const int& _emulation_speed);
+	u8 ResetGame();
+	
+	void GetFpsAndClock(float& _clock, float& _fps);
 };
 

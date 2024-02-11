@@ -9,7 +9,7 @@
 
 #include "BaseGPU.h"
 #include "GameboyMEM.h"
-#include "GraphicsMgr.h"
+#include "HardwareMgr.h"
 
 class GameboyGPU : protected BaseGPU {
 public:
@@ -20,17 +20,18 @@ public:
 
 private:
 	// constructor
-	GameboyGPU(graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr) : graphicsInfo(_graphics_info) {
+	GameboyGPU() {
 		memInstance = GameboyMEM::getInstance();
 		graphicsCtx = memInstance->GetGraphicsContext();
 		machineCtx = memInstance->GetMachineContext();
-		graphicsMgr = _graphics_mgr;
 
-		graphicsInfo.is2d = graphicsInfo.en2d = true;
-		graphicsInfo.image_data = std::vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * TEX2D_CHANNELS);
-		graphicsInfo.aspect_ratio = LCD_ASPECT_RATIO;
-		graphicsInfo.lcd_width = PPU_SCREEN_X;
-		graphicsInfo.lcd_height = PPU_SCREEN_Y;
+		graphics_information graphics_info = {};
+		graphics_info.is2d = graphics_info.en2d = true;
+		graphics_info.image_data = std::vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * TEX2D_CHANNELS);
+		graphics_info.aspect_ratio = LCD_ASPECT_RATIO;
+		graphics_info.lcd_width = PPU_SCREEN_X;
+		graphics_info.lcd_height = PPU_SCREEN_Y;
+		HardwareMgr::SetGraphicsInfo(graphics_info);
 
 		if (machineCtx->isCgb) {
 			DrawScanline = &GameboyGPU::DrawScanlineCGB;
@@ -48,13 +49,11 @@ private:
 	int GetDelayTime() const override;
 	int GetTicksPerFrame(const float& _clock) const override;
 	int GetFrames() override;
-	void SetGraphicsParameters();
 
 	// memory access
 	GameboyMEM* memInstance = nullptr;
 	graphics_context* graphicsCtx = nullptr;
 	machine_context* machineCtx = nullptr;
-	graphics_information& graphicsInfo;
 
 	// members
 	void EnterMode2();

@@ -12,7 +12,7 @@
 #include "BaseMMU.h"
 #include "BaseGPU.h"
 #include "BaseAPU.h"
-#include "data_containers.h"
+#include "BaseCartridge.h"
 #include <chrono>
 using namespace std::chrono;
 
@@ -37,8 +37,8 @@ public:
 	virtual u32 GetCurrentClockCycles() = 0;
 
 	virtual void GetCurrentProgramCounter() = 0;
-	virtual void InitMessageBufferProgram() = 0;
-	virtual void InitMessageBufferProgramTmp() = 0;
+	virtual void SetupInstrDebugTables() = 0;
+	virtual void SetupInstrDebugTablesTmp() = 0;
 	virtual void GetCurrentRegisterValues() const = 0;
 	virtual void GetCurrentMiscValues() const = 0;
 	virtual void GetCurrentFlagsAndISR() const = 0;

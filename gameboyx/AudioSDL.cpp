@@ -2,6 +2,7 @@
 #include "format"
 //#include "AudioMgr.h"
 #include "BaseAPU.h"
+#include "logger.h"
 
 #define _USE_MATH_DEFINES
 #include <cmath>
@@ -18,17 +19,17 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 	SDL_zero(want);
 	SDL_zero(have);
 
-	want.freq = audioInfo.sampling_rate;
+	want.freq = samplingRate;
 	want.format = AUDIO_F32;
-	want.channels = (u8)audioInfo.channels;
+	want.channels = (u8)audioChannels;
 	want.samples = SOUND_BUFFER_SIZE;				// buffer size per channel
 	want.callback = audio_callback;
 	want.userdata = &audioSamples;
 	device = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
 
 	// audio info (settings)
-	audioInfo.sampling_rate = have.freq;
-	audioInfo.channels = (int)have.channels;
+	samplingRate = have.freq;
+	audioChannels = (int)have.channels;
 
 	// audio samples (audio api data)
 	int format_size = SDL_AUDIO_BITSIZE(have.format) / 8;
@@ -38,17 +39,17 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 		SDL_CloseAudioDevice(device);
 		return;
 	}
-	audioSamples.buffer = std::vector<float>(SOUND_BUFFER_SIZE * audioInfo.channels, .0f);
+	audioSamples.buffer = std::vector<float>(SOUND_BUFFER_SIZE * audioChannels, .0f);
 	audioSamples.buffer_size = (int)audioSamples.buffer.size() * sizeof(float);
 	audioSamples.read_cursor = 0;
-	audioSamples.write_cursor = audioInfo.channels * sizeof(float);
+	audioSamples.write_cursor = audioChannels * sizeof(float);
 
 	// finish audio data
 	audioEnv.device = (void*)&device;
 	audioEnv.audio_info = &audioInfo;
 
 	SDL_PauseAudioDevice(device, 0);
-	LOG_INFO("[SDL] ", name, " set: ", format("{:d} channels @ {:.1f}kHz", audioInfo.channels, audioInfo.sampling_rate / pow(10, 3)));
+	LOG_INFO("[SDL] ", name, " set: ", format("{:d} channels @ {:.1f}kHz", audioChannels, samplingRate / pow(10, 3)));
 }
 
 void AudioSDL::InitAudioBackend(BaseAPU* _sound_instance) {

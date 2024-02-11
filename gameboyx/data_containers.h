@@ -13,20 +13,32 @@
 #include <unordered_map>
 
 #include "defs.h"
-#include "GuiScrollableTable.h"
+#include "GuiTable.h"
 #include "general_config.h"
 #include "BaseCartridge.h"
 
-template <class T> using MemoryBufferEntry = std::pair<std::string, std::vector<T>>;	// memory buffer: type, vector<Table>
-template <class T> using MemoryBuffer = std::vector<MemoryBufferEntry<T>>;				// memory buffer: type, vector<Table>
+// typedefs for table contents
+using debug_instr_entry_contents = std::pair<std::string, std::string>;
+using misc_output_data = std::pair<std::string, std::string>;
 
+enum memory_data_types {
+	MEM_ENTRY_ADDR,
+	MEM_ENTRY_LEN,
+	MEM_ENTRY_REF
+};
+using memory_data = std::tuple<std::string, int, u8*>;
+
+// general data container for data regarding the machine state
 struct machine_information {
 	BaseCartridge* cartridge;
 
-	bool instruction_debug_enabled = false;
-	// index, address, raw data, resolved data
-	GuiScrollableTable<debug_instr_data> program_buffer = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-	GuiScrollableTable<debug_instr_data> program_buffer_tmp = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+	bool debug_instr_enabled = false;
+
+	Table<debug_instr_entry_contents> debug_instr_table = Table<debug_instr_entry_contents>(DEBUG_INSTR_LINES);
+	Table<debug_instr_entry_contents> debug_instr_table_tmp = Table<debug_instr_entry_contents>(DEBUG_INSTR_LINES);
+
+	std::vector<Table<memory_data>> memory_tables = std::vector<Table<memory_data>>();
+
 	std::vector<misc_output_data> register_values = std::vector<misc_output_data>();
 	std::vector<misc_output_data> flag_values = std::vector<misc_output_data>();
 	std::vector<misc_output_data> misc_values = std::vector<misc_output_data>();
@@ -49,19 +61,20 @@ struct machine_information {
 	bool batteryBuffered = false;
 	bool timerPresent = false;
 
-	MemoryBuffer<GuiScrollableTable<memory_data>> memory_buffer = MemoryBuffer<GuiScrollableTable<memory_data>>();
-
 	// controller
 	std::unordered_map<SDL_Keycode, int> key_map = std::unordered_map<SDL_Keycode, int>();
 
 	void reset_machine_information() {
 		cartridge = nullptr;
 
-		program_buffer = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
-		program_buffer_tmp = GuiScrollableTable<debug_instr_data>(DEBUG_INSTR_LINES);
+		debug_instr_table = Table<debug_instr_entry_contents>(DEBUG_INSTR_LINES);
+		debug_instr_table_tmp = Table<debug_instr_entry_contents>(DEBUG_INSTR_LINES);
+		memory_tables = std::vector<Table<memory_data>>();
+
 		register_values = std::vector<misc_output_data>();
 		flag_values = std::vector<misc_output_data>();
 		misc_values = std::vector<misc_output_data>();
+		
 
 		pause_execution = true;
 
@@ -77,8 +90,6 @@ struct machine_information {
 		ramPresent = false;
 		batteryBuffered = false;
 		timerPresent = false;
-
-		memory_buffer = MemoryBuffer<GuiScrollableTable<memory_data>>();
 	}
 };
 

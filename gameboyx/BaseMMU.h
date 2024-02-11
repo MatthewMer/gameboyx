@@ -10,11 +10,12 @@
 
 #include "GameboyCartridge.h"
 #include "BaseMEM.h"
-#include "data_containers.h"
 
 #include "data_io.h"
 #include "general_config.h"
 #include "helper_functions.h"
+
+#include "BaseCartridge.h"
 
 class BaseMMU
 {

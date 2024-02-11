@@ -27,3 +27,22 @@ struct Vec2 {
 
     Vec2(int x, int y) : x(x), y(y) {};
 };
+
+enum instr_entry_types {
+	INSTR_HEX,
+	INSTR_ASM
+};
+using instr_entry = std::pair<std::string, std::string>;
+
+enum reg_entry_types {
+	REG_NAME,
+	REG_DATA
+};
+using reg_entry = std::pair<std::string, std::string>;
+
+enum memory_data_types {
+	MEM_ENTRY_ADDR,
+	MEM_ENTRY_LEN,
+	MEM_ENTRY_REF
+};
+using memory_entry = std::tuple<std::string, int, u8*>;

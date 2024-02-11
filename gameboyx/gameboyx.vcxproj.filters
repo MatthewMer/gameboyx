@@ -87,6 +87,9 @@
     <ClCompile Include="AudioSDL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HardwareMgr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameboyCartridge.h">
@@ -143,7 +146,7 @@
     <ClInclude Include="data_containers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GuiScrollableTable.h">
+    <ClInclude Include="GuiTable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GraphicsVulkan.h">
@@ -174,6 +177,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AudioSDL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HardwareMgr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

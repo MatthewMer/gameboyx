@@ -7,7 +7,7 @@
 
 BaseCPU* BaseCPU::instance = nullptr;
 
-BaseCPU* BaseCPU::getInstance(machine_information& _machine_info) {
+BaseCPU* BaseCPU::getInstance() {
 	resetInstance();
 
 	instance = new GameboyCPU(_machine_info);

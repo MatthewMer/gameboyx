@@ -4,14 +4,13 @@
 #include <SDL.h>
 #include <imgui_impl_sdl2.h>
 
-#include "data_containers.h"
 #include "general_config.h"
 
 class GraphicsMgr {
 
 public:
 	// get/reset vkInstance
-	static GraphicsMgr* getInstance(SDL_Window* _window, graphics_information& _graphics_info, game_status& _game_stat);
+	static GraphicsMgr* getInstance(SDL_Window** _window);
 	static void resetInstance();
 
 	// render
@@ -39,11 +38,13 @@ public:
 	virtual bool Init2dGraphicsBackend() = 0;
 	virtual void Destroy2dGraphicsBackend() = 0;
 
+	void SetGraphicsInfo(graphics_information& _graphics_info) {
+		graphicsInfo = std::move(_graphics_info);
+	}
+
 protected:
 
-	explicit GraphicsMgr(SDL_Window* _window, graphics_information& _graphics_info, game_status& _game_stat)
-		: window(_window), graphicsInfo(_graphics_info), gameStat(_game_stat) {
-	}
+	explicit GraphicsMgr() = default;
 	~GraphicsMgr() = default;
 
 	// sdl
@@ -59,14 +60,11 @@ protected:
 	std::string vendor = "";
 	std::string driverVersion = "";
 
-	graphics_information& graphicsInfo;
-	game_status& gameStat;
-
 	virtual void DetectResizableBar() = 0;
 
+	graphics_information graphicsInfo;
+
 private:
-
 	static GraphicsMgr* instance;
-
 };
 

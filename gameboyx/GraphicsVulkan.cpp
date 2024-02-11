@@ -270,11 +270,6 @@ bool GraphicsVulkan::StartGraphics() {
 }
 
 void GraphicsVulkan::StopGraphics() {
-	if (gameStat.game_running) {
-		if (graphicsInfo.is2d) {
-			DestroyTex2dRenderTarget();
-		}
-	}
 	DestroyCommandBuffer();
 	DestroyFrameBuffers();
 	DestroyPipelines();
