@@ -111,7 +111,8 @@ void GuiMgr::ProcessGUI() {
     }
 
     if (requestDeleteGames) {
-
+        DeleteGames();
+        requestDeleteGames = false;
     }
 }
 
@@ -417,7 +418,7 @@ void GuiMgr::ShowDebugMemoryTab(Table<memory_entry>& _table) {
 void GuiMgr::ShowHardwareInfo() {
     ImGui::SetNextWindowSize(hw_info_win_size);
 
-    if (ImGui::Begin("Hardware Info", &showGraphicsInfo, WIN_CHILD_FLAGS)) {
+    if (ImGui::Begin("Hardware Info", &showHardwareInfo, WIN_CHILD_FLAGS)) {
         if (ImGui::BeginTable("hardware_info", 2, TABLE_FLAGS_NO_BORDER_OUTER_H)) {
 
             for (int i = 0; i < hwInfoColNum; i++) {
@@ -459,14 +460,13 @@ void GuiMgr::ShowNewGameDialog() {
     string current_path = get_current_path();
     string s_path_rom_folder = current_path + ROM_FOLDER;
 
-    auto filter_items = new nfdfilteritem_t[FILE_EXTS.size()];
-    for (int i = 0; const auto & [key, value] : FILE_EXTS) {
-        filter_items[i] = { value.first.c_str(), value.second.c_str() };
+    auto filter_items = std::vector<nfdfilteritem_t>();
+    for (const auto & [key, value] : FILE_EXTS) {
+        filter_items.emplace_back(value.first.c_str(), value.second.c_str());
     }
 
     nfdchar_t* out_path = nullptr;
-    const auto result = NFD_OpenDialog(&out_path, filter_items, (nfdfiltersize_t)FILE_EXTS.size(), s_path_rom_folder.c_str());
-    delete[] filter_items;
+    const auto result = NFD_OpenDialog(&out_path, filter_items.data(), (nfdfiltersize_t)FILE_EXTS.size(), s_path_rom_folder.c_str());
 
     if (result == NFD_OKAY) {
         if (out_path != nullptr) {
