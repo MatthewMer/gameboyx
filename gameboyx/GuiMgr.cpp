@@ -41,6 +41,8 @@ void GuiMgr::resetInstance() {
 }
 
 GuiMgr::GuiMgr() {
+    vhwmgr = VHardwareMgr::getInstance();
+
     // init explorer
     NFD_Init();
 
@@ -61,8 +63,6 @@ GuiMgr::GuiMgr() {
             gamesSelected.push_back(false);
         }
     }
-
-    vhwmgr = VHardwareMgr::getInstance();
 }
 
 GuiMgr::~GuiMgr() {

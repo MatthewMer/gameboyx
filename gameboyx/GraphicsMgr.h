@@ -3,6 +3,7 @@
 #include <string>
 #include <SDL.h>
 #include <imgui_impl_sdl2.h>
+#include <atomic>
 
 #include "general_config.h"
 #include "HardwareStructs.h"
@@ -62,10 +63,8 @@ protected:
 	virtual bool Init2dGraphicsBackend() = 0;
 	virtual void Destroy2dGraphicsBackend() = 0;
 
-	virtual_graphics_information graphicsInfo;
-
-	u32 win_width;
-	u32 win_height;
+	graphics_information graphicsInfo = {};
+	virtual_graphics_information virtGraphicsInfo = {};
 
 	int shadersCompiled;
 	int shadersTotal;

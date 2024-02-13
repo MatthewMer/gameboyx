@@ -58,7 +58,9 @@ struct tex2d_data {
 	VkPipeline pipeline;
 	std::vector<vulkan_buffer> staging_buffer = std::vector<vulkan_buffer>(2);
 
-	int update_index = 0;
+	int next_update_index = 0;
+	std::atomic<int> current_update_index = 0;
+	std::atomic<bool> update_texture = false;
 
 	std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>(2);
 	std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>(2);
@@ -172,6 +174,7 @@ private:
 	// render functions
 	typedef void (GraphicsVulkan::* update_function)();
 	update_function updateFunction = nullptr;
+	update_function updateFunctionMainThread = nullptr;
 	void UpdateDummy();
 
 	typedef void (GraphicsVulkan::* render_function)(VkCommandBuffer& _command_buffer);
@@ -213,6 +216,7 @@ private:
 	// render target 2d texture
 	tex2d_data tex2dData = {};
 
+	void UpdateTex2dMainThread();
 	void UpdateTex2d() override;
 	void RecalcTex2dScaleMatrix() override;
 

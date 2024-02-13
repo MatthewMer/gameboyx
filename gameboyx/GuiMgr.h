@@ -131,7 +131,7 @@ private:
 
 	// graphics overlay (FPS)
 	bool showGraphicsMenu = false;
-	int framerate = 1;
+	int framerate = 0;
 	int graphicsOverlayCorner = 1;
 	float graphicsFPSsamples[FPS_SAMPLES_NUM];
 	std::queue<float> graphicsFPSfifo = std::queue<float>();

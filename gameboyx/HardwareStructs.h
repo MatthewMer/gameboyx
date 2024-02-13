@@ -7,19 +7,19 @@ class BaseAPU;
 
 struct virtual_graphics_information {
 	// drawing mode
-	bool is2d = true;
-	bool en2d = true;
+	bool is2d = false;
+	bool en2d = false;
 
 	// data for gameboy output
 	std::vector<u8>* image_data = nullptr;
-	u32 lcd_width = 1;
-	u32 lcd_height = 1;
+	u32 lcd_width = 0;
+	u32 lcd_height = 0;
 	float aspect_ratio = 1.f;
 };
 
 struct graphics_information {
-	int win_width = 1;
-	int win_height = 1;
+	u32 win_width = 0;
+	u32 win_height = 0;
 };
 
 struct virtual_audio_information {
@@ -27,7 +27,7 @@ struct virtual_audio_information {
 	int cursor = 0;
 	std::vector<float>* audio_data;
 
-	bool audio_running = true;
+	bool audio_running = false;
 
 	BaseAPU* sound_instance = nullptr;
 };
@@ -36,7 +36,7 @@ struct audio_information {
 	int channels_max = 0;
 	int sampling_rate_max = 0;
 
-	float volume = 1.f;
+	float volume = .0f;
 	int channels = 0;
 	int sampling_rate = 0;
 

@@ -23,9 +23,9 @@ void GraphicsMgr::resetInstance() {
 }
 
 bool GraphicsMgr::InitGraphicsBackend(virtual_graphics_information& _graphics_info) {
-	graphicsInfo = _graphics_info;
+	virtGraphicsInfo = _graphics_info;
 
-	if (graphicsInfo.is2d) {
+	if (virtGraphicsInfo.is2d) {
 		return Init2dGraphicsBackend();
 	} else {
 		return false;
@@ -33,7 +33,7 @@ bool GraphicsMgr::InitGraphicsBackend(virtual_graphics_information& _graphics_in
 }
 
 void GraphicsMgr::DestroyGraphicsBackend() {
-	if (graphicsInfo.is2d) {
+	if (virtGraphicsInfo.is2d) {
 		Destroy2dGraphicsBackend();
 	}
 }
