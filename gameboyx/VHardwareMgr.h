@@ -8,7 +8,14 @@
 */
 
 #include <SDL.h>
+#include <thread>
+#include <mutex>
 
+#include "BaseCPU.h"
+#include "BaseCTRL.h"
+#include "BaseAPU.h"
+#include "BaseGPU.h"
+#include "BaseCartridge.h"
 #include "defs.h"
 
 class BaseCartridge;
@@ -22,10 +29,15 @@ class BaseCartridge;
 class GuiMgr;
 typedef void (GuiMgr::* gui_callback)();
 
-namespace VHardwareMgr
+class VHardwareMgr
 {
-	u8 InitHardware(BaseCartridge* _cartridge);
-	void ShutdownHardware();
+public:
+	static VHardwareMgr* getInstance();
+	static void resetInstance();
+
+    u8 InitHardware(BaseCartridge* _cartridge);
+    void ShutdownHardware();
+    u8 ResetHardware();
 
 	// members for running hardware
 	void ProcessHardware();
@@ -38,8 +50,57 @@ namespace VHardwareMgr
 	void SetDebugEnabled(const bool& _debug_enabled);
 	void SetPauseExecution(const bool& _pause_execution);
 	void SetEmulationSpeed(const int& _emulation_speed);
-	u8 ResetGame();
 	
 	void GetFpsAndClock(float& _clock, float& _fps);
+    void GetCurrentPCandBank(u32& _pc, int& _bank);
+
+private:
+    VHardwareMgr() = default;
+    ~VHardwareMgr();
+	static VHardwareMgr* instance;
+
+    // hardware instances
+    BaseCPU* core_instance;
+    BaseMMU* mmu_instance;
+    BaseMEM* memory_instance;
+    BaseAPU* sound_instance;
+    BaseGPU* graphics_instance;
+    BaseCTRL* control_instance;
+    BaseCartridge* cart_instance;
+
+    // execution time
+    u32 timePerFrame;
+    u32 currentTimePerFrame;
+    steady_clock::time_point timeFramePrev;
+    steady_clock::time_point timeFrameCur;
+
+    // timestamps for core frequency calculation
+    steady_clock::time_point timeSecondPrev;
+    steady_clock::time_point timeSecondCur;
+    u32 accumulatedTime;
+
+    u8 errors;
+
+    float currentFrequency;
+    float currentFramerate;
+
+    std::thread hardwareThread;
+    std::mutex mutHardware;
+
+    std::mutex mutRun;
+    bool running;
+
+    std::mutex mutDebug;
+    bool debugEnable;
+
+    std::mutex mutPause;
+    bool pauseExecution;
+
+    std::mutex mutSpeed;
+    int emulationSpeed;
+
+    bool CheckDelay();
+    void InitMembers();
+    void CheckFpsAndClock();
 };
 

@@ -5,7 +5,7 @@
 class BaseCTRL {
 public:
 	// get/reset instance
-	static BaseCTRL* getInstance(machine_information& _machine_info);
+	static BaseCTRL* getInstance(BaseCartridge* _cartridge);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -24,6 +24,8 @@ protected:
 	~BaseCTRL() = default;
 
 	virtual void InitKeyMap() = 0;
+
+	std::unordered_map<SDL_Keycode, int> keyMap = std::unordered_map<SDL_Keycode, int>();
 
 private:
 	static BaseCTRL* instance;

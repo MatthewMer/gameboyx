@@ -84,26 +84,31 @@ u32 GameboyCPU::GetCurrentClockCycles() {
     return result;
 }
 
-void GameboyCPU::GetCurrentProgramCounter() {
-    machineInfo.current_pc = (int)Regs.PC;
+void GameboyCPU::GetBankAndPC(int& _bank, u32& _pc) {
+    _pc = (u32)Regs.PC;
 
-    if (Regs.PC < ROM_N_OFFSET) {
-        machineInfo.current_rom_bank = 0;
-    } else if (Regs.PC < VRAM_N_OFFSET) {
-        machineInfo.current_rom_bank = machine_ctx->rom_bank_selected + 1;
+    if (_pc < ROM_N_OFFSET) {
+        _bank = 0;
+    } else if (_pc < VRAM_N_OFFSET) {
+        _bank = machine_ctx->rom_bank_selected + 1;
     } else {
-        SetupInstrDebugTablesTmp();
+        _bank = -1;
     }
 }
 
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
-GameboyCPU::GameboyCPU(machine_information& _machine_info) : BaseCPU(_machine_info) {
-    mem_instance = GameboyMEM::getInstance();
+GameboyCPU::GameboyCPU(BaseCartridge* _cartridge) : BaseCPU(_cartridge) {
+    mem_instance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
     machine_ctx = mem_instance->GetMachineContext();
     graphics_ctx = mem_instance->GetGraphicsContext();
     sound_ctx = mem_instance->GetSoundContext();
+
+    graphics_instance = BaseGPU::getInstance(_cartridge);
+    sound_instance = BaseAPU::getInstance(_cartridge);
+
+    ticksPerFrame = graphics_instance->GetTicksPerFrame((float)(BASE_CLOCK_CPU * pow(10, 6)));
 
     InitRegisterStates();
 
@@ -137,13 +142,6 @@ void GameboyCPU::InitRegisterStates() {
         Regs.DE = INIT_DMG_DE;
         Regs.HL = INIT_DMG_HL;
     }
-}
-
-void GameboyCPU::SetHardwareInstances() {
-    graphics_instance = BaseGPU::getInstance();
-    sound_instance = BaseAPU::getInstance();
-
-    ticksPerFrame = graphics_instance->GetTicksPerFrame((float)(BASE_CLOCK_CPU * pow(10, 6)));
 }
 
 /* ***********************************************************************************************************
@@ -3589,77 +3587,67 @@ void GameboyCPU::SET7() {
     ACCESS HARDWARE STATUS
 *********************************************************************************************************** */
 // get current hardware status (currently mapped memory banks, etc.)
-void GameboyCPU::GetCurrentHardwareState() const {
-    machineInfo.hardware_info.clear();
+void GameboyCPU::GetCurrentHardwareState(std::vector<data_entry>& _hardware_info, std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const {
+    _hardware_info.clear();
+    _hardware_info.emplace_back("Speedmode", format("{:d}", machine_ctx->currentSpeed));
+    _hardware_info.emplace_back("ROM banks", format("{:d}", machine_ctx->rom_bank_num));
+    _hardware_info.emplace_back("ROM selected", format("{:d}", machine_ctx->rom_bank_selected + 1));
+    _hardware_info.emplace_back("RAM banks", format("{:d}", machine_ctx->ram_bank_num));
+    _hardware_info.emplace_back("RAM selected", format("{:d}", machine_ctx->ram_bank_selected));
+    _hardware_info.emplace_back("WRAM banks", format("{:d}", machine_ctx->wram_bank_num));
+    _hardware_info.emplace_back("WRAM selected", format("{:d}", machine_ctx->wram_bank_selected + 1));
+    _hardware_info.emplace_back("VRAM banks", format("{:d}", machine_ctx->vram_bank_num));
+    _hardware_info.emplace_back("VRAM selected", format("{:d}", machine_ctx->vram_bank_selected));
 
-    machineInfo.hardware_info.emplace_back("Speedmode", format("{:d}", machine_ctx->currentSpeed));
-    machineInfo.hardware_info.emplace_back("ROM banks", format("{:d}", machine_ctx->rom_bank_num));
-    machineInfo.hardware_info.emplace_back("ROM selected", format("{:d}", machine_ctx->rom_bank_selected + 1));
-    machineInfo.hardware_info.emplace_back("RAM banks", format("{:d}", machine_ctx->ram_bank_num));
-    machineInfo.hardware_info.emplace_back("RAM selected", format("{:d}", machine_ctx->ram_bank_selected));
-    machineInfo.hardware_info.emplace_back("WRAM banks", format("{:d}", machine_ctx->wram_bank_num));
-    machineInfo.hardware_info.emplace_back("WRAM selected", format("{:d}", machine_ctx->wram_bank_selected + 1));
-    machineInfo.hardware_info.emplace_back("VRAM banks", format("{:d}", machine_ctx->vram_bank_num));
-    machineInfo.hardware_info.emplace_back("VRAM selected", format("{:d}", machine_ctx->vram_bank_selected));
-}
+    _register_values.clear();
+    _register_values.emplace_back(REGISTER_NAMES.at(A) + REGISTER_NAMES.at(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
+    _register_values.emplace_back(REGISTER_NAMES.at(BC), format("{:04x}", Regs.BC));
+    _register_values.emplace_back(REGISTER_NAMES.at(DE), format("{:04x}", Regs.DE));
+    _register_values.emplace_back(REGISTER_NAMES.at(HL), format("{:04x}", Regs.HL));
+    _register_values.emplace_back(REGISTER_NAMES.at(SP), format("{:04x}", Regs.SP));
+    _register_values.emplace_back(REGISTER_NAMES.at(PC), format("{:04x}", Regs.PC));
+    _register_values.emplace_back(REGISTER_NAMES.at(IE), format("{:02x}", machine_ctx->IE));
+    _register_values.emplace_back(REGISTER_NAMES.at(IF), format("{:02x}", mem_instance->GetIO(IF_ADDR)));
 
-void GameboyCPU::GetCurrentRegisterValues() const {
-    machineInfo.register_values.clear();
-
-    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(A) + REGISTER_NAMES.at(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
-    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(BC), format("{:04x}", Regs.BC));
-    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(DE), format("{:04x}", Regs.DE));
-    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(HL), format("{:04x}", Regs.HL));
-    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(SP), format("{:04x}", Regs.SP));
-    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(PC), format("{:04x}", Regs.PC));
-    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(IE), format("{:02x}", machine_ctx->IE));
-    machineInfo.register_values.emplace_back(REGISTER_NAMES.at(IF), format("{:02x}", mem_instance->GetIO(IF_ADDR)));
-}
-
-void GameboyCPU::GetCurrentFlagsAndISR() const {
-    machineInfo.flag_values.clear();
-
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_H), format("{:01b}", (Regs.F & FLAG_HCARRY) >> 5));
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(FLAG_IME), format("{:01b}", ime ? 1 : 0));
+    _flag_values.clear();
+    _flag_values.emplace_back(FLAG_NAMES.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
+    _flag_values.emplace_back(FLAG_NAMES.at(FLAG_H), format("{:01b}", (Regs.F & FLAG_HCARRY) >> 5));
+    _flag_values.emplace_back(FLAG_NAMES.at(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
+    _flag_values.emplace_back(FLAG_NAMES.at(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
+    _flag_values.emplace_back(FLAG_NAMES.at(FLAG_IME), format("{:01b}", ime ? 1 : 0));
     u8 isr_requested = mem_instance->GetIO(IF_ADDR);
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_SERIAL), format("{:01b}", (isr_requested & IRQ_SERIAL) >> 3));
-    machineInfo.flag_values.emplace_back(FLAG_NAMES.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
-}
+    _flag_values.emplace_back(FLAG_NAMES.at(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
+    _flag_values.emplace_back(FLAG_NAMES.at(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
+    _flag_values.emplace_back(FLAG_NAMES.at(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
+    _flag_values.emplace_back(FLAG_NAMES.at(INT_SERIAL), format("{:01b}", (isr_requested & IRQ_SERIAL) >> 3));
+    _flag_values.emplace_back(FLAG_NAMES.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
 
-void GameboyCPU::GetCurrentMiscValues() const {
-    machineInfo.misc_values.clear();
-
-    machineInfo.misc_values.emplace_back("LCDC", format("{:02x}", mem_instance->GetIO(LCDC_ADDR)));
-    machineInfo.misc_values.emplace_back("STAT", format("{:02x}", mem_instance->GetIO(STAT_ADDR)));
-    machineInfo.misc_values.emplace_back("WRAM", format("{:02x}", mem_instance->GetIO(CGB_WRAM_SELECT_ADDR)));
-    machineInfo.misc_values.emplace_back("VRAM", format("{:02x}", mem_instance->GetIO(CGB_VRAM_SELECT_ADDR)));
-    machineInfo.misc_values.emplace_back("LY", format("{:02x}", mem_instance->GetIO(LY_ADDR)));
-    machineInfo.misc_values.emplace_back("LYC", format("{:02x}", mem_instance->GetIO(LYC_ADDR)));
-    machineInfo.misc_values.emplace_back("SCX", format("{:02x}", mem_instance->GetIO(SCX_ADDR)));
-    machineInfo.misc_values.emplace_back("SCY", format("{:02x}", mem_instance->GetIO(SCY_ADDR)));
-    machineInfo.misc_values.emplace_back("WX", format("{:02x}", mem_instance->GetIO(WX_ADDR)));
-    machineInfo.misc_values.emplace_back("WY", format("{:02x}", mem_instance->GetIO(WY_ADDR)));
+    _misc_values.clear();
+    _misc_values.emplace_back("LCDC", format("{:02x}", mem_instance->GetIO(LCDC_ADDR)));
+    _misc_values.emplace_back("STAT", format("{:02x}", mem_instance->GetIO(STAT_ADDR)));
+    _misc_values.emplace_back("WRAM", format("{:02x}", mem_instance->GetIO(CGB_WRAM_SELECT_ADDR)));
+    _misc_values.emplace_back("VRAM", format("{:02x}", mem_instance->GetIO(CGB_VRAM_SELECT_ADDR)));
+    _misc_values.emplace_back("LY", format("{:02x}", mem_instance->GetIO(LY_ADDR)));
+    _misc_values.emplace_back("LYC", format("{:02x}", mem_instance->GetIO(LYC_ADDR)));
+    _misc_values.emplace_back("SCX", format("{:02x}", mem_instance->GetIO(SCX_ADDR)));
+    _misc_values.emplace_back("SCY", format("{:02x}", mem_instance->GetIO(SCY_ADDR)));
+    _misc_values.emplace_back("WX", format("{:02x}", mem_instance->GetIO(WX_ADDR)));
+    _misc_values.emplace_back("WY", format("{:02x}", mem_instance->GetIO(WY_ADDR)));
 }
 
 /* ***********************************************************************************************************
     PREPARE DEBUG DATA (DISASSEMBLED INSTRUCTIONS)
 *********************************************************************************************************** */
-void GameboyCPU::DecodeBankContent(TableSection<debug_instr_entry_contents>& _program_buffer, vector<u8>* _bank_data, const int& _offset, const int& _bank_num, const string& _bank_name) {
+void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, vector<u8>* _bank_data, const int& _offset, const int& _bank_num, const string& _bank_name) {
     u16 data = 0;
     bool cb = false;
 
     _program_buffer.clear();
-    auto current_entry = TableEntry<debug_instr_entry_contents>();                // a table entry consists of the address and a pair of two strings (left and right column of debugger)
+    auto current_entry = TableEntry<instr_entry>();                // a table entry consists of the address and a pair of two strings (left and right column of debugger)
     u8* bank_data = _bank_data->data();
 
     for (u16 addr = 0, i = 0; addr < _bank_data->size(); i++) {
-        current_entry = TableEntry<debug_instr_entry_contents>();
+        current_entry = TableEntry<instr_entry>();
 
         // get opcode and set entry address
         u8 opcode = bank_data[addr];
@@ -3751,7 +3739,7 @@ void GameboyCPU::DecodeBankContent(TableSection<debug_instr_entry_contents>& _pr
                         data = bank_data[addr]; addr++;
                         i8 signed_data = *(i8*)&data;
 
-                        result_binary += format(" {:0x2}", (u8)(data & 0xFF));
+                        result_binary += format(" {:02x}", (u8)(data & 0xFF));
 
                         result_string += (i == 0 ? "" : ",");
                         result_string = format("SP+{:02x}", signed_data);
@@ -3779,68 +3767,51 @@ void GameboyCPU::DecodeBankContent(TableSection<debug_instr_entry_contents>& _pr
     }
 }
 
-void GameboyCPU::SetupInstrDebugTables() {
-    machineInfo.debug_instr_table = Table<debug_instr_entry_contents>(DEBUG_INSTR_LINES);
+void GameboyCPU::SetupInstrDebugTables(Table<instr_entry>& _table) {
+    _table = Table<instr_entry>(DEBUG_INSTR_LINES);
 
     int i = 0;
 
-    TableSection<debug_instr_entry_contents> current_table;
+    TableSection<instr_entry> current_table;
     int offset = 0;
 
     while (vector<u8>* rom_data = mem_instance->GetProgramData(i)) {
-        current_table = TableSection<debug_instr_entry_contents>();
+        current_table = TableSection<instr_entry>();
 
         if (i == 0)     { offset = ROM_0_OFFSET; } 
         else            { offset = ROM_N_OFFSET; }
 
         DecodeBankContent(current_table, rom_data, offset, i, "ROM");
-        machineInfo.debug_instr_table.AddTableSectionDisposable(current_table);
+        _table.AddTableSectionDisposable(current_table);
 
         i++;
     }
 }
 
-void GameboyCPU::SetupInstrDebugTablesTmp() {
-    auto bank_table = TableSection<debug_instr_entry_contents>();
+void GameboyCPU::SetupInstrDebugTablesTmp(Table<instr_entry>& _table) {
+    auto bank_table = TableSection<instr_entry>();
     int bank_num;
 
-    machineInfo.debug_instr_table_tmp = Table<debug_instr_entry_contents>(DEBUG_INSTR_LINES);
+    _table = Table<instr_entry>(DEBUG_INSTR_LINES);
 
     if (Regs.PC >= VRAM_N_OFFSET && Regs.PC < RAM_N_OFFSET) {
-        if (machineInfo.current_rom_bank != -1) {
-            bank_num = mem_instance->GetIO(CGB_VRAM_SELECT_ADDR);
-            DecodeBankContent(bank_table, &graphics_ctx->VRAM_N[bank_num], VRAM_N_OFFSET, bank_num, "VRAM");
-            machineInfo.current_rom_bank = -1;
-        }
+        bank_num = mem_instance->GetIO(CGB_VRAM_SELECT_ADDR);
+        DecodeBankContent(bank_table, &graphics_ctx->VRAM_N[bank_num], VRAM_N_OFFSET, bank_num, "VRAM");
     } else if (Regs.PC >= RAM_N_OFFSET && Regs.PC < WRAM_0_OFFSET) {
-        if (machineInfo.current_rom_bank != -2) {
-            bank_num = machine_ctx->ram_bank_selected;
-            DecodeBankContent(bank_table, &mem_instance->RAM_N[bank_num], RAM_N_OFFSET, bank_num, "RAM");
-            machineInfo.current_rom_bank = -2;
-        }
+        bank_num = machine_ctx->ram_bank_selected;
+        DecodeBankContent(bank_table, &mem_instance->RAM_N[bank_num], RAM_N_OFFSET, bank_num, "RAM");
     } else if (Regs.PC >= WRAM_0_OFFSET && Regs.PC < WRAM_N_OFFSET) {
-        if (machineInfo.current_rom_bank != -3) {
-            bank_num = 0;
-            DecodeBankContent(bank_table, &mem_instance->WRAM_0, WRAM_0_OFFSET, bank_num, "WRAM");
-            machineInfo.current_rom_bank = -3;
-        }
+        bank_num = 0;
+        DecodeBankContent(bank_table, &mem_instance->WRAM_0, WRAM_0_OFFSET, bank_num, "WRAM");
     } else if (Regs.PC >= WRAM_N_OFFSET && Regs.PC < MIRROR_WRAM_OFFSET) {
-        if (machineInfo.current_rom_bank != -4) {
-            bank_num = machine_ctx->wram_bank_selected;
-            DecodeBankContent(bank_table, &mem_instance->WRAM_N[bank_num], WRAM_N_OFFSET, bank_num + 1, "WRAM");
-            machineInfo.current_rom_bank = -4;
-        }
+        bank_num = machine_ctx->wram_bank_selected;
+        DecodeBankContent(bank_table, &mem_instance->WRAM_N[bank_num], WRAM_N_OFFSET, bank_num + 1, "WRAM");
     } else if (Regs.PC >= HRAM_OFFSET && Regs.PC < IE_OFFSET) {
-        if (machineInfo.current_rom_bank != -5) {
-            bank_num = 0;
-            DecodeBankContent(bank_table, &mem_instance->HRAM, HRAM_OFFSET, bank_num, "HRAM");
-            machineInfo.current_rom_bank = -5;
-        }
+        bank_num = 0;
+        DecodeBankContent(bank_table, &mem_instance->HRAM, HRAM_OFFSET, bank_num, "HRAM");
     } else {
         // TODO
     }
 
-    if (bank_table.size() > 0) {
-        machineInfo.debug_instr_table_tmp.AddTableSectionDisposable(bank_table);
-    }
+    _table.AddTableSectionDisposable(bank_table);
 }

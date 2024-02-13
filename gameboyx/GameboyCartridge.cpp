@@ -172,6 +172,9 @@ bool GameboyCartridge::ReadRom() {
         title += (char)vecRom[ROM_HEAD_TITLE + i];
     }
 
+    // hardware info
+
+
     // checksum
     u8 chksum_expected = vecRom[ROM_HEAD_CHKSUM];
     u8 chksum_calulated = 0;

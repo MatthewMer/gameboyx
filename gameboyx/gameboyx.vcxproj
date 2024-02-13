@@ -176,6 +176,7 @@
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <ClCompile Include="BaseCartridge.cpp" />
+    <ClCompile Include="BaseMEM.cpp" />
     <ClCompile Include="GameboyCartridge.cpp" />
     <ClCompile Include="BaseCTRL.cpp" />
     <ClCompile Include="GameboyCTRL.cpp" />
@@ -218,13 +219,13 @@
     <ClInclude Include="BaseGPU.h" />
     <ClInclude Include="GameboyGPU.h" />
     <ClInclude Include="HardwareMgr.h" />
+    <ClInclude Include="HardwareStructs.h" />
     <ClInclude Include="helper_functions.h" />
     <ClInclude Include="GuiMgr.h" />
     <ClInclude Include="general_config.h" />
     <ClInclude Include="include\logger.h" />
     <ClInclude Include="BaseMEM.h" />
     <ClInclude Include="GameboyMEM.h" />
-    <ClInclude Include="data_containers.h" />
     <ClInclude Include="BaseMMU.h" />
     <ClInclude Include="GameboyMMU.h" />
     <ClInclude Include="GuiTable.h" />

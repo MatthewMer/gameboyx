@@ -100,7 +100,7 @@ private:
 
 template <class T> constexpr Table<T>& Table<T>::operator=(const Table<T>& _right) noexcept {
     if (this != &_right) {
-        tableSections = std::move(_right.tableSections);
+        tableSections = _right.tableSections;
         startIndex = _right.startIndex;
         endIndex = _right.startIndex;
         indexIterator = _right.indexIterator;
@@ -128,8 +128,7 @@ template <class T> constexpr void Table<T>::SetElementsToShow() {
 }
 
 template <class T> void Table<T>::AddTableSectionDisposable(TableSection<T>& _buffer) {
-    tableSections.reserve(tableSections.size() + 1);
-    tableSections.emplace_back(std::move(_buffer));
+    tableSections.emplace_back(_buffer);
     size = tableSections.size();
 
     SetElementsToShow();
@@ -211,7 +210,7 @@ template <class T> void Table<T>::ScrollDownPage() {
 
 template <class T> void Table<T>::SearchBank(int& _bank) {
     if (_bank < 0) { _bank = 0; }
-    else if (_bank > tableSections.size() - 1) { _bank = tableSections.size() - 1; }
+    else if (_bank > tableSections.size() - 1) { _bank = (int)tableSections.size() - 1; }
 
     startIndex = bank_index(_bank, 0);
     endIndex = bank_index(_bank, currentlyVisibleElements);

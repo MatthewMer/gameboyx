@@ -14,31 +14,6 @@ using namespace std;
 #define LINE_NUM_HEX(x)     (((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE))
 
 /* ***********************************************************************************************************
-    CONSTRUCTOR AND (DE)INIT
-*********************************************************************************************************** */
-GameboyMEM* GameboyMEM::instance = nullptr;
-
-GameboyMEM* GameboyMEM::getInstance(machine_information& _machine_info) {
-    if (instance == nullptr) {
-        instance = new GameboyMEM(_machine_info);
-        instance->InitMemory();
-    }
-    return instance;
-}
-
-GameboyMEM* GameboyMEM::getInstance() {
-    if (instance != nullptr) { return instance; }
-    else { LOG_ERROR("Couldn't access memory instance"); }
-}
-
-void GameboyMEM::resetInstance() {
-    if (instance != nullptr) {
-        delete instance;
-        instance = nullptr;
-    }
-}
-
-/* ***********************************************************************************************************
     HARDWARE ACCESS
 *********************************************************************************************************** */
 machine_context* GameboyMEM::GetMachineContext() {
@@ -64,8 +39,8 @@ void GameboyMEM::RequestInterrupts(const u8& _isr_flags) {
 /* ***********************************************************************************************************
     INITIALIZE MEMORY
 *********************************************************************************************************** */
-void GameboyMEM::InitMemory() {
-    const auto& vec_rom = machineInfo.cartridge->GetRomVector();
+void GameboyMEM::InitMemory(BaseCartridge* _cartridge) {
+    const auto& vec_rom = _cartridge->GetRomVector();
 
     machine_ctx.isCgb = vec_rom[ROM_HEAD_CGBFLAG] & 0x80 ? true : false;
     machine_ctx.wram_bank_num = (machine_ctx.isCgb ? 8 : 2);
@@ -85,8 +60,6 @@ void GameboyMEM::InitMemory() {
         LOG_INFO("[emu] ROM copied");
     }
     InitMemoryState();
-
-    SetupMemoryDebugTables();
 }
 
 bool GameboyMEM::CopyRom(const vector<u8>& _vec_rom) {
@@ -875,22 +848,22 @@ void GameboyMEM::SetAPUMasterVolume(const u8& _data) {
 /* ***********************************************************************************************************
     MEMORY DEBUGGER
 *********************************************************************************************************** */
-void GameboyMEM::FillMemoryDebugTable(TableSection<memory_data>& _table_section, vector<u8>* _bank_data, const int& _offset) {
-    auto data = memory_data();
+void GameboyMEM::FillMemoryDebugTable(TableSection<memory_entry>& _table_section, vector<u8>* _bank_data, const int& _offset) {
+    auto data = memory_entry();
 
     int size = (int)_bank_data->size();
     int line_num = (int)LINE_NUM_HEX(size);
     int index;
 
-    _table_section = TableSection<memory_data>(line_num);
+    _table_section = TableSection<memory_entry>(line_num);
 
     for (int i = 0; i < line_num; i++) {
-        auto table_entry = TableEntry<memory_data>();
+        auto table_entry = TableEntry<memory_entry>();
 
         index = i * DEBUG_MEM_ELEM_PER_LINE;
         get<ST_ENTRY_ADDRESS>(table_entry) = _offset + index;
 
-        data = memory_data();
+        data = memory_entry();
         get<MEM_ENTRY_ADDR>(data) = format("{:04x}", _offset + index);
         get<MEM_ENTRY_LEN>(data) = size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
         get<MEM_ENTRY_REF>(data) = &(*_bank_data)[index];
@@ -902,16 +875,16 @@ void GameboyMEM::FillMemoryDebugTable(TableSection<memory_data>& _table_section,
 }
 
 
-void GameboyMEM::SetupMemoryDebugTables() {
+void GameboyMEM::SetupMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) {
     // access for memory inspector
-    machineInfo.memory_tables.clear();
+    _tables.clear();
 
     // ROM
     {
         // ROM 0
-        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        auto table = Table<memory_entry>(DEBUG_MEM_LINES);
         table.name = "ROM";
-        auto table_section = TableSection<memory_data>();
+        auto table_section = TableSection<memory_entry>();
 
         FillMemoryDebugTable(table_section, &ROM_0, ROM_0_OFFSET);
 
@@ -919,55 +892,55 @@ void GameboyMEM::SetupMemoryDebugTables() {
 
         // ROM n
         for (auto& n : ROM_N) {
-            table_section = TableSection<memory_data>();
+            table_section = TableSection<memory_entry>();
 
             FillMemoryDebugTable(table_section, &n, ROM_0_OFFSET);
 
             table.AddTableSectionDisposable(table_section);
         }
 
-        machineInfo.memory_tables.push_back(std::move(table));
+        _tables.push_back(table);
     }
 
     // VRAM
     {
-        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        auto table = Table<memory_entry>(DEBUG_MEM_LINES);
         table.name = "VRAM";
-        auto table_section = TableSection<memory_data>();
+        auto table_section = TableSection<memory_entry>();
 
         for (auto& n : graphics_ctx.VRAM_N) {
-            table_section = TableSection<memory_data>();
+            table_section = TableSection<memory_entry>();
 
             FillMemoryDebugTable(table_section, &n, VRAM_N_OFFSET);
 
             table.AddTableSectionDisposable(table_section);
         }
 
-        machineInfo.memory_tables.push_back(std::move(table));
+        _tables.push_back(table);
     }
 
     // RAM
     if (machine_ctx.ram_bank_num > 0) {
-        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        auto table = Table<memory_entry>(DEBUG_MEM_LINES);
         table.name = "RAM";
-        auto table_section = TableSection<memory_data>();
+        auto table_section = TableSection<memory_entry>();
 
         for (auto& n : RAM_N) {
-            table_section = TableSection<memory_data>();
+            table_section = TableSection<memory_entry>();
 
             FillMemoryDebugTable(table_section, &n, RAM_N_OFFSET);
 
             table.AddTableSectionDisposable(table_section);
         }
 
-        machineInfo.memory_tables.push_back(std::move(table));
+        _tables.push_back(table);
     }
 
     // WRAM
     {
-        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        auto table = Table<memory_entry>(DEBUG_MEM_LINES);
         table.name = "WRAM";
-        auto table_section = TableSection<memory_data>();
+        auto table_section = TableSection<memory_entry>();
 
         FillMemoryDebugTable(table_section, &WRAM_0, WRAM_0_OFFSET);
 
@@ -975,53 +948,53 @@ void GameboyMEM::SetupMemoryDebugTables() {
 
         // WRAM n
         for (auto& n : WRAM_N) {
-            table_section = TableSection<memory_data>();
+            table_section = TableSection<memory_entry>();
 
             FillMemoryDebugTable(table_section, &n, WRAM_N_OFFSET);
 
             table.AddTableSectionDisposable(table_section);
         }
 
-        machineInfo.memory_tables.push_back(std::move(table));
+        _tables.push_back(table);
     }
 
     // OAM
     {
-        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        auto table = Table<memory_entry>(DEBUG_MEM_LINES);
         table.name = "OAM";
-        auto table_section = TableSection<memory_data>();
+        auto table_section = TableSection<memory_entry>();
 
         FillMemoryDebugTable(table_section, &graphics_ctx.OAM, OAM_OFFSET);
 
         table.AddTableSectionDisposable(table_section);
 
-        machineInfo.memory_tables.push_back(std::move(table));
+        _tables.push_back(table);
     }
 
     // IO
     {
-        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        auto table = Table<memory_entry>(DEBUG_MEM_LINES);
         table.name = "IO";
-        auto table_section = TableSection<memory_data>();
+        auto table_section = TableSection<memory_entry>();
 
         FillMemoryDebugTable(table_section, &IO, IO_OFFSET);
 
         table.AddTableSectionDisposable(table_section);
 
-        machineInfo.memory_tables.push_back(std::move(table));
+        _tables.push_back(table);
     }
 
     // HRAM
     {
-        auto table = Table<memory_data>(DEBUG_MEM_LINES);
+        auto table = Table<memory_entry>(DEBUG_MEM_LINES);
         table.name = "HRAM";
-        auto table_section = TableSection<memory_data>();
+        auto table_section = TableSection<memory_entry>();
 
         FillMemoryDebugTable(table_section, &HRAM, HRAM_OFFSET);
 
         table.AddTableSectionDisposable(table_section);
 
-        machineInfo.memory_tables.push_back(std::move(table));
+        _tables.push_back(table);
     }
 }
 

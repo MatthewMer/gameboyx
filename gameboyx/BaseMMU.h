@@ -21,7 +21,7 @@ class BaseMMU
 {
 public:
 	// get/reset instance
-	static BaseMMU* getInstance(machine_information& _machine_info);
+	static BaseMMU* getInstance(BaseCartridge* _cartridge);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -36,19 +36,15 @@ public:
 	virtual u8 Read8Bit(const u16& _addr) = 0;
 	//virtual u16 Read16Bit(const u16& _addr) = 0;
 
-	virtual void ResetChildMemoryInstances() = 0;
-
 protected:
 	// constructor
-	explicit BaseMMU(machine_information& _machine_info) : machineInfo(_machine_info) {};
-	~BaseMMU() = default;
+	explicit BaseMMU() {};
+	~BaseMMU() {
+		BaseMEM::resetInstance();
+	}
 
 	virtual void ReadSave() = 0;
 	virtual void WriteSave() const = 0;
 
-	machine_information& machineInfo;
-		
-private:
 	static BaseMMU* instance;
-	static BaseMMU* getNewMmuInstance(machine_information& _machine_info);
 };

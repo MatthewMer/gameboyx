@@ -12,25 +12,22 @@ using namespace std;
 *********************************************************************************************************** */
 BaseMMU* BaseMMU::instance = nullptr;
 
-BaseMMU* BaseMMU::getInstance(machine_information& _machine_info) {
-	resetInstance();
-
-	instance = getNewMmuInstance(_machine_info);
+BaseMMU* BaseMMU::getInstance(BaseCartridge* _cartridge) {
 	if (instance == nullptr) {
-		LOG_ERROR("Couldn't create MMU");
+		switch (_cartridge->console) {
+		case GB:
+		case GBC:
+			instance = GameboyMMU::getInstance(_cartridge);
+			break;
+		}
 	}
+
 	return instance;
 }
 
 void BaseMMU::resetInstance() {
 	if (instance != nullptr) {
-		instance->ResetChildMemoryInstances();
 		delete instance;
 		instance = nullptr;
 	}
 }
-
-BaseMMU* BaseMMU::getNewMmuInstance(machine_information& _machine_info) {
-	return GameboyMMU::getInstance(_machine_info);
-}
-

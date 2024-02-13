@@ -20,18 +20,20 @@ public:
 
 private:
 	// constructor
-	GameboyGPU() {
-		memInstance = GameboyMEM::getInstance();
+	GameboyGPU(BaseCartridge* _cartridge) {
+		memInstance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
 		graphicsCtx = memInstance->GetGraphicsContext();
 		machineCtx = memInstance->GetMachineContext();
 
-		graphics_information graphics_info = {};
-		graphics_info.is2d = graphics_info.en2d = true;
-		graphics_info.image_data = std::vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * TEX2D_CHANNELS);
-		graphics_info.aspect_ratio = LCD_ASPECT_RATIO;
-		graphics_info.lcd_width = PPU_SCREEN_X;
-		graphics_info.lcd_height = PPU_SCREEN_Y;
-		HardwareMgr::SetGraphicsInfo(graphics_info);
+		imageData = std::vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * TEX2D_CHANNELS);
+
+		virtual_graphics_information virt_graphics_info = {};
+		virt_graphics_info.is2d = virt_graphics_info.en2d = true;
+		virt_graphics_info.image_data = &imageData;
+		virt_graphics_info.aspect_ratio = LCD_ASPECT_RATIO;
+		virt_graphics_info.lcd_width = PPU_SCREEN_X;
+		virt_graphics_info.lcd_height = PPU_SCREEN_Y;
+		HardwareMgr::InitGraphicsBackend(virt_graphics_info);
 
 		if (machineCtx->isCgb) {
 			DrawScanline = &GameboyGPU::DrawScanlineCGB;
@@ -39,11 +41,11 @@ private:
 			DrawScanline = &GameboyGPU::DrawScanlineDMG;
 		}
 
-		graphicsMgr->Init2dGraphicsBackend();
+		//graphicsMgr->Init2dGraphicsBackend();
 	}
 	// destructor
-	~GameboyGPU() override {
-		graphicsMgr->Destroy2dGraphicsBackend();
+	~GameboyGPU() {
+		//graphicsMgr->Destroy2dGraphicsBackend();
 	}
 
 	int GetDelayTime() const override;

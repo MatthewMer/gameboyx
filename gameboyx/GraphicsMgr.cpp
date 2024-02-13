@@ -21,3 +21,19 @@ void GraphicsMgr::resetInstance() {
 		instance = nullptr;
 	}
 }
+
+bool GraphicsMgr::InitGraphicsBackend(virtual_graphics_information& _graphics_info) {
+	graphicsInfo = _graphics_info;
+
+	if (graphicsInfo.is2d) {
+		return Init2dGraphicsBackend();
+	} else {
+		return false;
+	}
+}
+
+void GraphicsMgr::DestroyGraphicsBackend() {
+	if (graphicsInfo.is2d) {
+		Destroy2dGraphicsBackend();
+	}
+}

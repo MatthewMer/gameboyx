@@ -13,25 +13,25 @@ enum key_codes {
 };
 
 void GameboyCTRL::InitKeyMap() {
-	machineInfo.key_map = std::unordered_map<SDL_Keycode, int>();
+	keyMap = std::unordered_map<SDL_Keycode, int>();
 
-	machineInfo.key_map[SDLK_e] = START;
-	machineInfo.key_map[SDLK_q] = SELECT;
-	machineInfo.key_map[SDLK_m] = B;
-	machineInfo.key_map[SDLK_n] = A;
-	machineInfo.key_map[SDLK_s] = DOWN;
-	machineInfo.key_map[SDLK_w] = UP;
-	machineInfo.key_map[SDLK_a] = LEFT;
-	machineInfo.key_map[SDLK_d] = RIGHT;
+	keyMap[SDLK_e] = START;
+	keyMap[SDLK_q] = SELECT;
+	keyMap[SDLK_m] = B;
+	keyMap[SDLK_n] = A;
+	keyMap[SDLK_s] = DOWN;
+	keyMap[SDLK_w] = UP;
+	keyMap[SDLK_a] = LEFT;
+	keyMap[SDLK_d] = RIGHT;
 }
 
 bool GameboyCTRL::SetKey(const SDL_Keycode& _key) {
 	
-	if (machineInfo.key_map.find(_key) != machineInfo.key_map.end()) {
+	if (keyMap.find(_key) != keyMap.end()) {
 
 		// set bool in case cpu writes to joyp register and requires current states to set the right bits
 		// and directly set the corresponding bit and request interrupt in case of a high to low transition
-		switch (machineInfo.key_map[_key]) {
+		switch (keyMap[_key]) {
 		case START:
 			controlCtx->start_pressed = true;
 			memInstance->SetButton(JOYP_START_DOWN, true);
@@ -72,9 +72,9 @@ bool GameboyCTRL::SetKey(const SDL_Keycode& _key) {
 }
 
 bool GameboyCTRL::ResetKey(const SDL_Keycode& _key) {
-	if (machineInfo.key_map.find(_key) != machineInfo.key_map.end()) {
+	if (keyMap.find(_key) != keyMap.end()) {
 
-		switch (machineInfo.key_map[_key]) {
+		switch (keyMap[_key]) {
 		case START:
 			controlCtx->start_pressed = false;
 			memInstance->UnsetButton(JOYP_START_DOWN, true);

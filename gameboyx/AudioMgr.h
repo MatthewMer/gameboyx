@@ -1,5 +1,6 @@
 #pragma once
 
+#include "HardwareStructs.h"
 #include "general_config.h"
 #include <thread>
 
@@ -13,13 +14,6 @@ struct audio_samples {
 	int write_cursor = 0;
 };
 
-struct audio_env {
-	void* device = nullptr;
-	audio_information* audio_info = nullptr;
-	bool audio_running = true;
-	BaseAPU* sound_instance = nullptr;
-};
-
 class AudioMgr {
 public:
 	// get/reset instance
@@ -28,7 +22,7 @@ public:
 
 	virtual void InitAudio(const bool& _reinit) = 0;
 
-	virtual void InitAudioBackend(BaseAPU* _sound_instance) = 0;
+	virtual bool InitAudioBackend(virtual_audio_information& _virt_audio_info) = 0;
 	virtual void DestroyAudioBackend() = 0;
 
 	// clone/assign protection
@@ -40,22 +34,19 @@ public:
 protected:
 	// constructor
 	explicit AudioMgr() {
-		audioChannelsMax = SOUND_7_1;
-		samplingRateMax = SOUND_SAMPLING_RATE_MAX;
-		audioChannels = 0;
-		samplingRate = 0;
+		audioInfo.channels_max = SOUND_7_1;
+		audioInfo.sampling_rate_max = SOUND_SAMPLING_RATE_MAX;
+		audioInfo.channels = 0;
+		audioInfo.sampling_rate = 0;
 	}
 	~AudioMgr() = default;
 
 	std::string name = "";
-	audio_env audioEnv = audio_env();
 	audio_samples audioSamples = audio_samples();
 	std::thread audioThread;
 
-	int audioChannelsMax;
-	int samplingRateMax;
-	int audioChannels;
-	int samplingRate;
+	audio_information audioInfo = {};
+	virtual_audio_information virtAudioInfo = {};
 
 private:
 	static AudioMgr* instance;

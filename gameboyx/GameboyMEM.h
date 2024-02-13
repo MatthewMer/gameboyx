@@ -13,6 +13,11 @@
 #include "defs.h"
 
 struct machine_context {
+	std::string title = "";
+	bool battery_buffered = false;
+	bool ram_present = false;
+	bool timer_present = false;
+
 	// interrupt
 	u8 IE = 0x00;
 
@@ -185,10 +190,7 @@ struct control_context {
 class GameboyMEM : private BaseMEM
 {
 public:
-	// get/reset instance
-	static GameboyMEM* getInstance(machine_information& _machine_info);
-	static GameboyMEM* getInstance();
-	static void resetInstance();
+	friend class BaseMEM;
 
 	// clone/assign protection
 	GameboyMEM(GameboyMEM const&) = delete;
@@ -249,16 +251,21 @@ public:
 
 private:
 	// constructor
-	explicit GameboyMEM(machine_information& _machine_info) : BaseMEM(_machine_info) {};
-	static GameboyMEM* instance;
+	explicit GameboyMEM(BaseCartridge* _cartridge) {
+		InitMemory(_cartridge);
+		machine_ctx.title = _cartridge->title;
+		machine_ctx.battery_buffered = _cartridge->batteryBuffered;
+		machine_ctx.ram_present = _cartridge->ramPresent;
+		machine_ctx.timer_present = _cartridge->timerPresent;
+	};
 	// destructor
 	~GameboyMEM() = default;
 
 	// members
-	void InitMemory() override;
+	void InitMemory(BaseCartridge* _cartridge) override;
 	void InitMemoryState() override;
-	void SetupMemoryDebugTables() override;
-	void FillMemoryDebugTable(TableSection<memory_data>& _table_section, std::vector<u8>* _bank_data, const int& _offset) override;
+	void SetupMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) override;
+	void FillMemoryDebugTable(TableSection<memory_entry>& _table_section, std::vector<u8>* _bank_data, const int& _offset) override;
 
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;
 	bool CopyRom(const std::vector<u8>& _vec_rom) override;

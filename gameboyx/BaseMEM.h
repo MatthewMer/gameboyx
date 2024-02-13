@@ -9,20 +9,28 @@
 */
 
 #include "BaseCartridge.h"
+#include "GuiTable.h"
+#include "defs.h"
 
 class BaseMEM
 {
+public:
+	// get/reset instance
+	static BaseMEM* getInstance(BaseCartridge* _cartridge);
+	static void resetInstance();
+	
 protected:
 	// constructor
-	explicit BaseMEM(machine_information& _machine_info) : machineInfo(_machine_info) {};
+	BaseMEM() = default;
+	~BaseMEM() = default;
 
 	// members
-	virtual void InitMemory() = 0;
+	virtual void InitMemory(BaseCartridge* _cartridge) = 0;
 	virtual void InitMemoryState() = 0;
 	virtual bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) = 0;
 	virtual bool CopyRom(const std::vector<u8>& _vec_rom) = 0;
-	virtual void SetupMemoryDebugTables() = 0;
-	virtual void FillMemoryDebugTable(TableSection<memory_data>& _table_section, std::vector<u8>* _bank_data, const int& _offset) = 0;
+	virtual void SetupMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) = 0;
+	virtual void FillMemoryDebugTable(TableSection<memory_entry>& _table_section, std::vector<u8>* _bank_data, const int& _offset) = 0;
 
 	virtual void AllocateMemory() = 0;
 
@@ -30,5 +38,5 @@ protected:
 
 	virtual std::vector<u8>* GetProgramData(const int& _bank) const = 0;
 
-	machine_information& machineInfo;
+	static BaseMEM* instance;
 };

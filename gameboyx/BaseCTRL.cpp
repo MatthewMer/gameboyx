@@ -5,10 +5,15 @@
 
 BaseCTRL* BaseCTRL::instance = nullptr;
 
-BaseCTRL* BaseCTRL::getInstance(machine_information& _machine_info) {
-	resetInstance();
-
-	instance = new GameboyCTRL(_machine_info);
+BaseCTRL* BaseCTRL::getInstance(BaseCartridge* _cartridge) {
+	if (instance == nullptr) {
+		switch (_cartridge->console) {
+		case GB:
+		case GBC:
+			instance = new GameboyCTRL(_cartridge);
+			break;
+		}
+	}
 
 	return instance;
 }

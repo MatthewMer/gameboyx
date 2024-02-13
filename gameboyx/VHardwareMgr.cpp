@@ -1,129 +1,44 @@
 #include "VHardwareMgr.h"
 
 #include "logger.h"
-#include <thread>
-#include <mutex>
 
-#include "BaseCPU.h"
-#include "BaseCTRL.h"
-#include "BaseAPU.h"
-#include "BaseGPU.h"
-#include "BaseCartridge.h"
 
 using namespace std;
-
-/* *************************************************************************
-Anonymous Namespace (behaves like a static class in JAVA, etc.)
-************************************************************************* */
-namespace VHardwareMgr {
-    // private "members" *****************************************
-    namespace {
-        // hardware instances
-        BaseCPU* core_instance;
-        BaseAPU* sound_instance;
-        BaseGPU* graphics_instance;
-        BaseCTRL* control_instance;
-        BaseCartridge* cart_instance;
-
-        // execution time
-        u32 timePerFrame;
-        u32 currentTimePerFrame;
-        steady_clock::time_point timeFramePrev;
-        steady_clock::time_point timeFrameCur;
-
-        // timestamps for core frequency calculation
-        steady_clock::time_point timeSecondPrev;
-        steady_clock::time_point timeSecondCur;
-        u32 accumulatedTime;
-
-        u8 errors;
-
-        float currentFrequency;
-        float currentFramerate;
-
-        std::thread hardwareThread;
-        std::mutex mutHardware;
-
-        std::mutex mutRun;
-        bool running;
-
-        std::mutex mutDebug;
-        bool debugEnable;
-
-        std::mutex mutPause;
-        bool pauseExecution;
-
-        std::mutex mutSpeed;
-        int emulationSpeed;
-        
-
-        bool CheckDelay() {
-            timeFrameCur = high_resolution_clock::now();
-            currentTimePerFrame = (u32)duration_cast<milliseconds>(timeFrameCur - timeFramePrev).count();
-
-            if (currentTimePerFrame >= timePerFrame) {
-                timeFramePrev = timeFrameCur;
-                currentTimePerFrame = 0;
-
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        void InitMembers() {
-            timeFramePrev = high_resolution_clock::now();
-            timeFrameCur = high_resolution_clock::now();
-            timeSecondPrev = high_resolution_clock::now();
-            timeSecondCur = high_resolution_clock::now();
-
-            running = true;
-            debugEnable = false;
-            pauseExecution = false;
-            emulationSpeed = 1;
-        }
-
-        void CheckFpsAndClock() {
-            timeSecondCur = high_resolution_clock::now();
-            accumulatedTime += (u32)duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
-            timeSecondPrev = timeSecondCur;
-
-            if (accumulatedTime > 999999) {
-                currentFrequency = ((float)core_instance->GetCurrentClockCycles() / accumulatedTime);
-                currentFramerate = graphics_instance->GetFrames() / (accumulatedTime / (float)pow(10, 9));
-
-                accumulatedTime = 0;
-            }
-        }
-    }
-
-    // public "members" *****************************************
-    u8 InitHardware(BaseCartridge* _cartridge);
-    void ShutdownHardware();
-
-    // members for running hardware
-    void ProcessHardware();
-
-    // SDL
-    bool EventKeyDown(const SDL_Keycode& _key);
-    bool EventKeyUp(const SDL_Keycode& _key);
-
-    u8 SetInitialValues(const bool& _debug_enable, const bool& _pause_execution, const int& _emulation_speed);
-    void SetDebugEnabled(const bool& _debug_enabled);
-    void SetPauseExecution(const bool& _pause_execution);
-    void SetEmulationSpeed(const int& _emulation_speed);
-    u8 ResetGame();
-
-    void GetFpsAndClock(float& _clock, float& _fps);
-};
 
 /* ***********************************************************************************************************
     (DE)INIT
 *********************************************************************************************************** */
+VHardwareMgr* VHardwareMgr::instance = nullptr;
+
+VHardwareMgr* VHardwareMgr::getInstance() {
+    if (instance == nullptr) {
+        instance = new VHardwareMgr();
+    }
+
+    return instance;
+}
+
+void VHardwareMgr::resetInstance() {
+    if (instance != nullptr) {
+        delete instance;
+        instance = nullptr;
+    }
+}
+
+VHardwareMgr::~VHardwareMgr() {
+    BaseCPU::resetInstance();
+    BaseCTRL::resetInstance();
+    BaseGPU::resetInstance();
+    BaseAPU::resetInstance();
+}
+
+/* ***********************************************************************************************************
+    RUN HARDWARE
+*********************************************************************************************************** */
 u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge) {
     errors = 0x00;
 
-    if(_cartridge == nullptr){
+    if (_cartridge == nullptr) {
         errors |= VHWMGR_ERR_CART_NULL;
     } else {
         if (_cartridge->ReadRom()) {
@@ -143,22 +58,12 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge) {
                 sound_instance != nullptr &&
                 control_instance != nullptr) {
 
-                core_instance->SetHardwareInstances();
-
                 // returns the time per frame in ns
                 timePerFrame = graphics_instance->GetDelayTime();
 
-                core_instance->GetCurrentHardwareState();
-                core_instance->GetCurrentRegisterValues();
-                core_instance->GetCurrentMiscValues();
-                core_instance->GetCurrentFlagsAndISR();
-                core_instance->GetCurrentProgramCounter();
-
-                core_instance->SetupInstrDebugTables();
-
                 InitMembers();
 
-                hardwareThread = thread(ProcessHardware);
+                hardwareThread = thread([this] { ProcessHardware(); });
                 if (!hardwareThread.joinable()) {
                     errors |= VHWMGR_ERR_INIT_THREAD;
                 } else {
@@ -174,8 +79,6 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge) {
     }
 
     if (errors) {
-        ShutdownHardware();
-
         string title;
         if (errors | VHWMGR_ERR_CART_NULL) {
             title = N_A;
@@ -183,6 +86,7 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge) {
             title = cart_instance->title;
         }
         LOG_ERROR("[emu] starting game ", title);
+        resetInstance();
     }
 
     return errors;
@@ -197,11 +101,11 @@ void VHardwareMgr::ShutdownHardware() {
         hardwareThread.join();
     }
 
-    BaseCPU::resetInstance();
     BaseCTRL::resetInstance();
-    BaseGPU::resetInstance();
     BaseAPU::resetInstance();
-
+    BaseGPU::resetInstance();
+    BaseCPU::resetInstance();
+    
     string title;
     if (cart_instance == nullptr) {
         title = N_A;
@@ -212,9 +116,14 @@ void VHardwareMgr::ShutdownHardware() {
     LOG_INFO("[emu] hardware for ", title, " stopped");
 }
 
-/* ***********************************************************************************************************
-    RUN HARDWARE
-*********************************************************************************************************** */
+u8 VHardwareMgr::ResetHardware() {
+    errors = 0x00;
+
+
+
+    return errors;
+}
+
 void VHardwareMgr::ProcessHardware() {
     unique_lock<mutex> lock_run(mutRun, defer_lock);
     unique_lock<mutex> lock_debug(mutDebug, defer_lock);
@@ -265,13 +174,71 @@ void VHardwareMgr::ProcessHardware() {
     }
 }
 
+bool VHardwareMgr::CheckDelay() {
+    timeFrameCur = high_resolution_clock::now();
+    currentTimePerFrame = (u32)duration_cast<milliseconds>(timeFrameCur - timeFramePrev).count();
+
+    if (currentTimePerFrame >= timePerFrame) {
+        timeFramePrev = timeFrameCur;
+        currentTimePerFrame = 0;
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void VHardwareMgr::InitMembers() {
+    timeFramePrev = high_resolution_clock::now();
+    timeFrameCur = high_resolution_clock::now();
+    timeSecondPrev = high_resolution_clock::now();
+    timeSecondCur = high_resolution_clock::now();
+
+    running = true;
+    debugEnable = false;
+    pauseExecution = false;
+    emulationSpeed = 1;
+}
+
+void VHardwareMgr::CheckFpsAndClock() {
+    timeSecondCur = high_resolution_clock::now();
+    accumulatedTime += (u32)duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
+    timeSecondPrev = timeSecondCur;
+
+    if (accumulatedTime > 999999) {
+        currentFrequency = ((float)core_instance->GetCurrentClockCycles() / accumulatedTime);
+        currentFramerate = graphics_instance->GetFrames() / (accumulatedTime / (float)pow(10, 9));
+
+        accumulatedTime = 0;
+    }
+}
+
 /* ***********************************************************************************************************
     External interaction (Getters/Setters)
 *********************************************************************************************************** */
+u8 VHardwareMgr::SetInitialValues(const bool& _debug_enable, const bool& _pause_execution, const int& _emulation_speed) {
+    errors = 0x00;
+
+    if (hardwareThread.joinable()) {
+        errors |= VHWMGR_ERR_THREAD_RUNNING;
+    } else {
+        debugEnable = _debug_enable;
+        pauseExecution = _pause_execution;
+        emulationSpeed = _emulation_speed;
+    }
+
+    return errors;
+}
+
 void VHardwareMgr::GetFpsAndClock(float& _clock, float& _fps) {
     unique_lock<mutex> lock_hardware(mutHardware);
     _clock = currentFrequency;
     _fps = currentFramerate;
+}
+
+void VHardwareMgr::GetCurrentPCandBank(u32& _pc, int& _bank) {
+    unique_lock<mutex> lock_hardware(mutHardware);
+    core_instance->GetBankAndPC(_bank, _pc);
 }
 
 bool VHardwareMgr::EventKeyDown(const SDL_Keycode& _key) {
@@ -282,20 +249,6 @@ bool VHardwareMgr::EventKeyDown(const SDL_Keycode& _key) {
 bool VHardwareMgr::EventKeyUp(const SDL_Keycode& _key) {
     unique_lock<mutex> lock_hardware(mutHardware);
     return control_instance->ResetKey(_key);
-}
-
-u8 VHardwareMgr::SetInitialValues(const bool& _debug_enable, const bool& _pause_execution, const int& _emulation_speed) {
-    errors = 0x00;
-    
-    if (hardwareThread.joinable()) {
-        errors |= VHWMGR_ERR_THREAD_RUNNING;
-    } else {
-        debugEnable = _debug_enable;
-        pauseExecution = _pause_execution;
-        emulationSpeed = _emulation_speed;
-    }
-
-    return errors;
 }
 
 void VHardwareMgr::SetDebugEnabled(const bool& _debug_enabled) {
@@ -311,10 +264,4 @@ void VHardwareMgr::SetPauseExecution(const bool& _pause_execution) {
 void VHardwareMgr::SetEmulationSpeed(const int& _emulation_speed) {
     unique_lock<mutex> lock_speed(mutSpeed);
     emulationSpeed = _emulation_speed;
-}
-
-u8 VHardwareMgr::ResetGame() {
-    errors = 0x00;
-
-    return errors;
 }

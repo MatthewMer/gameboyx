@@ -198,6 +198,18 @@ bool compile_shader(vector<char>& _byte_code, const string& _shader_source_file,
 VkBool32 VKAPI_CALL debug_report_callback(VkDebugUtilsMessageSeverityFlagBitsEXT _severity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* _callback_data, void* userData);
 #endif
 
+GraphicsVulkan::GraphicsVulkan(SDL_Window** _window) {
+	auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+	*_window = SDL_CreateWindow(APP_TITLE.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, GUI_WIN_WIDTH, GUI_WIN_HEIGHT, window_flags);
+	window = *_window;
+
+	if (!window) {
+		LOG_ERROR("[vulkan]", SDL_GetError());
+	} else {
+		LOG_INFO("[vulkan] window created");
+	}
+};
+
 bool GraphicsVulkan::InitGraphics() {
 #ifdef VK_DEBUG_CALLBACK
 	vector<const char*> additional_extensions = {
@@ -328,7 +340,7 @@ void GraphicsVulkan::RenderFrame() {
 		begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		begin_info.renderPass = renderPass;
 		begin_info.framebuffer = frameBuffers[image_index];
-		begin_info.renderArea = { {0, 0}, {graphicsInfo.win_width, graphicsInfo.win_height} };
+		begin_info.renderArea = { {0, 0}, {win_width, win_height} };
 		begin_info.clearValueCount = 1;
 		begin_info.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
@@ -434,7 +446,7 @@ void GraphicsVulkan::UpdateTex2d() {
 		LOG_ERROR("[vulkan] reset texture2d update fence");
 	}
 
-	memcpy(tex2dData.mapped_image_data[update_index], graphicsInfo.image_data.data(), graphicsInfo.image_data.size());
+	memcpy(tex2dData.mapped_image_data[update_index], graphicsInfo.image_data->data(), graphicsInfo.image_data->size());
 
 	if (vkResetCommandPool(device, tex2dData.command_pool[update_index], 0) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] reset texture2d command pool");
@@ -753,10 +765,10 @@ bool GraphicsVulkan::InitSwapchain(VkImageUsageFlags _flags) {
 		return false;
 	}
 
-	graphicsInfo.win_width = surface_capabilites.currentExtent.width;
-	graphicsInfo.win_height = surface_capabilites.currentExtent.height;
-	viewport = { .0f, .0f, (float)graphicsInfo.win_width, (float)graphicsInfo.win_height, .0f, 1.f };
-	scissor = { {0, 0}, {graphicsInfo.win_width, graphicsInfo.win_height} };
+	win_width = surface_capabilites.currentExtent.width;
+	win_height = surface_capabilites.currentExtent.height;
+	viewport = { .0f, .0f, (float)win_width, (float)win_height, .0f, 1.f };
+	scissor = { {0, 0}, {win_width, win_height} };
 
 	u32 image_num = 0;
 	if (vkGetSwapchainImagesKHR(device, swapchain, &image_num, nullptr) != VK_SUCCESS) {
@@ -788,7 +800,7 @@ bool GraphicsVulkan::InitSwapchain(VkImageUsageFlags _flags) {
 		}
 	}
 
-	aspectRatio = (float)graphicsInfo.win_width / graphicsInfo.win_height;
+	aspectRatio = (float)win_width / win_height;
 
 	return true;
 }
@@ -832,8 +844,8 @@ bool GraphicsVulkan::InitFrameBuffers() {
 		framebuffer_info.renderPass = renderPass;
 		framebuffer_info.attachmentCount = 1;
 		framebuffer_info.pAttachments = &imageViews[i];
-		framebuffer_info.width = graphicsInfo.win_width;
-		framebuffer_info.height = graphicsInfo.win_height;
+		framebuffer_info.width = win_width;
+		framebuffer_info.height = win_height;
 		framebuffer_info.layers = 1;
 
 		if (vkCreateFramebuffer(device, &framebuffer_info, nullptr, &frameBuffers[i]) != VK_SUCCESS) {
@@ -1606,12 +1618,12 @@ void GraphicsVulkan::EnumerateShaders() {
 	LOG_INFO("[vulkan] ", shaderSourceFiles.size(), " shader(s) found");
 
 	if (shaderSourceFiles.empty()) {
-		graphicsInfo.shaders_compilation_finished = true;
+		shaderCompilationFinished = true;
 		return;
 	} else {
-		graphicsInfo.shaders_compiled = 0;
-		graphicsInfo.shaders_total = (int)(shaderSourceFiles.size());
-		graphicsInfo.shaders_compilation_finished = false;
+		shadersCompiled = 0;
+		shadersTotal = (int)(shaderSourceFiles.size());
+		shaderCompilationFinished = false;
 
 		compiler = shaderc_compiler_initialize();
 		options = shaderc_compile_options_initialize();
@@ -1622,11 +1634,11 @@ void GraphicsVulkan::EnumerateShaders() {
 void GraphicsVulkan::CompileNextShader() {
 	bool compiled = true;
 	vector<char> vertex_byte_code;
-	if (!compile_shader(vertex_byte_code, shaderSourceFiles[graphicsInfo.shaders_compiled].first, compiler, options)) {
+	if (!compile_shader(vertex_byte_code, shaderSourceFiles[shadersCompiled].first, compiler, options)) {
 		compiled = false;
 	}
 	vector<char> fragment_byte_code;
-	if (!compile_shader(fragment_byte_code, shaderSourceFiles[graphicsInfo.shaders_compiled].second, compiler, options)) {
+	if (!compile_shader(fragment_byte_code, shaderSourceFiles[shadersCompiled].second, compiler, options)) {
 		compiled = false;
 	}
 
@@ -1644,9 +1656,9 @@ void GraphicsVulkan::CompileNextShader() {
 		}
 	}
 
-	graphicsInfo.shaders_compiled++;
-	if (graphicsInfo.shaders_compiled == graphicsInfo.shaders_total) {
-		graphicsInfo.shaders_compilation_finished = true;
+	shadersCompiled++;
+	if (shadersCompiled == shadersTotal) {
+		shaderCompilationFinished = true;
 
 		shaderc_compiler_release(compiler);
 		shaderc_compile_options_release(options);

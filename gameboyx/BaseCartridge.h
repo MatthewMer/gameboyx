@@ -35,6 +35,10 @@ public:
 	std::string fileName;
 	std::string filePath;
 
+	bool batteryBuffered = false;
+	bool ramPresent = false;
+	bool timerPresent = false;
+
 	// clone/assign protection
 	BaseCartridge(BaseCartridge const&) = delete;
 	BaseCartridge(BaseCartridge&&) = delete;

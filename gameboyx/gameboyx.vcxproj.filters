@@ -90,6 +90,9 @@
     <ClCompile Include="HardwareMgr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BaseMEM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameboyCartridge.h">
@@ -143,9 +146,6 @@
     <ClInclude Include="VHardwareMgr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="data_containers.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="GuiTable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -180,6 +180,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HardwareMgr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HardwareStructs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

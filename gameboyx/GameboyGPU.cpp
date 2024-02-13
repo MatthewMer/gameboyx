@@ -71,7 +71,7 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 				ly++;
 
 				if (ly == LCD_SCANLINES_VBLANK) {
-					graphicsMgr->UpdateGpuData();
+					HardwareMgr::UpdateGpuData();
 					frameCounter++;
 					EnterMode1();
 				} else {
@@ -300,7 +300,7 @@ void GameboyGPU::DrawTileOBJDMG(const int& _x, const int& _y, const u32* _color_
 
 					u32 color_mask = 0xFF000000;
 					for (int k = 0, j = 3 * 8; j > -1; j -= 8, k++) {
-						graphicsInfo.image_data[image_offset_y + image_offset_x + k] = (u8)((color & color_mask) >> j);
+						imageData[image_offset_y + image_offset_x + k] = (u8)((color & color_mask) >> j);
 						color_mask >>= 8;
 					}
 
@@ -322,7 +322,7 @@ void GameboyGPU::DrawTileOBJDMG(const int& _x, const int& _y, const u32* _color_
 
 					u32 color_mask = 0xFF000000;
 					for (int k = 0, j = 3 * 8; j > -1; j -= 8, k++) {
-						graphicsInfo.image_data[image_offset_y + image_offset_x + k] = (u8)((color & color_mask) >> j);
+						imageData[image_offset_y + image_offset_x + k] = (u8)((color & color_mask) >> j);
 						color_mask >>= 8;
 					}
 
@@ -355,7 +355,7 @@ void GameboyGPU::DrawTileBGWINDMG(const int& _x, const int& _y, const u32* _colo
 
 				u32 color_mask = 0xFF000000;
 				for (int k = 0, j = 3 * 8; j > -1; j -= 8, k++) {
-					graphicsInfo.image_data[image_offset_y + image_offset_x + k] = (u8)((color & color_mask) >> j);
+					imageData[image_offset_y + image_offset_x + k] = (u8)((color & color_mask) >> j);
 					color_mask >>= 8;
 				}
 			}

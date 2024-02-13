@@ -7,17 +7,21 @@
 
 BaseCPU* BaseCPU::instance = nullptr;
 
-BaseCPU* BaseCPU::getInstance() {
-	resetInstance();
-
-	instance = new GameboyCPU(_machine_info);
+BaseCPU* BaseCPU::getInstance(BaseCartridge* _cartridge) {
+	if (instance == nullptr) {
+		switch (_cartridge->console) {
+		case GB:
+		case GBC:
+			instance = new GameboyCPU(_cartridge);
+			break;
+		}
+	}
 
 	return instance;
 }
 
 void BaseCPU::resetInstance() {
 	if (instance != nullptr) {
-		BaseMMU::resetInstance();
 		delete instance;
 		instance = nullptr;
 	}

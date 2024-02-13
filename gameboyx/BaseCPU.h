@@ -13,6 +13,8 @@
 #include "BaseGPU.h"
 #include "BaseAPU.h"
 #include "BaseCartridge.h"
+#include "defs.h"
+#include "GuiTable.h"
 #include <chrono>
 using namespace std::chrono;
 
@@ -20,7 +22,7 @@ class BaseCPU
 {
 public:
 	// get/reset instance
-	static BaseCPU* getInstance(machine_information& _machine_info);
+	static BaseCPU* getInstance(BaseCartridge* _cartridge);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -33,30 +35,26 @@ public:
 	virtual void RunCycles() = 0;
 	virtual void RunCycle() = 0;
 
-	virtual void GetCurrentHardwareState() const = 0;
+	virtual void GetCurrentHardwareState(std::vector<data_entry>& _hardware_info, std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const = 0;
 	virtual u32 GetCurrentClockCycles() = 0;
+	virtual void GetBankAndPC(int& _bank, u32& _pc) = 0;
 
-	virtual void GetCurrentProgramCounter() = 0;
-	virtual void SetupInstrDebugTables() = 0;
-	virtual void SetupInstrDebugTablesTmp() = 0;
-	virtual void GetCurrentRegisterValues() const = 0;
-	virtual void GetCurrentMiscValues() const = 0;
-	virtual void GetCurrentFlagsAndISR() const = 0;
+	virtual void SetupInstrDebugTables(Table<instr_entry>& _table) = 0;
+	virtual void SetupInstrDebugTablesTmp(Table<instr_entry>& _table) = 0;
 
 	virtual void Write8Bit(const u8& _data, const u16& _addr) = 0;
 	virtual void Write16Bit(const u16& _data, const u16& _addr) = 0;
 	virtual u8 Read8Bit(const u16& _addr) = 0;
 	virtual u16 Read16Bit(const u16& _addr) = 0;
 
-	virtual void SetHardwareInstances() = 0;
-
 protected:
 	// constructor
-	explicit BaseCPU(machine_information& _machine_info) : machineInfo(_machine_info) {
-		mmu_instance = BaseMMU::getInstance(_machine_info);
+	explicit BaseCPU(BaseCartridge* _cartridge) {
+		mmu_instance = BaseMMU::getInstance(_cartridge);
 	};
-
-	~BaseCPU() = default;
+	~BaseCPU() {
+		BaseMMU::resetInstance();
+	}
 
 	BaseMMU* mmu_instance = nullptr;
 	BaseGPU* graphics_instance = nullptr;
@@ -73,8 +71,6 @@ protected:
 	virtual bool CheckInterrupts() = 0;
 
 	virtual void InitRegisterStates() = 0;
-
-	machine_information& machineInfo;
 
 private:
 	static BaseCPU* instance;

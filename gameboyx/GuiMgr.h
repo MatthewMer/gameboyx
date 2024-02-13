@@ -24,39 +24,6 @@ struct Bool{
 	bool value = false;
 };
 
-struct gui_instr_debugger_data {
-	bank_index instr_index = bank_index(0, 0);					// bank, index
-	int bank_sel = 0;
-	int addr_sel = 0;
-	std::list<bank_index> breakpoints = std::list<bank_index>();
-	std::list<bank_index> breakpoints_tmp = std::list<bank_index>();
-	bool pc_set_to_ram = false;
-	bool autorun = false;
-	int last_pc = -1;
-	bool pause_execution = false;
-	const int col_num = (int)DEBUG_INSTR_COLUMNS.size();
-	const int col_num_regs = (int)DEBUG_REGISTER_COLUMNS.size();
-	const int col_num_flags = (int)DEBUG_FLAG_COLUMNS.size();
-};
-
-struct gui_memory_inspector_data {
-	std::vector<int> dbgMemBankIndex = std::vector<int>();
-	int dbgMemColNum = (int)DEBUG_MEM_COLUMNS.size();
-	Vec2 dbgMemCursorPos = Vec2(-1, -1);
-	bool dbgMemCellHovered = false;
-	bool dbgMemCellAnyHovered = false;
-};
-
-struct gui_fps_data {
-	int graphicsOverlayCorner = 1;
-	float graphicsFPSsamples[FPS_SAMPLES_NUM];
-	std::queue<float> graphicsFPSfifo = std::queue<float>();
-	std::queue<float> graphicsFPSfifoCopy = std::queue<float>();
-	float graphicsFPSavg = .0f;
-	int graphicsFPScount = 0;
-	float graphicsFPScur = .0f;
-};
-
 class GuiMgr {
 public:
 	// singleton instance access
@@ -90,6 +57,8 @@ private:
 	~GuiMgr();
 	static GuiMgr* instance;
 
+	VHardwareMgr* vhwmgr;
+
 	// special keys
 	bool sdlkCtrlDown = false;
 	bool sdlkCtrlDownFirst = false;
@@ -110,13 +79,20 @@ private:
 	bool showEmulationSpeed = false;
 	bool showWinAbout = false;
 	bool showNewGameDialog = false;
+	bool showImGuiDebug = false;
+	bool showGraphicsInfo = false;
 
-	// control variables -> ProcessGUI()
+	// flow control values
 	bool gameRunning = false;
 	bool requestGameStart = false;
 	bool requestGameStop = false;
 	bool requestGameReset = false;
-	bool deleteGames = false;
+	bool requestDeleteGames = false;
+	bool pauseExecution = false;
+	bool autoRun = false;
+	bool pcSetToRam = false;
+	bool jumpToPc = false;
+	bool nextStep = false;
 
 	// game select
 	int gameSelectedIndex = 0;
@@ -125,7 +101,15 @@ private:
 	const int mainColNum = (int)GAMES_COLUMNS.size();
 
 	// debug instructions
-	gui_instr_debugger_data debugInstrData = {};
+	int bankSelect = 0;
+	int addrSelect = 0;
+	std::list<bank_index> breakpoints = std::list<bank_index>();
+	std::list<bank_index> breakpointsTmp = std::list<bank_index>();
+	int lastPc = -1;
+	bank_index debugInstrCurrentInstrIndex = bank_index(0, 0);
+	const int debugInstrColNum = (int)DEBUG_INSTR_COLUMNS.size();
+	const int debugInstrRegColNum = (int)DEBUG_REGISTER_COLUMNS.size();
+	const int debugInstrFlagColNum = (int)DEBUG_FLAG_COLUMNS.size();
 	Table<instr_entry> debugInstrTable = Table<instr_entry>(DEBUG_INSTR_LINES);
 	Table<instr_entry> debugInstrTableTmp = Table<instr_entry>(DEBUG_INSTR_LINES);
 	std::vector<reg_entry> regValues = std::vector<reg_entry>();
@@ -134,23 +118,34 @@ private:
 
 	// hardware info
 	const int hwInfoColNum = (int)HW_INFO_COLUMNS.size();
+	std::vector<data_entry> hardwareInfo = std::vector<data_entry>();
+	float frequency = .0f;
 
 	// memory inspector
-	std::vector<Table<memory_entry>> debugMemoryTables = std::vector<Table<memory_entry>>(DEBUG_MEM_LINES);
-	
+	std::vector<Table<memory_entry>> debugMemoryTables = std::vector<Table<memory_entry>>();
+	std::vector<int> dbgMemBankIndex = std::vector<int>();
+	int dbgMemColNum = (int)DEBUG_MEM_COLUMNS.size();
+	Vec2 dbgMemCursorPos = Vec2(-1, -1);
+	bool dbgMemCellHovered = false;
+	bool dbgMemCellAnyHovered = false;
 
 	// graphics overlay (FPS)
-	
 	bool showGraphicsMenu = false;
-	gui_fps_data fpsData = {};
-
-	
+	int framerate = 1;
+	int graphicsOverlayCorner = 1;
+	float graphicsFPSsamples[FPS_SAMPLES_NUM];
+	std::queue<float> graphicsFPSfifo = std::queue<float>();
+	std::queue<float> graphicsFPSfifoCopy = std::queue<float>();
+	float graphicsFPSavg = .0f;
+	int graphicsFPScount = 0;
+	float graphicsFPScur = .0f;
 
 	// emulation speed multiplier
 	int currentSpeedIndex = 0;
 	std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(EMULATION_SPEEDS.size(), { false });
 
 	// help/about
+	
 	
 
 	// new game dialog
@@ -159,9 +154,6 @@ private:
 	// callbacks
 	void InitCallback();
 	void UpdateCallback();
-	
-	bool showImGuiDebug = false;
-	bool showGraphicsInfo = false;
 
 	// gui functions
 	void ShowMainMenuBar();
@@ -182,29 +174,29 @@ private:
 	void ShowDebugInstrTable();
 	void ShowDebugInstrSelect();
 	void ShowDebugInstrMiscData(const char* _title, const int& _col_num, const std::vector<float>& _columns, const std::vector<reg_entry>& _data);
-
-	// memory inspector components
-	void ShowDebugMemoryTab()
+	
+	void ShowDebugMemoryTab(Table<memory_entry>& _table);
 
 	// actions
-	void ActionDeleteGames();
-	bool ActionAddGame(const std::string& _path_to_rom);
-	void ActionSetToCurrentPC(TableBase& _table_obj);
-	void ActionStartGame(int _index);
-	void ActionEndGame();
+	void DeleteGames();
+	bool AddGame(const std::string& _path_to_rom);
+	void ActionSetToCurrentPC();
+	void ActionRequestStart();
+	void ActionRequestStop();
 	void ActionRequestReset();
 	void ActionSetToBank(TableBase& _table_obj, int& _bank);
 	void ActionSetToAddress(TableBase& _table_obj, int& _address);
 	void ActionSetEmulationSpeed(const int& _index);
+	void ActionPauseExecution();
+	void ActionGamesSelect(const int& _index);
 
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);
 	void ReloadGamesGuiCtx();
 	void ResetDebugInstr(); 
 	void ResetMemInspector();
-	bool PCChanged();
-	void SetBreakPoint(const bank_index& _current_index);
-	void SetBreakPointTmp(const bank_index& _current_index);
+	bool CheckPC();
+	void ActionSetBreakPoint(std::list<bank_index>& _breakpoints, const bank_index& _current_index);
 	void ResetEventMouseWheel();
 	void SetBankAndAddressScrollableTable(TableBase& _tyble_obj, int& _bank, int& _address);
 	void SetupMemInspectorIndex();

@@ -8,8 +8,6 @@
 */
 
 #include "BaseCPU.h"
-#include "GameboyCartridge.h"
-#include "defs.h"
 #include "GameboyMEM.h"
 
 #include <vector>
@@ -110,20 +108,16 @@ public:
 
 	void RunCycles() override;
 	void RunCycle() override;
-	void GetCurrentHardwareState() const override;
+	void GetCurrentHardwareState(std::vector<data_entry>& _hardware_info, std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const override;
 	u32 GetCurrentClockCycles() override;
 
-	void GetCurrentProgramCounter() override;
-	void SetupInstrDebugTables() override;
-	void SetupInstrDebugTablesTmp() override;
-	void GetCurrentRegisterValues() const  override;
-	void GetCurrentMiscValues() const override;
-	void GetCurrentFlagsAndISR() const override;
-	void SetHardwareInstances() override;
+	void GetBankAndPC(int& _bank, u32& _pc) override;
+	void SetupInstrDebugTables(Table<instr_entry>& _table) override;
+	void SetupInstrDebugTablesTmp(Table<instr_entry>& _table) override;
 
 private:
 	// constructor
-	explicit GameboyCPU(machine_information& _machine_info);
+	explicit GameboyCPU(BaseCartridge* _cartridge);
 	// destructor
 	~GameboyCPU() = default;
 
@@ -175,7 +169,7 @@ private:
 	instr_tuple* instrPtr = nullptr;
 	instruction functionPtr = nullptr;
 
-	void DecodeBankContent(TableSection<debug_instr_entry_contents>& _sub_table, std::vector<u8>* _bank_data, const int& _offset, const int& _bank_num, const std::string& _bank_name);
+	void DecodeBankContent(TableSection<instr_entry>& _sub_table, std::vector<u8>* _bank_data, const int& _offset, const int& _bank_num, const std::string& _bank_name);
 
 	machine_context* machine_ctx;
 	graphics_context* graphics_ctx;

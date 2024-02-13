@@ -5,6 +5,7 @@
 #include <imgui_impl_sdl2.h>
 
 #include "general_config.h"
+#include "HardwareStructs.h"
 
 class GraphicsMgr {
 
@@ -35,12 +36,8 @@ public:
 
 	virtual void UpdateGpuData() = 0;
 
-	virtual bool Init2dGraphicsBackend() = 0;
-	virtual void Destroy2dGraphicsBackend() = 0;
-
-	void SetGraphicsInfo(graphics_information& _graphics_info) {
-		graphicsInfo = std::move(_graphics_info);
-	}
+	bool InitGraphicsBackend(virtual_graphics_information& _graphics_info);
+	void DestroyGraphicsBackend();
 
 protected:
 
@@ -62,7 +59,17 @@ protected:
 
 	virtual void DetectResizableBar() = 0;
 
-	graphics_information graphicsInfo;
+	virtual bool Init2dGraphicsBackend() = 0;
+	virtual void Destroy2dGraphicsBackend() = 0;
+
+	virtual_graphics_information graphicsInfo;
+
+	u32 win_width;
+	u32 win_height;
+
+	int shadersCompiled;
+	int shadersTotal;
+	bool shaderCompilationFinished;
 
 private:
 	static GraphicsMgr* instance;

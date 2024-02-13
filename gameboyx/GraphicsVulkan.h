@@ -14,11 +14,11 @@
 #endif
 
 #include "GraphicsMgr.h"
+
 #include <vulkan/vulkan.h>
 #include <SDL_vulkan.h>
 #include <shaderc/shaderc.h>
 #include <imgui_impl_vulkan.h>
-
 #include <vector>
 
 #ifndef GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -104,24 +104,14 @@ public:
 	// update 3d/2d data
 	void UpdateGpuData() override;
 
+private:
+	// constructor/destructor
+	explicit GraphicsVulkan(SDL_Window** _window);
+	~GraphicsVulkan() = default;
+
 	// (de)init 2d render target
 	bool Init2dGraphicsBackend() override;
 	void Destroy2dGraphicsBackend() override;
-
-private:
-	// constructor/destructor
-	explicit GraphicsVulkan(SDL_Window** _window) : GraphicsMgr() {
-		auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-		*_window = SDL_CreateWindow(APP_TITLE.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, GUI_WIN_WIDTH, GUI_WIN_HEIGHT, window_flags);
-		window = *_window;
-
-		if (!window) {
-			LOG_ERROR("[SDL]", SDL_GetError());
-		} else {
-			LOG_INFO("[SDL] window created");
-		}
-	};
-	~GraphicsVulkan() = default;
 
 	// graphics queue
 	VkQueue queue = VK_NULL_HANDLE;
@@ -143,8 +133,8 @@ private:
 	VkInstance vulkanInstance = VK_NULL_HANDLE;
 	VkDevice device = VK_NULL_HANDLE;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-	VkPhysicalDeviceProperties physicalDeviceProperties;
-	VkDebugUtilsMessengerEXT debugCallback;
+	VkPhysicalDeviceProperties physicalDeviceProperties = {};
+	VkDebugUtilsMessengerEXT debugCallback = nullptr;
 
 	// renderpass
 	VkRenderPass renderPass = {};

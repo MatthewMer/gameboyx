@@ -71,8 +71,8 @@ const unordered_map<u8, gameboy_mapper_types> gameboy_mapper_map{
 	{0xFF, HuC1_RAM_BATTERY}
 };
 
-GameboyMMU* GameboyMMU::getInstance(machine_information& _machine_info) {
-	const auto vec_rom = _machine_info.cartridge->GetRomVector();
+GameboyMMU* GameboyMMU::getInstance(BaseCartridge* _cartridge) {
+	const auto vec_rom = _cartridge->GetRomVector();
 	u8 type_code = vec_rom[ROM_HEAD_HW_TYPE];
 
 	if (gameboy_mapper_map.find(type_code) != gameboy_mapper_map.end()) {
@@ -80,34 +80,35 @@ GameboyMMU* GameboyMMU::getInstance(machine_information& _machine_info) {
 		gameboy_mapper_types type = gameboy_mapper_map.at(type_code);
 		switch (type) {
 		case ROM_RAM_BATTERY:
-			_machine_info.batteryBuffered = true;
+			_cartridge->batteryBuffered = true;
 		case ROM_RAM:
-			_machine_info.ramPresent = true;
+			_cartridge->ramPresent = true;
 		case ROM_ONLY:
-			return new MmuSM83_ROM(_machine_info);
+			return new MmuSM83_ROM(_cartridge);
 			break;
 		case MBC1_RAM_BATTERY:
-			_machine_info.batteryBuffered = true;
+			_cartridge->batteryBuffered = true;
 		case MBC1_RAM:
-			_machine_info.ramPresent = true;
+			_cartridge->ramPresent = true;
 		case MBC1:
-			return new MmuSM83_MBC1(_machine_info);
+			return new MmuSM83_MBC1(_cartridge);
 			break;
 		case MBC3_TIMER_RAM_BATTERY:
-			_machine_info.ramPresent = true;
+			_cartridge->ramPresent = true;
 		case MBC3_TIMER_BATTERY:
-			_machine_info.timerPresent = true;
+			_cartridge->timerPresent = true;
 		case MBC3_RAM_BATTERY:
-			_machine_info.batteryBuffered = true;
+			_cartridge->batteryBuffered = true;
 		case MBC3_RAM:
 			if (type == MBC3_RAM_BATTERY || type == MBC3_RAM) {
-				_machine_info.ramPresent = true;
+				_cartridge->ramPresent = true;
 			}
 		case MBC3:
-			return new MmuSM83_MBC3(_machine_info);
+			return new MmuSM83_MBC3(_cartridge);
 			break;
 		default:
 			LOG_WARN("Mapper type ", format("{:02x}", type_code), " not implemented");
+			return nullptr;
 			break;
 		}
 	} else {
@@ -116,9 +117,12 @@ GameboyMMU* GameboyMMU::getInstance(machine_information& _machine_info) {
 	}
 }
 
-GameboyMMU::GameboyMMU(machine_information& _machine_info) : BaseMMU(_machine_info){
-	mem_instance = GameboyMEM::getInstance(_machine_info);
+GameboyMMU::GameboyMMU(BaseCartridge* _cartridge){
+	mem_instance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
 	machine_ctx = mem_instance->GetMachineContext();
+	if (machine_ctx->battery_buffered && machine_ctx->ram_present) {
+		ReadSave();
+	}
 }
 
 /* ***********************************************************************************************************
@@ -130,11 +134,7 @@ GameboyMMU::GameboyMMU(machine_information& _machine_info) : BaseMMU(_machine_in
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_ROM::MmuSM83_ROM(machine_information& _machine_info) : GameboyMMU(_machine_info) {
-	if (_machine_info.batteryBuffered && _machine_info.ramPresent) {
-		ReadSave();
-	}
-}
+MmuSM83_ROM::MmuSM83_ROM(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {}
 
 /* ***********************************************************************************************************
 	MEMORY ACCESS
@@ -154,7 +154,7 @@ void MmuSM83_ROM::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (machineInfo.ramPresent) {
+		if (machine_ctx->ram_present) {
 			mem_instance->WriteRAM_N(_data, _addr);
 		} else {
 			return;
@@ -216,7 +216,7 @@ u8 MmuSM83_ROM::Read8Bit(const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (machineInfo.ramPresent) {
+		if (machine_ctx->ram_present) {
 			return mem_instance->ReadRAM_N(_addr);
 		}
 		else {
@@ -286,7 +286,7 @@ u8 MmuSM83_ROM::Read8Bit(const u16& _addr) {
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_MBC1::MmuSM83_MBC1(machine_information& _machine_info): GameboyMMU(_machine_info) {
+MmuSM83_MBC1::MmuSM83_MBC1(BaseCartridge* _cartridge): GameboyMMU(_cartridge) {
 
 	switch (machine_ctx->ram_bank_num) {
 	case 0:
@@ -300,10 +300,6 @@ MmuSM83_MBC1::MmuSM83_MBC1(machine_information& _machine_info): GameboyMMU(_mach
 	case 4:
 		ramBankMask = 0x03;
 		break;
-	}
-
-	if (_machine_info.batteryBuffered && _machine_info.ramPresent) {
-		ReadSave();
 	}
 
 	/*
@@ -327,7 +323,7 @@ void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 		if (_addr < MBC1_ROM_BANK_NUMBER_SEL_0_4) {
 			ramEnable = (_data & MBC1_RAM_ENABLE_MASK) == MBC1_RAM_ENABLE;
 
-			if (!ramEnable && machineInfo.ramPresent && machineInfo.batteryBuffered) {
+			if (!ramEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
 				WriteSave();
 			}
 			
@@ -359,7 +355,7 @@ void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (machineInfo.ramPresent) {
+		if (machine_ctx->ram_present) {
 			if (ramEnable) {
 				mem_instance->WriteRAM_N(_data, _addr);
 			}
@@ -428,7 +424,7 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (ramEnable && machineInfo.ramPresent) {
+		if (ramEnable && machine_ctx->ram_present) {
 			return mem_instance->ReadRAM_N(_addr);
 		}
 		else {
@@ -467,6 +463,8 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 	else {
 		return mem_instance->ReadIE();
 	}
+
+	return 0xFF;
 }
 
 /* ***********************************************************************************************************
@@ -496,11 +494,7 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_MBC3::MmuSM83_MBC3(machine_information& _machine_info) : GameboyMMU(_machine_info) {
-	if (_machine_info.batteryBuffered && _machine_info.ramPresent) {
-		ReadSave();
-	}
-}
+MmuSM83_MBC3::MmuSM83_MBC3(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {}
 
 /* ***********************************************************************************************************
 	MEMORY ACCESS
@@ -511,7 +505,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		// RAM/TIMER enable
 		if (_addr < MBC3_ROM_BANK_NUMBER_SELECT) {
 			timerRamEnable = (_data & MBC3_RAM_ENABLE_MASK) == MBC3_RAM_ENABLE;
-			if (!timerRamEnable && machineInfo.ramPresent && machineInfo.batteryBuffered) {
+			if (!timerRamEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
 				WriteSave();
 			}
 		}
@@ -544,7 +538,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 	}
 	// RAM 0-n -> RTC Registers 08-0C
 	else if (_addr < WRAM_0_OFFSET) {
-		if(machineInfo.ramPresent){
+		if(machine_ctx->ram_present){
 			if (timerRamEnable) {
 				int ramBankNumber = machine_ctx->ram_bank_selected;
 				if (ramBankNumber < 0x04) {
@@ -612,7 +606,7 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	}
 	// RAM 0-n
 	else if (_addr < WRAM_0_OFFSET) {
-		if (timerRamEnable && machineInfo.ramPresent) {
+		if (timerRamEnable && machine_ctx->ram_present) {
 			int ramBankNumber = machine_ctx->ram_bank_selected;
 			if (ramBankNumber < 0x04) {
 				return mem_instance->ReadRAM_N(_addr);
@@ -656,6 +650,8 @@ u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 	else {
 		return mem_instance->ReadIE();
 	}
+
+	return 0xFF;
 }
 
 /* ***********************************************************************************************************

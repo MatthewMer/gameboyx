@@ -28,6 +28,12 @@ struct Vec2 {
     Vec2(int x, int y) : x(x), y(y) {};
 };
 
+enum {
+	DATA_NAME,
+	DATA_VAL
+};
+using data_entry = std::pair<std::string, std::string>;
+
 enum instr_entry_types {
 	INSTR_HEX,
 	INSTR_ASM

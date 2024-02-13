@@ -19,27 +19,26 @@ class GameboyMMU : protected BaseMMU {
 public:
 	friend class BaseMMU;
 
+	static GameboyMMU* getInstance(BaseCartridge* _cartridge);
+
 	// members
 	void Write8Bit(const u8& _data, const u16& _addr) override {};
 	void Write16Bit(const u16& _data, const u16& _addr) override {};
 	u8 Read8Bit(const u16& _addr) override { return 0xFF; };
 
-	static GameboyMMU* getInstance(machine_information& _machine_info);
-
 protected:
 
-	explicit GameboyMMU(machine_information& _machine_info);
+	explicit GameboyMMU(BaseCartridge* _cartridge);
 	// destructor
 	~GameboyMMU() = default;
 
-	void ResetChildMemoryInstances() override { GameboyMEM::resetInstance(); }
 	GameboyMEM* mem_instance;
 
 	// hardware info and access
 	machine_context* machine_ctx;
 
 	void ReadSave() override {
-		std::string save_file = SAVE_FOLDER + machineInfo.cartridge->title + SAVE_EXT;
+		std::string save_file = SAVE_FOLDER + machine_ctx->title + SAVE_EXT;
 
 		if (check_file_exists(save_file)) {
 			auto data = std::vector<char>();
@@ -56,7 +55,7 @@ protected:
 	}
 
 	void WriteSave() const override {
-		const std::string save_file = SAVE_FOLDER + machineInfo.cartridge->title + SAVE_EXT;
+		const std::string save_file = SAVE_FOLDER + machine_ctx->title + SAVE_EXT;
 
 		check_and_create_file(save_file);
 		auto data = std::vector<char>();
@@ -90,7 +89,7 @@ public:
 
 private:
 	// constructor
-	explicit MmuSM83_ROM(machine_information& _machine_info);
+	explicit MmuSM83_ROM(BaseCartridge* _cartridge);
 	// destructor
 	~MmuSM83_ROM() = default;
 };
@@ -119,7 +118,7 @@ public:
 
 private:
 	// constructor
-	explicit MmuSM83_MBC1(machine_information& _machine_info);
+	explicit MmuSM83_MBC1(BaseCartridge* _cartridge);
 	// destructor
 	~MmuSM83_MBC1() = default;
 
@@ -155,7 +154,7 @@ public:
 
 private:
 	// constructor
-	explicit MmuSM83_MBC3(machine_information& _machine_info);
+	explicit MmuSM83_MBC3(BaseCartridge* _cartridge);
 	// destructor
 	~MmuSM83_MBC3() = default;
 

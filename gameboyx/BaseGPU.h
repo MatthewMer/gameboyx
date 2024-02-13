@@ -10,13 +10,15 @@
 
 #include "GraphicsMgr.h"
 #include "BaseCartridge.h"
+#include "defs.h"
+
+#include <vector>
 
 class BaseGPU
 {
 public:
 	// get/reset instance
-	static BaseGPU* getInstance(graphics_information& _graphics_info, GraphicsMgr* _graphics_mgr);
-	static BaseGPU* getInstance();
+	static BaseGPU* getInstance(BaseCartridge* _cartridge);
 	static void resetInstance();
 
 	// clone/assign protection
@@ -39,7 +41,7 @@ protected:
 	int frameCounter = 0;
 	int tickCounter = 0;
 
-	GraphicsMgr* graphicsMgr = nullptr;
+	std::vector<u8> imageData;
 
 private:
 	static BaseGPU* instance;

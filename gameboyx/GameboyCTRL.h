@@ -12,8 +12,8 @@ public:
 
 private:
 	// constructor
-	GameboyCTRL(machine_information& _machine_info) : machineInfo(_machine_info) {
-		memInstance = GameboyMEM::getInstance();
+	GameboyCTRL(BaseCartridge* _cartridge) : BaseCTRL() {
+		memInstance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
 		controlCtx = memInstance->GetControlContext();
 
 		InitKeyMap();
@@ -26,5 +26,4 @@ private:
 	// memory access
 	GameboyMEM* memInstance;
 	control_context* controlCtx;
-	machine_information& machineInfo;
 };

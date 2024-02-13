@@ -1,127 +1,135 @@
 #include "HardwareMgr.h"
 
-#include "GraphicsMgr.h"
-#include "AudioMgr.h"
-#include "imgui.h"
-#include "SDL.h"
-#include "logger.h"
+HardwareMgr* HardwareMgr::instance = nullptr;
+u32 HardwareMgr::errors = 0x00000000;
 
-#include <unordered_map>
+u8 HardwareMgr::InitHardware() {
+	errors = 0;
 
-namespace HardwareMgr {
-	namespace {
-		GraphicsMgr* graphicsMgr;
-
-		AudioMgr* audioMgr;
-
-		SDL_Window* window;
-		u32 win_min;
-
-		// graphics
-		bool is2d;
-
-		// audio
-
-		// control
-		std::unordered_map<SDL_EventType, SDL_Keycode> keyMap;
-		Sint32 mouseScroll;
+	if (instance == nullptr) {
+		instance = new HardwareMgr();
+	}else{
+		errors |= HWMGR_ERR_ALREADY_RUNNING;
+		return errors;
 	}
 
-	bool InitHardware() {
-		// sdl
-		window = nullptr;
-		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
-			LOG_ERROR("[SDL]", SDL_GetError());
-			return false;
-		} else {
-			LOG_INFO("[SDL] initialized");
-		}
 
-		// graphics
-		graphicsMgr = GraphicsMgr::getInstance(&window);
-		if (graphicsMgr != nullptr) {
-			if (!graphicsMgr->InitGraphics()) { return false; }
-			if (!graphicsMgr->StartGraphics()) { return false; }
-
-			ImGui::CreateContext();
-			ImGui::StyleColorsDark();
-			if (!graphicsMgr->InitImgui()) { return false; }
-
-			graphicsMgr->EnumerateShaders();
-		}
-
-		SDL_SetWindowMinimumSize(window, GUI_WIN_WIDTH_MIN, GUI_WIN_HEIGHT_MIN);
-
-		// audio
-		audioMgr = AudioMgr::getInstance();
-		if (audioMgr != nullptr) {
-			audioMgr->InitAudio(false);
-		}
-
-		return true;
+	// sdl
+	instance->window = nullptr;
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
+		LOG_ERROR("[SDL]", SDL_GetError());
+		return false;
+	} else {
+		LOG_INFO("[SDL] initialized");
 	}
 
-	void ShutdownHardware() {
-		// graphics
-		graphicsMgr->DestroyImgui();
-		ImGui_ImplSDL2_Shutdown();
-		ImGui::DestroyContext();
+	// graphics
+	instance->graphicsMgr = GraphicsMgr::getInstance(&instance->window);
+	if (instance->graphicsMgr != nullptr) {
+		if (!instance->graphicsMgr->InitGraphics()) { return false; }
+		if (!instance->graphicsMgr->StartGraphics()) { return false; }
 
-		graphicsMgr->StopGraphics();
-		graphicsMgr->ExitGraphics();
+		ImGui::CreateContext();
+		ImGui::StyleColorsDark();
+		if (!instance->graphicsMgr->InitImgui()) { return false; }
 
-		SDL_DestroyWindow(window);
-		SDL_Quit();
+		instance->graphicsMgr->EnumerateShaders();
 	}
 
-	void NextFrame() {
-		win_min = SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED;
+	SDL_SetWindowMinimumSize(instance->window, GUI_WIN_WIDTH_MIN, GUI_WIN_HEIGHT_MIN);
 
-		if (!win_min) {
-			graphicsMgr->NextFrameImGui();
-			ImGui_ImplSDL2_NewFrame();
-			ImGui::NewFrame();
-		}
+	// audio
+	instance->audioMgr = AudioMgr::getInstance();
+	if (instance->audioMgr != nullptr) {
+		instance->audioMgr->InitAudio(false);
 	}
 
-	void RenderFrame() {
-		graphicsMgr->RenderFrame();
+	return true;
+}
+
+void HardwareMgr::ShutdownHardware() {
+	// graphics
+	instance->graphicsMgr->DestroyImgui();
+	ImGui_ImplSDL2_Shutdown();
+	ImGui::DestroyContext();
+
+	instance->graphicsMgr->StopGraphics();
+	instance->graphicsMgr->ExitGraphics();
+
+	SDL_DestroyWindow(instance->window);
+	SDL_Quit();
+}
+
+void HardwareMgr::NextFrame() {
+	u32 win_min = SDL_GetWindowFlags(instance->window) & SDL_WINDOW_MINIMIZED;
+
+	if (!win_min) {
+		instance->graphicsMgr->NextFrameImGui();
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
 	}
+}
 
-	void ProcessInput(bool& _running) {
-		SDL_Event event;
-		while (SDL_PollEvent(&event)) {
-			ImGui_ImplSDL2_ProcessEvent(&event);
-			if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-				_running = false;
+void HardwareMgr::RenderFrame() {
+	instance->graphicsMgr->RenderFrame();
+}
 
-			keyMap.clear();
+void HardwareMgr::ProcessInput(bool& _running) {
+	SDL_Event event;
+	auto& key_map = instance->keyMap;
+	auto& mouse_scroll = instance->mouseScroll;
 
-			switch (event.type) {
-			case SDL_QUIT:
-				_running = false;
-				break;
-			case SDL_KEYDOWN:
-				keyMap.emplace(SDL_KEYDOWN, event.key.keysym.sym);
-				break;
-			case SDL_KEYUP:
-				keyMap.emplace(SDL_KEYUP, event.key.keysym.sym);
-				break;
-			case SDL_MOUSEWHEEL:
-				mouseScroll = event.wheel.y;
-				break;
-			default:
-				mouseScroll = 0;
-				break;
-			}
+	while (SDL_PollEvent(&event)) {
+		ImGui_ImplSDL2_ProcessEvent(&event);
+		if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(instance->window))
+			_running = false;
+
+		key_map.clear();
+
+		switch (event.type) {
+		case SDL_QUIT:
+			_running = false;
+			break;
+		case SDL_KEYDOWN:
+			key_map.emplace(SDL_KEYDOWN, event.key.keysym.sym);
+			break;
+		case SDL_KEYUP:
+			key_map.emplace(SDL_KEYUP, event.key.keysym.sym);
+			break;
+		case SDL_MOUSEWHEEL:
+			mouse_scroll = event.wheel.y;
+			break;
+		default:
+			mouse_scroll = 0;
+			break;
 		}
 	}
+}
 
-	void ToggleFullscreen() {
-		if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) {
-			SDL_SetWindowFullscreen(window, 0);
-		} else {
-			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-		}
+void HardwareMgr::ToggleFullscreen() {
+	if (SDL_GetWindowFlags(instance->window) & SDL_WINDOW_FULLSCREEN) {
+		SDL_SetWindowFullscreen(instance->window, 0);
+	} else {
+		SDL_SetWindowFullscreen(instance->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	}
+}
+
+void HardwareMgr::InitGraphicsBackend(virtual_graphics_information& _virt_graphics_info) {
+	instance->graphicsMgr->InitGraphicsBackend(_virt_graphics_info);
+}
+
+void HardwareMgr::InitAudioBackend(virtual_audio_information& _virt_audio_info) {
+	instance->audioMgr->InitAudioBackend(_virt_audio_info);
+}
+
+void HardwareMgr::DestroyGraphicsBackend() {
+	instance->graphicsMgr->DestroyGraphicsBackend();
+}
+
+void HardwareMgr::DestroyAudioBackend() {
+	instance->audioMgr->DestroyAudioBackend();
+}
+
+void HardwareMgr::UpdateGpuData() {
+	instance->graphicsMgr->UpdateGpuData();
 }
