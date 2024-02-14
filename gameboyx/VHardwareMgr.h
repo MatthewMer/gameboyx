@@ -17,8 +17,8 @@
 #include "BaseGPU.h"
 #include "BaseCartridge.h"
 #include "defs.h"
-
-class BaseCartridge;
+#include "general_config.h"
+#include "VHardwareStructs.h"
 
 #define VHWMGR_ERR_READ_ROM			0x01
 #define VHWMGR_ERR_INIT_THREAD		0x02
@@ -26,6 +26,7 @@ class BaseCartridge;
 #define VHWMGR_ERR_CART_NULL		0x08
 #define VHWMGR_ERR_THREAD_RUNNING	0x10
 
+class BaseCartridge;
 class GuiMgr;
 typedef void (GuiMgr::* gui_callback)();
 
@@ -35,7 +36,7 @@ public:
 	static VHardwareMgr* getInstance();
 	static void resetInstance();
 
-    u8 InitHardware(BaseCartridge* _cartridge);
+    u8 InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings);
     void ShutdownHardware();
     u8 ResetHardware();
 
@@ -82,6 +83,8 @@ private:
     u32 accumulatedTime;
 
     u8 errors;
+
+    int buffering = V_TRIPPLE_BUFFERING;
 
     float currentFrequency;
     float currentFramerate;

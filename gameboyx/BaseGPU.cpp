@@ -5,16 +5,23 @@
 
 BaseGPU* BaseGPU::instance = nullptr;
 
-BaseGPU* BaseGPU::getInstance(BaseCartridge* _cartridge) {
+BaseGPU* BaseGPU::getInstance(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings) {
 	if (instance == nullptr) {
 		switch (_cartridge->console) {
 		case GB:
 		case GBC:
-			instance = new GameboyGPU(_cartridge);
+			instance = new GameboyGPU(_cartridge, _virt_graphics_settings);
 			break;
 		}
 	}
 
+	return instance;
+}
+
+BaseGPU* BaseGPU::getInstance() {
+	if (instance == nullptr) {
+		LOG_ERROR("[emu] GPU instance is nullptr");
+	}
 	return instance;
 }
 

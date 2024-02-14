@@ -47,6 +47,8 @@ public:
 	virtual u8 Read8Bit(const u16& _addr) = 0;
 	virtual u16 Read16Bit(const u16& _addr) = 0;
 
+	virtual void SetInstances() = 0;
+
 protected:
 	// constructor
 	explicit BaseCPU(BaseCartridge* _cartridge) {

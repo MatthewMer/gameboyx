@@ -15,6 +15,9 @@ struct virtual_graphics_information {
 	u32 lcd_width = 0;
 	u32 lcd_height = 0;
 	float aspect_ratio = 1.f;
+
+	// settings
+	int buffering = 0;
 };
 
 struct graphics_information {

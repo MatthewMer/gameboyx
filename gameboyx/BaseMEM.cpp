@@ -15,6 +15,13 @@ BaseMEM* BaseMEM::getInstance(BaseCartridge* _cartridge) {
     return instance;
 }
 
+BaseMEM* BaseMEM::getInstance() {
+    if (instance == nullptr) {
+        LOG_ERROR("[emu] MEM instance is nullptr");
+    }
+    return instance;
+}
+
 void BaseMEM::resetInstance() {
     if (instance != nullptr) {
         delete instance;

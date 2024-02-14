@@ -97,7 +97,10 @@ void GuiMgr::ProcessGUI() {
         requestGameStop = false;
     }
     if (requestGameStart) {
-        if(vhwmgr->InitHardware(games[gameSelectedIndex]) != 0x00){
+        // gather settings
+        virtual_graphics_settings graphics_settings = {};
+        graphics_settings.buffering = V_TRIPPLE_BUFFERING;
+        if(vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings) != 0x00){
             gameRunning = false;
         } else {
             gameRunning = true;

@@ -66,6 +66,9 @@ bool AudioSDL::InitAudioBackend(virtual_audio_information& _virt_audio_info) {
 
 void AudioSDL::DestroyAudioBackend() {
 	virtAudioInfo.audio_running = false;
+	if (audioThread.joinable()) {
+		audioThread.join();
+	}
 	LOG_INFO("[SDL] audio backend stopped");
 }
 

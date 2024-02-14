@@ -56,15 +56,16 @@ struct tex2d_data {
 
 	VkPipelineLayout pipeline_layout;
 	VkPipeline pipeline;
-	std::vector<vulkan_buffer> staging_buffer = std::vector<vulkan_buffer>(2);
+	std::vector<vulkan_buffer> staging_buffer = std::vector<vulkan_buffer>();
 
 	int update_index = 0;
 	std::atomic<bool> submit_cmdbuffer_0 = false;
 	std::atomic<bool> submit_cmdbuffer_1 = false;
+	std::atomic<bool> submit_cmdbuffer_2 = false;
 
-	std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>(2);
-	std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>(2);
-	std::vector<VkFence> update_fence = std::vector<VkFence>(2);
+	std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>();
+	std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>();
+	std::vector<VkFence> update_fence = std::vector<VkFence>();
 
 	VkDescriptorPool descriptor_pool = {};
 	VkDescriptorSet descriptor_set = {};
@@ -72,7 +73,7 @@ struct tex2d_data {
 
 	VkSampler sampler = {};
 
-	std::vector<void*> mapped_image_data = std::vector<void*>(2);
+	std::vector<void*> mapped_image_data = std::vector<void*>();
 
 	float scale_x = 1.f;
 	float scale_y = 1.f;

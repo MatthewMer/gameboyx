@@ -100,20 +100,21 @@ void GameboyCPU::GetBankAndPC(int& _bank, u32& _pc) {
     CONSTRUCTOR
 *********************************************************************************************************** */
 GameboyCPU::GameboyCPU(BaseCartridge* _cartridge) : BaseCPU(_cartridge) {
-    mem_instance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
+    mem_instance = (GameboyMEM*)BaseMEM::getInstance();
     machine_ctx = mem_instance->GetMachineContext();
     graphics_ctx = mem_instance->GetGraphicsContext();
     sound_ctx = mem_instance->GetSoundContext();
-
-    graphics_instance = BaseGPU::getInstance(_cartridge);
-    sound_instance = BaseAPU::getInstance(_cartridge);
-
-    ticksPerFrame = graphics_instance->GetTicksPerFrame((float)(BASE_CLOCK_CPU * pow(10, 6)));
 
     InitRegisterStates();
 
     setupLookupTable();
     setupLookupTableCB();
+}
+
+void GameboyCPU::SetInstances() {
+    graphics_instance = BaseGPU::getInstance();
+    sound_instance = BaseAPU::getInstance();
+    ticksPerFrame = graphics_instance->GetTicksPerFrame((float)(BASE_CLOCK_CPU * pow(10, 6)));
 }
 
 /* ***********************************************************************************************************

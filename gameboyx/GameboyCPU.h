@@ -115,6 +115,8 @@ public:
 	void SetupInstrDebugTables(Table<instr_entry>& _table) override;
 	void SetupInstrDebugTablesTmp(Table<instr_entry>& _table) override;
 
+	void SetInstances() override;
+
 private:
 	// constructor
 	explicit GameboyCPU(BaseCartridge* _cartridge);

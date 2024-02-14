@@ -11,6 +11,7 @@
 #include "GraphicsMgr.h"
 #include "BaseCartridge.h"
 #include "defs.h"
+#include "VHardwareStructs.h"
 
 #include <vector>
 
@@ -18,7 +19,8 @@ class BaseGPU
 {
 public:
 	// get/reset instance
-	static BaseGPU* getInstance(BaseCartridge* _cartridge);
+	static BaseGPU* getInstance(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings);
+	static BaseGPU* getInstance();
 	static void resetInstance();
 
 	// clone/assign protection

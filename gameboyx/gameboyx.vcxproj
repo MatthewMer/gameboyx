@@ -235,6 +235,7 @@
     <ClInclude Include="GameboyAPU.h" />
     <ClInclude Include="VHardwareMgr.h" />
     <ClInclude Include="GraphicsVulkan.h" />
+    <ClInclude Include="VHardwareStructs.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui-lib\imgui-lib.vcxproj">

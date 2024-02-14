@@ -52,6 +52,7 @@ int main(int, char**)
         HardwareMgr::RenderFrame();
     }
     
+    VHardwareMgr::getInstance()->ShutdownHardware();
     HardwareMgr::ShutdownHardware();
 
     return 0;

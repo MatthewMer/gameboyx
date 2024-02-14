@@ -35,7 +35,7 @@ VHardwareMgr::~VHardwareMgr() {
 /* ***********************************************************************************************************
     RUN HARDWARE
 *********************************************************************************************************** */
-u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge) {
+u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings) {
     errors = 0x00;
 
     if (_cartridge == nullptr) {
@@ -44,13 +44,10 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge) {
         if (_cartridge->ReadRom()) {
             cart_instance = _cartridge;
 
-            // initialize cpu first -> initializes required memory
             core_instance = BaseCPU::getInstance(cart_instance);
-            // afterwards initialize other hardware -> needs initialzed memory
-            graphics_instance = BaseGPU::getInstance(cart_instance);
+            graphics_instance = BaseGPU::getInstance(cart_instance, _virt_graphics_settings);
             sound_instance = BaseAPU::getInstance(cart_instance);
             control_instance = BaseCTRL::getInstance(cart_instance);
-            // cpu needs references to other hardware to finish setting up, could differ between different emulated platforms
 
             if (cart_instance != nullptr &&
                 core_instance != nullptr &&
@@ -58,10 +55,13 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge) {
                 sound_instance != nullptr &&
                 control_instance != nullptr) {
 
+                core_instance->SetInstances();
+
                 // returns the time per frame in ns
                 timePerFrame = graphics_instance->GetDelayTime();
 
                 InitMembers();
+                buffering = _virt_graphics_settings.buffering;
 
                 hardwareThread = thread([this] { ProcessHardware(); });
                 if (!hardwareThread.joinable()) {
@@ -126,24 +126,26 @@ void VHardwareMgr::ProcessHardware() {
     
     while (running.load()) {
         if (next.load()) {
-            if (debugEnable.load()) {
+            for (int i = 0; i < buffering; i++) {
+                if (debugEnable.load()) {
 
-                if (!pauseExecution.load()) {
+                    if (!pauseExecution.load()) {
 
-                    lock_hardware.lock();
-                    core_instance->RunCycle();
-                    CheckFpsAndClock();
-                    lock_hardware.unlock();
+                        lock_hardware.lock();
+                        core_instance->RunCycle();
+                        CheckFpsAndClock();
+                        lock_hardware.unlock();
 
-                    pauseExecution = true;
-                }
-            } else if (CheckDelay()) {
-                for (int j = 0; j < emulationSpeed.load(); j++) {
+                        pauseExecution = true;
+                    }
+                } else if (CheckDelay()) {
+                    for (int j = 0; j < emulationSpeed.load(); j++) {
 
-                    lock_hardware.lock();
-                    core_instance->RunCycles();
-                    CheckFpsAndClock();
-                    lock_hardware.unlock();
+                        lock_hardware.lock();
+                        core_instance->RunCycles();
+                        CheckFpsAndClock();
+                        lock_hardware.unlock();
+                    }
                 }
             }
             next.store(false);

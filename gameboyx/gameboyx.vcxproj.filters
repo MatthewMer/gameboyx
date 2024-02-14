@@ -185,5 +185,8 @@
     <ClInclude Include="HardwareStructs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="VHardwareStructs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

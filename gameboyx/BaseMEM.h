@@ -17,6 +17,7 @@ class BaseMEM
 public:
 	// get/reset instance
 	static BaseMEM* getInstance(BaseCartridge* _cartridge);
+	static BaseMEM* getInstance();
 	static void resetInstance();
 	
 protected:

@@ -8,6 +8,7 @@ class BaseAPU {
 public:
 	// get/reset instance
 	static BaseAPU* getInstance(BaseCartridge* _cartridge);
+	static BaseAPU* getInstance();
 	static void resetInstance();
 
 	// clone/assign protection

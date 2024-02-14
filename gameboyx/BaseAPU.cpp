@@ -18,6 +18,13 @@ BaseAPU* BaseAPU::getInstance(BaseCartridge* _cartridge) {
 	return instance;
 }
 
+BaseAPU* BaseAPU::getInstance() {
+	if (instance == nullptr) {
+		LOG_ERROR("[emu] APU instance is nullptr");
+	}
+	return instance;
+}
+
 void BaseAPU::resetInstance() {
 	if (instance != nullptr) {
 		delete instance;

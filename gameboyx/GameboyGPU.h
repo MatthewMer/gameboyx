@@ -20,7 +20,7 @@ public:
 
 private:
 	// constructor
-	GameboyGPU(BaseCartridge* _cartridge) {
+	GameboyGPU(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings) {
 		memInstance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
 		graphicsCtx = memInstance->GetGraphicsContext();
 		machineCtx = memInstance->GetMachineContext();
@@ -33,6 +33,7 @@ private:
 		virt_graphics_info.aspect_ratio = LCD_ASPECT_RATIO;
 		virt_graphics_info.lcd_width = PPU_SCREEN_X;
 		virt_graphics_info.lcd_height = PPU_SCREEN_Y;
+		virt_graphics_info.buffering = _virt_graphics_settings.buffering;
 		HardwareMgr::InitGraphicsBackend(virt_graphics_info);
 
 		if (machineCtx->isCgb) {
@@ -40,12 +41,10 @@ private:
 		} else {
 			DrawScanline = &GameboyGPU::DrawScanlineDMG;
 		}
-
-		//graphicsMgr->Init2dGraphicsBackend();
 	}
 	// destructor
 	~GameboyGPU() {
-		//graphicsMgr->Destroy2dGraphicsBackend();
+		HardwareMgr::DestroyGraphicsBackend();
 	}
 
 	int GetDelayTime() const override;
