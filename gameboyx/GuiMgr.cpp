@@ -88,6 +88,9 @@ void GuiMgr::DrawGUI() {
 }
 
 void GuiMgr::ProcessGUI() {
+    if (gameRunning) {
+        vhwmgr->Next(true);
+    }
     if (requestGameStop) {
         vhwmgr->ShutdownHardware();
         gameRunning = false;
@@ -109,7 +112,6 @@ void GuiMgr::ProcessGUI() {
         }
         requestGameReset = false;
     }
-
     if (requestDeleteGames) {
         DeleteGames();
         requestDeleteGames = false;

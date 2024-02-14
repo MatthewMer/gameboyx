@@ -54,6 +54,8 @@ public:
 	void GetFpsAndClock(float& _clock, float& _fps);
     void GetCurrentPCandBank(u32& _pc, int& _bank);
 
+    void Next(const bool& _next);
+
 private:
     VHardwareMgr() = default;
     ~VHardwareMgr();
@@ -87,17 +89,11 @@ private:
     std::thread hardwareThread;
     std::mutex mutHardware;
 
-    std::mutex mutRun;
-    bool running;
-
-    std::mutex mutDebug;
-    bool debugEnable;
-
-    std::mutex mutPause;
-    bool pauseExecution;
-
-    std::mutex mutSpeed;
-    int emulationSpeed;
+    std::atomic<bool> running;
+    std::atomic<bool> debugEnable;
+    std::atomic<bool> pauseExecution;
+    std::atomic<int> emulationSpeed;
+    std::atomic<bool> next;
 
     bool CheckDelay();
     void InitMembers();

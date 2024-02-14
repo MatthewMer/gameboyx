@@ -58,9 +58,9 @@ struct tex2d_data {
 	VkPipeline pipeline;
 	std::vector<vulkan_buffer> staging_buffer = std::vector<vulkan_buffer>(2);
 
-	int next_update_index = 0;
-	std::atomic<int> current_update_index = 0;
-	std::atomic<bool> update_texture = false;
+	int update_index = 0;
+	std::atomic<bool> submit_cmdbuffer_0 = false;
+	std::atomic<bool> submit_cmdbuffer_1 = false;
 
 	std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>(2);
 	std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>(2);

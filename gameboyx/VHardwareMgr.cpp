@@ -93,10 +93,7 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge) {
 }
 
 void VHardwareMgr::ShutdownHardware() {
-    unique_lock<mutex> lock_run(mutRun);
-    running = false;
-    lock_run.unlock();
-
+    running.store(false);
     if (hardwareThread.joinable()) {
         hardwareThread.join();
     }
@@ -125,52 +122,32 @@ u8 VHardwareMgr::ResetHardware() {
 }
 
 void VHardwareMgr::ProcessHardware() {
-    unique_lock<mutex> lock_run(mutRun, defer_lock);
-    unique_lock<mutex> lock_debug(mutDebug, defer_lock);
-    unique_lock<mutex> lock_pause(mutPause, defer_lock);
-    unique_lock<mutex> lock_speed(mutSpeed, defer_lock);
     unique_lock<mutex> lock_hardware(mutHardware, defer_lock);
     
-    lock_run.lock();
-    while (running) {
-        lock_run.unlock();
+    while (running.load()) {
+        if (next.load()) {
+            if (debugEnable.load()) {
 
-        lock_debug.lock();
-        if (debugEnable) {
-            lock_debug.unlock();
+                if (!pauseExecution.load()) {
 
-            lock_pause.lock();
-            if (!pauseExecution) {
+                    lock_hardware.lock();
+                    core_instance->RunCycle();
+                    CheckFpsAndClock();
+                    lock_hardware.unlock();
 
-                lock_hardware.lock();
-                core_instance->RunCycle();
-                CheckFpsAndClock();
-                lock_hardware.unlock();
-
-                pauseExecution = true;
-            }
-            lock_pause.unlock();
-        } else {
-            lock_debug.unlock();
-
-            if (CheckDelay()) {
-
-                lock_speed.lock();
-                for (int j = 0; j < emulationSpeed; j++) {
-                    lock_speed.unlock();
+                    pauseExecution = true;
+                }
+            } else if (CheckDelay()) {
+                for (int j = 0; j < emulationSpeed.load(); j++) {
 
                     lock_hardware.lock();
                     core_instance->RunCycles();
                     CheckFpsAndClock();
                     lock_hardware.unlock();
-
-                    lock_speed.lock();
                 }
-                lock_speed.unlock();
             }
+            next.store(false);
         }
-
-        lock_run.lock();
     }
 }
 
@@ -194,10 +171,11 @@ void VHardwareMgr::InitMembers() {
     timeSecondPrev = high_resolution_clock::now();
     timeSecondCur = high_resolution_clock::now();
 
-    running = true;
-    debugEnable = false;
-    pauseExecution = false;
-    emulationSpeed = 1;
+    running.store(true);
+    debugEnable.store(false);
+    pauseExecution.store(false);
+    emulationSpeed.store(1);
+    next.store(false);
 }
 
 void VHardwareMgr::CheckFpsAndClock() {
@@ -222,9 +200,9 @@ u8 VHardwareMgr::SetInitialValues(const bool& _debug_enable, const bool& _pause_
     if (hardwareThread.joinable()) {
         errors |= VHWMGR_ERR_THREAD_RUNNING;
     } else {
-        debugEnable = _debug_enable;
-        pauseExecution = _pause_execution;
-        emulationSpeed = _emulation_speed;
+        debugEnable.store(_debug_enable);
+        pauseExecution.store(_pause_execution);
+        emulationSpeed.store(_emulation_speed);
     }
 
     return errors;
@@ -252,16 +230,17 @@ bool VHardwareMgr::EventKeyUp(const SDL_Keycode& _key) {
 }
 
 void VHardwareMgr::SetDebugEnabled(const bool& _debug_enabled) {
-    unique_lock<mutex> lock_debug(mutDebug);
-    debugEnable = _debug_enabled;
+    debugEnable.store(_debug_enabled);
 }
 
 void VHardwareMgr::SetPauseExecution(const bool& _pause_execution) {
-    unique_lock<mutex> lock_pause(mutPause);
-    pauseExecution = _pause_execution;
+    pauseExecution.store(_pause_execution);
 }
 
 void VHardwareMgr::SetEmulationSpeed(const int& _emulation_speed) {
-    unique_lock<mutex> lock_speed(mutSpeed);
-    emulationSpeed = _emulation_speed;
+    emulationSpeed.store(_emulation_speed);
+}
+
+void VHardwareMgr::Next(const bool& _next) {
+    next.store(_next);
 }

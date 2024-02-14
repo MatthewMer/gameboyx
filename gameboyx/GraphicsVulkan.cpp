@@ -440,24 +440,24 @@ void GraphicsVulkan::UpdateGpuData() {
 }
 
 void GraphicsVulkan::UpdateTex2d() {
-	int& next_update_index = tex2dData.next_update_index;
+	int& update_index = tex2dData.update_index;
 
-	if (vkWaitForFences(device, 1, &tex2dData.update_fence[next_update_index], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+	if (vkWaitForFences(device, 1, &tex2dData.update_fence[update_index], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] wait for texture2d update fence");
 	}
-	if (vkResetFences(device, 1, &tex2dData.update_fence[next_update_index]) != VK_SUCCESS) {
+	if (vkResetFences(device, 1, &tex2dData.update_fence[update_index]) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] reset texture2d update fence");
 	}
 
-	memcpy(tex2dData.mapped_image_data[next_update_index], virtGraphicsInfo.image_data->data(), virtGraphicsInfo.image_data->size());
+	memcpy(tex2dData.mapped_image_data[update_index], virtGraphicsInfo.image_data->data(), virtGraphicsInfo.image_data->size());
 
-	if (vkResetCommandPool(device, tex2dData.command_pool[next_update_index], 0) != VK_SUCCESS) {
+	if (vkResetCommandPool(device, tex2dData.command_pool[update_index], 0) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] reset texture2d command pool");
 	}
 
 	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	if (vkBeginCommandBuffer(tex2dData.command_buffer[next_update_index], &beginInfo) != VK_SUCCESS) {
+	if (vkBeginCommandBuffer(tex2dData.command_buffer[update_index], &beginInfo) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] begin command buffer texture2d update");
 	}
 
@@ -475,14 +475,14 @@ void GraphicsVulkan::UpdateTex2d() {
 		imageBarrier.subresourceRange.layerCount = 1;
 		imageBarrier.srcAccessMask = VK_ACCESS_NONE;
 		imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		vkCmdPipelineBarrier(tex2dData.command_buffer[next_update_index], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+		vkCmdPipelineBarrier(tex2dData.command_buffer[update_index], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 	}
 
 	VkBufferImageCopy region = {};
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.layerCount = 1;
 	region.imageExtent = { virtGraphicsInfo.lcd_width, virtGraphicsInfo.lcd_height, 1 };
-	vkCmdCopyBufferToImage(tex2dData.command_buffer[next_update_index], tex2dData.staging_buffer[next_update_index].buffer, tex2dData.image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	vkCmdCopyBufferToImage(tex2dData.command_buffer[update_index], tex2dData.staging_buffer[update_index].buffer, tex2dData.image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 	{
 		VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
@@ -496,37 +496,42 @@ void GraphicsVulkan::UpdateTex2d() {
 		imageBarrier.subresourceRange.layerCount = 1;
 		imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		vkCmdPipelineBarrier(tex2dData.command_buffer[next_update_index], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+		vkCmdPipelineBarrier(tex2dData.command_buffer[update_index], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 	}
 
-	if (vkEndCommandBuffer(tex2dData.command_buffer[next_update_index]) != VK_SUCCESS) {
+	if (vkEndCommandBuffer(tex2dData.command_buffer[update_index]) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] end command buffer texture2d update");
 	}
 
-	/*
-	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &tex2dData.command_buffer[next_update_index];
-	if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[next_update_index]) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] queue submit texture2d update");
+	switch (update_index) {
+	case 0:
+		tex2dData.submit_cmdbuffer_0.store(true);
+		break;
+	case 1:
+		tex2dData.submit_cmdbuffer_1.store(true);
+		break;
 	}
-	*/
-
-	while (tex2dData.update_texture) {}
-	tex2dData.current_update_index = next_update_index;
-	tex2dData.update_texture = true;
-	++next_update_index %= 2;
+	++update_index %= 2;
 }
 
 void GraphicsVulkan::UpdateTex2dMainThread() {
-	if (tex2dData.update_texture) {
+	if (tex2dData.submit_cmdbuffer_0.load()) {
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &tex2dData.command_buffer[tex2dData.current_update_index];
-		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[tex2dData.current_update_index]) != VK_SUCCESS) {
+		submitInfo.pCommandBuffers = &tex2dData.command_buffer[0];
+		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[0]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
 		}
-		tex2dData.update_texture = false;
+		tex2dData.submit_cmdbuffer_0.store(false);
+	}
+	if (tex2dData.submit_cmdbuffer_1.load()) {
+		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &tex2dData.command_buffer[1];
+		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[1]) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] queue submit texture2d update");
+		}
+		tex2dData.submit_cmdbuffer_1.store(false);
 	}
 }
 
