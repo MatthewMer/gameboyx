@@ -108,13 +108,15 @@ public:
 
 	void RunCycles() override;
 	void RunCycle() override;
-	void GetCurrentHardwareState(std::vector<data_entry>& _hardware_info, std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const override;
-	u32 GetCurrentClockCycles() override;
 
-	void GetBankAndPC(int& _bank, u32& _pc) override;
+	void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const override;
+	void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const override;
+	u32 GetCurrentClockCycles() override;
+	void GetBankAndPC(int& _bank, u32& _pc) const override;
+
 	void SetupInstrDebugTables(Table<instr_entry>& _table) override;
 	void SetupInstrDebugTablesTmp(Table<instr_entry>& _table) override;
-
+	
 	void SetInstances() override;
 
 private:

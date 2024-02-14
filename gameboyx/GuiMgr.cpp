@@ -89,35 +89,40 @@ void GuiMgr::DrawGUI() {
 
 void GuiMgr::ProcessGUI() {
     if (gameRunning) {
-        vhwmgr->Next(true);
-    }
-    if (requestGameStop) {
-        vhwmgr->ShutdownHardware();
-        gameRunning = false;
-        requestGameStop = false;
-    }
-    if (requestGameStart) {
-        // gather settings
-        virtual_graphics_settings graphics_settings = {};
-        graphics_settings.buffering = V_TRIPPLE_BUFFERING;
-        if(vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings) != 0x00){
+        if (requestGameStop) {
+            vhwmgr->ShutdownHardware();
             gameRunning = false;
+            requestGameStop = false;
+        }else if (requestGameReset) {
+            if (vhwmgr->ResetHardware() != 0x00) {
+                gameRunning = false;
+            } else {
+                gameRunning = true;
+            }
+            requestGameReset = false;
         } else {
-            gameRunning = true;
+            vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency);
+            vhwmgr->GetHardwareInfo(hardwareInfo);
+            vhwmgr->GetInstrDebugFlags(regValues, flagValues, miscValues);
+            if(setEmulationSpeed){ vhwmgr->SetEmulationSpeed(newSpeed); }
+            vhwmgr->Next();
         }
-        requestGameStart = false;
-    }
-    if (requestGameReset) {
-        if (vhwmgr->ResetHardware() != 0x00) {
-            gameRunning = false;
-        } else {
-            gameRunning = true;
+    } else {
+        if (requestGameStart) {
+            // gather settings
+            virtual_graphics_settings graphics_settings = {};
+            graphics_settings.buffering = V_DOUBLE_BUFFERING;
+
+            if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings) != 0x00) {
+                gameRunning = false;
+            } else {
+                gameRunning = true;
+            }
+            requestGameStart = false;
+        }else if (requestDeleteGames) {
+            DeleteGames();
+            requestDeleteGames = false;
         }
-        requestGameReset = false;
-    }
-    if (requestDeleteGames) {
-        DeleteGames();
-        requestDeleteGames = false;
     }
 }
 
@@ -435,7 +440,7 @@ void GuiMgr::ShowHardwareInfo() {
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("CPU Clock");
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted((to_string(frequency) + " MHz").c_str());
+            ImGui::TextUnformatted((to_string(virtualFrequency) + " MHz").c_str());
 
             int length = (int)hardwareInfo.size();
             if (length > 0) { ImGui::TableNextRow(); }
@@ -590,7 +595,7 @@ void GuiMgr::ShowGraphicsOverlay() {
             }
         }
 
-        ImGui::TextUnformatted(to_string(framerate).c_str());
+        ImGui::TextUnformatted(to_string(virtualFramerate).c_str());
         ImGui::SameLine();
         ImGui::TextUnformatted("FPS (Emu)");
 
@@ -702,7 +707,8 @@ void GuiMgr::ActionSetEmulationSpeed(const int& _index) {
 
     for (int i = 0; const auto & [key, value] : EMULATION_SPEEDS) {
         if (_index == i) {
-            vhwmgr->SetEmulationSpeed(key);
+            setEmulationSpeed = true;
+            newSpeed = key;
         }
         i++;
     }
@@ -842,6 +848,23 @@ void GuiMgr::SetBankAndAddressScrollableTable(TableBase& _tyble_obj, int& _bank,
     bank_index centre = _tyble_obj.GetCurrentIndexCentre();
     _bank = centre.bank;
     _address = _tyble_obj.GetAddressByIndex(centre);
+}
+
+void GuiMgr::ResetGUI() {
+    bankSelect = 0;
+    addrSelect = 0;
+    breakpoints = std::list<bank_index>();
+    breakpointsTmp = std::list<bank_index>();
+    lastPc = -1;
+    debugInstrCurrentInstrIndex = bank_index(0, 0);
+    debugInstrTable = Table<instr_entry>(DEBUG_INSTR_LINES);
+    debugInstrTableTmp = Table<instr_entry>(DEBUG_INSTR_LINES);
+    regValues = std::vector<reg_entry>();
+    flagValues = std::vector<reg_entry>();
+    miscValues = std::vector<reg_entry>();
+    debugMemoryTables = std::vector<Table<memory_entry>>();
+    virtualFramerate = 0;
+    hardwareInfo = std::vector<data_entry>();
 }
 
 /* ***********************************************************************************************************

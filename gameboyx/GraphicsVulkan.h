@@ -20,6 +20,8 @@
 #include <shaderc/shaderc.h>
 #include <imgui_impl_vulkan.h>
 #include <vector>
+#include <thread>
+#include <mutex>
 
 #ifndef GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -59,9 +61,9 @@ struct tex2d_data {
 	std::vector<vulkan_buffer> staging_buffer = std::vector<vulkan_buffer>();
 
 	int update_index = 0;
-	std::atomic<bool> submit_cmdbuffer_0 = false;
-	std::atomic<bool> submit_cmdbuffer_1 = false;
-	std::atomic<bool> submit_cmdbuffer_2 = false;
+	alignas(64) std::atomic<bool> submit_cmdbuffer_0 = false;
+	alignas(64) std::atomic<bool> submit_cmdbuffer_1 = false;
+	alignas(64) std::atomic<bool> submit_cmdbuffer_2 = false;
 
 	std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>();
 	std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>();
@@ -118,6 +120,9 @@ private:
 
 	// graphics queue
 	VkQueue queue = VK_NULL_HANDLE;
+	std::thread queueSubmitThread;
+	void QueueSubmit();
+	alignas(64) std::atomic<bool> submitRunning = true;
 	uint32_t familyIndex = (uint32_t)-1;
 	VkPhysicalDeviceMemoryProperties devMemProps = {};
 
@@ -175,7 +180,9 @@ private:
 	// render functions
 	typedef void (GraphicsVulkan::* update_function)();
 	update_function updateFunction = nullptr;
-	update_function updateFunctionMainThread = nullptr;
+	update_function updateFunctionSubmit = nullptr;
+	std::mutex mutQueue;
+
 	void UpdateDummy();
 
 	typedef void (GraphicsVulkan::* render_function)(VkCommandBuffer& _command_buffer);
@@ -217,14 +224,12 @@ private:
 	// render target 2d texture
 	tex2d_data tex2dData = {};
 
-	void UpdateTex2dMainThread();
+	void UpdateTex2dSubmit();
 	void UpdateTex2d() override;
 	void RecalcTex2dScaleMatrix() override;
 
-	bool InitTex2dRenderTarget();
-	void DestroyTex2dRenderTarget();
 	bool InitTex2dPipeline();
-	void DestroyTex2dShader();
+	void DestroyTex2dPipeline();
 	void BindPipelines2d(VkCommandBuffer& _command_buffer);
 	bool InitTex2dBuffers();
 	bool InitTex2dSampler();

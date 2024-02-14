@@ -84,7 +84,7 @@ u32 GameboyCPU::GetCurrentClockCycles() {
     return result;
 }
 
-void GameboyCPU::GetBankAndPC(int& _bank, u32& _pc) {
+void GameboyCPU::GetBankAndPC(int& _bank, u32& _pc) const {
     _pc = (u32)Regs.PC;
 
     if (_pc < ROM_N_OFFSET) {
@@ -3588,7 +3588,7 @@ void GameboyCPU::SET7() {
     ACCESS HARDWARE STATUS
 *********************************************************************************************************** */
 // get current hardware status (currently mapped memory banks, etc.)
-void GameboyCPU::GetCurrentHardwareState(std::vector<data_entry>& _hardware_info, std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const {
+void GameboyCPU::GetHardwareInfo(std::vector<data_entry>& _hardware_info) const {
     _hardware_info.clear();
     _hardware_info.emplace_back("Speedmode", format("{:d}", machine_ctx->currentSpeed));
     _hardware_info.emplace_back("ROM banks", format("{:d}", machine_ctx->rom_bank_num));
@@ -3599,7 +3599,9 @@ void GameboyCPU::GetCurrentHardwareState(std::vector<data_entry>& _hardware_info
     _hardware_info.emplace_back("WRAM selected", format("{:d}", machine_ctx->wram_bank_selected + 1));
     _hardware_info.emplace_back("VRAM banks", format("{:d}", machine_ctx->vram_bank_num));
     _hardware_info.emplace_back("VRAM selected", format("{:d}", machine_ctx->vram_bank_selected));
+}
 
+void GameboyCPU::GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const {
     _register_values.clear();
     _register_values.emplace_back(REGISTER_NAMES.at(A) + REGISTER_NAMES.at(F), format("A:{:02x} F:{:02x}", Regs.A, Regs.F));
     _register_values.emplace_back(REGISTER_NAMES.at(BC), format("{:04x}", Regs.BC));

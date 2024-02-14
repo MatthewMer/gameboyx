@@ -24,6 +24,14 @@ struct Bool{
 	bool value = false;
 };
 
+enum windowID {
+	GAME_SELECT,
+	DEBUG_INSTR,
+	DEBUG_MEM,
+	HW_INFO,
+	ABOUT
+};
+
 class GuiMgr {
 public:
 	// singleton instance access
@@ -94,6 +102,14 @@ private:
 	bool jumpToPc = false;
 	bool nextStep = false;
 
+	std::unordered_map<windowID, bool> windowPriorities = {
+		{GAME_SELECT, false},
+		{DEBUG_INSTR, false},
+		{DEBUG_MEM, false},
+		{HW_INFO, false},
+		{ABOUT, false}
+	};
+
 	// game select
 	int gameSelectedIndex = 0;
 	std::vector<bool> gamesSelected = std::vector<bool>();
@@ -119,7 +135,7 @@ private:
 	// hardware info
 	const int hwInfoColNum = (int)HW_INFO_COLUMNS.size();
 	std::vector<data_entry> hardwareInfo = std::vector<data_entry>();
-	float frequency = .0f;
+	float virtualFrequency = .0f;
 
 	// memory inspector
 	std::vector<Table<memory_entry>> debugMemoryTables = std::vector<Table<memory_entry>>();
@@ -131,7 +147,7 @@ private:
 
 	// graphics overlay (FPS)
 	bool showGraphicsMenu = false;
-	int framerate = 0;
+	int virtualFramerate = 0;
 	int graphicsOverlayCorner = 1;
 	float graphicsFPSsamples[FPS_SAMPLES_NUM];
 	std::queue<float> graphicsFPSfifo = std::queue<float>();
@@ -141,19 +157,12 @@ private:
 	float graphicsFPScur = .0f;
 
 	// emulation speed multiplier
+	bool setEmulationSpeed = false;
+	int newSpeed = 1;
 	int currentSpeedIndex = 0;
 	std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(EMULATION_SPEEDS.size(), { false });
 
-	// help/about
-	
-	
-
-	// new game dialog
-	
-
-	// callbacks
-	void InitCallback();
-	void UpdateCallback();
+	void ResetGUI();
 
 	// gui functions
 	void ShowMainMenuBar();

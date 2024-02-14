@@ -277,7 +277,7 @@ bool GraphicsVulkan::StartGraphics() {
 
 	bindPipelines = &GraphicsVulkan::BindPipelinesDummy;
 	updateFunction = &GraphicsVulkan::UpdateDummy;
-	updateFunctionMainThread = &GraphicsVulkan::UpdateDummy;
+	updateFunctionSubmit = &GraphicsVulkan::UpdateDummy;
 
 	return true;
 }
@@ -292,18 +292,116 @@ void GraphicsVulkan::StopGraphics() {
 }
 
 bool GraphicsVulkan::Init2dGraphicsBackend() {
-	if (InitTex2dRenderTarget()) {
-		UpdateTex2d();
-		return true;
-	} else {
+	for (int i = 0; i < virtGraphicsInfo.buffering; i++) {
+		VkCommandPoolCreateInfo cmd_pool_info = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+		cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+		cmd_pool_info.queueFamilyIndex = familyIndex;
+		tex2dData.command_pool.emplace_back();
+		if (vkCreateCommandPool(device, &cmd_pool_info, nullptr, &tex2dData.command_pool[i]) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] create command pool for tex2d update");
+		}
+
+		VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+		alloc_info.commandPool = tex2dData.command_pool[i];
+		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+		alloc_info.commandBufferCount = 1;
+		tex2dData.command_buffer.emplace_back();
+		if (vkAllocateCommandBuffers(device, &alloc_info, &tex2dData.command_buffer[i]) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] init command buffer for tex2d update");
+		}
+	}
+
+	// vertex buffer for triangle
+	if (!InitBuffer(tex2dData.vertex_buffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
+		LOG_ERROR("[vulkan] init vertex buffer");
 		return false;
 	}
+	if (!LoadBuffer(tex2dData.vertex_buffer, vertexData, sizeof(vertexData))) {
+		LOG_ERROR("[vulkan] copy data to vertex buffer");
+		return false;
+	}
+
+	// index buffer for triangle
+	if (!InitBuffer(tex2dData.index_buffer, sizeof(indexData), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
+		LOG_ERROR("[vulkan] init index buffer");
+		return false;
+	}
+	if (!LoadBuffer(tex2dData.index_buffer, indexData, sizeof(indexData))) {
+		LOG_ERROR("[vulkan] copy data to index buffer");
+		return false;
+	}
+
+	VkFenceCreateInfo fence_info = {};
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	for (int i = 0; i < virtGraphicsInfo.buffering; i++) {
+		tex2dData.update_fence.emplace_back();
+		if (vkCreateFence(device, &fence_info, nullptr, &tex2dData.update_fence[i]) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] create tex2dUpdateFence");
+			return false;
+		}
+	}
+
+	if (!InitTex2dBuffers()) { return false; }
+
+	if (!InitTex2dSampler()) { return false; }
+
+	if (!InitTex2dDescriptorSets()) { return false; }
+
+	// shader to present 2d texture
+	if (!InitTex2dPipeline()) {
+		LOG_ERROR("[vulkan] init shader for 2d texture output");
+		return false;
+	}
+
+	RecalcTex2dScaleMatrix();
+
+	bindPipelines = &GraphicsVulkan::BindPipelines2d;
+	updateFunction = &GraphicsVulkan::UpdateTex2d;
+	updateFunctionSubmit = &GraphicsVulkan::UpdateTex2dSubmit;
+
+	submitRunning.store(true);
+	queueSubmitThread = thread([this]() -> void { QueueSubmit(); });
+	if (!queueSubmitThread.joinable()) {
+		LOG_ERROR("[vulkan] create queue submit thread");
+	}
+
+	UpdateTex2d();
+
+	LOG_INFO("[vulkan] 2d graphics backend initialized");
+
+	return true;
 }
 
 void GraphicsVulkan::Destroy2dGraphicsBackend() {
-	DestroyTex2dRenderTarget();
+	submitRunning.store(false);
+	if (queueSubmitThread.joinable()) {
+		queueSubmitThread.join();
+	}
 
-	updateFunctionMainThread = &GraphicsVulkan::UpdateDummy;
+	WaitIdle();
+	DestroyTex2dSampler();
+	DestroyTex2dPipeline();
+	vkDestroyDescriptorPool(device, tex2dData.descriptor_pool, nullptr);
+	vkDestroyDescriptorSetLayout(device, tex2dData.descriptor_set_layout[0], nullptr);
+	for (auto& n : tex2dData.staging_buffer) {
+		DestroyBuffer(n);
+	}
+	tex2dData.staging_buffer.clear();
+	WaitIdle();
+	DestroyImage(tex2dData.image);
+	DestroyBuffer(tex2dData.vertex_buffer);
+	DestroyBuffer(tex2dData.index_buffer);
+	for (auto& n : tex2dData.command_pool) {
+		vkDestroyCommandPool(device, n, nullptr);
+	}
+	tex2dData.command_pool.clear();
+	for (auto& n : tex2dData.update_fence) {
+		vkDestroyFence(device, n, nullptr);
+	}
+	tex2dData.update_fence.clear();
+
+	updateFunctionSubmit = &GraphicsVulkan::UpdateDummy;
 	updateFunction = &GraphicsVulkan::UpdateDummy;
 	bindPipelines = &GraphicsVulkan::BindPipelinesDummy;
 
@@ -311,7 +409,7 @@ void GraphicsVulkan::Destroy2dGraphicsBackend() {
 }
 
 void GraphicsVulkan::RenderFrame() {
-	(this->*updateFunctionMainThread)();
+	//(this->*updateFunctionSubmit)();
 
 	u32 image_index = 0;
 	static u32 frame_index = 0;
@@ -380,27 +478,39 @@ void GraphicsVulkan::RenderFrame() {
 	submit_info.pWaitDstStageMask = &waitFlags;
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores = &releaseSemaphore;
-	if (vkQueueSubmit(queue, 1, &submit_info, renderFence) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] submit command buffer to queue");
-	}
-
-	// present
-	VkPresentInfoKHR present_info = {};
-	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	present_info.pSwapchains = &swapchain;
-	present_info.swapchainCount = 1;
-	present_info.pImageIndices = &image_index;
-	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores = &releaseSemaphore;
-	if (VkResult result = vkQueuePresentKHR(queue, &present_info); result != VK_SUCCESS) {
-		/*
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-			RebuildSwapchain();
+	{
+		unique_lock<mutex> lock_queue(mutQueue);
+		if (vkQueueSubmit(queue, 1, &submit_info, renderFence) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] submit command buffer to queue");
 		}
-		*/
+
+		// present
+		VkPresentInfoKHR present_info = {};
+		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		present_info.pSwapchains = &swapchain;
+		present_info.swapchainCount = 1;
+		present_info.pImageIndices = &image_index;
+		present_info.waitSemaphoreCount = 1;
+		present_info.pWaitSemaphores = &releaseSemaphore;
+		if (VkResult result = vkQueuePresentKHR(queue, &present_info); result != VK_SUCCESS) {
+			/*
+			if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+				RebuildSwapchain();
+			}
+			*/
+		}
 	}
 
 	++frame_index %= FRAMES_IN_FLIGHT;
+}
+
+void GraphicsVulkan::QueueSubmit() {
+	unique_lock<mutex> lock_queue(mutQueue, defer_lock);
+	while (submitRunning.load()) {
+		lock_queue.lock();
+		(this->*updateFunctionSubmit)();
+		lock_queue.unlock();
+	}
 }
 
 void GraphicsVulkan::BindPipelinesDummy(VkCommandBuffer& _command_buffer) {
@@ -517,7 +627,7 @@ void GraphicsVulkan::UpdateTex2d() {
 	++update_index %= virtGraphicsInfo.buffering;
 }
 
-void GraphicsVulkan::UpdateTex2dMainThread() {
+void GraphicsVulkan::UpdateTex2dSubmit() {
 	// in case (for whatever reason) both commandbuffers are ready for submission, submit them both to allow main thread to automatically catch up
 	// this should actually not happen because main thread signals virtual hardware when it is ready for the next frame
 	if (tex2dData.submit_cmdbuffer_0.load()) {
@@ -1372,86 +1482,6 @@ void GraphicsVulkan::DestroySemaphore(VkSemaphore& _semaphore) {
 	vkDestroySemaphore(device, _semaphore, nullptr);
 }
 
-bool GraphicsVulkan::InitTex2dRenderTarget() {
-	for (int i = 0; i < virtGraphicsInfo.buffering; i++) {
-		VkCommandPoolCreateInfo cmd_pool_info = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-		cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-		cmd_pool_info.queueFamilyIndex = familyIndex;
-		tex2dData.command_pool.emplace_back();
-		if (vkCreateCommandPool(device, &cmd_pool_info, nullptr, &tex2dData.command_pool[i] ) != VK_SUCCESS) {
-			LOG_ERROR("[vulkan] create command pool for tex2d update");
-		}
-
-		VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-		alloc_info.commandPool = tex2dData.command_pool[i];
-		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-		alloc_info.commandBufferCount = 1;
-		tex2dData.command_buffer.emplace_back();
-		if (vkAllocateCommandBuffers(device, &alloc_info, &tex2dData.command_buffer[i]) != VK_SUCCESS) {
-			LOG_ERROR("[vulkan] init command buffer for tex2d update");
-		}
-	}
-
-	// vertex buffer for triangle
-	if (!InitBuffer(tex2dData.vertex_buffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
-		LOG_ERROR("[vulkan] init vertex buffer");
-		return false;
-	}
-	if (!LoadBuffer(tex2dData.vertex_buffer, vertexData, sizeof(vertexData))) {
-		LOG_ERROR("[vulkan] copy data to vertex buffer");
-		return false;
-	}
-
-	// index buffer for triangle
-	if (!InitBuffer(tex2dData.index_buffer, sizeof(indexData), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | bufferUsageFlags, memoryPropertyFlags)) {
-		LOG_ERROR("[vulkan] init index buffer");
-		return false;
-	}
-	if (!LoadBuffer(tex2dData.index_buffer, indexData, sizeof(indexData))) {
-		LOG_ERROR("[vulkan] copy data to index buffer");
-		return false;
-	}
-
-	VkFenceCreateInfo fence_info = {};
-	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	for (int i = 0; i < virtGraphicsInfo.buffering; i++) {
-		tex2dData.update_fence.emplace_back();
-		if (vkCreateFence(device, &fence_info, nullptr, &tex2dData.update_fence[i]) != VK_SUCCESS) {
-			LOG_ERROR("[vulkan] create tex2dUpdateFence");
-			return false;
-		}
-	}
-
-	if (!InitTex2dBuffers()) { return false; }
-
-	if (!InitTex2dSampler()) { return false; }
-
-	if (!InitTex2dDescriptorSets()) { return false; }
-
-	// shader to present 2d texture
-	if (!InitTex2dPipeline()) {
-		LOG_ERROR("[vulkan] init shader for 2d texture output");
-		return false;
-	}
-
-	if (virtGraphicsInfo.en2d) {
-		bindPipelines = &GraphicsVulkan::BindPipelines2d;
-		updateFunction = &GraphicsVulkan::UpdateTex2d;
-		updateFunctionMainThread = &GraphicsVulkan::UpdateTex2dMainThread;
-	} else {
-
-	}
-
-	RecalcTex2dScaleMatrix();
-
-	//UpdateTex2dProjMatrix();
-
-	LOG_INFO("[vulkan] 2d graphics backend initialized");
-
-	return true;
-}
-
 bool GraphicsVulkan::InitTex2dSampler() {
 	VkSamplerCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1555,32 +1585,6 @@ bool GraphicsVulkan::InitTex2dBuffers() {
 	return true;
 }
 
-void GraphicsVulkan::DestroyTex2dRenderTarget() {
-	WaitIdle();
-	DestroyTex2dSampler();
-	DestroyTex2dShader();
-	vkDestroyDescriptorPool(device, tex2dData.descriptor_pool, nullptr);
-	vkDestroyDescriptorSetLayout(device, tex2dData.descriptor_set_layout[0], nullptr);
-	for (auto& n : tex2dData.staging_buffer) {
-		DestroyBuffer(n);
-	}
-	tex2dData.staging_buffer.clear();
-	WaitIdle();
-	DestroyImage(tex2dData.image);
-	DestroyBuffer(tex2dData.vertex_buffer);
-	DestroyBuffer(tex2dData.index_buffer);
-	for (auto& n : tex2dData.command_pool) {
-		vkDestroyCommandPool(device, n, nullptr);
-	}
-	tex2dData.command_pool.clear();
-	for (auto& n : tex2dData.update_fence) {
-		vkDestroyFence(device, n, nullptr);
-	}
-	tex2dData.update_fence.clear();
-
-	bindPipelines = &GraphicsVulkan::BindPipelinesDummy;
-}
-
 void GraphicsVulkan::DestroyTex2dSampler() {
 	WaitIdle();
 	vkDestroySampler(device, tex2dData.sampler, nullptr);
@@ -1625,7 +1629,7 @@ bool GraphicsVulkan::InitTex2dPipeline() {
 	}
 }
 
-void GraphicsVulkan::DestroyTex2dShader() {
+void GraphicsVulkan::DestroyTex2dPipeline() {
 	WaitIdle();
 	vkDestroyPipeline(device, tex2dData.pipeline, nullptr);
 	vkDestroyPipelineLayout(device, tex2dData.pipeline_layout, nullptr);

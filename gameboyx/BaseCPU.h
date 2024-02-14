@@ -35,9 +35,10 @@ public:
 	virtual void RunCycles() = 0;
 	virtual void RunCycle() = 0;
 
-	virtual void GetCurrentHardwareState(std::vector<data_entry>& _hardware_info, std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const = 0;
+	virtual void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const = 0;
+	virtual void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const = 0;
 	virtual u32 GetCurrentClockCycles() = 0;
-	virtual void GetBankAndPC(int& _bank, u32& _pc) = 0;
+	virtual void GetBankAndPC(int& _bank, u32& _pc) const = 0;
 
 	virtual void SetupInstrDebugTables(Table<instr_entry>& _table) = 0;
 	virtual void SetupInstrDebugTablesTmp(Table<instr_entry>& _table) = 0;

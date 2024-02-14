@@ -52,10 +52,14 @@ public:
 	void SetPauseExecution(const bool& _pause_execution);
 	void SetEmulationSpeed(const int& _emulation_speed);
 	
-	void GetFpsAndClock(float& _clock, float& _fps);
+	void GetFpsAndClock(int& _fps, float& _clock);
     void GetCurrentPCandBank(u32& _pc, int& _bank);
 
-    void Next(const bool& _next);
+    void Next();
+
+    void GetInstrDebugTable(Table<instr_entry>& _table);
+    void GetInstrDebugFlags(std::vector<reg_entry>& _reg_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values);
+    void GetHardwareInfo(std::vector<data_entry>& _hardware_info);
 
 private:
     VHardwareMgr() = default;
@@ -77,14 +81,14 @@ private:
     steady_clock::time_point timeFramePrev;
     steady_clock::time_point timeFrameCur;
 
-    // timestamps for core frequency calculation
+    // timestamps for core virtualFrequency calculation
     steady_clock::time_point timeSecondPrev;
     steady_clock::time_point timeSecondCur;
     u32 accumulatedTime;
 
     u8 errors;
 
-    int buffering = V_TRIPPLE_BUFFERING;
+    int buffering = (int)V_DOUBLE_BUFFERING;
 
     float currentFrequency;
     float currentFramerate;
@@ -92,11 +96,11 @@ private:
     std::thread hardwareThread;
     std::mutex mutHardware;
 
-    std::atomic<bool> running;
-    std::atomic<bool> debugEnable;
-    std::atomic<bool> pauseExecution;
-    std::atomic<int> emulationSpeed;
-    std::atomic<bool> next;
+    alignas(64) std::atomic<bool> running;
+    alignas(64) std::atomic<bool> debugEnable;
+    alignas(64) std::atomic<bool> pauseExecution;
+    alignas(64) std::atomic<int> emulationSpeed;
+    alignas(64) std::atomic<bool> next;
 
     bool CheckDelay();
     void InitMembers();

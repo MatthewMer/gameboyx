@@ -61,9 +61,9 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settin
                 timePerFrame = graphics_instance->GetDelayTime();
 
                 InitMembers();
-                buffering = _virt_graphics_settings.buffering;
+                buffering = (int)_virt_graphics_settings.buffering;
 
-                hardwareThread = thread([this] { ProcessHardware(); });
+                hardwareThread = thread([this]() -> void { ProcessHardware(); });
                 if (!hardwareThread.joinable()) {
                     errors |= VHWMGR_ERR_INIT_THREAD;
                 } else {
@@ -185,9 +185,9 @@ void VHardwareMgr::CheckFpsAndClock() {
     accumulatedTime += (u32)duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
-    if (accumulatedTime > 999999) {
+    if (accumulatedTime > 1000000) {
         currentFrequency = ((float)core_instance->GetCurrentClockCycles() / accumulatedTime);
-        currentFramerate = graphics_instance->GetFrames() / (accumulatedTime / (float)pow(10, 9));
+        currentFramerate = graphics_instance->GetFrames() / (accumulatedTime / (float)pow(10, 6));
 
         accumulatedTime = 0;
     }
@@ -210,10 +210,10 @@ u8 VHardwareMgr::SetInitialValues(const bool& _debug_enable, const bool& _pause_
     return errors;
 }
 
-void VHardwareMgr::GetFpsAndClock(float& _clock, float& _fps) {
+void VHardwareMgr::GetFpsAndClock(int& _fps, float& _clock) {
     unique_lock<mutex> lock_hardware(mutHardware);
     _clock = currentFrequency;
-    _fps = currentFramerate;
+    _fps = (int)currentFramerate;
 }
 
 void VHardwareMgr::GetCurrentPCandBank(u32& _pc, int& _bank) {
@@ -243,6 +243,21 @@ void VHardwareMgr::SetEmulationSpeed(const int& _emulation_speed) {
     emulationSpeed.store(_emulation_speed);
 }
 
-void VHardwareMgr::Next(const bool& _next) {
-    next.store(_next);
+void VHardwareMgr::Next() {
+    next.store(true);
+}
+
+void VHardwareMgr::GetInstrDebugTable(Table<instr_entry>& _table) {
+    unique_lock<mutex> lock_hardware(mutHardware);
+
+}
+
+void VHardwareMgr::GetInstrDebugFlags(std::vector<reg_entry>& _reg_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) {
+    unique_lock<mutex> lock_hardware(mutHardware);
+    core_instance->GetInstrDebugFlags(_reg_values, _flag_values, _misc_values);
+}
+
+void VHardwareMgr::GetHardwareInfo(std::vector<data_entry>& _hardware_info) {
+    unique_lock<mutex> lock_hardware(mutHardware);
+    core_instance->GetHardwareInfo(_hardware_info);
 }
