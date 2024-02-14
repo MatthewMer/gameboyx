@@ -409,8 +409,6 @@ void GraphicsVulkan::Destroy2dGraphicsBackend() {
 }
 
 void GraphicsVulkan::RenderFrame() {
-	//(this->*updateFunctionSubmit)();
-
 	u32 image_index = 0;
 	static u32 frame_index = 0;
 
@@ -507,9 +505,7 @@ void GraphicsVulkan::RenderFrame() {
 void GraphicsVulkan::QueueSubmit() {
 	unique_lock<mutex> lock_queue(mutQueue, defer_lock);
 	while (submitRunning.load()) {
-		lock_queue.lock();
 		(this->*updateFunctionSubmit)();
-		lock_queue.unlock();
 	}
 }
 
@@ -634,6 +630,7 @@ void GraphicsVulkan::UpdateTex2dSubmit() {
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &tex2dData.command_buffer[0];
+		std::unique_lock<mutex> lock_queue(mutQueue);
 		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[0]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
 		}
@@ -643,6 +640,7 @@ void GraphicsVulkan::UpdateTex2dSubmit() {
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &tex2dData.command_buffer[1];
+		std::unique_lock<mutex> lock_queue(mutQueue);
 		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[1]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
 		}
@@ -652,6 +650,7 @@ void GraphicsVulkan::UpdateTex2dSubmit() {
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &tex2dData.command_buffer[2];
+		std::unique_lock<mutex> lock_queue(mutQueue);
 		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[2]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
 		}

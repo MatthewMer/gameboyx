@@ -53,12 +53,6 @@ public:
 	void EventKeyUp(const SDL_Keycode& _key);
 	void EventMouseWheel(const Sint32& _wheel_y);
 
-	// main reenables gui
-	void GameStopped();
-	void GameStarted();
-
-	void SetGameToStart();
-
 private:
 	// constructor
 	GuiMgr();
@@ -157,8 +151,6 @@ private:
 	float graphicsFPScur = .0f;
 
 	// emulation speed multiplier
-	bool setEmulationSpeed = false;
-	int newSpeed = 1;
 	int currentSpeedIndex = 0;
 	std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(EMULATION_SPEEDS.size(), { false });
 

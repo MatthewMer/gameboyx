@@ -101,10 +101,9 @@ void GuiMgr::ProcessGUI() {
             }
             requestGameReset = false;
         } else {
-            vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency);
-            vhwmgr->GetHardwareInfo(hardwareInfo);
-            vhwmgr->GetInstrDebugFlags(regValues, flagValues, miscValues);
-            if(setEmulationSpeed){ vhwmgr->SetEmulationSpeed(newSpeed); }
+            if (showGraphicsOverlay || showHardwareInfo) { vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency); }
+            if (showHardwareInfo) { vhwmgr->GetHardwareInfo(hardwareInfo); }
+            if (showInstrDebugger) { vhwmgr->GetInstrDebugFlags(regValues, flagValues, miscValues); }
             vhwmgr->Next();
         }
     } else {
@@ -707,8 +706,7 @@ void GuiMgr::ActionSetEmulationSpeed(const int& _index) {
 
     for (int i = 0; const auto & [key, value] : EMULATION_SPEEDS) {
         if (_index == i) {
-            setEmulationSpeed = true;
-            newSpeed = key;
+            vhwmgr->SetEmulationSpeed(key);
         }
         i++;
     }
