@@ -100,7 +100,7 @@ private:
 
 template <class T> constexpr Table<T>& Table<T>::operator=(const Table<T>& _right) noexcept {
     if (this != &_right) {
-        tableSections = _right.tableSections;
+        tableSections = std::move(_right.tableSections);
         startIndex = _right.startIndex;
         endIndex = _right.startIndex;
         indexIterator = _right.indexIterator;
@@ -138,7 +138,7 @@ template <class T> constexpr void Table<T>::SetElementsToShow() {
         }
     }
 
-    endIndex = bank_index(0, startIndex.index + currentlyVisibleElements);
+    //endIndex = bank_index(0, startIndex.index + currentlyVisibleElements);
     indexIterator = startIndex;
 }
 
@@ -298,7 +298,7 @@ template <class T> bank_index Table<T>::GetCurrentIndexCentre() {
             m += tableSections[bank].size();
         }
 
-        int index = (int)(n - (m - tableSections[bank].size()));
+        int index = ((int)(n - (m - tableSections[bank].size())));
         return bank_index(bank, index);
     }
     else {
