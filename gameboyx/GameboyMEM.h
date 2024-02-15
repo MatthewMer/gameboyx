@@ -261,7 +261,7 @@ private:
 		machine_ctx.timer_present = _cartridge->timerPresent;
 	};
 	// destructor
-	~GameboyMEM() = default;
+	~GameboyMEM() override = default;
 
 	// members
 	void InitMemory(BaseCartridge* _cartridge) override;

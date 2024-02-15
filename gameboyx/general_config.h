@@ -195,10 +195,10 @@ inline const ImGuiTableFlags MAIN_TABLE_FLAGS =
     ImGuiTableFlags_BordersInnerV;
 
 inline const ImGuiWindowFlags WIN_CHILD_FLAGS =
-    ImGuiWindowFlags_NoScrollbar |
     ImGuiWindowFlags_NoResize |
     ImGuiWindowFlags_NoCollapse |
-    ImGuiWindowFlags_AlwaysAutoResize;
+    ImGuiWindowFlags_AlwaysAutoResize |
+    ImGuiWindowFlags_NoScrollWithMouse;
 
 inline const ImGuiWindowFlags WIN_OVERLAY_FLAGS = 
     ImGuiWindowFlags_NoDecoration | 

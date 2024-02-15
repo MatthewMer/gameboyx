@@ -38,7 +38,7 @@ public:
 protected:
 	// constructor
 	BaseGPU() = default;
-	virtual ~BaseGPU() = default;
+	virtual ~BaseGPU() {}
 
 	int frameCounter = 0;
 	int tickCounter = 0;

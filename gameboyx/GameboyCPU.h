@@ -123,7 +123,9 @@ private:
 	// constructor
 	explicit GameboyCPU(BaseCartridge* _cartridge);
 	// destructor
-	~GameboyCPU() = default;
+	~GameboyCPU() override {
+		BaseMMU::resetInstance();
+	}
 
 	// instruction data
 	u8 opcode;

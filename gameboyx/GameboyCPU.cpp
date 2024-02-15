@@ -318,7 +318,7 @@ void GameboyCPU::TickTimers() {
     // peripherals directly bound to CPUs timer system (master clock) (PPU not affected by speed mode)
     int ticks = TICKS_PER_MC / machine_ctx->currentSpeed;
     graphics_instance->ProcessGPU(ticks);
-    sound_instance->ProcessAPU(ticks);
+    sound_instance->ProcessAPU(TICKS_PER_MC);
 }
 
 void GameboyCPU::IncrementTIMA() {
@@ -3649,8 +3649,17 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
     auto current_entry = TableEntry<instr_entry>();                // a table entry consists of the address and a pair of two strings (left and right column of debugger)
     u8* bank_data = _bank_data->data();
 
-    for (u16 addr = 0, i = 0; addr < _bank_data->size(); i++) {
+    for (u16 addr = 0; addr < _bank_data->size();) {
         current_entry = TableEntry<instr_entry>();
+
+        if (addr == ROM_HEAD_LOGO && _bank_num == 0) {
+            get<ST_ENTRY_ADDRESS>(current_entry) = addr;
+            get<ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr);
+            get<ST_ENTRY_DATA>(current_entry).second = "- HEADER INFO -";
+            addr = ROM_HEAD_END + 1;
+            _program_buffer.emplace_back(current_entry);
+            current_entry = TableEntry<instr_entry>();
+        }
 
         // get opcode and set entry address
         u8 opcode = bank_data[addr];
@@ -3732,9 +3741,9 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
 
                         result_string += (i == 0 ? "" : ",");
                         if (arg == a16_ref) {
-                            result_string = format(" ({:04x})", data);
+                            result_string += format(" ({:04x})", data);
                         } else {
-                            result_string = format(" {:04x}", data);
+                            result_string += format(" {:04x}", data);
                         }
                         break;
                     case SP_r8:
@@ -3745,7 +3754,7 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
                         result_binary += format(" {:02x}", (u8)(data & 0xFF));
 
                         result_string += (i == 0 ? "" : ",");
-                        result_string = format("SP+{:02x}", signed_data);
+                        result_string += format("SP+{:02x}", signed_data);
                     }
                         break;
                     case BC_ref:
@@ -3754,7 +3763,7 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
                     case HL_INC_ref:
                     case HL_DEC_ref:
                     case C_ref:
-                        result_string = DATA_NAMES.at(arg);
+                        result_string += DATA_NAMES.at(arg);
                         break;
                     default:
                         break;

@@ -123,12 +123,27 @@ template <class T> constexpr void Table<T>::SetElementsToShow() {
     else                            { currentlyVisibleElements = elements; }
 
     startIndex = bank_index(0, 0);
+    endIndex = startIndex;
+    
+    int bank = 0;
+    for (size_t i = 0; const auto & n : tableSections) {
+        i += n.size();
+        if (i >= currentlyVisibleElements) { 
+            endIndex.bank = bank;
+            endIndex.index = currentlyVisibleElements - (int)(i - n.size());
+            break; 
+        }
+        else { 
+            bank++; 
+        }
+    }
+
     endIndex = bank_index(0, startIndex.index + currentlyVisibleElements);
     indexIterator = startIndex;
 }
 
 template <class T> void Table<T>::AddTableSectionDisposable(TableSection<T>& _buffer) {
-    tableSections.emplace_back(_buffer);
+    tableSections.emplace_back(std::move(_buffer));
     size = tableSections.size();
 
     SetElementsToShow();
@@ -274,17 +289,21 @@ template <class T> bank_index& Table<T>::GetCurrentIndex() {
 }
 
 template <class T> bank_index Table<T>::GetCurrentIndexCentre() {
-    bank_index index = startIndex;
-    index.index += visibleElements / 2;
+    if (size > 0) {
+        size_t n = (size_t)currentlyVisibleElements / 2;
+        size_t m = tableSections[startIndex.bank].size() - (size_t)startIndex.index;
+        int bank = startIndex.bank;
+        while (m < n) {
+            bank++;
+            m += tableSections[bank].size();
+        }
 
-    int current_bank_size = (int)tableSections[index.bank].size();
-
-    if (index.index >= current_bank_size) {
-        index.index -= current_bank_size;
-        index.bank++;
+        int index = (int)(n - (m - tableSections[bank].size()));
+        return bank_index(bank, index);
     }
-
-    return index;
+    else {
+        return bank_index(0, 0);
+    }
 }
 
 // search address in current table section

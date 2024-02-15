@@ -8,6 +8,7 @@
 #include "logger.h"
 #include "HardwareStructs.h"
 
+
 #include <queue>
 
 #define HWMGR_ERR_ALREADY_RUNNING		0x00000001
@@ -29,7 +30,7 @@ public:
 	static void UpdateGpuData();
 
 	static std::queue<std::pair<SDL_Keycode, SDL_EventType>>& GetKeys();
-	static Sint32& GetScroll();
+	static Sint32 GetScroll();
 
 private:
 	HardwareMgr() = default;

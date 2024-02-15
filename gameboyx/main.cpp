@@ -45,10 +45,9 @@ int main(int, char**)
     while (running)
     {
         HardwareMgr::ProcessInput(running);
-        gui_mgr->ProcessGUI();
 
         HardwareMgr::NextFrame();
-        gui_mgr->DrawGUI();
+        gui_mgr->ProcessGUI();
         HardwareMgr::RenderFrame();
     }
     

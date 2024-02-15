@@ -55,9 +55,7 @@ protected:
 	explicit BaseCPU(BaseCartridge* _cartridge) {
 		mmu_instance = BaseMMU::getInstance(_cartridge);
 	};
-	~BaseCPU() {
-		BaseMMU::resetInstance();
-	}
+	virtual ~BaseCPU() {}
 
 	BaseMMU* mmu_instance = nullptr;
 	BaseGPU* graphics_instance = nullptr;

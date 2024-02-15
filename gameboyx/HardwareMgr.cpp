@@ -85,8 +85,6 @@ void HardwareMgr::RenderFrame() {
 
 void HardwareMgr::ProcessInput(bool& _running) {
 	SDL_Event event;
-	auto& key_map = keyMap;
-	auto& mouse_scroll = mouseScroll;
 
 	while (SDL_PollEvent(&event)) {
 		ImGui_ImplSDL2_ProcessEvent(&event);
@@ -98,16 +96,15 @@ void HardwareMgr::ProcessInput(bool& _running) {
 			_running = false;
 			break;
 		case SDL_KEYDOWN:
-			key_map.push(std::pair(event.key.keysym.sym, SDL_KEYDOWN));
+			keyMap.push(std::pair(event.key.keysym.sym, SDL_KEYDOWN));
 			break;
 		case SDL_KEYUP:
-			key_map.push(std::pair(event.key.keysym.sym, SDL_KEYUP));
+			keyMap.push(std::pair(event.key.keysym.sym, SDL_KEYUP));
 			break;
 		case SDL_MOUSEWHEEL:
-			mouse_scroll = event.wheel.y;
+			mouseScroll = event.wheel.y;
 			break;
 		default:
-			mouse_scroll = 0;
 			break;
 		}
 	}
@@ -117,7 +114,7 @@ std::queue<std::pair<SDL_Keycode, SDL_EventType>>& HardwareMgr::GetKeys() {
 	return keyMap;
 }
 
-Sint32& HardwareMgr::GetScroll() {
+Sint32 HardwareMgr::GetScroll() {
 	Sint32 scroll = mouseScroll;
 	mouseScroll = 0;
 	return scroll;

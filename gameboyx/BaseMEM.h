@@ -25,7 +25,7 @@ public:
 protected:
 	// constructor
 	BaseMEM() = default;
-	~BaseMEM() = default;
+	virtual ~BaseMEM() {}
 
 	// members
 	virtual void InitMemory(BaseCartridge* _cartridge) = 0;

@@ -45,7 +45,6 @@ public:
 	GuiMgr& operator=(GuiMgr&&) = delete;
 
 	// functions
-	void DrawGUI();
 	void ProcessGUI();
 
 	// sdl functions
@@ -63,14 +62,14 @@ private:
 
 	// special keys
 	bool sdlkCtrlDown = false;
-	bool sdlkCtrlDownFirst = false;
+	bool sdlkCtrlBlocked = false;
 	bool sdlkShiftDown = false;
 	bool sdlkDelDown = false;
 	bool sdlkADown = false;
 	bool sdlScrollDown = false;
 	bool sdlScrollUp = false;
 
-	// GUI elements to show -> DrawGUI()
+	// GUI elements to show -> ProcessGUI()
 	bool showMainMenuBar = true;
 	bool showGameSelect = true;
 	bool showInstrDebugger = false;
@@ -90,11 +89,8 @@ private:
 	bool requestGameStop = false;
 	bool requestGameReset = false;
 	bool requestDeleteGames = false;
-	bool pauseExecution = false;
 	bool autoRun = false;
 	bool pcSetToRam = false;
-	bool jumpToPc = false;
-	bool nextStep = false;
 
 	void ProcessInput();
 	bool windowActive;
@@ -121,16 +117,20 @@ private:
 
 	// game select
 	int gameSelectedIndex = 0;
-	std::vector<bool> gamesSelected = std::vector<bool>();
+	std::vector<Bool> gamesSelected = std::vector<Bool>();
 	std::vector<BaseCartridge*> games = std::vector<BaseCartridge*>();
 	const int mainColNum = (int)GAMES_COLUMNS.size();
 
 	// debug instructions
+	bool instrDebugWasEnabled = false;
 	int bankSelect = 0;
 	int addrSelect = 0;
 	std::list<bank_index> breakpoints = std::list<bank_index>();
 	std::list<bank_index> breakpointsTmp = std::list<bank_index>();
 	int lastPc = -1;
+	int currentPc = -1;
+	int lastBank = -1;
+	int currentBank = -1;
 	bank_index debugInstrCurrentInstrIndex = bank_index(0, 0);
 	const int debugInstrColNum = (int)DEBUG_INSTR_COLUMNS.size();
 	const int debugInstrRegColNum = (int)DEBUG_REGISTER_COLUMNS.size();
@@ -148,7 +148,6 @@ private:
 
 	// memory inspector
 	std::vector<Table<memory_entry>> debugMemoryTables = std::vector<Table<memory_entry>>();
-	std::vector<int> dbgMemBankIndex = std::vector<int>();
 	int dbgMemColNum = (int)DEBUG_MEM_COLUMNS.size();
 	Vec2 dbgMemCursorPos = Vec2(-1, -1);
 	bool dbgMemCellHovered = false;
@@ -195,24 +194,29 @@ private:
 	void ShowDebugMemoryTab(Table<memory_entry>& _table);
 
 	// actions
-	void DeleteGames();
-	bool AddGame(const std::string& _path_to_rom);
+	void ActionGameStart();
+	void ActionGameStop();
+	void ActionGameReset();
+	void ActionDeleteGames();
+	bool ActionAddGame(const std::string& _path_to_rom);
+	void ActionGameSelectUp();
+	void ActionGameSelectDown();
+	void ActionContinueExecution();
+	void ActionContinueExecutionBreakpoint();
+	void ActionToggleMainMenuBar();
 	void ActionSetToCurrentPC();
-	void ActionRequestStart();
-	void ActionRequestStop();
-	void ActionRequestReset();
 	void ActionSetToBank(TableBase& _table_obj, int& _bank);
 	void ActionSetToAddress(TableBase& _table_obj, int& _address);
 	void ActionSetEmulationSpeed(const int& _index);
-	void ActionPauseExecution();
 	void ActionGamesSelect(const int& _index);
+	void ActionGamesSelectAll();
 
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);
 	void ReloadGamesGuiCtx();
-	bool CheckPC();
+	void CheckPCandBank();
 	void ActionSetBreakPoint(std::list<bank_index>& _breakpoints, const bank_index& _current_index);
-	void SetBankAndAddressScrollableTable(TableBase& _tyble_obj, int& _bank, int& _address);
+	void GetBankAndAddressTable(TableBase& _tyble_obj, int& _bank, int& _address);
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();

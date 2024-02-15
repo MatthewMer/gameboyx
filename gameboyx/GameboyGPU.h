@@ -43,7 +43,7 @@ private:
 		}
 	}
 	// destructor
-	~GameboyGPU() {
+	~GameboyGPU() override {
 		HardwareMgr::DestroyGraphicsBackend();
 	}
 

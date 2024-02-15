@@ -30,7 +30,7 @@ protected:
 
 	explicit GameboyMMU(BaseCartridge* _cartridge);
 	// destructor
-	~GameboyMMU() = default;
+	virtual ~GameboyMMU() {}
 
 	GameboyMEM* mem_instance;
 
@@ -91,7 +91,9 @@ private:
 	// constructor
 	explicit MmuSM83_ROM(BaseCartridge* _cartridge);
 	// destructor
-	~MmuSM83_ROM() = default;
+	~MmuSM83_ROM() override {
+		BaseMEM::resetInstance();
+	}
 };
 
 /* ***********************************************************************************************************
@@ -120,7 +122,9 @@ private:
 	// constructor
 	explicit MmuSM83_MBC1(BaseCartridge* _cartridge);
 	// destructor
-	~MmuSM83_MBC1() = default;
+	~MmuSM83_MBC1() override {
+		BaseMEM::resetInstance();
+	}
 
 	// mbc1 control
 	bool ramEnable = false;
@@ -156,7 +160,9 @@ private:
 	// constructor
 	explicit MmuSM83_MBC3(BaseCartridge* _cartridge);
 	// destructor
-	~MmuSM83_MBC3() = default;
+	~MmuSM83_MBC3() override {
+		BaseMEM::resetInstance();
+	}
 
 	// mbc3 control
 	bool timerRamEnable = false;

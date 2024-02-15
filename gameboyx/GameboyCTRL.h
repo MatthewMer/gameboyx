@@ -19,7 +19,7 @@ private:
 		InitKeyMap();
 	}
 	// destructor
-	~GameboyCTRL() = default;
+	~GameboyCTRL() override = default;
 
 	void InitKeyMap() override;
 

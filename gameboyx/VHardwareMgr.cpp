@@ -129,32 +129,35 @@ void VHardwareMgr::ProcessHardware() {
   
     while (running.load()) {
         if (next.load()) {
-            for (int i = 0; i < buffering; i++) {
-                if (debugEnable.load()) {
+            if (debugEnable.load()) {
 
-                    if (!pauseExecution.load()) {
-                        lock_keys.lock();
-                        ProcessKeys();
-                        lock_keys.unlock();
+                if (!pauseExecution.load()) {
+                    lock_keys.lock();
+                    ProcessKeys();
+                    lock_keys.unlock();
 
-                        lock_hardware.lock();
-                        core_instance->RunCycle();
-                        lock_hardware.unlock();
+                    lock_hardware.lock();
+                    core_instance->RunCycle();
+                    lock_hardware.unlock();
 
-                        pauseExecution.store(true);
-                    }
-                } else if (CheckDelay()) {
-                    for (int j = 0; j < emulationSpeed.load(); j++) {
-                        lock_keys.lock();
-                        ProcessKeys();
-                        lock_keys.unlock();
-
-                        lock_hardware.lock();
-                        core_instance->RunCycles();
-                        lock_hardware.unlock();
-                    }
+                    pauseExecution.store(true);
                 }
-                CheckFpsAndClock();
+            }
+            else {
+                for (int i = 0; i < buffering; i++) {
+                    if (CheckDelay()) {
+                        for (int j = 0; j < emulationSpeed.load(); j++) {
+                            lock_keys.lock();
+                            ProcessKeys();
+                            lock_keys.unlock();
+
+                            lock_hardware.lock();
+                            core_instance->RunCycles();
+                            lock_hardware.unlock();
+                        }
+                    }
+                    CheckFpsAndClock();
+                }
             }
             next.store(false);
         }
@@ -193,7 +196,7 @@ void VHardwareMgr::CheckFpsAndClock() {
     accumulatedTime += (u32)duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
-    if (accumulatedTime > 1000000) {
+    if (accumulatedTime > 999999) {
         currentFrequency = ((float)core_instance->GetCurrentClockCycles() / accumulatedTime);
         currentFramerate = graphics_instance->GetFrames() / (accumulatedTime / (float)pow(10, 6));
 

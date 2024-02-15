@@ -39,10 +39,8 @@ public:
 
 protected:
 	// constructor
-	explicit BaseMMU() {};
-	~BaseMMU() {
-		BaseMEM::resetInstance();
-	}
+	BaseMMU() = default;
+	virtual ~BaseMMU() {}
 
 	virtual void ReadSave() = 0;
 	virtual void WriteSave() const = 0;

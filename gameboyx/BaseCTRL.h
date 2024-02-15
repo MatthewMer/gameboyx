@@ -21,7 +21,7 @@ public:
 protected:
 	// constructor
 	BaseCTRL() = default;
-	~BaseCTRL() = default;
+	virtual ~BaseCTRL() {}
 
 	virtual void InitKeyMap() = 0;
 
