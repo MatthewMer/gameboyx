@@ -84,7 +84,7 @@ u32 GameboyCPU::GetCurrentClockCycles() {
     return result;
 }
 
-void GameboyCPU::GetBankAndPC(int& _bank, u32& _pc) const {
+void GameboyCPU::GetCurrentPCandBank(int& _pc, int& _bank) const {
     _pc = (u32)Regs.PC;
 
     if (_pc < ROM_N_OFFSET) {
@@ -3770,7 +3770,7 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
     }
 }
 
-void GameboyCPU::SetupInstrDebugTables(Table<instr_entry>& _table) {
+void GameboyCPU::GetInstrDebugTable(Table<instr_entry>& _table) {
     _table = Table<instr_entry>(DEBUG_INSTR_LINES);
 
     int i = 0;
@@ -3791,7 +3791,7 @@ void GameboyCPU::SetupInstrDebugTables(Table<instr_entry>& _table) {
     }
 }
 
-void GameboyCPU::SetupInstrDebugTablesTmp(Table<instr_entry>& _table) {
+void GameboyCPU::GetInstrDebugTableTmp(Table<instr_entry>& _table) {
     auto bank_table = TableSection<instr_entry>();
     int bank_num;
 

@@ -25,6 +25,13 @@ BaseMMU* BaseMMU::getInstance(BaseCartridge* _cartridge) {
 	return instance;
 }
 
+BaseMMU* BaseMMU::getInstance() {
+	if (instance == nullptr) {
+		LOG_ERROR("[emu] MMU instance is nullptr");
+	}
+	return instance;
+}
+
 void BaseMMU::resetInstance() {
 	if (instance != nullptr) {
 		delete instance;

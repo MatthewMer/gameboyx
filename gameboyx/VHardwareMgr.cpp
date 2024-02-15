@@ -35,7 +35,7 @@ VHardwareMgr::~VHardwareMgr() {
 /* ***********************************************************************************************************
     RUN HARDWARE
 *********************************************************************************************************** */
-u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings) {
+u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings) {
     errors = 0x00;
 
     if (_cartridge == nullptr) {
@@ -56,11 +56,13 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settin
                 control_instance != nullptr) {
 
                 core_instance->SetInstances();
+                mmu_instance = BaseMMU::getInstance();
+                memory_instance = BaseMEM::getInstance();
 
                 // returns the time per frame in ns
                 timePerFrame = graphics_instance->GetDelayTime();
 
-                InitMembers();
+                InitMembers(_emu_settings);
                 buffering = (int)_virt_graphics_settings.buffering;
 
                 hardwareThread = thread([this]() -> void { ProcessHardware(); });
@@ -123,30 +125,36 @@ u8 VHardwareMgr::ResetHardware() {
 
 void VHardwareMgr::ProcessHardware() {
     unique_lock<mutex> lock_hardware(mutHardware, defer_lock);
-    
+    unique_lock<mutex> lock_keys(mutKeys, defer_lock);
+  
     while (running.load()) {
         if (next.load()) {
             for (int i = 0; i < buffering; i++) {
                 if (debugEnable.load()) {
 
                     if (!pauseExecution.load()) {
+                        lock_keys.lock();
+                        ProcessKeys();
+                        lock_keys.unlock();
 
                         lock_hardware.lock();
                         core_instance->RunCycle();
-                        CheckFpsAndClock();
                         lock_hardware.unlock();
 
-                        pauseExecution = true;
+                        pauseExecution.store(true);
                     }
                 } else if (CheckDelay()) {
                     for (int j = 0; j < emulationSpeed.load(); j++) {
+                        lock_keys.lock();
+                        ProcessKeys();
+                        lock_keys.unlock();
 
                         lock_hardware.lock();
                         core_instance->RunCycles();
-                        CheckFpsAndClock();
                         lock_hardware.unlock();
                     }
                 }
+                CheckFpsAndClock();
             }
             next.store(false);
         }
@@ -167,16 +175,16 @@ bool VHardwareMgr::CheckDelay() {
     }
 }
 
-void VHardwareMgr::InitMembers() {
+void VHardwareMgr::InitMembers(emulation_settings& _settings) {
     timeFramePrev = high_resolution_clock::now();
     timeFrameCur = high_resolution_clock::now();
     timeSecondPrev = high_resolution_clock::now();
     timeSecondCur = high_resolution_clock::now();
 
     running.store(true);
-    debugEnable.store(false);
-    pauseExecution.store(false);
-    emulationSpeed.store(1);
+    debugEnable.store(_settings.debug_enabled);
+    pauseExecution.store(_settings.pause_execution);
+    emulationSpeed.store(_settings.emulation_speed);
     next.store(false);
 }
 
@@ -193,42 +201,45 @@ void VHardwareMgr::CheckFpsAndClock() {
     }
 }
 
+void VHardwareMgr::ProcessKeys() {
+    while (!keyMap.empty()) {
+        pair<SDL_Keycode, SDL_EventType>& input = keyMap.front();
+
+        switch (input.second) {
+        case SDL_KEYDOWN:
+            control_instance->SetKey(input.first);
+            break;
+        case SDL_KEYUP:
+            control_instance->ResetKey(input.first);
+            break;
+        }
+
+        keyMap.pop();
+    }
+}
+
 /* ***********************************************************************************************************
     External interaction (Getters/Setters)
 *********************************************************************************************************** */
-u8 VHardwareMgr::SetInitialValues(const bool& _debug_enable, const bool& _pause_execution, const int& _emulation_speed) {
-    errors = 0x00;
-
-    if (hardwareThread.joinable()) {
-        errors |= VHWMGR_ERR_THREAD_RUNNING;
-    } else {
-        debugEnable.store(_debug_enable);
-        pauseExecution.store(_pause_execution);
-        emulationSpeed.store(_emulation_speed);
-    }
-
-    return errors;
-}
-
 void VHardwareMgr::GetFpsAndClock(int& _fps, float& _clock) {
-    unique_lock<mutex> lock_hardware(mutHardware);
+    //unique_lock<mutex> lock_hardware(mutHardware);
     _clock = currentFrequency;
     _fps = (int)currentFramerate;
 }
 
-void VHardwareMgr::GetCurrentPCandBank(u32& _pc, int& _bank) {
-    unique_lock<mutex> lock_hardware(mutHardware);
-    core_instance->GetBankAndPC(_bank, _pc);
+void VHardwareMgr::GetCurrentPCandBank(int& _pc, int& _bank) {
+    //unique_lock<mutex> lock_hardware(mutHardware);
+    core_instance->GetCurrentPCandBank(_pc, _bank);
 }
 
-bool VHardwareMgr::EventKeyDown(const SDL_Keycode& _key) {
-    unique_lock<mutex> lock_hardware(mutHardware);
-    return control_instance->SetKey(_key);
+void VHardwareMgr::EventKeyDown(SDL_Keycode& _key) {
+    unique_lock<mutex> lock_keys(mutKeys);
+    keyMap.push(pair(_key, SDL_KEYDOWN));
 }
 
-bool VHardwareMgr::EventKeyUp(const SDL_Keycode& _key) {
-    unique_lock<mutex> lock_hardware(mutHardware);
-    return control_instance->ResetKey(_key);
+void VHardwareMgr::EventKeyUp(SDL_Keycode& _key) {
+    unique_lock<mutex> lock_keys(mutKeys);
+    keyMap.push(pair(_key, SDL_KEYUP));
 }
 
 void VHardwareMgr::SetDebugEnabled(const bool& _debug_enabled) {
@@ -248,16 +259,26 @@ void VHardwareMgr::Next() {
 }
 
 void VHardwareMgr::GetInstrDebugTable(Table<instr_entry>& _table) {
-    unique_lock<mutex> lock_hardware(mutHardware);
+    //unique_lock<mutex> lock_hardware(mutHardware);
+    core_instance->GetInstrDebugTable(_table);
+}
 
+void VHardwareMgr::GetInstrDebugTableTmp(Table<instr_entry>& _table) {
+    //unique_lock<mutex> lock_hardware(mutHardware);
+    core_instance->GetInstrDebugTableTmp(_table);
 }
 
 void VHardwareMgr::GetInstrDebugFlags(std::vector<reg_entry>& _reg_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) {
-    unique_lock<mutex> lock_hardware(mutHardware);
+    //unique_lock<mutex> lock_hardware(mutHardware);
     core_instance->GetInstrDebugFlags(_reg_values, _flag_values, _misc_values);
 }
 
 void VHardwareMgr::GetHardwareInfo(std::vector<data_entry>& _hardware_info) {
-    unique_lock<mutex> lock_hardware(mutHardware);
+    //unique_lock<mutex> lock_hardware(mutHardware);
     core_instance->GetHardwareInfo(_hardware_info);
+}
+
+void VHardwareMgr::GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) {
+    //unique_lock<mutex> lock_hardware(mutHardware);
+    memory_instance->GetMemoryDebugTables(_tables);
 }

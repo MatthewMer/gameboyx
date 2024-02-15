@@ -19,6 +19,8 @@ public:
 	static BaseMEM* getInstance(BaseCartridge* _cartridge);
 	static BaseMEM* getInstance();
 	static void resetInstance();
+
+	virtual void GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) = 0;
 	
 protected:
 	// constructor
@@ -30,7 +32,6 @@ protected:
 	virtual void InitMemoryState() = 0;
 	virtual bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) = 0;
 	virtual bool CopyRom(const std::vector<u8>& _vec_rom) = 0;
-	virtual void SetupMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) = 0;
 	virtual void FillMemoryDebugTable(TableSection<memory_entry>& _table_section, std::vector<u8>* _bank_data, const int& _offset) = 0;
 
 	virtual void AllocateMemory() = 0;

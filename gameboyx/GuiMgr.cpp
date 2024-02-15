@@ -12,6 +12,7 @@
 #include "general_config.h"
 #include <format>
 #include <cmath>
+#include <queue>
 
 using namespace std;
 
@@ -88,6 +89,8 @@ void GuiMgr::DrawGUI() {
 }
 
 void GuiMgr::ProcessGUI() {
+    ProcessInput();
+
     if (gameRunning) {
         if (requestGameStop) {
             vhwmgr->ShutdownHardware();
@@ -103,7 +106,13 @@ void GuiMgr::ProcessGUI() {
         } else {
             if (showGraphicsOverlay || showHardwareInfo) { vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency); }
             if (showHardwareInfo) { vhwmgr->GetHardwareInfo(hardwareInfo); }
-            if (showInstrDebugger) { vhwmgr->GetInstrDebugFlags(regValues, flagValues, miscValues); }
+            if (showInstrDebugger) { 
+                // get flags
+                vhwmgr->GetInstrDebugFlags(regValues, flagValues, miscValues);
+
+                // process gui
+                CheckPC();
+            }
             vhwmgr->Next();
         }
     } else {
@@ -112,9 +121,16 @@ void GuiMgr::ProcessGUI() {
             virtual_graphics_settings graphics_settings = {};
             graphics_settings.buffering = V_DOUBLE_BUFFERING;
 
-            if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings) != 0x00) {
+            emulation_settings emu_settings = {};
+            emu_settings.debug_enabled = showInstrDebugger;
+            emu_settings.pause_execution = pauseExecution;
+            emu_settings.emulation_speed = currentSpeed;
+
+            if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings, emu_settings) != 0x00) {
                 gameRunning = false;
             } else {
+                vhwmgr->GetInstrDebugTable(debugInstrTable);
+                vhwmgr->GetMemoryDebugTables(debugMemoryTables);
                 gameRunning = true;
             }
             requestGameStart = false;
@@ -191,6 +207,7 @@ void GuiMgr::ShowEmulationSpeeds() {
 
 void GuiMgr::ShowWindowAbout() {
     if (ImGui::Begin("About", &showWinAbout, WIN_CHILD_FLAGS)) {
+        CheckWindow(ABOUT);
         ImGui::Text("GameboyX Emulator");
         ImGui::Text("Version: %s %d.%d", GBX_RELEASE, GBX_VERSION_MAJOR, GBX_VERSION_MINOR, GBX_VERSION_PATCH);
         ImGui::Text("Author: %s", GBX_AUTHOR);
@@ -203,6 +220,7 @@ void GuiMgr::ShowDebugInstructions() {
     ImGui::SetNextWindowSize(debug_instr_win_size);
 
     if (ImGui::Begin("Instruction Debugger", &showInstrDebugger, WIN_CHILD_FLAGS)) {
+        CheckWindow(DEBUG_INSTR);
         ShowDebugInstrButtonsHead();
         ShowDebugInstrTable();
         ShowDebugInstrSelect();
@@ -337,11 +355,13 @@ void GuiMgr::ShowDebugMemoryInspector() {
     ImGui::SetNextWindowSize(debug_mem_win_size);
 
     if (ImGui::Begin("Memory Inspector", &showMemoryInspector, WIN_CHILD_FLAGS)) {
+        CheckWindow(DEBUG_MEM);
         if (ImGui::BeginTabBar("memory_inspector_tabs", 0)) {
 
             if (gameRunning) {
-                for (auto& table : debugMemoryTables) {
+                for (int i = 0; auto & table : debugMemoryTables) {
                     ShowDebugMemoryTab(table);
+                    i++;
                 }
             }
             else {
@@ -377,6 +397,8 @@ void GuiMgr::ShowDebugMemoryTab(Table<memory_entry>& _table) {
     string table_name = _table.name;
 
     if (ImGui::BeginTabItem(table_name.c_str())) {
+        CheckScroll(DEBUG_MEM, _table);
+
         int tables_num = (int)_table.size - 1;
         dbgMemCellAnyHovered = false;
 
@@ -428,6 +450,7 @@ void GuiMgr::ShowHardwareInfo() {
     ImGui::SetNextWindowSize(hw_info_win_size);
 
     if (ImGui::Begin("Hardware Info", &showHardwareInfo, WIN_CHILD_FLAGS)) {
+        CheckWindow(HW_INFO);
         if (ImGui::BeginTable("hardware_info", 2, TABLE_FLAGS_NO_BORDER_OUTER_H)) {
 
             for (int i = 0; i < hwInfoColNum; i++) {
@@ -501,6 +524,7 @@ void GuiMgr::ShowGameSelect() {
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, IMGUI_BG_COLOR);
     if (ImGui::Begin("games_select", nullptr, MAIN_WIN_FLAGS)) {
+        CheckWindow(GAME_SELECT);
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 10, 10 });
 
         if (ImGui::BeginTable("game_list", mainColNum, MAIN_TABLE_FLAGS)) {
@@ -706,7 +730,8 @@ void GuiMgr::ActionSetEmulationSpeed(const int& _index) {
 
     for (int i = 0; const auto & [key, value] : EMULATION_SPEEDS) {
         if (_index == i) {
-            vhwmgr->SetEmulationSpeed(key);
+            currentSpeed = key;
+            vhwmgr->SetEmulationSpeed(currentSpeed);
         }
         i++;
     }
@@ -794,31 +819,9 @@ void GuiMgr::ReloadGamesGuiCtx() {
     }
 }
 
-// ***** UNIVERSIAL CHECKER FOR SCROLL ACTION RELATED TO ANY WINDOW WITH CUSTOM SCROLLABLE TABLE *****
-bool GuiMgr::CheckScroll(TableBase& _table_obj) {
-    if ((ImGui::IsWindowHovered() || ImGui::IsWindowFocused())) {
-        if (sdlScrollDown || sdlScrollUp) {
-            if (sdlScrollUp) {
-                sdlScrollUp = false;
-                if (sdlkShiftDown) { _table_obj.ScrollUpPage(); }
-                else { _table_obj.ScrollUp(1); }
-            }
-            else if (sdlScrollDown) {
-                sdlScrollDown = false;
-                if (sdlkShiftDown) { _table_obj.ScrollDownPage(); }
-                else { _table_obj.ScrollDown(1); }
-            }
-        }
-
-        return true;
-    }
-
-    return false;
-}
-
 // ***** program counter auto scroll *****
 bool GuiMgr::CheckPC() {
-    u32 current_pc;
+    int current_pc;
     int current_bank;
     vhwmgr->GetCurrentPCandBank(current_pc, current_bank);
 
@@ -827,10 +830,88 @@ bool GuiMgr::CheckPC() {
         debugInstrCurrentInstrIndex.bank = current_bank;
 
         if (current_bank >= 0) { pcSetToRam = false; }
-        else { pcSetToRam = true; }
+        else { 
+            vhwmgr->GetInstrDebugTableTmp(debugInstrTableTmp);
+            pcSetToRam = true; 
+        }
     }
 
     return false;
+}
+
+void GuiMgr::CheckWindow(const windowID& _id) {
+    windowsActive.at(_id) = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+    windowsHovered.at(_id) = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+}
+
+void GuiMgr::ProcessInput() {
+    // keys
+    auto& inputs = HardwareMgr::GetKeys();
+
+    while (!inputs.empty()) {
+        pair<SDL_Keycode, SDL_EventType>& input = inputs.front();
+
+        switch (input.second) {
+        case SDL_KEYDOWN:
+            EventKeyDown(input.first);
+            break;
+        case SDL_KEYUP:
+            EventKeyUp(input.first);
+            break;
+        }
+
+        inputs.pop();
+    }
+    
+    // mouse scroll
+    const auto& scroll = HardwareMgr::GetScroll();
+    EventMouseWheel(scroll);
+
+    windowActive = false;
+    for (const auto& [key, value] : windowsActive) {
+        if (value) {
+            activeId = key;
+            windowActive = true;
+        }
+    }
+
+    windowHovered = false;
+    for (const auto& [key, value] : windowsHovered) {
+        if (value) {
+            hoveredId = key;
+            windowHovered = true;
+        }
+    }
+}
+
+template <class T>
+void GuiMgr::CheckScroll(const windowID& _id, Table<T>& _table) {
+    bool scroll = false;
+
+    if (windowActive) {
+        if (windowHovered) {
+            scroll = _id == hoveredId;
+        }
+        else {
+            scroll = _id == activeId;
+        }
+    }
+    else if (windowHovered) {
+        scroll = _id == hoveredId;
+    }
+
+    if (scroll) {
+        if (sdlScrollUp) {
+            sdlScrollUp = false;
+            if (sdlkShiftDown) { _table.ScrollUpPage(); }
+            else { _table.ScrollUp(1); }
+        }
+        else if (sdlScrollDown) {
+            sdlScrollDown = false;
+            if (sdlkShiftDown) { _table.ScrollDownPage(); }
+            else { _table.ScrollDown(1); }
+        }
+    }
 }
 
 // ***** DEBUG INSTRUCTION PROCESS BREAKPOINT *****
@@ -868,81 +949,102 @@ void GuiMgr::ResetGUI() {
 /* ***********************************************************************************************************
     IMGUIGAMEBOYX SDL FUNCTIONS
 *********************************************************************************************************** */
-void GuiMgr::EventKeyDown(const SDL_Keycode& _key) {
-    switch (_key) {
-    case SDLK_a:
-        sdlkADown = true;
-        break;
-    case SDLK_F3:
-        pauseExecution = false;
-        break;
-    case SDLK_LSHIFT:
-        sdlkShiftDown = true;
-        break;
-    case SDLK_LCTRL:
-    case SDLK_RCTRL:
-        sdlkCtrlDown = true;
-        sdlkCtrlDownFirst = !sdlkADown;
-        break;
-    case SDLK_DELETE:
-        sdlkDelDown = true;
-        break;
-    case SDLK_DOWN:
-        for (int i = 0; i < gamesSelected.size(); i++) {
-            gamesSelected[i] = false;
+void GuiMgr::EventKeyDown(SDL_Keycode& _key) {
+    if (gameRunning) {
+        switch (_key) {
+        case SDLK_F3:
+            pauseExecution = false;
+            break;
+        case SDLK_LSHIFT:
+            sdlkShiftDown = true;
+            break;
+        default:
+            vhwmgr->EventKeyDown(_key);
+            break;
         }
-        if (gameSelectedIndex < games.size() - 1) { gameSelectedIndex++; }
-        gamesSelected[gameSelectedIndex] = true;
-        break;
-    case SDLK_UP:
-        for (int i = 0; i < gamesSelected.size(); i++) {
-            gamesSelected[i] = false;
+    }
+    else {
+        switch (_key) {
+        case SDLK_a:
+            sdlkADown = true;
+            break;
+        case SDLK_LSHIFT:
+            sdlkShiftDown = true;
+            break;
+        case SDLK_LCTRL:
+        case SDLK_RCTRL:
+            sdlkCtrlDown = true;
+            sdlkCtrlDownFirst = !sdlkADown;
+            break;
+        case SDLK_DELETE:
+            sdlkDelDown = true;
+            break;
+        default:
+            break;
         }
-        if (gameSelectedIndex > 0) { gameSelectedIndex--; }
-        gamesSelected[gameSelectedIndex] = true;
-        break;
-    case SDLK_RETURN:
-        ActionRequestStart();
-        break;
-    default:
-        break;
     }
 }
 
-void GuiMgr::EventKeyUp(const SDL_Keycode& _key) {
-    switch (_key) {
-    case SDLK_a:
-        sdlkADown = false;
-        break;
-    case SDLK_F10:
-        showMainMenuBar = !showMainMenuBar;
-        break;
-    case SDLK_LSHIFT:
-        sdlkShiftDown = false;
-        break;
-    case SDLK_LCTRL:
-    case SDLK_RCTRL:
-        sdlkCtrlDown = false;
-        break;
-    case SDLK_DELETE:
-        sdlkDelDown = false;
-        break;
-    case SDLK_F1:
-        ActionRequestReset();
-        break;
-    case SDLK_F3:
-        pauseExecution = true;
-        break;
-    default:
-        break;
+void GuiMgr::EventKeyUp(SDL_Keycode& _key) {
+    if (gameRunning) {
+        switch (_key) {
+        case SDLK_F10:
+            showMainMenuBar = !showMainMenuBar;
+            break;
+        case SDLK_F1:
+            ActionRequestReset();
+            break;
+        case SDLK_F3:
+            pauseExecution = true;
+            break;
+        case SDLK_F11:
+            HardwareMgr::ToggleFullscreen();
+            break;
+        default:
+            vhwmgr->EventKeyUp(_key);
+            break;
+        }
+    }
+    else {
+        switch (_key) {
+        case SDLK_a:
+            sdlkADown = false;
+            break;
+        case SDLK_F10:
+            showMainMenuBar = !showMainMenuBar;
+            break;
+        case SDLK_LSHIFT:
+            sdlkShiftDown = false;
+            break;
+        case SDLK_LCTRL:
+        case SDLK_RCTRL:
+            sdlkCtrlDown = false;
+            break;
+        case SDLK_DELETE:
+            sdlkDelDown = false;
+            break;
+        case SDLK_F3:
+            pauseExecution = true;
+            break;
+        case SDLK_RETURN:
+            ActionRequestStart();
+            break;
+        case SDLK_F11:
+            HardwareMgr::ToggleFullscreen();
+            break;
+        default:
+            break;
+        }
     }
 }
 
 void GuiMgr::EventMouseWheel(const Sint32& _wheel_y) {
     if (_wheel_y > 0) {
         sdlScrollUp = true;
+        sdlScrollDown = false;
     }
     else if (_wheel_y < 0) {
         sdlScrollDown = true;
+        sdlScrollUp = false;
     }
 }

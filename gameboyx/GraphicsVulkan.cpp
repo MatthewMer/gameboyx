@@ -634,6 +634,7 @@ void GraphicsVulkan::UpdateTex2dSubmit() {
 		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[0]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
 		}
+		lock_queue.unlock();
 		tex2dData.submit_cmdbuffer_0.store(false);
 	}
 	if (tex2dData.submit_cmdbuffer_1.load()) {
@@ -644,6 +645,7 @@ void GraphicsVulkan::UpdateTex2dSubmit() {
 		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[1]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
 		}
+		lock_queue.unlock();
 		tex2dData.submit_cmdbuffer_1.store(false);
 	}
 	if (tex2dData.submit_cmdbuffer_2.load()) {
@@ -654,6 +656,7 @@ void GraphicsVulkan::UpdateTex2dSubmit() {
 		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[2]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
 		}
+		lock_queue.unlock();
 		tex2dData.submit_cmdbuffer_2.store(false);
 	}
 }
@@ -1760,6 +1763,7 @@ VkBool32 VKAPI_CALL debug_report_callback(VkDebugUtilsMessageSeverityFlagBitsEXT
 VkDebugUtilsMessengerEXT GraphicsVulkan::RegisterDebugCallback() {
 	PFN_vkCreateDebugUtilsMessengerEXT pfnCreateDebutUtilsMessengerEXT;
 	pfnCreateDebutUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulkanInstance, "vkCreateDebugUtilsMessengerEXT");
+
 	VkDebugUtilsMessengerCreateInfoEXT callbackInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 	callbackInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
 	callbackInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;

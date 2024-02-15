@@ -112,10 +112,10 @@ public:
 	void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const override;
 	void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const override;
 	u32 GetCurrentClockCycles() override;
-	void GetBankAndPC(int& _bank, u32& _pc) const override;
+	void GetCurrentPCandBank(int& _pc, int& _bank) const override;
 
-	void SetupInstrDebugTables(Table<instr_entry>& _table) override;
-	void SetupInstrDebugTablesTmp(Table<instr_entry>& _table) override;
+	void GetInstrDebugTable(Table<instr_entry>& _table) override;
+	void GetInstrDebugTableTmp(Table<instr_entry>& _table) override;
 	
 	void SetInstances() override;
 

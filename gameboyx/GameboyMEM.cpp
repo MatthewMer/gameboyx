@@ -875,7 +875,7 @@ void GameboyMEM::FillMemoryDebugTable(TableSection<memory_entry>& _table_section
 }
 
 
-void GameboyMEM::SetupMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) {
+void GameboyMEM::GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) {
     // access for memory inspector
     _tables.clear();
 

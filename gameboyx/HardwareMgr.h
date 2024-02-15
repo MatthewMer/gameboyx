@@ -3,12 +3,12 @@
 #include "defs.h"
 #include "GraphicsMgr.h"
 #include "AudioMgr.h"
-#include "imgui.h"
-#include "SDL.h"
+#include <imgui.h>
+#include <SDL.h>
 #include "logger.h"
 #include "HardwareStructs.h"
 
-#include <unordered_map>
+#include <queue>
 
 #define HWMGR_ERR_ALREADY_RUNNING		0x00000001
 
@@ -28,20 +28,23 @@ public:
 
 	static void UpdateGpuData();
 
+	static std::queue<std::pair<SDL_Keycode, SDL_EventType>>& GetKeys();
+	static Sint32& GetScroll();
+
 private:
 	HardwareMgr() = default;
 	~HardwareMgr() = default;
 
-	GraphicsMgr* graphicsMgr = nullptr;
-	AudioMgr* audioMgr = nullptr;
-	SDL_Window* window = nullptr;
+	static GraphicsMgr* graphicsMgr;
+	static AudioMgr* audioMgr;
+	static SDL_Window* window;
 
-	graphics_information graphicsInfo;
-	audio_information audioInfo;
+	static graphics_information graphicsInfo;
+	static audio_information audioInfo;
 
 	// control
-	std::unordered_map<SDL_EventType, SDL_Keycode> keyMap = std::unordered_map<SDL_EventType, SDL_Keycode>();
-	Sint32 mouseScroll = 0;
+	static std::queue<std::pair<SDL_Keycode, SDL_EventType>> keyMap;
+	static Sint32 mouseScroll;
 
 	static HardwareMgr* instance;
 	static u32 errors;

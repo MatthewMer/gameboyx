@@ -240,6 +240,8 @@ public:
 	void SetButton(const u8& _bit, const bool& _is_button);
 	void UnsetButton(const u8& _bit, const bool& _is_button);
 
+	void GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) override;
+
 	// actual memory
 	std::vector<u8> ROM_0;
 	std::vector<std::vector<u8>> ROM_N;
@@ -264,7 +266,6 @@ private:
 	// members
 	void InitMemory(BaseCartridge* _cartridge) override;
 	void InitMemoryState() override;
-	void SetupMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) override;
 	void FillMemoryDebugTable(TableSection<memory_entry>& _table_section, std::vector<u8>* _bank_data, const int& _offset) override;
 
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;

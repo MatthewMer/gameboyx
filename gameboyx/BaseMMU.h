@@ -22,6 +22,7 @@ class BaseMMU
 public:
 	// get/reset instance
 	static BaseMMU* getInstance(BaseCartridge* _cartridge);
+	static BaseMMU* getInstance();
 	static void resetInstance();
 
 	// clone/assign protection

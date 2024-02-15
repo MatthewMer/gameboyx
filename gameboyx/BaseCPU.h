@@ -38,10 +38,10 @@ public:
 	virtual void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const = 0;
 	virtual void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const = 0;
 	virtual u32 GetCurrentClockCycles() = 0;
-	virtual void GetBankAndPC(int& _bank, u32& _pc) const = 0;
+	virtual void GetCurrentPCandBank(int& _pc, int& _bank) const = 0;
 
-	virtual void SetupInstrDebugTables(Table<instr_entry>& _table) = 0;
-	virtual void SetupInstrDebugTablesTmp(Table<instr_entry>& _table) = 0;
+	virtual void GetInstrDebugTable(Table<instr_entry>& _table) = 0;
+	virtual void GetInstrDebugTableTmp(Table<instr_entry>& _table) = 0;
 
 	virtual void Write8Bit(const u8& _data, const u16& _addr) = 0;
 	virtual void Write16Bit(const u16& _data, const u16& _addr) = 0;

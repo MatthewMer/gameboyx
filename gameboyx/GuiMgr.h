@@ -49,8 +49,8 @@ public:
 	void ProcessGUI();
 
 	// sdl functions
-	void EventKeyDown(const SDL_Keycode& _key);
-	void EventKeyUp(const SDL_Keycode& _key);
+	void EventKeyDown(SDL_Keycode& _key);
+	void EventKeyUp(SDL_Keycode& _key);
 	void EventMouseWheel(const Sint32& _wheel_y);
 
 private:
@@ -96,13 +96,28 @@ private:
 	bool jumpToPc = false;
 	bool nextStep = false;
 
-	std::unordered_map<windowID, bool> windowPriorities = {
+	void ProcessInput();
+	bool windowActive;
+	bool windowHovered;
+	windowID activeId;
+	windowID hoveredId;
+	std::unordered_map<windowID, bool> windowsActive = {
 		{GAME_SELECT, false},
 		{DEBUG_INSTR, false},
 		{DEBUG_MEM, false},
 		{HW_INFO, false},
 		{ABOUT, false}
 	};
+	std::unordered_map<windowID, bool> windowsHovered = {
+		{GAME_SELECT, false},
+		{DEBUG_INSTR, false},
+		{DEBUG_MEM, false},
+		{HW_INFO, false},
+		{ABOUT, false}
+	};
+	void CheckWindow(const windowID& _id);
+	template <class T>
+	void CheckScroll(const windowID& _id, Table<T>& _table);
 
 	// game select
 	int gameSelectedIndex = 0;
@@ -152,6 +167,7 @@ private:
 
 	// emulation speed multiplier
 	int currentSpeedIndex = 0;
+	int currentSpeed = 1;
 	std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(EMULATION_SPEEDS.size(), { false });
 
 	void ResetGUI();
@@ -194,17 +210,9 @@ private:
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);
 	void ReloadGamesGuiCtx();
-	void ResetDebugInstr(); 
-	void ResetMemInspector();
 	bool CheckPC();
 	void ActionSetBreakPoint(std::list<bank_index>& _breakpoints, const bank_index& _current_index);
-	void ResetEventMouseWheel();
 	void SetBankAndAddressScrollableTable(TableBase& _tyble_obj, int& _bank, int& _address);
-	void SetupMemInspectorIndex();
-
-	bool CheckScroll(TableBase& _table_obj);
-
-	void ProcessMainMenuKeys();
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();
