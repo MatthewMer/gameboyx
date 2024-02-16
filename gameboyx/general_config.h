@@ -76,6 +76,12 @@ inline const std::unordered_map<u32, std::string> VENDOR_IDS = {
 #define TEX2D_CHANNELS			    4
 
 /* ***********************************************************************************************************
+    GRAPHICS
+*********************************************************************************************************** */
+#define APP_MAX_FRAMERATE           500
+#define APP_MIN_FRAMERATE           30
+
+/* ***********************************************************************************************************
     IMGUI EMULATOR
 *********************************************************************************************************** */
 //#define _DEBUG_GBX
@@ -252,24 +258,27 @@ inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumn
 #define SOUND_5_1                   6
 #define SOUND_7_1                   8
 
-inline const std::vector<float> SOUND_7_1_ANGLES = {
-    (float)(22.5f * (M_PI / 180.f)),               // front-right
-    (float)(85.f * (M_PI / 180.f)),                // center-right
-    (float)(140.f * (M_PI / 180.f)),               // rear-right
-    (float)(220.f * (M_PI / 180.f)),               // rear-left
-    (float)(275.f * (M_PI / 180.f)),               // center-left
-    (float)(337.5f * (M_PI / 180.f))               // front-left
+inline const float SOUND_7_1_ANGLES[8] = {
+    (float)(337.5f * (M_PI / 180.f)),               // front-left
+    (float)(22.5f * (M_PI / 180.f)),                // front-right
+    (float)(.0f * (M_PI / 180.f)),                  // centre
+    .0f,                                            // low frequency (not needed)
+    (float)(275.f * (M_PI / 180.f)),                // center-left
+    (float)(85.f * (M_PI / 180.f)),                 // center-right
+    (float)(220.f * (M_PI / 180.f)),                // rear-left
+    (float)(140.f * (M_PI / 180.f))                 // rear-right
 };
 
-inline const std::vector<float> SOUND_5_1_ANGLES = {
-    (float)(22.5f * (M_PI / 180.f)),               // front-right
-    (float)(140.f * (M_PI / 180.f)),               // rear-right
-    (float)(220.f * (M_PI / 180.f)),               // rear-left
-    (float)(337.5f * (M_PI / 180.f))               // front-left
+inline const float SOUND_5_1_ANGLES[6] = {
+    (float)(337.5f * (M_PI / 180.f)),               // front-left
+    (float)(22.5f * (M_PI / 180.f)),                // front-right
+    (float)(.0f * (M_PI / 180.f)),                  // centre
+    .0f,                                            // low frequency (not needed)
+    (float)(220.f * (M_PI / 180.f)),                // rear-left
+    (float)(140.f * (M_PI / 180.f))                 // rear-right
 };
 
-/* ***********************************************************************************************************
-    GRAPHICS
-*********************************************************************************************************** */
-#define APP_MAX_FRAMERATE           500
-#define APP_MIN_FRAMERATE           30
+inline const float SOUND_STEREO_ANGLES[2] = {
+    (float)(270.f * (M_PI / 180.f)),                // left
+    (float)(90.f * (M_PI / 180.f))                  // right
+};

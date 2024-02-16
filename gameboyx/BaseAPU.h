@@ -19,7 +19,7 @@ public:
 
 	// public members
 	virtual void ProcessAPU(const int& _ticks) = 0;
-	virtual void SampleApuData(const int& _samples_num, const int& _sampling_rate) = 0;
+	virtual void SampleAPU(float* _data, const int& _sampling_rate) = 0;
 
 protected:
 	// constructor

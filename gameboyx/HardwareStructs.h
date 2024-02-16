@@ -2,6 +2,7 @@
 
 #include "defs.h"
 #include <vector>
+#include <atomic>
 
 class BaseAPU;
 
@@ -27,12 +28,17 @@ struct graphics_information {
 
 struct virtual_audio_information {
 	int channels = 0;
-	int cursor = 0;
-	std::vector<float>* audio_data;
-
-	bool audio_running = false;
-
+	alignas(64) std::atomic<bool> audio_running = true;
 	BaseAPU* sound_instance = nullptr;
+
+	constexpr virtual_audio_information& operator=(virtual_audio_information& _right) noexcept {
+		if (this != &_right) {
+			channels = _right.channels;
+			audio_running.store(_right.audio_running.load());
+			sound_instance = _right.sound_instance;
+		}
+		return *this;
+	}
 };
 
 struct audio_information {
