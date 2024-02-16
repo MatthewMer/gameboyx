@@ -1,5 +1,9 @@
 #pragma once
 
+#include <queue>
+#include <chrono>
+using namespace std::chrono;
+
 #include "defs.h"
 #include "GraphicsMgr.h"
 #include "AudioMgr.h"
@@ -8,14 +12,11 @@
 #include "logger.h"
 #include "HardwareStructs.h"
 
-
-#include <queue>
-
 #define HWMGR_ERR_ALREADY_RUNNING		0x00000001
 
 class HardwareMgr {
 public:
-	static u8 InitHardware();
+	static u8 InitHardware(graphics_settings& _graphics_settings);
 	static void ShutdownHardware();
 	static void NextFrame();
 	static void RenderFrame();
@@ -32,6 +33,10 @@ public:
 	static std::queue<std::pair<SDL_Keycode, SDL_EventType>>& GetKeys();
 	static Sint32 GetScroll();
 
+	static void GetGraphicsSettings(graphics_settings& _graphics_settings);
+
+	static void SetFramerateTarget(const int& _target, const bool& _unlimited);
+
 private:
 	HardwareMgr() = default;
 	~HardwareMgr() = default;
@@ -43,10 +48,19 @@ private:
 	static graphics_information graphicsInfo;
 	static audio_information audioInfo;
 
+	static graphics_settings graphicsSettings;
+
 	// control
 	static std::queue<std::pair<SDL_Keycode, SDL_EventType>> keyMap;
 	static Sint32 mouseScroll;
 
 	static HardwareMgr* instance;
 	static u32 errors;
+
+	// for framerate target
+	static void CheckDelay();
+	static u32 timePerFrame;
+	static u32 currentTimePerFrame;
+	static steady_clock::time_point timeFramePrev;
+	static steady_clock::time_point timeFrameCur;
 };

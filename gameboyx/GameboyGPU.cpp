@@ -14,9 +14,9 @@ using namespace std;
 
 #define MC_PER_SCANLINE		((((BASE_CLOCK_CPU / 4) * 1000000) / DISPLAY_FREQUENCY) / LCD_SCANLINES_TOTAL)
 
-// return delta t per frame in milliseconds
+// return delta t per frame in nanoseconds
 int GameboyGPU::GetDelayTime() const {
-	return (int)((1.f / DISPLAY_FREQUENCY) * pow(10, 3));
+	return (int)((1.f / DISPLAY_FREQUENCY) * pow(10, 6));
 }
 
 int GameboyGPU::GetTicksPerFrame(const float& _clock) const {

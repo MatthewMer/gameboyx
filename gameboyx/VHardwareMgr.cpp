@@ -125,48 +125,38 @@ u8 VHardwareMgr::ResetHardware() {
 
 void VHardwareMgr::ProcessHardware() {
     unique_lock<mutex> lock_hardware(mutHardware, defer_lock);
-    unique_lock<mutex> lock_keys(mutKeys, defer_lock);
   
     while (running.load()) {
-        if (next.load()) {
-            if (debugEnable.load()) {
+        if (debugEnable.load()) {
 
-                if (!pauseExecution.load()) {
-                    lock_keys.lock();
-                    ProcessKeys();
-                    lock_keys.unlock();
+            if (!pauseExecution.load()) {
+                lock_hardware.lock();
+                core_instance->RunCycle();
+                lock_hardware.unlock();
 
-                    lock_hardware.lock();
-                    core_instance->RunCycle();
-                    lock_hardware.unlock();
+                CheckFpsAndClock();
 
-                    pauseExecution.store(true);
-                }
+                pauseExecution.store(true);
             }
-            else {
-                for (int i = 0; i < buffering; i++) {
-                    if (CheckDelay()) {
-                        for (int j = 0; j < emulationSpeed.load(); j++) {
-                            lock_keys.lock();
-                            ProcessKeys();
-                            lock_keys.unlock();
-
-                            lock_hardware.lock();
-                            core_instance->RunCycles();
-                            lock_hardware.unlock();
-                        }
+        }
+        else {
+            for (int i = 0; i < buffering; i++) {
+                if (CheckDelay()) {
+                    for (int j = 0; j < emulationSpeed.load(); j++) {
+                        lock_hardware.lock();
+                        core_instance->RunCycles();
+                        lock_hardware.unlock();
                     }
                     CheckFpsAndClock();
-                }
+                }                    
             }
-            next.store(false);
         }
     }
 }
 
 bool VHardwareMgr::CheckDelay() {
     timeFrameCur = high_resolution_clock::now();
-    currentTimePerFrame = (u32)duration_cast<milliseconds>(timeFrameCur - timeFramePrev).count();
+    currentTimePerFrame = (u32)duration_cast<microseconds>(timeFrameCur - timeFramePrev).count();
 
     if (currentTimePerFrame >= timePerFrame) {
         timeFramePrev = timeFrameCur;
@@ -188,7 +178,6 @@ void VHardwareMgr::InitMembers(emulation_settings& _settings) {
     debugEnable.store(_settings.debug_enabled);
     pauseExecution.store(_settings.pause_execution);
     emulationSpeed.store(_settings.emulation_speed);
-    next.store(false);
 }
 
 void VHardwareMgr::CheckFpsAndClock() {
@@ -201,23 +190,6 @@ void VHardwareMgr::CheckFpsAndClock() {
         currentFramerate = graphics_instance->GetFrames() / (accumulatedTime / (float)pow(10, 6));
 
         accumulatedTime = 0;
-    }
-}
-
-void VHardwareMgr::ProcessKeys() {
-    while (!keyMap.empty()) {
-        pair<SDL_Keycode, SDL_EventType>& input = keyMap.front();
-
-        switch (input.second) {
-        case SDL_KEYDOWN:
-            control_instance->SetKey(input.first);
-            break;
-        case SDL_KEYUP:
-            control_instance->ResetKey(input.first);
-            break;
-        }
-
-        keyMap.pop();
     }
 }
 
@@ -234,15 +206,15 @@ void VHardwareMgr::GetCurrentPCandBank(int& _pc, int& _bank) {
     //unique_lock<mutex> lock_hardware(mutHardware);
     core_instance->GetCurrentPCandBank(_pc, _bank);
 }
-
+   
 void VHardwareMgr::EventKeyDown(SDL_Keycode& _key) {
-    unique_lock<mutex> lock_keys(mutKeys);
-    keyMap.push(pair(_key, SDL_KEYDOWN));
+    unique_lock<mutex> lock_hardware(mutHardware);
+    control_instance->SetKey(_key);
 }
 
 void VHardwareMgr::EventKeyUp(SDL_Keycode& _key) {
-    unique_lock<mutex> lock_keys(mutKeys);
-    keyMap.push(pair(_key, SDL_KEYUP));
+    unique_lock<mutex> lock_hardware(mutHardware);
+    control_instance->ResetKey(_key);
 }
 
 void VHardwareMgr::SetDebugEnabled(const bool& _debug_enabled) {
@@ -255,10 +227,6 @@ void VHardwareMgr::SetPauseExecution(const bool& _pause_execution) {
 
 void VHardwareMgr::SetEmulationSpeed(const int& _emulation_speed) {
     emulationSpeed.store(_emulation_speed);
-}
-
-void VHardwareMgr::Next() {
-    next.store(true);
 }
 
 void VHardwareMgr::GetInstrDebugTable(Table<instr_entry>& _table) {

@@ -158,6 +158,12 @@ inline const std::vector<std::pair<std::string, float>> DEBUG_MEM_COLUMNS{
     {"0f", 1.f},
 };
 
+inline const ImVec2 graph_settings_win_size(400.f, 0.f);
+inline const std::vector<float> GRAPH_SETTINGS_COLUMNS = {
+    1.f,
+    1.f
+};
+
 inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Color" };
 
 #define BG_CHANNEL_COL .1f
@@ -169,7 +175,7 @@ inline const ImVec4 IMGUI_BLUE_COLOR(.0f, .0f, 1.f, 1.f);
 
 inline const float OVERLAY_DISTANCE = 10.0f;
 
-#define FPS_SAMPLES_NUM             1000
+#define FPS_SAMPLES_NUM             50
 
 #define DEBUG_INSTR_LINES           21
 #define DEBUG_MEM_LINES             32
@@ -261,3 +267,9 @@ inline const std::vector<float> SOUND_5_1_ANGLES = {
     (float)(220.f * (M_PI / 180.f)),               // rear-left
     (float)(337.5f * (M_PI / 180.f))               // front-left
 };
+
+/* ***********************************************************************************************************
+    GRAPHICS
+*********************************************************************************************************** */
+#define APP_MAX_FRAMERATE           500
+#define APP_MIN_FRAMERATE           30

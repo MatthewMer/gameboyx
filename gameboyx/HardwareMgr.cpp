@@ -6,14 +6,24 @@ GraphicsMgr* HardwareMgr::graphicsMgr = nullptr;
 AudioMgr* HardwareMgr::audioMgr = nullptr;
 SDL_Window* HardwareMgr::window = nullptr;
 
-graphics_information HardwareMgr::graphicsInfo = graphics_information();
-audio_information HardwareMgr::audioInfo = audio_information();
+graphics_information HardwareMgr::graphicsInfo = {};
+audio_information HardwareMgr::audioInfo = {};
+
+graphics_settings HardwareMgr::graphicsSettings = {};
 
 std::queue<std::pair<SDL_Keycode, SDL_EventType>> HardwareMgr::keyMap = std::queue<std::pair<SDL_Keycode, SDL_EventType>>();
 Sint32 HardwareMgr::mouseScroll = 0;
 
-u8 HardwareMgr::InitHardware() {
+u32 HardwareMgr::timePerFrame = 0;
+u32 HardwareMgr::currentTimePerFrame = 0;
+steady_clock::time_point HardwareMgr::timeFramePrev = high_resolution_clock::now();
+steady_clock::time_point HardwareMgr::timeFrameCur = high_resolution_clock::now();
+
+u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings) {
 	errors = 0;
+
+	graphicsSettings = std::move(_graphics_settings);
+	SetFramerateTarget(graphicsSettings.framerateTarget, graphicsSettings.fpsUnlimited);
 
 	if (instance == nullptr) {
 		instance = new HardwareMgr();
@@ -80,6 +90,7 @@ void HardwareMgr::NextFrame() {
 }
 
 void HardwareMgr::RenderFrame() {
+	CheckDelay();
 	graphicsMgr->RenderFrame();
 }
 
@@ -146,4 +157,32 @@ void HardwareMgr::DestroyAudioBackend() {
 
 void HardwareMgr::UpdateGpuData() {
 	graphicsMgr->UpdateGpuData();
+}
+
+void HardwareMgr::SetFramerateTarget(const int& _target, const bool& _unlimited) {
+	graphicsSettings.framerateTarget = _target;
+	graphicsSettings.fpsUnlimited = _unlimited;
+
+	if (_target > 0 && !_unlimited) {
+		timePerFrame = (u32)((1.f / _target) * pow(10, 6));
+	}
+	else {
+		timePerFrame = 0;
+	}
+}
+
+void HardwareMgr::CheckDelay() {
+	if (!graphicsSettings.fpsUnlimited) {
+		while (currentTimePerFrame < timePerFrame) {
+			timeFrameCur = high_resolution_clock::now();
+			currentTimePerFrame = (u32)duration_cast<microseconds>(timeFrameCur - timeFramePrev).count();
+		}
+
+		timeFramePrev = timeFrameCur;
+		currentTimePerFrame = 0;
+	}
+}
+
+void HardwareMgr::GetGraphicsSettings(graphics_settings& _graphics_settings) {
+	_graphics_settings = graphicsSettings;
 }

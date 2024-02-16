@@ -15,8 +15,6 @@
 #include "BaseCartridge.h"
 #include "defs.h"
 #include "GuiTable.h"
-#include <chrono>
-using namespace std::chrono;
 
 class BaseCPU
 {

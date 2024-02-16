@@ -7,11 +7,6 @@
 *	passed by the GUI object and passes it to the constructors of the hardware classes. 
 */
 
-#include <SDL.h>
-#include <thread>
-#include <mutex>
-#include <queue>
-
 #include "BaseCPU.h"
 #include "BaseCTRL.h"
 #include "BaseAPU.h"
@@ -20,6 +15,13 @@
 #include "defs.h"
 #include "general_config.h"
 #include "VHardwareStructs.h"
+
+#include <SDL.h>
+#include <thread>
+#include <mutex>
+#include <queue>
+#include <chrono>
+using namespace std::chrono;
 
 struct emulation_settings {
     bool debug_enabled = false;
@@ -61,8 +63,6 @@ public:
 	void GetFpsAndClock(int& _fps, float& _clock);
     void GetCurrentPCandBank(int& _pc, int& _bank);
 
-    void Next();
-
     void GetInstrDebugTable(Table<instr_entry>& _table);
     void GetInstrDebugTableTmp(Table<instr_entry>& _table);
     void GetInstrDebugFlags(std::vector<reg_entry>& _reg_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values);
@@ -101,11 +101,6 @@ private:
     float currentFrequency;
     float currentFramerate;
 
-    // buffer for pressed keys
-    void ProcessKeys();
-    std::queue<std::pair<SDL_Keycode, SDL_EventType>> keyMap = std::queue<std::pair<SDL_Keycode, SDL_EventType>>();
-    std::mutex mutKeys;
-
     std::thread hardwareThread;
     std::mutex mutHardware;
 
@@ -113,7 +108,6 @@ private:
     alignas(64) std::atomic<bool> debugEnable;
     alignas(64) std::atomic<bool> pauseExecution;
     alignas(64) std::atomic<int> emulationSpeed;
-    alignas(64) std::atomic<bool> next;
 
     bool CheckDelay();
     void InitMembers(emulation_settings& _settings);

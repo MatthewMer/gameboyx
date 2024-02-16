@@ -34,7 +34,13 @@ int main(int, char**)
 {
     create_fs_hierarchy();
 
-    if (!HardwareMgr::InitHardware())   { return -1; }
+    // todo: implement a config loader that loads configuration data and pass the data to the different application components
+    //          and probably add a namespace that contains all the settings structs instead of passing them around
+    graphics_settings graph_settings = {};
+    graph_settings.framerateTarget = 144;
+    graph_settings.fpsUnlimited = false;
+
+    if (!HardwareMgr::InitHardware(graph_settings))   { return -1; }
 
     GuiMgr* gui_mgr = GuiMgr::getInstance();
 
@@ -51,7 +57,7 @@ int main(int, char**)
         HardwareMgr::RenderFrame();
     }
     
-    VHardwareMgr::getInstance()->ShutdownHardware();
+    gui_mgr->resetInstance();
     HardwareMgr::ShutdownHardware();
 
     return 0;

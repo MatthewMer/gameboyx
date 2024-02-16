@@ -45,3 +45,8 @@ struct audio_information {
 
 	void* device = nullptr;
 };
+
+struct graphics_settings {
+	int framerateTarget = 0;
+	bool fpsUnlimited = false;
+};

@@ -82,6 +82,7 @@ private:
 	bool showNewGameDialog = false;
 	bool showImGuiDebug = false;
 	bool showGraphicsInfo = false;
+	bool showGraphicsSettings = false;
 
 	// flow control values
 	bool gameRunning = false;
@@ -169,6 +170,12 @@ private:
 	int currentSpeed = 1;
 	std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(EMULATION_SPEEDS.size(), { false });
 
+	// graphics settings
+	int framerateTarget = 0;
+	bool fpsUnlimited = false;
+
+	bool tripleBuffering;
+
 	void ResetGUI();
 
 	// gui functions
@@ -181,6 +188,7 @@ private:
 	void ShowHardwareInfo();
 	void ShowGraphicsInfo();
 	void ShowGraphicsOverlay();
+	void ShowGraphicsSettings();
 
 	// main menur bar elements
 	void ShowEmulationSpeeds();
@@ -210,6 +218,7 @@ private:
 	void ActionSetEmulationSpeed(const int& _index);
 	void ActionGamesSelect(const int& _index);
 	void ActionGamesSelectAll();
+	void ActionSetFramerateTarget();
 
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);

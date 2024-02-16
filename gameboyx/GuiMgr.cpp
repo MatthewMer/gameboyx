@@ -42,6 +42,11 @@ void GuiMgr::resetInstance() {
 }
 
 GuiMgr::GuiMgr() {
+    graphics_settings graph_settings = {};
+    HardwareMgr::GetGraphicsSettings(graph_settings);
+    framerateTarget = graph_settings.framerateTarget;
+    fpsUnlimited = graph_settings.fpsUnlimited;
+
     vhwmgr = VHardwareMgr::getInstance();
 
     // init explorer
@@ -62,6 +67,9 @@ GuiMgr::GuiMgr() {
 }
 
 GuiMgr::~GuiMgr() {
+    if (gameRunning) {
+        vhwmgr->ShutdownHardware();
+    }
     VHardwareMgr::resetInstance();
 }
 
@@ -101,8 +109,7 @@ void GuiMgr::ProcessGUI() {
     if (showGraphicsOverlay) { ShowGraphicsOverlay(); }
     if (!gameRunning) { ShowGameSelect(); }
     if (showNewGameDialog) { ShowNewGameDialog(); }
-
-    if (gameRunning) { vhwmgr->Next(); }
+    if (showGraphicsSettings) { ShowGraphicsSettings(); }
 }
 
 /* ***********************************************************************************************************
@@ -135,6 +142,7 @@ void GuiMgr::ShowMainMenuBar() {
             }
             // Graphics
             if (ImGui::BeginMenu("Graphics", &showGraphicsMenu)) {
+                ImGui::MenuItem("Settings", nullptr, &showGraphicsSettings);
                 ImGui::MenuItem("Overlay", nullptr, &showGraphicsOverlay);
                 ImGui::EndMenu();
             }
@@ -577,12 +585,13 @@ void GuiMgr::ShowGraphicsOverlay() {
     graphicsFPSavg += fps;
     graphicsFPSavg /= 2;
     graphicsFPScount++;
-
-    graphicsFPSfifo.pop();
-    graphicsFPSfifo.push(fps);
     
     // stablize output (roughly once per second)
     if (graphicsFPScount >= graphicsFPSavg) {
+        graphicsFPSfifo.pop();
+        graphicsFPSfifo.push(graphicsFPSavg);
+
+        graphicsFPSavg = 0;
         graphicsFPScur = fps;
         graphicsFPScount = 0;
     }
@@ -627,6 +636,88 @@ void GuiMgr::ShowGraphicsOverlay() {
     }
 }
 
+void GuiMgr::ShowGraphicsSettings() {
+    static bool was_unlimited = false;
+
+    ImGui::SetNextWindowSize(graph_settings_win_size);
+
+    if (ImGui::Begin("Graphics Settings", &showGraphicsSettings, WIN_CHILD_FLAGS)) {
+        ImGui::TextColored(HIGHLIGHT_COLOR, "Application");
+        if (ImGui::BeginTable("graphics app", 2, TABLE_FLAGS_NO_BORDER_OUTER_H)) {
+
+            for (int i = 0; i < 2; i++) {
+                ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER);
+            }
+
+            //ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+
+            static const char* title_fps = "fps";
+            ImGui::TableNextColumn();
+            if (fpsUnlimited) { ImGui::BeginDisabled(); }
+            ImGui::TextUnformatted("Framerate target");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("sets base application framerate target");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+                
+            if (ImGui::SliderInt(title_fps, &framerateTarget, APP_MIN_FRAMERATE, APP_MAX_FRAMERATE)) {
+                ActionSetFramerateTarget();
+            }
+            if (fpsUnlimited) { ImGui::EndDisabled(); }
+
+            static const char* title_unlimit = "unlimited";
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Unlimited");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("disable framerate target");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+            ImGui::Checkbox(title_unlimit, &fpsUnlimited);
+            if (was_unlimited != fpsUnlimited){
+                was_unlimited = fpsUnlimited;
+                ActionSetFramerateTarget();
+            }
+
+            //ImGui::PopStyleVar();
+            ImGui::EndTable();
+        }
+
+        ImGui::Separator();
+        ImGui::TextColored(HIGHLIGHT_COLOR, "Emulation");
+        if (ImGui::BeginTable("graphics emu", 2, TABLE_FLAGS_NO_BORDER_OUTER_H)) {
+
+            for (int i = 0; i < 2; i++) {
+                ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER);
+            }
+
+            //ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+
+            static const char* title_buffering = "buffering";
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Triple buffering");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("enables triple buffering for virtual hardware, default is double buffering (restart game)");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+            ImGui::Checkbox(title_buffering, &tripleBuffering);
+
+            //ImGui::PopStyleVar();
+            ImGui::EndTable();
+        }
+        ImGui::End();
+    }
+}
+
 /* ***********************************************************************************************************
     ACTIONS TO READ/WRITE/PROCESS DATA ETC.
 *********************************************************************************************************** */
@@ -635,7 +726,7 @@ void GuiMgr::ActionGameStart() {
         if (games.size() > 0) {
             // gather settings
             virtual_graphics_settings graphics_settings = {};
-            graphics_settings.buffering = V_DOUBLE_BUFFERING;
+            graphics_settings.buffering = tripleBuffering ? V_TRIPPLE_BUFFERING : V_DOUBLE_BUFFERING;
 
             emulation_settings emu_settings = {};
             emu_settings.debug_enabled = showInstrDebugger;
@@ -838,6 +929,12 @@ void GuiMgr::ActionSetBreakPoint(list<bank_index>& _breakpoints, const bank_inde
         _breakpoints.emplace_back(_current_index);
     }
 }
+
+void GuiMgr::ActionSetFramerateTarget() {
+    HardwareMgr::SetFramerateTarget(framerateTarget, fpsUnlimited);
+}
+
+
 
 void GuiMgr::GetBankAndAddressTable(TableBase& _table_obj, int& _bank, int& _address) {
     bank_index centre = _table_obj.GetCurrentIndexCentre();
