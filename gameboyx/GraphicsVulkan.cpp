@@ -413,7 +413,7 @@ void GraphicsVulkan::RenderFrame() {
 	u32 image_index = 0;
 	static u32 frame_index = 0;
 
-	// wait for fence that signals queue submit finished
+	// wait for fence that signals processing of submitted command buffer finished
 	if (vkWaitForFences(device, 1, &renderFences[frame_index], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] wait for fences");
 	}
@@ -493,11 +493,13 @@ void GraphicsVulkan::RenderFrame() {
 		present_info.waitSemaphoreCount = 1;
 		present_info.pWaitSemaphores = &releaseSemaphores[frame_index];
 		if (VkResult result = vkQueuePresentKHR(queue, &present_info); result != VK_SUCCESS) {
-			/*
 			if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 				RebuildSwapchain();
+				RecalcTex2dScaleMatrix();
 			}
-			*/
+			else {
+				LOG_ERROR("[vulkan] present result");
+			}
 		}
 		lock_queue.unlock();
 	}
