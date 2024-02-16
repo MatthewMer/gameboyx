@@ -303,7 +303,7 @@ bool GraphicsVulkan::Init2dGraphicsBackend() {
 
 		VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 		alloc_info.commandPool = tex2dData.command_pool[i];
-		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		alloc_info.commandBufferCount = 1;
 		tex2dData.command_buffer.emplace_back();
 		if (vkAllocateCommandBuffers(device, &alloc_info, &tex2dData.command_buffer[i]) != VK_SUCCESS) {
@@ -396,6 +396,7 @@ void GraphicsVulkan::Destroy2dGraphicsBackend() {
 		vkDestroyCommandPool(device, n, nullptr);
 	}
 	tex2dData.command_pool.clear();
+	WaitIdle();
 	for (auto& n : tex2dData.update_fence) {
 		vkDestroyFence(device, n, nullptr);
 	}
@@ -412,7 +413,15 @@ void GraphicsVulkan::RenderFrame() {
 	u32 image_index = 0;
 	static u32 frame_index = 0;
 
-	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphore, 0, &image_index); result != VK_SUCCESS) {
+	// wait for fence that signals queue submit finished
+	if (vkWaitForFences(device, 1, &renderFences[frame_index], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] wait for fences");
+	}
+	if (vkResetFences(device, 1, &renderFences[frame_index]) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] reset fences");
+	}
+
+	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphores[frame_index], 0, &image_index); result != VK_SUCCESS) {
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 			RebuildSwapchain();
 			RecalcTex2dScaleMatrix();
@@ -459,26 +468,19 @@ void GraphicsVulkan::RenderFrame() {
 		}
 	}
 
-	if (vkWaitForFences(device, 1, &renderFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] wait for fences");
-	}
-	if (vkResetFences(device, 1, &renderFence) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] reset fences");
-	}
-
 	// submit buffer to queue
 	VkSubmitInfo submit_info = {};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit_info.commandBufferCount = 1;
 	submit_info.pCommandBuffers = &commandBuffers[frame_index];
 	submit_info.waitSemaphoreCount = 1;
-	submit_info.pWaitSemaphores = &acquireSemaphore;
+	submit_info.pWaitSemaphores = &acquireSemaphores[frame_index];
 	submit_info.pWaitDstStageMask = &waitFlags;
 	submit_info.signalSemaphoreCount = 1;
-	submit_info.pSignalSemaphores = &releaseSemaphore;
+	submit_info.pSignalSemaphores = &releaseSemaphores[frame_index];
 	{
 		unique_lock<mutex> lock_queue(mutQueue);
-		if (vkQueueSubmit(queue, 1, &submit_info, renderFence) != VK_SUCCESS) {
+		if (vkQueueSubmit(queue, 1, &submit_info, renderFences[frame_index]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] submit command buffer to queue");
 		}
 
@@ -489,7 +491,7 @@ void GraphicsVulkan::RenderFrame() {
 		present_info.swapchainCount = 1;
 		present_info.pImageIndices = &image_index;
 		present_info.waitSemaphoreCount = 1;
-		present_info.pWaitSemaphores = &releaseSemaphore;
+		present_info.pWaitSemaphores = &releaseSemaphores[frame_index];
 		if (VkResult result = vkQueuePresentKHR(queue, &present_info); result != VK_SUCCESS) {
 			/*
 			if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
@@ -497,13 +499,13 @@ void GraphicsVulkan::RenderFrame() {
 			}
 			*/
 		}
+		lock_queue.unlock();
 	}
 
 	++frame_index %= FRAMES_IN_FLIGHT;
 }
 
 void GraphicsVulkan::QueueSubmit() {
-	unique_lock<mutex> lock_queue(mutQueue, defer_lock);
 	while (submitRunning.load()) {
 		(this->*updateFunctionSubmit)();
 	}
@@ -1024,13 +1026,19 @@ bool GraphicsVulkan::InitCommandBuffers() {
 	VkFenceCreateInfo fence_info = {};
 	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	if (vkCreateFence(device, &fence_info, nullptr, &renderFence) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] create renderFence");
-		return false;
+	for (auto& n : renderFences) {
+		if (vkCreateFence(device, &fence_info, nullptr, &n) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] create renderFence");
+			return false;
+		}
 	}
 
-	if (!InitSemaphore(acquireSemaphore) || !InitSemaphore(releaseSemaphore)) {
-		return false;
+	for (auto& n : acquireSemaphores) {
+		if (!InitSemaphore(n)) { return false; }
+	}
+
+	for (auto& n : releaseSemaphores) {
+		if (!InitSemaphore(n)) { return false; }
 	}
 
 	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
@@ -1447,9 +1455,16 @@ void GraphicsVulkan::DestroyCommandBuffer() {
 	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
 		vkDestroyCommandPool(device, commandPools[i], nullptr);
 	}
-	vkDestroyFence(device, renderFence, nullptr);
-	DestroySemaphore(acquireSemaphore);
-	DestroySemaphore(releaseSemaphore);
+	for (auto& n : renderFences) {
+		vkDestroyFence(device, n, nullptr);
+	}
+
+	for (auto& n : acquireSemaphores) {
+		DestroySemaphore(n);
+	}
+	for (auto& n : releaseSemaphores) {
+		DestroySemaphore(n);
+	}
 }
 
 void GraphicsVulkan::DestroyImgui() {

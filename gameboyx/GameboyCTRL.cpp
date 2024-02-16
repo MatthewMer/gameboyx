@@ -33,52 +33,36 @@ bool GameboyCTRL::SetKey(const SDL_Keycode& _key) {
 		// and directly set the corresponding bit and request interrupt in case of a high to low transition
 		switch (keyMap.at(_key)) {
 		case START:
-			if (!controlCtx->start_pressed) {
-				controlCtx->start_pressed = true;
-				memInstance->SetButton(JOYP_START_DOWN, true);
-			}
+			controlCtx->start_pressed = true;
+			memInstance->SetButton(JOYP_START_DOWN, true);
 			break;
 		case SELECT:
-			if (!controlCtx->select_pressed) {
-				controlCtx->select_pressed = true;
-				memInstance->SetButton(JOYP_SELECT_UP, true);
-			}
+			controlCtx->select_pressed = true;
+			memInstance->SetButton(JOYP_SELECT_UP, true);
 			break;
 		case B:
-			if (!controlCtx->b_pressed) {
-				controlCtx->b_pressed = true;
-				memInstance->SetButton(JOYP_B_LEFT, true);
-			}
+			controlCtx->b_pressed = true;
+			memInstance->SetButton(JOYP_B_LEFT, true);
 			break;
 		case A:
-			if (!controlCtx->a_pressed) {
-				controlCtx->a_pressed = true;
-				memInstance->SetButton(JOYP_A_RIGHT, true);
-			}
+			controlCtx->a_pressed = true;
+			memInstance->SetButton(JOYP_A_RIGHT, true);
 			break;
 		case DOWN:
-			if (!controlCtx->down_pressed) {
-				controlCtx->down_pressed = true;
-				memInstance->SetButton(JOYP_START_DOWN, false);
-			}
+			controlCtx->down_pressed = true;
+			memInstance->SetButton(JOYP_START_DOWN, false);
 			break;
 		case UP:
-			if (!controlCtx->up_pressed) {
-				controlCtx->up_pressed = true;
-				memInstance->SetButton(JOYP_SELECT_UP, false);
-			}
+			controlCtx->up_pressed = true;
+			memInstance->SetButton(JOYP_SELECT_UP, false);
 			break;
 		case LEFT:
-			if (!controlCtx->left_pressed) {
-				controlCtx->left_pressed = true;
-				memInstance->SetButton(JOYP_B_LEFT, false);
-			}
+			controlCtx->left_pressed = true;
+			memInstance->SetButton(JOYP_B_LEFT, false);
 			break;
 		case RIGHT:
-			if (!controlCtx->right_pressed) {
-				controlCtx->right_pressed = true;
-				memInstance->SetButton(JOYP_A_RIGHT, false);
-			}
+			controlCtx->right_pressed = true;
+			memInstance->SetButton(JOYP_A_RIGHT, false);
 			break;
 		}
 		return true;

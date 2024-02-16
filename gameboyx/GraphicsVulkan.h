@@ -166,9 +166,9 @@ private:
 	VkRect2D scissor = {};
 
 	// main sync
-	VkFence renderFence = {};
-	VkSemaphore acquireSemaphore = {};
-	VkSemaphore releaseSemaphore = {};
+	std::vector<VkFence> renderFences = std::vector<VkFence>(FRAMES_IN_FLIGHT);
+	std::vector<VkSemaphore> acquireSemaphores = std::vector<VkSemaphore>(FRAMES_IN_FLIGHT);
+	std::vector<VkSemaphore> releaseSemaphores = std::vector<VkSemaphore>(FRAMES_IN_FLIGHT);
 	VkPipelineStageFlags waitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;				// swapchain
 
 	// imgui
