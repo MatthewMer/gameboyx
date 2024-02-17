@@ -6,6 +6,13 @@
 
 class BaseAPU;
 
+struct complex {
+	float real;
+	float imaginary;
+};
+
+void fft(std::vector<complex>& _signal);
+
 struct audio_samples {
 	std::vector<float> buffer;
 	int buffer_size = 0;
@@ -51,3 +58,4 @@ protected:
 private:
 	static AudioMgr* instance;
 };
+

@@ -1,6 +1,6 @@
 #include "AudioSDL.h"
 #include "format"
-//#include "AudioMgr.h"
+#include "AudioMgr.h"
 #include "BaseAPU.h"
 #include "logger.h"
 

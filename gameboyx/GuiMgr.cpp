@@ -674,12 +674,12 @@ void GuiMgr::ShowGraphicsSettings() {
             ImGui::TextUnformatted("Unlimited");
             if (ImGui::IsItemHovered()) {
                 if (ImGui::BeginTooltip()) {
-                    ImGui::Text("disable framerate target");
+                    ImGui::Text("disables framerate target");
                     ImGui::EndTooltip();
                 }
             }
             ImGui::TableNextColumn();
-            ImGui::Checkbox(title_unlimit, &fpsUnlimited);
+            ImGui::Checkbox("", &fpsUnlimited);
             if (was_unlimited != fpsUnlimited){
                 was_unlimited = fpsUnlimited;
                 ActionSetFramerateTarget();
@@ -704,12 +704,12 @@ void GuiMgr::ShowGraphicsSettings() {
             ImGui::TextUnformatted("Triple buffering");
             if (ImGui::IsItemHovered()) {
                 if (ImGui::BeginTooltip()) {
-                    ImGui::Text("enables triple buffering for virtual hardware, default is double buffering (restart game)");
+                    ImGui::Text("enables triple buffering for virtual hardware (requires game restart)");
                     ImGui::EndTooltip();
                 }
             }
             ImGui::TableNextColumn();
-            ImGui::Checkbox(title_buffering, &tripleBuffering);
+            ImGui::Checkbox("", &tripleBuffering);
 
             //ImGui::PopStyleVar();
             ImGui::EndTable();
