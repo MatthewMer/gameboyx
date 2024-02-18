@@ -42,7 +42,7 @@ struct complex {
 	}
 };
 
-void fft(std::vector<complex>& _signal);
+void fft(complex* _samples, const int& _N);
 
 struct audio_samples {
 	std::vector<float> buffer;

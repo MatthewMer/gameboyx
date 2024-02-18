@@ -103,7 +103,18 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 	SDL_AudioDeviceID* device = (SDL_AudioDeviceID*)_audio_info->device;
 	BaseAPU* sound_instance = _virt_audio_info->sound_instance;
 
-	std::vector<float> virt_samples = std::vector<float>(_virt_audio_info->channels, .0f);
+	const int channels = _audio_info->channels;
+	const float sampling_rate = (float)_audio_info->sampling_rate;
+
+	const int virt_channels = _virt_audio_info->channels;
+
+	// filled with samples per period of virtual channels
+	std::vector<std::vector<complex>> virt_samples = std::vector<std::vector<complex>>(virt_channels);
+	std::vector<int> virt_frequencies = std::vector<int>(virt_channels);
+	std::vector<int> virt_frequencies_copy = std::vector<int>(virt_channels);
+
+	// get ratios to fit samples into physical sampling rate
+	std::vector<float> sampling_rate_ratios = std::vector<float>(virt_channels, 1.f);
 
 	std::vector<float> virt_angles;
 	{
@@ -134,7 +145,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 		break;
 	}
 
-	const int channels = _audio_info->channels;
+	
 
 	while (_virt_audio_info->audio_running.load()) {
 		SDL_LockAudioDevice(*device);
@@ -154,39 +165,45 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 
 		float* buffer = (float*)(((u8*)_samples->buffer.data()) + _samples->write_cursor);
 
+		// keep track of current sample to avoid cutting off the signal
+		float current_sample = .0f;
+
 		// get samples for each channel of virtual hardware
-		for (int i = 0; i < region_1_samples; i++) {
-			sound_instance->SampleAPU(virt_samples.data(), _audio_info->sampling_rate);
+		if (region_1_size > 0) {
+			// get samples per period for all channels
+			sound_instance->SampleAPU(virt_samples, virt_frequencies);
 
-			for (int j = 0; j < channels; j++) {
-				buffer[j] = .0f;
-			}
-			
-			for (int j = 0; auto & n : virt_samples) {
-				(*speaker_fn)(buffer, n, virt_angles[j]);
-				j++;
-			}
-
-			buffer += channels;
-		}
-
-		buffer = _samples->buffer.data();
-
-		for (int i = 0; i < region_2_samples; i++) {
-			sound_instance->SampleAPU(virt_samples.data(), _audio_info->sampling_rate);
-
-			for (int j = 0; j < channels; j++) {
-				buffer[j] = .0f;
-			}
-
-			for (auto& n : virt_samples) {
-				for (int j = 0; auto & n : virt_samples) {
-					(*speaker_fn)(buffer, n, virt_angles[j]);
-					j++;
+			for (int i = 0; i < virt_channels; i++) {
+				if (virt_frequencies_copy[i] != virt_frequencies[i]) {							// in case the signal changed
+					fft(virt_samples[i].data(), (int)virt_samples[i].size());							// perform fft on one period			
+					for (int i = 0; auto & n : sampling_rate_ratios) {
+						n = (virt_samples[i].size() * virt_frequencies[i]) / sampling_rate;			// get ratio to stretch/compress to fit physical sampling rate
+						i++;
+					}
+					virt_frequencies_copy = virt_frequencies;
 				}
 			}
 
-			buffer += channels;
+			// TODO: process fft result and perform inverse fft
+
+			for (int i = 0; i < region_1_size; i++) {
+				for (int j = 0; j < channels; j++) {
+					buffer[j] = .0f;
+				}
+
+				// fill buffer
+			}
+		}
+
+		buffer = _samples->buffer.data();
+		if (region_2_size > 0) {
+			for (int i = 0; i < region_1_samples; i++) {
+				for (int j = 0; j < channels; j++) {
+					buffer[j] = .0f;
+				}
+
+				// fill buffer
+			}
 		}
 
 		_samples->write_cursor = (_samples->write_cursor + region_1_size + region_2_size) % _samples->buffer_size;
