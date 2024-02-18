@@ -9,6 +9,37 @@ class BaseAPU;
 struct complex {
 	float real;
 	float imaginary;
+
+	complex() {
+		this->real = 0;
+		this->imaginary = 0;
+	}
+
+	complex(float real, float imaginary) {
+		this->real = real;
+		this->imaginary = imaginary;
+	}
+
+	complex operator+(complex& _right) {
+		return complex(real + _right.real, imaginary + _right.imaginary);
+	}
+
+	complex operator-(complex& _right) {
+		return complex(real - _right.real, imaginary - _right.imaginary);
+	}
+
+	complex operator*(complex& _right) {
+		return complex(
+			real * _right.real - imaginary * _right.imaginary,
+			real * _right.imaginary + _right.real * imaginary);
+	}
+
+	complex operator/(complex& _right) {
+		return complex(
+			((real * _right.real) + (imaginary * _right.imaginary)) / ((_right.real * _right.real) + (_right.imaginary * _right.imaginary)),
+			((_right.real * imaginary) - (real * _right.imaginary)) / ((_right.real * _right.real) + (_right.imaginary * _right.imaginary))
+		);
+	}
 };
 
 void fft(std::vector<complex>& _signal);

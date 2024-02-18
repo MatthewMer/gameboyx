@@ -36,8 +36,9 @@ FFT algorithm -> transform signal from time domain into frequency domain (applic
 
 */
 
-// FFT based on Cooley and Turkey (need more research)
+// FFT based on Cooley-Tukey
 // returns DFT (size of N) with the phases, magnitudes and frequencies in cartesian form (e.g. 3.5+2.6i)
+// example in pseudo code: https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 void fft(complex* _samples, const int& _N) {
 	// only one sample
 	if (_N == 1) {
@@ -45,44 +46,29 @@ void fft(complex* _samples, const int& _N) {
 	}
 
 	// split in 2 arrays, one for all elements where n is odd and one where n is even
-	complex* e0 = new complex[_N / 2];
-	complex* e1 = new complex[_N / 2];
+	complex* e = new complex[_N / 2];
+	complex* o = new complex[_N / 2];
 	for (int n = 0; n < _N / 2; n++) {
-		e0[n] = _samples[n * 2];
-		e1[n + 1] = _samples[n * 2 + 1];
+		e[n] = _samples[n * 2];
+		o[n + 1] = _samples[n * 2 + 1];
 	}
 
 	// recursively call fft for all stages (with orders power of 2)
-	fft(e0, _N / 2);
-	fft(e1, _N / 2);
+	fft(e, _N / 2);
+	fft(o, _N / 2);
 
-	// twiddel factors ( e^(i*2*pi*k/N) , where k = index and N = order (or in other words N = sampling rate and k = t ?)
+	// twiddel factors ( e^(-i*2*pi*k/N) , where k = index and N = order (or in other words N = sampling rate and k = t ?)
 	// used for shifting the signal
-	float ang = (float)(2 * M_PI / _N);			// phase
-	complex w, wn;
-	w.real = 1;
-	w.imaginary = 0;
-	wn.real = cos(ang);
-	wn.imaginary = sin(ang);
-
 	for (int k = 0; 2 * k < _N; k++) {
+		// step through phase shifts
+		float ang = (float)(2 * M_PI * k / _N);
 		// shift phase and perform butterfly operation to calculate results
-		complex t;
-		t.real = w.real * e1[k].real - w.imaginary * e1[k].imaginary;
-		t.imaginary = w.real * e1[k].imaginary + w.imaginary * e1[k].real;
-
-		_samples[k].real = e0[k].real + t.real;
-		_samples[k].imaginary = e0[k].imaginary + t.imaginary;
-		_samples[k + _N / 2].real = e0[k].real - t.real;
-		_samples[k + _N / 2].imaginary = e0[k].imaginary - t.imaginary;
-
-		if (k < _N / 2) {
-			float temp = w.real;
-			w.real = w.real * wn.real - w.imaginary * wn.imaginary;
-			w.imaginary = temp * wn.imaginary + w.imaginary * wn.real;
-		}
+		complex p = e[k];
+		complex q = complex(cos(ang), -sin(ang)) * o[k];
+		_samples[k] = p + q;
+		_samples[k + _N / 2] = p - q;
 	}
 
-	delete[] e0;
-	delete[] e1;
+	delete[] e;
+	delete[] o;
 }
