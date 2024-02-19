@@ -300,7 +300,12 @@ void GraphicsVulkan::StopGraphics() {
 
 void GraphicsVulkan::SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering) {
 	presentMode = (_present_mode_fifo ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR);
-	minImageCount = (_triple_buffering ? 3 : 2);
+	if (presentMode == VK_PRESENT_MODE_FIFO_KHR) {
+		minImageCount = 2;
+	}
+	else {
+		minImageCount = (_triple_buffering ? 3 : 2);
+	}
 
 	RebuildSwapchain();
 

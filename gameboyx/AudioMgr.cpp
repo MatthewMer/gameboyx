@@ -30,8 +30,8 @@ FFT algorithm -> transform signal from time domain into frequency domain (applic
 	of these two components (amplitude) with the signal itself (multiply and integrate, as described by the formula above) delivers the area enclosed by the resulting signal, which also resembles 
 	its "impact". Using Pythagoras on these two values (both components resemble a right triangle in the complex plane) you get the magnitude of the sinusoid, using the 4 quadrant inverse tangent 
 	(atan2(opposite side / adjacent side)) you get its phase. In the FFT this "spiral" rotates clockwise ((e^(i*2*pi*f*t))^-1 = e^(-i*2*pi*f*t)), which has the effekt of morroring the sine component
-	on the t-axis (rotating the circle in the complex plane clockwise), which is directly tied to the phase shift performed during DFT. The point of intersection of this spiral with the 
-	complex plane is therefore cos(0)-i*sin(0) and when adding this complex exponent to the signal (which has its imaginary part set to i*sin(omega*t)=i0) is where the phase shift along the t-axis happens.
+	on the t-axis (rotating the circle in the complex plane clockwise). The point of intersection of this spiral with the complex plane is therefore cos(0)-i*sin(0) and when adding this 
+	complex exponent to the signal (which has its imaginary part set to i*sin(omega*t)=i0) is where the phase shift along the t-axis happens.
 	
 	FFT (which is an optimized version of DFT) splits the samples in half until each one contains 2 values and processes recursively the DFT for each half. The regular FT is actually impossible 
 	to compute because it tests an infinite amount of waves (represented by the resulting complex numbers), starting at 0Hz (DC), to the 1st harmonic, the 2nd harmonic 

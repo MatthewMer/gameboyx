@@ -706,6 +706,7 @@ void GuiMgr::ShowGraphicsSettings() {
 
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
+            if (vsync) { ImGui::BeginDisabled(); }
             ImGui::TextUnformatted("Triple buffering");
             if (ImGui::IsItemHovered()) {
                 if (ImGui::BeginTooltip()) {
@@ -719,6 +720,7 @@ void GuiMgr::ShowGraphicsSettings() {
                 ActionSetSwapchainSettings();
                 was_triple_buffering = tripleBuffering;
             }
+            if (vsync) { ImGui::EndDisabled(); }
 
             ImGui::PopStyleVar();
             ImGui::EndTable();
