@@ -37,6 +37,8 @@ public:
 
 	static void SetFramerateTarget(const int& _target, const bool& _unlimited);
 
+	static void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering);
+
 private:
 	HardwareMgr() = default;
 	~HardwareMgr() = default;

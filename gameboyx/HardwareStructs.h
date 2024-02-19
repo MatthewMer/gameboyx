@@ -55,4 +55,6 @@ struct audio_information {
 struct graphics_settings {
 	int framerateTarget = 0;
 	bool fpsUnlimited = false;
+	bool tripleBuffering = false;
+	bool presentModeFifo = false;
 };

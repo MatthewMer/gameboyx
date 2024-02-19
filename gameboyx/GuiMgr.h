@@ -173,8 +173,10 @@ private:
 	// graphics settings
 	int framerateTarget = 0;
 	bool fpsUnlimited = false;
+	bool tripleBuffering = false;
+	bool vsync = false;
 
-	bool tripleBuffering;
+	bool tripleBufferingEmu;
 
 	void ResetGUI();
 
@@ -219,6 +221,7 @@ private:
 	void ActionGamesSelect(const int& _index);
 	void ActionGamesSelectAll();
 	void ActionSetFramerateTarget();
+	void ActionSetSwapchainSettings();
 
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);

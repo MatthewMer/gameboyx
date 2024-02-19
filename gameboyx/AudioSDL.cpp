@@ -175,7 +175,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 
 			for (int i = 0; i < virt_channels; i++) {
 				if (virt_frequencies_copy[i] != virt_frequencies[i]) {							// in case the signal changed
-					fft(virt_samples[i].data(), (int)virt_samples[i].size());							// perform fft on one period			
+					fft(virt_samples[i].data(), (int)virt_samples[i].size());						// perform fft on one period			
 					for (int i = 0; auto & n : sampling_rate_ratios) {
 						n = (virt_samples[i].size() * virt_frequencies[i]) / sampling_rate;			// get ratio to stretch/compress to fit physical sampling rate
 						i++;

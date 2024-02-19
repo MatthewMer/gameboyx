@@ -46,6 +46,8 @@ GuiMgr::GuiMgr() {
     HardwareMgr::GetGraphicsSettings(graph_settings);
     framerateTarget = graph_settings.framerateTarget;
     fpsUnlimited = graph_settings.fpsUnlimited;
+    tripleBuffering = graph_settings.tripleBuffering;
+    vsync = graph_settings.presentModeFifo;
 
     vhwmgr = VHardwareMgr::getInstance();
 
@@ -637,7 +639,9 @@ void GuiMgr::ShowGraphicsOverlay() {
 }
 
 void GuiMgr::ShowGraphicsSettings() {
-    static bool was_unlimited = false;
+    static bool was_unlimited = fpsUnlimited;
+    static bool was_triple_buffering = tripleBuffering;
+    static bool was_vsync = vsync;
 
     ImGui::SetNextWindowSize(graph_settings_win_size);
 
@@ -649,9 +653,9 @@ void GuiMgr::ShowGraphicsSettings() {
                 ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER);
             }
 
-            //ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
 
-            static const char* title_fps = "fps";
+            // application ******************************************
             ImGui::TableNextColumn();
             if (fpsUnlimited) { ImGui::BeginDisabled(); }
             ImGui::TextUnformatted("Framerate target");
@@ -663,12 +667,11 @@ void GuiMgr::ShowGraphicsSettings() {
             }
             ImGui::TableNextColumn();
                 
-            if (ImGui::SliderInt(title_fps, &framerateTarget, APP_MIN_FRAMERATE, APP_MAX_FRAMERATE)) {
+            if (ImGui::SliderInt("##fps", &framerateTarget, APP_MIN_FRAMERATE, APP_MAX_FRAMERATE)) {
                 ActionSetFramerateTarget();
             }
             if (fpsUnlimited) { ImGui::EndDisabled(); }
 
-            static const char* title_unlimit = "unlimited";
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("Unlimited");
@@ -679,16 +682,49 @@ void GuiMgr::ShowGraphicsSettings() {
                 }
             }
             ImGui::TableNextColumn();
-            ImGui::Checkbox("", &fpsUnlimited);
+            ImGui::Checkbox("##unlimited", &fpsUnlimited);
             if (was_unlimited != fpsUnlimited){
-                was_unlimited = fpsUnlimited;
                 ActionSetFramerateTarget();
+                was_unlimited = fpsUnlimited;
             }
 
-            //ImGui::PopStyleVar();
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("VSync");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("enables vertical synchronization");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+            ImGui::Checkbox("##vsync", &vsync);
+            if (was_vsync != vsync) {
+                ActionSetSwapchainSettings();
+                was_vsync = vsync;
+            }
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Triple buffering");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("enables triple buffering for physical hardware");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+            ImGui::Checkbox("##triple_buffering", &tripleBuffering);
+            if (was_triple_buffering != tripleBuffering) {
+                ActionSetSwapchainSettings();
+                was_triple_buffering = tripleBuffering;
+            }
+
+            ImGui::PopStyleVar();
             ImGui::EndTable();
         }
 
+        // emulation ******************************************
         ImGui::Separator();
         ImGui::TextColored(HIGHLIGHT_COLOR, "Emulation");
         if (ImGui::BeginTable("graphics emu", 2, TABLE_FLAGS_NO_BORDER_OUTER_H)) {
@@ -697,9 +733,8 @@ void GuiMgr::ShowGraphicsSettings() {
                 ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER);
             }
 
-            //ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
 
-            static const char* title_buffering = "buffering";
             ImGui::TableNextColumn();
             ImGui::TextUnformatted("Triple buffering");
             if (ImGui::IsItemHovered()) {
@@ -709,9 +744,9 @@ void GuiMgr::ShowGraphicsSettings() {
                 }
             }
             ImGui::TableNextColumn();
-            ImGui::Checkbox("", &tripleBuffering);
+            ImGui::Checkbox("##triple_buffering_emu", &tripleBufferingEmu);
 
-            //ImGui::PopStyleVar();
+            ImGui::PopStyleVar();
             ImGui::EndTable();
         }
         ImGui::End();
@@ -726,7 +761,7 @@ void GuiMgr::ActionGameStart() {
         if (games.size() > 0) {
             // gather settings
             virtual_graphics_settings graphics_settings = {};
-            graphics_settings.buffering = tripleBuffering ? V_TRIPPLE_BUFFERING : V_DOUBLE_BUFFERING;
+            graphics_settings.buffering = tripleBufferingEmu ? V_TRIPPLE_BUFFERING : V_DOUBLE_BUFFERING;
 
             emulation_settings emu_settings = {};
             emu_settings.debug_enabled = showInstrDebugger;
@@ -934,6 +969,9 @@ void GuiMgr::ActionSetFramerateTarget() {
     HardwareMgr::SetFramerateTarget(framerateTarget, fpsUnlimited);
 }
 
+void GuiMgr::ActionSetSwapchainSettings() {
+    HardwareMgr::SetSwapchainSettings(vsync, tripleBuffering);
+}
 
 
 void GuiMgr::GetBankAndAddressTable(TableBase& _table_obj, int& _bank, int& _address) {

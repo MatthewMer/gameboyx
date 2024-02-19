@@ -20,7 +20,7 @@ public:
 
 	// initialize
 	virtual bool InitGraphics() = 0;
-	virtual bool StartGraphics() = 0;
+	virtual bool StartGraphics(bool& _present_mode_fifo, bool& _triple_buffering) = 0;
 
 	// deinit
 	virtual bool ExitGraphics() = 0;
@@ -39,6 +39,8 @@ public:
 
 	bool InitGraphicsBackend(virtual_graphics_information& _graphics_info);
 	void DestroyGraphicsBackend();
+
+	virtual void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering) = 0;
 
 protected:
 

@@ -258,10 +258,14 @@ bool GraphicsVulkan::ExitGraphics() {
 	return true;
 }
 
-bool GraphicsVulkan::StartGraphics() {
+bool GraphicsVulkan::StartGraphics(bool& _present_mode_fifo, bool& _triple_buffering) {
 	if (!InitSurface()) {
 		return false;
 	}
+
+	presentMode = (_present_mode_fifo ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR);
+	minImageCount = (_triple_buffering ? 3 : 2);
+
 	if (!InitSwapchain(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
 		return false;
 	}
@@ -279,6 +283,9 @@ bool GraphicsVulkan::StartGraphics() {
 	updateFunction = &GraphicsVulkan::UpdateDummy;
 	updateFunctionSubmit = &GraphicsVulkan::UpdateDummy;
 
+	_present_mode_fifo = (presentMode == VK_PRESENT_MODE_FIFO_KHR ? true : false);
+	_triple_buffering = (minImageCount == 3 ? true : false);
+
 	return true;
 }
 
@@ -289,6 +296,16 @@ void GraphicsVulkan::StopGraphics() {
 	DestroyRenderPass();
 	DestroySwapchain(false);
 	DestroySurface();
+}
+
+void GraphicsVulkan::SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering) {
+	presentMode = (_present_mode_fifo ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR);
+	minImageCount = (_triple_buffering ? 3 : 2);
+
+	RebuildSwapchain();
+
+	_present_mode_fifo = (presentMode == VK_PRESENT_MODE_FIFO_KHR ? true : false);
+	_triple_buffering = (minImageCount == 3 ? true : false);
 }
 
 bool GraphicsVulkan::Init2dGraphicsBackend() {
@@ -858,7 +875,7 @@ bool GraphicsVulkan::InitSurface() {
 	}
 }
 
-bool GraphicsVulkan::InitSwapchain(VkImageUsageFlags _flags) {
+bool GraphicsVulkan::InitSwapchain(const VkImageUsageFlags& _flags) {
 	VkBool32 supports_present = 0;
 	if ((vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, familyIndex, surface, &supports_present) != VK_SUCCESS) || !supports_present) {
 		LOG_ERROR("[vulkan] graphics queue doesn't support present");
@@ -893,8 +910,9 @@ bool GraphicsVulkan::InitSwapchain(VkImageUsageFlags _flags) {
 		surface_capabilites.maxImageCount = 8;
 	}
 
-	presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // VK_PRESENT_MODE_FIFO_KHR;
-	minImageCount = 3;
+	if (minImageCount < surface_capabilites.minImageCount) {
+		minImageCount = surface_capabilites.minImageCount;
+	}
 
 	// TODO: look into swapchain settings
 	VkSwapchainCreateInfoKHR swapchain_info;
@@ -910,7 +928,7 @@ bool GraphicsVulkan::InitSwapchain(VkImageUsageFlags _flags) {
 	swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;			// sharing between different queues
 	swapchain_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;	// no transform
 	swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;		// no transparency (opaque)
-	swapchain_info.presentMode = presentMode;								// simple image fifo (vsync)
+	swapchain_info.presentMode = presentMode;								// simple image fifo (vsync) or immediate
 	swapchain_info.clipped = VK_FALSE;										// draw only visible window areas if true (clipping)
 	swapchain_info.oldSwapchain = oldSwapchain;
 	swapchain_info.pNext = nullptr;

@@ -46,7 +46,7 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings) {
 	graphicsMgr = GraphicsMgr::getInstance(&window);
 	if (graphicsMgr != nullptr) {
 		if (!graphicsMgr->InitGraphics()) { return false; }
-		if (!graphicsMgr->StartGraphics()) { return false; }
+		if (!graphicsMgr->StartGraphics(_graphics_settings.presentModeFifo, _graphics_settings.tripleBuffering)) { return false; }
 
 		ImGui::CreateContext();
 		ImGui::StyleColorsDark();
@@ -185,4 +185,8 @@ void HardwareMgr::CheckDelay() {
 
 void HardwareMgr::GetGraphicsSettings(graphics_settings& _graphics_settings) {
 	_graphics_settings = graphicsSettings;
+}
+
+void HardwareMgr::SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering) {
+	graphicsMgr->SetSwapchainSettings(_present_mode_fifo, _triple_buffering);
 }

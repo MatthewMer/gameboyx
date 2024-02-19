@@ -39,6 +39,8 @@ int main(int, char**)
     graphics_settings graph_settings = {};
     graph_settings.framerateTarget = 144;
     graph_settings.fpsUnlimited = false;
+    graph_settings.presentModeFifo = false;
+    graph_settings.tripleBuffering = false;
 
     if (!HardwareMgr::InitHardware(graph_settings))   { return -1; }
 

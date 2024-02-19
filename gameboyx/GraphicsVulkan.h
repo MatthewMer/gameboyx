@@ -94,7 +94,7 @@ public:
 	bool ExitGraphics() override;
 
 	// deinit
-	bool StartGraphics() override;
+	bool StartGraphics(bool& _present_mode_fifo, bool& _triple_buffering) override;
 	void StopGraphics() override;
 
 	// shader compilation
@@ -108,6 +108,8 @@ public:
 
 	// update 3d/2d data
 	void UpdateGpuData() override;
+
+	void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering) override;
 
 private:
 	// constructor/destructor
@@ -127,15 +129,15 @@ private:
 	VkPhysicalDeviceMemoryProperties devMemProps = {};
 
 	// swapchain
+	uint32_t minImageCount = 2;
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE;
 	VkFormat swapchainFormat = {};
 	VkColorSpaceKHR colorSpace = {};
 	std::vector<VkImage> images;
-	uint32_t minImageCount = 0;
 	VkPresentModeKHR presentMode = {};
 	std::vector<VkImageView> imageViews;
-
+	
 	// context
 	VkSurfaceKHR surface = {};
 	VkInstance vulkanInstance = VK_NULL_HANDLE;
@@ -193,7 +195,7 @@ private:
 	bool InitVulkanInstance(std::vector<const char*>& _sdl_extensions);
 	bool InitPhysicalDevice();
 	bool InitLogicalDevice(std::vector<const char*>& _device_extensions);
-	bool InitSwapchain(VkImageUsageFlags _flags);
+	bool InitSwapchain(const VkImageUsageFlags& _flags);
 	bool InitSurface();
 	bool InitRenderPass();
 	bool InitFrameBuffers();
