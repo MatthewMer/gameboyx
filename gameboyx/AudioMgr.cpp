@@ -25,11 +25,12 @@ FFT algorithm -> transform signal from time domain into frequency domain (applic
 	FT: X(f) = integral(t=-infinity,infinity) x(t) * e^(-i*2*pi*f*t) dt, where x(t) is the signal and e^(-i*2*pi*f*t) the complex exponential (polar form: e^(j*phi),
 	which can be directly translated into the trigonometric form with eulers formula: e^(j*phi) = cos(phi) + j * sin(phi)) which contains the cosine component in the real part
 	and the sine component in the imaginary part. The complex exponential can be viewed as a spiral coming out of the imaginary plane, rotating counter clockwise around the 
-	t-axis with the radius omega*t (omega=2*pi*f) or amplitude, starting at cos(0)-i*sin(0) = 1. When plotting this spiral to the imaginary axis you end up with the sine component,
+	t-axis with the radius omega*t (omega=2*pi*f) or amplitude, starting at cos(0)+i*sin(0) = 1. When plotting this spiral to the imaginary axis you end up with the sine component,
 	when plotting it to the real axis you get the cosine component. These two components resemble each sinusoid in the frequency domain the input signal is made off. The convolution
 	of these two components (amplitude) with the signal itself (multiply and integrate, as described by the formula above) delivers the area enclosed by the resulting signal, which also resembles 
 	its "impact". Using Pythagoras on these two values (both components resemble a right triangle in the complex plane) you get the magnitude of the sinusoid, using the 4 quadrant inverse tangent 
-	(atan2(opposite side / adjacent side)) you get its phase.
+	(atan2(opposite side / adjacent side)) you get its phase. In the FFT this "spiral" rotates clockwise ((e^(i*2*pi*f*t))^-1 = e^(-i*2*pi*f*t)), which has the effekt of morroring the sine component
+	on the t-axis (rotating the circle in the complex plane clockwise), the point of intersection of this spiral with the complex plane is therefore cos(0)-i*sin(0).
 	
 	FFT (which is an optimized version of DFT) splits the samples in half until each one contains 2 values and processes recursively the DFT for each half. The regular FT is actually impossible 
 	to compute because it tests an infinite amount of waves (represented by the resulting complex numbers), starting at 0Hz (DC), to the 1st harmonic, the 2nd harmonic 
