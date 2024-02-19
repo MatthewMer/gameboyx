@@ -701,6 +701,7 @@ void GuiMgr::ShowGraphicsSettings() {
             ImGui::Checkbox("##vsync", &vsync);
             if (was_vsync != vsync) {
                 ActionSetSwapchainSettings();
+                was_triple_buffering = tripleBuffering;
                 was_vsync = vsync;
             }
 
@@ -719,6 +720,7 @@ void GuiMgr::ShowGraphicsSettings() {
             if (was_triple_buffering != tripleBuffering) {
                 ActionSetSwapchainSettings();
                 was_triple_buffering = tripleBuffering;
+                was_vsync = vsync;
             }
             if (vsync) { ImGui::EndDisabled(); }
 

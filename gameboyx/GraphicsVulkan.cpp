@@ -307,7 +307,9 @@ void GraphicsVulkan::SetSwapchainSettings(bool& _present_mode_fifo, bool& _tripl
 		minImageCount = (_triple_buffering ? 3 : 2);
 	}
 
+	unique_lock<mutex> lock_queue(mutQueue);
 	RebuildSwapchain();
+	lock_queue.unlock();
 
 	_present_mode_fifo = (presentMode == VK_PRESENT_MODE_FIFO_KHR ? true : false);
 	_triple_buffering = (minImageCount == 3 ? true : false);
@@ -461,7 +463,7 @@ void GraphicsVulkan::RenderFrame() {
 	commandbuffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	commandbuffer_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	{
-		VkCommandBuffer commandBuffer = commandBuffers[frame_index];
+		VkCommandBuffer& commandBuffer = commandBuffers[frame_index];
 		if (vkBeginCommandBuffer(commandBuffer, &commandbuffer_info) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] begin command buffer");
 		}
@@ -574,9 +576,19 @@ void GraphicsVulkan::UpdateGpuData() {
 void GraphicsVulkan::UpdateTex2d() {
 	int& update_index = tex2dData.update_index;
 
-	if (vkWaitForFences(device, 1, &tex2dData.update_fence[update_index], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+	VkResult result = vkWaitForFences(device, 1, &tex2dData.update_fence[update_index], VK_TRUE, 0);
+	switch (result) {
+	case VK_TIMEOUT:
+		return;
+		break;
+	case VK_SUCCESS:
+		break;
+	default:
 		LOG_ERROR("[vulkan] wait for texture2d update fence");
+		return;
+		break;
 	}
+
 	if (vkResetFences(device, 1, &tex2dData.update_fence[update_index]) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] reset texture2d update fence");
 	}
@@ -656,6 +668,7 @@ void GraphicsVulkan::UpdateTex2dSubmit() {
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &tex2dData.command_buffer[0];
+
 		std::unique_lock<mutex> lock_queue(mutQueue);
 		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[0]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
@@ -667,6 +680,7 @@ void GraphicsVulkan::UpdateTex2dSubmit() {
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &tex2dData.command_buffer[1];
+
 		std::unique_lock<mutex> lock_queue(mutQueue);
 		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[1]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
@@ -678,6 +692,7 @@ void GraphicsVulkan::UpdateTex2dSubmit() {
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &tex2dData.command_buffer[2];
+
 		std::unique_lock<mutex> lock_queue(mutQueue);
 		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[2]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] queue submit texture2d update");
@@ -1434,14 +1449,13 @@ bool GraphicsVulkan::InitImage(vulkan_image& _image, u32 _width, u32 _height, Vk
 
 void GraphicsVulkan::RebuildSwapchain() {
 	WaitIdle();
+	DestroyFrameBuffers();
+	
 	oldSwapchain = swapchain;
 	InitSwapchain(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 	DestroySwapchain(true);
 
-	DestroyFrameBuffers();
-	DestroyRenderPass();
-
-	InitRenderPass();
+	
 	InitFrameBuffers();
 }
 
