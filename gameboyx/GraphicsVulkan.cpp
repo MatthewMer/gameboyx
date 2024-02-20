@@ -579,6 +579,18 @@ void GraphicsVulkan::UpdateGpuData() {
 void GraphicsVulkan::UpdateTex2d() {
 	int& update_index = tex2dData.update_index;
 
+	switch (update_index) {
+	case 0:
+		if (tex2dData.submit_cmdbuffer_0.load()) { return; }
+		break;
+	case 1:
+		if (tex2dData.submit_cmdbuffer_1.load()) { return; }
+		break;
+	case 2:
+		if (tex2dData.submit_cmdbuffer_2.load()) { return; }
+		break;
+	}
+
 	VkResult result = vkWaitForFences(device, 1, &tex2dData.update_fence[update_index], VK_TRUE, 0);
 	switch (result) {
 	case VK_TIMEOUT:
