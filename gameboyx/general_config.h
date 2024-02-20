@@ -38,7 +38,7 @@ inline const std::string SAVE_EXT = ".sav";
 *********************************************************************************************************** */
 // uncomment this define to output graphics backend error messages and to activate the debug callback
 #ifndef GRAPHICS_DEBUG
-//#define GRAPHICS_DEBUG
+#define GRAPHICS_DEBUG
 #endif
 
 #ifdef GRAPHICS_DEBUG

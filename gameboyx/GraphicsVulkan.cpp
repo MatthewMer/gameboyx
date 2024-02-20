@@ -436,23 +436,25 @@ void GraphicsVulkan::Destroy2dGraphicsBackend() {
 void GraphicsVulkan::RenderFrame() {
 	u32 image_index = 0;
 	static u32 frame_index = 0;
+	static bool rebuild = false;
 
 	// wait for fence that signals processing of submitted command buffer finished
 	if (vkWaitForFences(device, 1, &renderFences[frame_index], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
 		LOG_ERROR("[vulkan] wait for fences");
-	}
-	if (vkResetFences(device, 1, &renderFences[frame_index]) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] reset fences");
+		return;
 	}
 
 	if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphores[frame_index], 0, &image_index); result != VK_SUCCESS) {
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-			RebuildSwapchain();
-			RecalcTex2dScaleMatrix();
+		if (result == VK_SUBOPTIMAL_KHR) {
+			rebuild = true;
 		} else {
 			LOG_ERROR("[vulkan] acquire image from swapchain");
+			return;
 		}
-		return;
+	}
+
+	if (vkResetFences(device, 1, &renderFences[frame_index]) != VK_SUCCESS) {
+		LOG_ERROR("[vulkan] reset fences");
 	}
 
 	if (vkResetCommandPool(device, commandPools[frame_index], 0) != VK_SUCCESS) {
@@ -517,9 +519,10 @@ void GraphicsVulkan::RenderFrame() {
 		present_info.waitSemaphoreCount = 1;
 		present_info.pWaitSemaphores = &releaseSemaphores[frame_index];
 		if (VkResult result = vkQueuePresentKHR(queue, &present_info); result != VK_SUCCESS) {
-			if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+			if (rebuild || result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 				RebuildSwapchain();
 				RecalcTex2dScaleMatrix();
+				rebuild = false;
 			}
 			else {
 				LOG_ERROR("[vulkan] present result");
@@ -1449,13 +1452,15 @@ bool GraphicsVulkan::InitImage(vulkan_image& _image, u32 _width, u32 _height, Vk
 
 void GraphicsVulkan::RebuildSwapchain() {
 	WaitIdle();
+
 	DestroyFrameBuffers();
+	//DestroyRenderPass();
 	
 	oldSwapchain = swapchain;
 	InitSwapchain(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 	DestroySwapchain(true);
 
-	
+	//InitRenderPass();
 	InitFrameBuffers();
 }
 
