@@ -311,7 +311,7 @@ void GameboyCPU::TickTimers() {
         if (!apuDivBitOverflowCur && apuDivBitOverflowPrev) {
             tick_apu = true;
         }
-        apuDivBitOverflowCur = apuDivBitOverflowPrev;
+        apuDivBitOverflowPrev = apuDivBitOverflowCur;
     }
 
     currentTicks += TICKS_PER_MC;
