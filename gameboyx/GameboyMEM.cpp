@@ -468,6 +468,15 @@ void GameboyMEM::WriteIORegister(const u8& _data, const u16& _addr) {
     case NR51_ADDR:
         SetAPUChannelPanning(_data);
         break;
+    case NR50_ADDR:
+        SetAPUMasterVolume(_data);
+        break;
+    case NR10_ADDR:
+        SetAPUCh1Sweep(_data);
+        break;
+    case NR11_ADDR:
+        SetAPUCh1TimerDutyCycle(_data);
+        break;
     default:
         IO[_addr - IO_OFFSET] = _data;
         // TODO: remove, only for testing with blargg's instruction test rom
@@ -490,10 +499,6 @@ void GameboyMEM::SetIO(const u16& _addr, const u8& _data) {
     }
 
     IO[_addr - IO_OFFSET] = _data;
-}
-
-u8* GameboyMEM::GetIOPtr(const u16& _addr) {
-    return IO.data() + (_addr - IO_OFFSET);
 }
 
 void GameboyMEM::CopyDataToRAM(const vector<char>& _data) {
@@ -822,6 +827,7 @@ void GameboyMEM::SetWRAMBank(const u8& _data) {
 *********************************************************************************************************** */
 void GameboyMEM::SetAPUMasterControl(const u8& _data) {
     IO[NR52_ADDR - IO_OFFSET] = (IO[NR52_ADDR - IO_OFFSET] & ~APU_ENABLE_BIT) | (_data & APU_ENABLE_BIT);
+
     sound_ctx.apuEnable = _data & APU_ENABLE_BIT ? true : false;
 }
 
@@ -840,10 +846,25 @@ void GameboyMEM::SetAPUMasterVolume(const u8& _data) {
 
     sound_ctx.masterVolumeRight = (float)VOLUME_MAP.at(_data & MASTER_VOLUME_RIGHT);
     sound_ctx.masterVolumeLeft = (float)VOLUME_MAP.at((_data & MASTER_VOLUME_LEFT) >> 4);
+    sound_ctx.outRightEnabled = _data & 0x08 ? true : false;
+    sound_ctx.outLeftEnabled = _data & 0x80 ? true : false;
 }
 
 // channel 1
+void GameboyMEM::SetAPUCh1Sweep(const u8& _data) {
+    IO[NR10_ADDR - IO_OFFSET] = _data;
 
+    sound_ctx.ch1Pace = (_data & CH1_SWEEP_PACE) >> 4;
+    sound_ctx.ch1DirSubtract = (_data & CH1_SWEEP_DIR ? true : false);
+    sound_ctx.ch1PeriodStep = _data & CH1_SWEEP_STEP;
+}
+
+void GameboyMEM::SetAPUCh1TimerDutyCycle(const u8& _data) {
+    IO[NR11_ADDR - IO_OFFSET] = _data;
+
+    sound_ctx.ch1DutyCycleIndex = (_data & CH_1_2_DUTY_CYCLE) >> 6;
+    sound_ctx.ch1LengthTimer = _data & CH_1_2_LENGTH_TIMER;
+}
 
 /* ***********************************************************************************************************
     MEMORY DEBUGGER

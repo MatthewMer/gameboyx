@@ -266,6 +266,7 @@ void GameboyCPU::TickTimers() {
     bool div_low_byte_selected = machine_ctx->timaDivMask < 0x100;
     u8& div = mem_instance->GetIO(DIV_ADDR);
     bool tima_enabled = mem_instance->GetIO(TAC_ADDR) & TAC_CLOCK_ENABLE;
+    bool tick_apu = false;
 
     if (machine_ctx->tima_reload_cycle) {
         div = mem_instance->GetIO(TMA_ADDR);
@@ -306,11 +307,11 @@ void GameboyCPU::TickTimers() {
         }
         timaEnAndDivOverflowPrev = timaEnAndDivOverflowCur;
 
-        /*  Would be more precise, but not necessary
-        if (sound_ctx->divApuBitWasHigh && !sound_ctx->divApuBitHigh) {
-            sound_instance->ProcessAPU(1);
+        apuDivBitOverflowCur = machine_ctx->div_low_byte & machine_ctx->apuDivMask ? true : false;
+        if (!apuDivBitOverflowCur && apuDivBitOverflowPrev) {
+            tick_apu = true;
         }
-        */
+        apuDivBitOverflowCur = apuDivBitOverflowPrev;
     }
 
     currentTicks += TICKS_PER_MC;
@@ -318,7 +319,9 @@ void GameboyCPU::TickTimers() {
     // peripherals directly bound to CPUs timer system (master clock) (PPU not affected by speed mode)
     int ticks = TICKS_PER_MC / machine_ctx->currentSpeed;
     graphics_instance->ProcessGPU(ticks);
-    sound_instance->ProcessAPU(TICKS_PER_MC);
+    if (tick_apu) {
+        sound_instance->ProcessAPU(1);
+    }
 }
 
 void GameboyCPU::IncrementTIMA() {
@@ -795,6 +798,8 @@ void GameboyCPU::STOP() {
     if (machine_ctx->speed_switch_requested) {
         machine_ctx->currentSpeed ^= 3;
         machine_ctx->speed_switch_requested = false;
+
+        machine_ctx->apuDivMask = (machine_ctx->currentSpeed == 2 ? APU_DIV_OVERFLOW_BIT_5 : APU_DIV_OVERFLOW_BIT_4);
 
         /*
         // set new APU bitmask

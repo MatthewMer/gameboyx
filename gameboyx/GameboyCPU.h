@@ -161,6 +161,8 @@ private:
 
 	bool timaEnAndDivOverflowPrev = false;
 	bool timaEnAndDivOverflowCur = false;
+	bool apuDivBitOverflowPrev = false;
+	bool apuDivBitOverflowCur = false;
 
 	// ISR
 	void isr_push(const u16& _isr_handler);

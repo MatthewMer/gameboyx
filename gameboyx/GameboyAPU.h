@@ -1,5 +1,6 @@
 #pragma once
 #include "BaseAPU.h"
+#include "GameboyMEM.h"
 
 #include "gameboy_defines.h"
 #include <vector>
@@ -15,6 +16,9 @@ public:
 private:
 	// constructor
 	GameboyAPU(BaseCartridge* _cartridge) {
+		memInstance = (GameboyMEM*)BaseMEM::getInstance();
+		soundCtx = memInstance->GetSoundContext();
+
 		virtual_audio_information virt_audio_info = {};
 		virt_audio_info.channels = APU_CHANNELS_NUM;
 		virt_audio_info.sound_instance = this;
@@ -25,5 +29,10 @@ private:
 		HardwareMgr::DestroyAudioBackend();
 	}
 
-	u8 divApuCounter = 0;
+	int envelopeSweepCounter = 0;
+	int soundLengthCounter = 0;
+	int ch1FrequencyCounter = 0;
+
+	GameboyMEM* memInstance = nullptr;
+	sound_context* soundCtx = nullptr;
 };

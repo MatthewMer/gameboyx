@@ -336,6 +336,31 @@
 #define MASTER_VOLUME_RIGHT             0x07
 #define MASTER_VOLUME_LEFT              0x70
 
+#define PANNING_RIGHT_CH1               0
+#define PANNING_RIGHT_CH2               1
+#define PANNING_RIGHT_CH3               2
+#define PANNING_RIGHT_CH4               3
+#define PANNING_LEFT_CH1                4
+#define PANNING_LEFT_CH2                5
+#define PANNING_LEFT_CH3                6
+#define PANNING_LEFT_CH4                7
+
+#define APU_DIV_OVERFLOW_BIT_4          0x10        // bit 4
+#define APU_DIV_OVERFLOW_BIT_5          0x20        // bit 5
+
+#define ENVELOPE_SWEEP_TICK_RATE        8
+#define SOUND_LENGTH_TICK_RATE          2
+#define CH1_FREQU_SWEEP_RATE            4
+
+#define CH1_SWEEP_PACE                  0x70
+#define CH1_SWEEP_DIR                   0x08
+#define CH1_SWEEP_STEP                  0x07
+
+#define CH_1_2_LENGTH_TIMER             0x3F
+#define CH_1_2_DUTY_CYCLE               0xC0
+
+#define CH_1_2_TIMER_OVERFLOW           0x40
+
 /* ***********************************************************************************************************
     REGISTERS INITIAL STATES
 *********************************************************************************************************** */

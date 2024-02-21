@@ -40,6 +40,7 @@ struct machine_context {
 	bool tima_reload_cycle = false;
 	bool tima_overflow_cycle = false;
 	bool tima_reload_if_write = false;
+	u8 apuDivMask = 0x10;
 
 	int rom_bank_num = 0;
 	int ram_bank_num = 0;
@@ -153,19 +154,39 @@ inline const std::unordered_map<u8, float> VOLUME_MAP = {
 };
 
 struct sound_context {
-	// master control
-	bool apuEnable = true;
-	bool ch1PulseEnable = false;
-	bool ch2PulseEnable = false;
-	bool ch3WaveEnable = false;
-	bool ch4NoiseEnable = false;
+	// master control	NR52
+	bool apuEnable = true;					// set by CPU
+	bool ch1Enable = false;					// set by APU
+	bool ch2Enable = false;					// as before
+	bool ch3Enable = false;					// ...
+	bool ch4Enable = false;
 
-	// channel panning
-	bool channelPanning[8] = {};				// CH1 right, CH2 right, ..., CH3 left, CH4 left
+	// channel panning	NR51
+	// Bit order:
+	// CH1 right
+	// CH2 right
+	// CH3 right
+	// CH4 right
+	// CH1 left
+	// CH2 left
+	// CH3 left
+	// CH4 left
+	bool channelPanning[8] = {};				
 
-	// volume
+	// master volume	NR50
 	float masterVolumeRight = 1.f;
 	float masterVolumeLeft = 1.f;
+	bool outRightEnabled = false;
+	bool outLeftEnabled = false;
+
+	// channel 1
+	// sweep				NR10
+	int ch1Pace = 0;
+	bool ch1DirSubtract = false;
+	int ch1PeriodStep = 0;
+	// timer, duty cycle	NR11
+	int ch1LengthTimer = 0;
+	int ch1DutyCycleIndex = 0;
 
 	//u8 divApuBitMask = DIV_APU_SINGLESPEED_BIT;
 	//u8 divApuCounter = 0;
@@ -231,7 +252,6 @@ public:
 	void RequestInterrupts(const u8& _isr_flags) override;
 	u8& GetIO(const u16& _addr);
 	void SetIO(const u16& _addr, const u8& _data);
-	u8* GetIOPtr(const u16& _addr);
 	void CopyDataToRAM(const std::vector<char>& _data);
 	void CopyDataFromRAM(std::vector<char>& _data) const;
 
@@ -302,6 +322,9 @@ private:
 	void SetAPUMasterControl(const u8& _data);
 	void SetAPUChannelPanning(const u8& _data);
 	void SetAPUMasterVolume(const u8& _data);
+
+	void SetAPUCh1Sweep(const u8& _data);
+	void SetAPUCh1TimerDutyCycle(const u8& _data);
 
 	// memory cpu context
 	machine_context machine_ctx = machine_context();
