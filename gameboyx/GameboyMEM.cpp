@@ -477,6 +477,9 @@ void GameboyMEM::WriteIORegister(const u8& _data, const u16& _addr) {
     case NR11_ADDR:
         SetAPUCh1TimerDutyCycle(_data);
         break;
+    case NR12_ADDR:
+        SetAPUCh1Envelope(_data);
+        break;
     default:
         IO[_addr - IO_OFFSET] = _data;
         // TODO: remove, only for testing with blargg's instruction test rom
@@ -854,9 +857,9 @@ void GameboyMEM::SetAPUMasterVolume(const u8& _data) {
 void GameboyMEM::SetAPUCh1Sweep(const u8& _data) {
     IO[NR10_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.ch1Pace = (_data & CH1_SWEEP_PACE) >> 4;
-    sound_ctx.ch1DirSubtract = (_data & CH1_SWEEP_DIR ? true : false);
-    sound_ctx.ch1PeriodStep = _data & CH1_SWEEP_STEP;
+    sound_ctx.ch1SweepPace = (_data & CH1_SWEEP_PACE) >> 4;
+    sound_ctx.ch1SweepDirSubtract = (_data & CH1_SWEEP_DIR ? true : false);
+    sound_ctx.ch1SweepPeriodStep = _data & CH1_SWEEP_STEP;
 }
 
 void GameboyMEM::SetAPUCh1TimerDutyCycle(const u8& _data) {
@@ -864,6 +867,14 @@ void GameboyMEM::SetAPUCh1TimerDutyCycle(const u8& _data) {
 
     sound_ctx.ch1DutyCycleIndex = (_data & CH_1_2_DUTY_CYCLE) >> 6;
     sound_ctx.ch1LengthTimer = _data & CH_1_2_LENGTH_TIMER;
+}
+
+void GameboyMEM::SetAPUCh1Envelope(const u8& _data) {
+    IO[NR12_ADDR - IO_OFFSET] = _data;
+
+    sound_ctx.ch1EnvelopeVolume = (_data & CH_1_2_ENV_VOLUME) >> 4;
+    sound_ctx.ch1EnvelopeIncrease = (_data & CH_1_2_ENV_DIR ? true : false);
+    sound_ctx.ch1EnvelopePace = _data & CH_1_2_ENV_PACE;
 }
 
 /* ***********************************************************************************************************

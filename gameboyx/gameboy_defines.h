@@ -359,6 +359,10 @@
 #define CH_1_2_LENGTH_TIMER             0x3F
 #define CH_1_2_DUTY_CYCLE               0xC0
 
+#define CH_1_2_ENV_VOLUME               0xF0
+#define CH_1_2_ENV_DIR                  0x08
+#define CH_1_2_ENV_PACE                 0x07
+
 #define CH_1_2_TIMER_OVERFLOW           0x40
 
 /* ***********************************************************************************************************

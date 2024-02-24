@@ -180,13 +180,17 @@ struct sound_context {
 	bool outLeftEnabled = false;
 
 	// channel 1
-	// sweep				NR10
-	int ch1Pace = 0;
-	bool ch1DirSubtract = false;
-	int ch1PeriodStep = 0;
-	// timer, duty cycle	NR11
+	// sweep						NR10
+	int ch1SweepPace = 0;
+	bool ch1SweepDirSubtract = false;
+	int ch1SweepPeriodStep = 0;
+	// timer, duty cycle			NR11
 	int ch1LengthTimer = 0;
 	int ch1DutyCycleIndex = 0;
+	// envelope						NR12
+	int ch1EnvelopeVolume = 0;
+	bool ch1EnvelopeIncrease = false;
+	int ch1EnvelopePace = 0;
 
 	//u8 divApuBitMask = DIV_APU_SINGLESPEED_BIT;
 	//u8 divApuCounter = 0;
@@ -325,6 +329,7 @@ private:
 
 	void SetAPUCh1Sweep(const u8& _data);
 	void SetAPUCh1TimerDutyCycle(const u8& _data);
+	void SetAPUCh1Envelope(const u8& _data);
 
 	// memory cpu context
 	machine_context machine_ctx = machine_context();
