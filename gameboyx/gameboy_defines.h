@@ -345,8 +345,8 @@
 #define PANNING_LEFT_CH3                6
 #define PANNING_LEFT_CH4                7
 
-#define APU_DIV_OVERFLOW_BIT_4          0x10        // bit 4
-#define APU_DIV_OVERFLOW_BIT_5          0x20        // bit 5
+#define APU_DIV_BIT_SINGLESPEED          0x10        // bit 4
+#define APU_DIV_BIT_DOUBLESPEED          0x20        // bit 5
 
 #define ENVELOPE_SWEEP_TICK_RATE        8
 #define SOUND_LENGTH_TICK_RATE          2
@@ -363,7 +363,19 @@
 #define CH_1_2_ENV_DIR                  0x08
 #define CH_1_2_ENV_PACE                 0x07
 
+#define CH_1_2_PERIOD_LOW               0xFF
+#define CH_1_2_PERIOD_HIGH              0x07
+
+#define CH_1_2_CTRL_TRIGGER             0x80
+#define CH_1_2_CTRL_LENGTH_EN           0x40
+
 #define CH_1_2_TIMER_OVERFLOW           0x40
+
+#define CH_1_2_PERIOD_FLIP              0x800
+#define CH_1_2_PERIOD_CLOCK             0x20000
+#define CH_1_2_PERIOD_THRESHOLD         0x7FF
+
+#define CH_LENGTH_TIMER_THRESHOLD       64
 
 /* ***********************************************************************************************************
     REGISTERS INITIAL STATES

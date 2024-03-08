@@ -109,7 +109,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 	const int virt_channels = _virt_audio_info->channels;
 
 	// filled with samples per period of virtual channels
-	std::vector<std::vector<complex>> virt_samples = std::vector<std::vector<complex>>(virt_channels);
+	std::vector<std::vector<float>> virt_samples = std::vector<std::vector<float>>(virt_channels);
 	std::vector<int> virt_frequencies = std::vector<int>(virt_channels);
 	std::vector<int> virt_frequencies_copy = std::vector<int>(virt_channels);
 
@@ -171,11 +171,11 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 		// get samples for each channel of virtual hardware
 		if (region_1_size > 0) {
 			// get samples per period for all channels
-			sound_instance->SampleAPU(virt_samples, virt_frequencies);
+			//sound_instance->SampleAPU(virt_samples, virt_frequencies);
 
 			for (int i = 0; i < virt_channels; i++) {
 				if (virt_frequencies_copy[i] != virt_frequencies[i]) {							// in case the signal changed
-					fft(virt_samples[i].data(), (int)virt_samples[i].size());						// perform fft on one period			
+					//fft(virt_samples[i].data(), (int)virt_samples[i].size());						// perform fft on one period			
 					for (int i = 0; auto & n : sampling_rate_ratios) {
 						n = (virt_samples[i].size() * virt_frequencies[i]) / sampling_rate;			// get ratio to stretch/compress to fit physical sampling rate
 						i++;

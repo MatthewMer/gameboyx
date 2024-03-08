@@ -40,7 +40,7 @@ struct machine_context {
 	bool tima_reload_cycle = false;
 	bool tima_overflow_cycle = false;
 	bool tima_reload_if_write = false;
-	u8 apuDivMask = 0x10;
+	u8 apuDivMask = APU_DIV_BIT_SINGLESPEED;		// singlespeedmode
 
 	int rom_bank_num = 0;
 	int ram_bank_num = 0;
@@ -156,10 +156,10 @@ inline const std::unordered_map<u8, float> VOLUME_MAP = {
 struct sound_context {
 	// master control	NR52
 	bool apuEnable = true;					// set by CPU
-	bool ch1Enable = false;					// set by APU
-	bool ch2Enable = false;					// as before
-	bool ch3Enable = false;					// ...
-	bool ch4Enable = false;
+	bool ch1EnableFlag = false;				// set by APU
+	bool ch2EnableFlag = false;				// as before
+	bool ch3EnableFlag = false;				// ...
+	bool ch4EnableFlag = false;
 
 	// channel panning	NR51
 	// Bit order:
@@ -191,6 +191,12 @@ struct sound_context {
 	int ch1EnvelopeVolume = 0;
 	bool ch1EnvelopeIncrease = false;
 	int ch1EnvelopePace = 0;
+	// period						NR13
+	int ch1Period = 0;
+	float ch1Frequency = 1.f;
+	// period + ctrl				NR14
+	bool ch1LengthEnable = false;
+	bool ch1Enable = false;
 
 	//u8 divApuBitMask = DIV_APU_SINGLESPEED_BIT;
 	//u8 divApuCounter = 0;
@@ -330,6 +336,8 @@ private:
 	void SetAPUCh1Sweep(const u8& _data);
 	void SetAPUCh1TimerDutyCycle(const u8& _data);
 	void SetAPUCh1Envelope(const u8& _data);
+	void SetAPUCh1PeriodLow(const u8& _data);
+	void SetAPUCh1PeriodHighControl(const u8& _data);
 
 	// memory cpu context
 	machine_context machine_ctx = machine_context();

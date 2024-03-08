@@ -480,6 +480,12 @@ void GameboyMEM::WriteIORegister(const u8& _data, const u16& _addr) {
     case NR12_ADDR:
         SetAPUCh1Envelope(_data);
         break;
+    case NR13_ADDR:
+        SetAPUCh1PeriodLow(_data);
+        break;
+    case NR14_ADDR:
+        SetAPUCh1PeriodHighControl(_data);
+        break;
     default:
         IO[_addr - IO_OFFSET] = _data;
         // TODO: remove, only for testing with blargg's instruction test rom
@@ -876,6 +882,26 @@ void GameboyMEM::SetAPUCh1Envelope(const u8& _data) {
     sound_ctx.ch1EnvelopeIncrease = (_data & CH_1_2_ENV_DIR ? true : false);
     sound_ctx.ch1EnvelopePace = _data & CH_1_2_ENV_PACE;
 }
+
+void GameboyMEM::SetAPUCh1PeriodLow(const u8& _data) {
+    IO[NR13_ADDR - IO_OFFSET] = _data;
+
+    sound_ctx.ch1Period = (sound_ctx.ch1Period & ~((int)CH_1_2_PERIOD_LOW)) | _data;
+    sound_ctx.ch1Frequency = CH_1_2_PERIOD_CLOCK / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period);
+}
+
+void GameboyMEM::SetAPUCh1PeriodHighControl(const u8& _data) {
+    IO[NR14_ADDR - IO_OFFSET] = _data;
+
+    sound_ctx.ch1Enable = _data & CH_1_2_CTRL_TRIGGER ? true : false;
+    sound_ctx.ch1LengthEnable = _data & CH_1_2_CTRL_LENGTH_EN ? true : false;
+
+    sound_ctx.ch1Period = (sound_ctx.ch1Period & ~((int)CH_1_2_PERIOD_HIGH << 8)) | ((int)_data << 8);
+    sound_ctx.ch1Frequency = CH_1_2_PERIOD_CLOCK / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period);
+
+    //sound_ctx.ch1LengthAltered = true;
+}
+
 
 /* ***********************************************************************************************************
     MEMORY DEBUGGER

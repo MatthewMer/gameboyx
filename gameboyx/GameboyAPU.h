@@ -11,7 +11,7 @@ public:
 
 	// members
 	void ProcessAPU(const int& _ticks) override;
-	void SampleAPU(std::vector<std::vector<complex>>& _data, std::vector<int>& _frequencies) override;
+	void SampleAPU(std::vector<std::vector<float>> _data, const int& _samples, int* _sampling_rates) override;
 
 private:
 	// constructor
@@ -32,6 +32,14 @@ private:
 	int envelopeSweepCounter = 0;
 	int soundLengthCounter = 0;
 	int ch1FrequencyCounter = 0;
+
+	int ch1FrequencySweepPaceCounter = 0;
+	int ch1SweepPace = 0;
+	bool ch1SweepEnabled = false;
+	int ch1LengthTimer = 0;
+	int ch1LengthTimerInitialValue = 0;
+	void ch1PeriodSweep();
+	void ch1TickLengthTimer();
 
 	GameboyMEM* memInstance = nullptr;
 	sound_context* soundCtx = nullptr;

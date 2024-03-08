@@ -266,7 +266,6 @@ void GameboyCPU::TickTimers() {
     bool div_low_byte_selected = machine_ctx->timaDivMask < 0x100;
     u8& div = mem_instance->GetIO(DIV_ADDR);
     bool tima_enabled = mem_instance->GetIO(TAC_ADDR) & TAC_CLOCK_ENABLE;
-    bool tick_apu = false;
 
     if (machine_ctx->tima_reload_cycle) {
         div = mem_instance->GetIO(TMA_ADDR);
@@ -291,7 +290,11 @@ void GameboyCPU::TickTimers() {
                 div++;
             }
 
-            //sound_ctx->divApuBitHigh = (div & sound_ctx->divApuBitMask ? true : false);
+            apuDivBitOverflowCur = div & machine_ctx->apuDivMask ? true : false;
+            if (!apuDivBitOverflowCur && apuDivBitOverflowPrev) {
+                sound_instance->ProcessAPU(1);
+            }
+            apuDivBitOverflowPrev = apuDivBitOverflowCur;
         } else {
             machine_ctx->div_low_byte++;
         }
@@ -306,12 +309,6 @@ void GameboyCPU::TickTimers() {
             IncrementTIMA();
         }
         timaEnAndDivOverflowPrev = timaEnAndDivOverflowCur;
-
-        apuDivBitOverflowCur = machine_ctx->div_low_byte & machine_ctx->apuDivMask ? true : false;
-        if (!apuDivBitOverflowCur && apuDivBitOverflowPrev) {
-            tick_apu = true;
-        }
-        apuDivBitOverflowPrev = apuDivBitOverflowCur;
     }
 
     currentTicks += TICKS_PER_MC;
@@ -319,9 +316,6 @@ void GameboyCPU::TickTimers() {
     // peripherals directly bound to CPUs timer system (master clock) (PPU not affected by speed mode)
     int ticks = TICKS_PER_MC / machine_ctx->currentSpeed;
     graphics_instance->ProcessGPU(ticks);
-    if (tick_apu) {
-        sound_instance->ProcessAPU(1);
-    }
 }
 
 void GameboyCPU::IncrementTIMA() {
@@ -799,19 +793,8 @@ void GameboyCPU::STOP() {
         machine_ctx->currentSpeed ^= 3;
         machine_ctx->speed_switch_requested = false;
 
-        machine_ctx->apuDivMask = (machine_ctx->currentSpeed == 2 ? APU_DIV_OVERFLOW_BIT_5 : APU_DIV_OVERFLOW_BIT_4);
-
-        /*
-        // set new APU bitmask
-        switch (machine_ctx->currentSpeed) {
-        case 1:
-            sound_ctx->divApuBitMask = DIV_APU_SINGLESPEED_BIT;
-            break;
-        case 2:
-            sound_ctx->divApuBitMask = DIV_APU_DOUBLESPEED_BIT;
-            break;
-        }
-        */
+        // selected bit ticks at 1024 Hz
+        machine_ctx->apuDivMask = (machine_ctx->currentSpeed == 2 ? APU_DIV_BIT_DOUBLESPEED : APU_DIV_BIT_SINGLESPEED);
     }
 }
 

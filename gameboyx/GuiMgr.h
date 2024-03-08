@@ -18,12 +18,6 @@
 #include "GuiTable.h"
 #include "VHardwareMgr.h"
 
-// workaround for vector<bool> being a special type of stl container, which uses single bits
-// for beeleans and therefore no direct access by reference/pointer (google proxy reference object)
-struct Bool{
-	bool value = false;
-};
-
 enum windowID {
 	GAME_SELECT,
 	DEBUG_INSTR,
@@ -176,7 +170,7 @@ private:
 	bool tripleBuffering = false;
 	bool vsync = false;
 
-	bool tripleBufferingEmu;
+	bool tripleBufferingEmu = false;
 
 	void ResetGUI();
 

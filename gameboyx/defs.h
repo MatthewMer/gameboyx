@@ -28,6 +28,13 @@ struct Vec2 {
     Vec2(int x, int y) : x(x), y(y) {};
 };
 
+// workaround for vector<bool> being a special type of stl container, which uses single bits
+// for beeleans and therefore no direct access by reference/pointer (google proxy reference object)
+struct Bool {
+	bool value = false;
+};
+
+
 enum {
 	DATA_NAME,
 	DATA_VAL
