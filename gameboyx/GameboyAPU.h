@@ -32,14 +32,13 @@ private:
 	int envelopeSweepCounter = 0;
 	int soundLengthCounter = 0;
 	int ch1FrequencyCounter = 0;
-
-	int ch1FrequencySweepPaceCounter = 0;
-	int ch1SweepPace = 0;
-	bool ch1SweepEnabled = false;
-	int ch1LengthTimer = 0;
-	int ch1LengthTimerInitialValue = 0;
+	
+	int ch1PeriodSweepCounter = 0;
+	int ch1LengthCounter = 0;
+	int ch1EnvelopeSweepCounter = 0;
 	void ch1PeriodSweep();
 	void ch1TickLengthTimer();
+	void ch1EnvelopeSweep();
 
 	GameboyMEM* memInstance = nullptr;
 	sound_context* soundCtx = nullptr;

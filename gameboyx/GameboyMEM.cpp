@@ -834,6 +834,7 @@ void GameboyMEM::SetWRAMBank(const u8& _data) {
 /* ***********************************************************************************************************
     APU CONTROL
 *********************************************************************************************************** */
+// TODO: reset registers
 void GameboyMEM::SetAPUMasterControl(const u8& _data) {
     IO[NR52_ADDR - IO_OFFSET] = (IO[NR52_ADDR - IO_OFFSET] & ~APU_ENABLE_BIT) | (_data & APU_ENABLE_BIT);
 
@@ -873,6 +874,7 @@ void GameboyMEM::SetAPUCh1TimerDutyCycle(const u8& _data) {
 
     sound_ctx.ch1DutyCycleIndex = (_data & CH_1_2_DUTY_CYCLE) >> 6;
     sound_ctx.ch1LengthTimer = _data & CH_1_2_LENGTH_TIMER;
+    sound_ctx.ch1LengthAltered = true;
 }
 
 void GameboyMEM::SetAPUCh1Envelope(const u8& _data) {
@@ -886,8 +888,8 @@ void GameboyMEM::SetAPUCh1Envelope(const u8& _data) {
 void GameboyMEM::SetAPUCh1PeriodLow(const u8& _data) {
     IO[NR13_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.ch1Period = (sound_ctx.ch1Period & ~((int)CH_1_2_PERIOD_LOW)) | _data;
-    sound_ctx.ch1Frequency = CH_1_2_PERIOD_CLOCK / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period);
+    sound_ctx.ch1Period = _data | (((u16)IO[NR14_ADDR - IO_OFFSET] & CH_1_2_PERIOD_HIGH) << 8);
+    LOG_INFO("f = ", pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period));
 }
 
 void GameboyMEM::SetAPUCh1PeriodHighControl(const u8& _data) {
@@ -896,10 +898,8 @@ void GameboyMEM::SetAPUCh1PeriodHighControl(const u8& _data) {
     sound_ctx.ch1Enable = _data & CH_1_2_CTRL_TRIGGER ? true : false;
     sound_ctx.ch1LengthEnable = _data & CH_1_2_CTRL_LENGTH_EN ? true : false;
 
-    sound_ctx.ch1Period = (sound_ctx.ch1Period & ~((int)CH_1_2_PERIOD_HIGH << 8)) | ((int)_data << 8);
-    sound_ctx.ch1Frequency = CH_1_2_PERIOD_CLOCK / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period);
-
-    //sound_ctx.ch1LengthAltered = true;
+    sound_ctx.ch1Period = (((u16)_data & CH_1_2_PERIOD_HIGH) << 8) | IO[NR13_ADDR - IO_OFFSET];
+    LOG_INFO("f = ", pow(2,17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period));
 }
 
 

@@ -186,6 +186,7 @@ struct sound_context {
 	int ch1SweepPeriodStep = 0;
 	// timer, duty cycle			NR11
 	int ch1LengthTimer = 0;
+	bool ch1LengthAltered = false;
 	int ch1DutyCycleIndex = 0;
 	// envelope						NR12
 	int ch1EnvelopeVolume = 0;
@@ -194,6 +195,7 @@ struct sound_context {
 	// period						NR13
 	int ch1Period = 0;
 	float ch1Frequency = 1.f;
+	float ch1SamplingRate = 1.f;
 	// period + ctrl				NR14
 	bool ch1LengthEnable = false;
 	bool ch1Enable = false;

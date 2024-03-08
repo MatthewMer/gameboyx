@@ -19,7 +19,9 @@ void GameboyAPU::ProcessAPU(const int& _ticks) {
 			if (envelopeSweepCounter == ENVELOPE_SWEEP_TICK_RATE) {
 				envelopeSweepCounter = 0;
 				
-
+				if (soundCtx->ch1Enable) {
+					ch1EnvelopeSweep();
+				}
 			}
 
 			if (soundLengthCounter == SOUND_LENGTH_TICK_RATE) {
@@ -43,44 +45,41 @@ void GameboyAPU::ProcessAPU(const int& _ticks) {
 }
 
 void GameboyAPU::ch1PeriodSweep() {
-	ch1FrequencySweepPaceCounter++;
-	if (ch1FrequencySweepPaceCounter == ch1SweepPace) {
-		ch1SweepPace = soundCtx->ch1SweepPace;
-		ch1FrequencySweepPaceCounter = 0;
+	if (soundCtx->ch1SweepPace != 0) {
+		ch1PeriodSweepCounter++;
 
-		ch1SweepEnabled = ch1SweepPace != 0;
-		if (ch1SweepEnabled) {
-			if (soundCtx->ch1Period != 0) {
-				int period;
-				bool writeback = true;
+		if (ch1PeriodSweepCounter >= soundCtx->ch1SweepPace) {
+			ch1PeriodSweepCounter = 0;
 
-				if (soundCtx->ch1SweepDirSubtract) {
-					period = soundCtx->ch1Period - (soundCtx->ch1Period >> soundCtx->ch1SweepPeriodStep);
-					if (period < 0) {
-						period = 0;
-					} else {
+			bool writeback = true;
 
-					}
-					soundCtx->ch1Period = period;
-				} else {
-					period = soundCtx->ch1Period + (soundCtx->ch1Period >> soundCtx->ch1SweepPeriodStep);
+			int period = soundCtx->ch1Period;
+			switch (soundCtx->ch1SweepDirSubtract) {
+			case true:
+				period = soundCtx->ch1Period - (soundCtx->ch1Period >> soundCtx->ch1SweepPeriodStep);
 
-					if (period > CH_1_2_PERIOD_THRESHOLD) {
-						soundCtx->ch1Enable = false;
-						writeback = false;
-					} else {
-						soundCtx->ch1Period = period;
-						soundCtx->ch1Frequency = CH_1_2_PERIOD_CLOCK / (CH_1_2_PERIOD_FLIP - period);
-					}
+				if (period < 1) {
+					writeback = false;
 				}
+				break;
+			case false:
+				period = soundCtx->ch1Period + (soundCtx->ch1Period >> soundCtx->ch1SweepPeriodStep);
 
-				if (writeback) {
-					u8& nr13 = memInstance->GetIO(NR13_ADDR);
-					u8& nr14 = memInstance->GetIO(NR14_ADDR);
-
-					nr13 = (u8)(period & CH_1_2_PERIOD_LOW);
-					nr14 = (nr14 & ~(CH_1_2_PERIOD_HIGH)) | (u8)((period >> 8) & CH_1_2_PERIOD_HIGH);
+				if (period > CH_1_2_PERIOD_FLIP - 1) {
+					writeback = false;
+					soundCtx->ch1Enable = false;
 				}
+				break;
+			}
+
+			if (writeback) {
+				memInstance->GetIO(NR13_ADDR) = period & CH_1_2_PERIOD_LOW;
+				u8& nr14 = memInstance->GetIO(NR14_ADDR);
+				nr14 = (nr14 & ~CH_1_2_PERIOD_HIGH) | ((period >> 8) & CH_1_2_PERIOD_HIGH);
+
+				soundCtx->ch1Period = period;
+
+				LOG_INFO("sweep: fs = ", pow(2, 17) / (CH_1_2_PERIOD_FLIP - soundCtx->ch1Period));
 			}
 		}
 	}
@@ -88,15 +87,35 @@ void GameboyAPU::ch1PeriodSweep() {
 
 void GameboyAPU::ch1TickLengthTimer() {
 	if (soundCtx->ch1LengthEnable) {
-		//if (soundCtx->ch1LengthAltered) {
-			ch1LengthTimerInitialValue = soundCtx->ch1LengthTimer;
-			ch1LengthTimer = 0;
+		if (soundCtx->ch1LengthAltered) {
+			ch1LengthCounter = soundCtx->ch1LengthTimer;
 
-			//soundCtx->ch1LengthAltered = false;
+			soundCtx->ch1LengthAltered = false;
+		}
 
-		ch1LengthTimer++;
-		if (ch1LengthTimer == CH_LENGTH_TIMER_THRESHOLD) {
+		ch1LengthCounter++;
+		if (ch1LengthCounter == CH_LENGTH_TIMER_THRESHOLD) {
 			soundCtx->ch1Enable = false;
+		}
+		LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
+	}
+}
+
+void GameboyAPU::ch1EnvelopeSweep() {
+	if (soundCtx->ch1EnvelopePace != 0) {
+		ch1EnvelopeSweepCounter++;
+		if (ch1EnvelopeSweepCounter >= soundCtx->ch1EnvelopePace) {
+			ch1EnvelopeSweepCounter = 0;
+
+			switch (soundCtx->ch1EnvelopeIncrease) {
+			case true:
+				if (soundCtx->ch1EnvelopeVolume < 0xF) { soundCtx->ch1EnvelopeVolume++; }
+				break;
+			case false:
+				if (soundCtx->ch1EnvelopeVolume > 0x0) { --soundCtx->ch1EnvelopeVolume; }
+				break;
+			}
+			LOG_INFO("envelope: x = ", soundCtx->ch1EnvelopeVolume);
 		}
 	}
 }
