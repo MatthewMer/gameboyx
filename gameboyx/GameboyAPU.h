@@ -11,11 +11,11 @@ public:
 
 	// members
 	void ProcessAPU(const int& _ticks) override;
-	void SampleAPU(std::vector<std::vector<float>> _data, const int& _samples, int* _sampling_rates) override;
+	void SampleAPU(float* _data) override;
 
 private:
 	// constructor
-	GameboyAPU(BaseCartridge* _cartridge) {
+	GameboyAPU(BaseCartridge* _cartridge) : BaseAPU() {
 		memInstance = (GameboyMEM*)BaseMEM::getInstance();
 		soundCtx = memInstance->GetSoundContext();
 
@@ -39,6 +39,15 @@ private:
 	void ch1PeriodSweep();
 	void ch1TickLengthTimer();
 	void ch1EnvelopeSweep();
+
+	int ch1SampleCount = 0;
+
+	int ch2LengthCounter = 0;
+	int ch2EnvelopeSweepCounter = 0;
+	void ch2TickLengthTimer();
+	void ch2EnvelopeSweep();
+
+	int ch2SampleCount = 0;
 
 	GameboyMEM* memInstance = nullptr;
 	sound_context* soundCtx = nullptr;

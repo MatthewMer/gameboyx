@@ -190,3 +190,7 @@ void HardwareMgr::GetGraphicsSettings(graphics_settings& _graphics_settings) {
 void HardwareMgr::SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering) {
 	graphicsMgr->SetSwapchainSettings(_present_mode_fifo, _triple_buffering);
 }
+
+int HardwareMgr::GetSamplingRate() {
+	return audioMgr->GetSamplingRate();
+}

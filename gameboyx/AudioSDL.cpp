@@ -44,10 +44,10 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 		SDL_CloseAudioDevice(device);
 		return;
 	}
-	audioSamples.buffer = std::vector<float>(SOUND_BUFFER_SIZE * audioInfo.channels * 10, .0f);
+	audioSamples.buffer = std::vector<float>(SOUND_BUFFER_SIZE * audioInfo.channels * 4, .0f);
 	audioSamples.buffer_size = (int)audioSamples.buffer.size() * sizeof(float);
-	audioSamples.read_cursor = 0;
-	audioSamples.write_cursor = audioInfo.channels * sizeof(float);
+	audioSamples.write_cursor = 0;
+	audioSamples.read_cursor = (audioSamples.write_cursor - (have.samples * have.channels) + (int)audioSamples.buffer.size()) % (int)audioSamples.buffer.size();
 
 	// finish audio data
 	audioInfo.device = (void*)&device;
@@ -81,22 +81,24 @@ void AudioSDL::DestroyAudioBackend() {
 void audio_callback(void* _user_data, u8* _device_buffer, int _length) {
 	audio_samples* samples = (audio_samples*)_user_data;
 
-	u8* region_2_buffer = (u8*)samples->buffer.data();
-	u8* region_1_buffer = region_2_buffer + samples->read_cursor;
+	float* reg_2 = samples->buffer.data();
+	float* reg_1 = reg_2 + samples->read_cursor;
 
-	int region_1_size, region_2_size;
-	if (samples->read_cursor + _length > samples->buffer_size) {
-		region_1_size = samples->buffer_size - samples->read_cursor;
-		region_2_size = _length - region_1_size;
+	int b_read_cursor = samples->read_cursor * sizeof(float);
+
+	int reg_1_size, reg_2_size;
+	if (b_read_cursor + _length > samples->buffer_size) {
+		reg_1_size = samples->buffer_size - b_read_cursor;
+		reg_2_size = _length - reg_1_size;
 	} else {
-		region_1_size = _length;
-		region_2_size = 0;
+		reg_1_size = _length;
+		reg_2_size = 0;
 	}
 
-	SDL_memcpy(_device_buffer, region_1_buffer, region_1_size);
-	SDL_memcpy(_device_buffer + region_1_size, region_2_buffer, region_2_size);
+	SDL_memcpy(_device_buffer, reg_1, reg_1_size);
+	SDL_memcpy(_device_buffer + reg_1_size, reg_2, reg_2_size);
 
-	samples->read_cursor = (samples->read_cursor + _length) % samples->buffer_size;
+	samples->read_cursor = ((b_read_cursor + _length) % samples->buffer_size) / sizeof(float);
 }
 
 void audio_thread(audio_information* _audio_info, virtual_audio_information* _virt_audio_info, audio_samples* _samples) {
@@ -104,23 +106,22 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 	BaseAPU* sound_instance = _virt_audio_info->sound_instance;
 
 	const int channels = _audio_info->channels;
-	const float sampling_rate = (float)_audio_info->sampling_rate;
+	const int sampling_rate = _audio_info->sampling_rate;
 
 	const int virt_channels = _virt_audio_info->channels;
 
 	// filled with samples per period of virtual channels
-	std::vector<std::vector<float>> virt_samples = std::vector<std::vector<float>>(virt_channels);
-	std::vector<int> virt_frequencies = std::vector<int>(virt_channels);
-	std::vector<int> virt_frequencies_copy = std::vector<int>(virt_channels);
-
-	// get ratios to fit samples into physical sampling rate
-	std::vector<float> sampling_rate_ratios = std::vector<float>(virt_channels, 1.f);
+	float* virt_samples = new float[virt_channels];
+	for (int i = 0; i < virt_channels; i++) {
+		virt_samples[i] = .0f;
+	}
 
 	std::vector<float> virt_angles;
 	{
-		float step = (float)((2 * M_PI) / _virt_audio_info->channels);
-		for (float i = .0f; i < 360.f; i += step) {
-			virt_angles.push_back(i);
+		float step = (float)(360.f / _virt_audio_info->channels);
+		int i = 0;
+		for (float a = 45.f; i < _virt_audio_info->channels; a += step, i++) {
+			virt_angles.push_back(a);
 		}
 	}
 
@@ -145,79 +146,75 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 		break;
 	}
 
-	
-
 	while (_virt_audio_info->audio_running.load()) {
 		SDL_LockAudioDevice(*device);
-		// sizes in bytes
-		int region_1_size = _samples->read_cursor - _samples->write_cursor;
-		int region_2_size = 0;
+		int reg_1_size, reg_2_size;
 		if (_samples->read_cursor < _samples->write_cursor) {
-			region_1_size = _samples->buffer_size - _samples->write_cursor;
-			region_2_size = _samples->read_cursor;
+			reg_1_size = (int)_samples->buffer.size() - _samples->write_cursor;
+			reg_2_size = _samples->read_cursor;
+		} else if (_samples->read_cursor > _samples->write_cursor) {
+			reg_1_size = _samples->read_cursor - _samples->write_cursor;
+			reg_2_size = 0;
+		} else {
+			reg_1_size = 0;
+			reg_2_size = 0;
 		}
 
-		// sizes in samples
-		int region_1_samples = (region_1_size / sizeof(float)) / _audio_info->channels;
-		int region_2_samples = (region_2_size / sizeof(float)) / _audio_info->channels;
+		/*
+		if (reg_1_size || reg_2_size) {
+			LOG_WARN(_samples->read_cursor, ";", _samples->write_cursor);
+			LOG_WARN(reg_1_size, ";", reg_2_size);
+		}
+		*/
 
-		// ***** transfer: channels n to channels m *****
-
-		float* buffer = (float*)(((u8*)_samples->buffer.data()) + _samples->write_cursor);
-
-		// keep track of current sample to avoid cutting off the signal
-		float current_sample = .0f;
-
-		// get samples for each channel of virtual hardware
-		if (region_1_size > 0) {
-			// get samples per period for all channels
-			//sound_instance->SampleAPU(virt_samples, virt_frequencies);
-
-			for (int i = 0; i < virt_channels; i++) {
-				if (virt_frequencies_copy[i] != virt_frequencies[i]) {							// in case the signal changed
-					//fft(virt_samples[i].data(), (int)virt_samples[i].size());						// perform fft on one period			
-					for (int i = 0; auto & n : sampling_rate_ratios) {
-						n = (virt_samples[i].size() * virt_frequencies[i]) / sampling_rate;			// get ratio to stretch/compress to fit physical sampling rate
-						i++;
-					}
-					virt_frequencies_copy = virt_frequencies;
-				}
-			}
-
-			// TODO: process fft result and perform inverse fft
-
-			for (int i = 0; i < region_1_size; i++) {
+		if (reg_1_size || reg_2_size) {
+			// transfer samples into ringbuffer
+			float* buffer = _samples->buffer.data() + _samples->write_cursor;
+			for (int i = 0; i < reg_1_size / channels; i++) {
 				for (int j = 0; j < channels; j++) {
 					buffer[j] = .0f;
 				}
+				for (int j = 0; j < virt_channels; j++) {
+					virt_samples[j] = .0f;
+				}
 
-				// fill buffer
+				sound_instance->SampleAPU(virt_samples);
+				for (int j = 0; j < virt_channels; j++) {
+					(*speaker_fn)(buffer, virt_samples[j], virt_angles[j]);
+				}
+
+				buffer += channels;
 			}
-		}
 
-		buffer = _samples->buffer.data();
-		if (region_2_size > 0) {
-			for (int i = 0; i < region_1_samples; i++) {
+			buffer = _samples->buffer.data();
+			for (int i = 0; i < reg_2_size / channels; i++) {
 				for (int j = 0; j < channels; j++) {
 					buffer[j] = .0f;
 				}
+				for (int j = 0; j < virt_channels; j++) {
+					virt_samples[j] = .0f;
+				}
 
-				// fill buffer
+				sound_instance->SampleAPU(virt_samples);
+				for (int j = 0; j < virt_channels; j++) {
+					//(*speaker_fn)(buffer, virt_samples[j], virt_angles[j]);
+				}
+
+				buffer += channels;
 			}
 		}
-
-		_samples->write_cursor = (_samples->write_cursor + region_1_size + region_2_size) % _samples->buffer_size;
-
 		SDL_UnlockAudioDevice(*device);
+
+		_samples->write_cursor = (_samples->write_cursor + reg_1_size + reg_2_size) % (int)_samples->buffer.size();
 	}
 }
 
 const float x = .5f;
-const float D = 1.2f;		// gain
+const float D = .9f;		// gain
 const float a = 2.f;
 
 float calc_sample(const float& _sample, const float& _sample_angle, const float& _speaker_angle) {
-	return tanh(D * _sample) * exp(a * .5f * cos(_sample_angle - _speaker_angle) - .5f);
+	return tanh(D * _sample);// * exp(a * .5f * cos(_sample_angle - _speaker_angle) - .5f);
 }
 
 // TODO: low frequency missing, probably use a low pass filter on all samples and combine and increase amplitude and output on low frequency channel
@@ -245,5 +242,6 @@ void samples_stereo(float* _dest, const float& _sample, const float& _angle) {
 }
 
 void samples_mono(float* _dest, const float& _sample, const float& _angle) {
-	//_dest[0] = calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[0]);
+	_dest[0] = calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[0]);
+	_dest[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[1]);
 }

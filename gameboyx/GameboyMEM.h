@@ -11,6 +11,7 @@
 #include "BaseMEM.h"
 #include "gameboy_defines.h"
 #include "defs.h"
+#include <atomic>
 
 struct machine_context {
 	std::string title = "";
@@ -171,13 +172,20 @@ struct sound_context {
 	// CH2 left
 	// CH3 left
 	// CH4 left
-	bool channelPanning[8] = {};				
+	alignas(64) std::atomic<bool> ch1Right = false;
+	alignas(64) std::atomic<bool> ch2Right = false;
+	alignas(64) std::atomic<bool> ch3Right = false;
+	alignas(64) std::atomic<bool> ch4Right = false;
+	alignas(64) std::atomic<bool> ch1Left = false;
+	alignas(64) std::atomic<bool> ch2Left = false;
+	alignas(64) std::atomic<bool> ch3Left = false;
+	alignas(64) std::atomic<bool> ch4Left = false;
 
 	// master volume	NR50
-	float masterVolumeRight = 1.f;
-	float masterVolumeLeft = 1.f;
-	bool outRightEnabled = false;
-	bool outLeftEnabled = false;
+	alignas(64) std::atomic<float> masterVolumeRight = 1.f;
+	alignas(64) std::atomic<float> masterVolumeLeft = 1.f;
+	alignas(64) std::atomic<bool> outRightEnabled = true;
+	alignas(64) std::atomic<bool> outLeftEnabled = true;
 
 	// channel 1
 	// sweep						NR10
@@ -187,18 +195,38 @@ struct sound_context {
 	// timer, duty cycle			NR11
 	int ch1LengthTimer = 0;
 	bool ch1LengthAltered = false;
-	int ch1DutyCycleIndex = 0;
+	alignas(64) std::atomic<int> ch1DutyCycleIndex = 0;
 	// envelope						NR12
 	int ch1EnvelopeVolume = 0;
 	bool ch1EnvelopeIncrease = false;
 	int ch1EnvelopePace = 0;
+	alignas(64) std::atomic<float> ch1Volume = .0f;
 	// period						NR13
 	int ch1Period = 0;
-	float ch1Frequency = 1.f;
-	float ch1SamplingRate = 1.f;
+	alignas(64) std::atomic<int> ch1SamplingRate;
+
 	// period + ctrl				NR14
 	bool ch1LengthEnable = false;
-	bool ch1Enable = false;
+	alignas(64) std::atomic<bool> ch1Enable = false;
+
+	// channel 2
+	// timer, duty cycle			NR21
+	int ch2LengthTimer = 0;
+	bool ch2LengthAltered = false;
+	alignas(64) std::atomic<int> ch2DutyCycleIndex = 0;
+	// envelope						NR22
+	int ch2EnvelopeVolume = 0;
+	bool ch2EnvelopeIncrease = false;
+	int ch2EnvelopePace = 0;
+	alignas(64) std::atomic<float> ch2Volume = .0f;
+	// period						NR13
+	int ch2Period = 0;
+	alignas(64) std::atomic<int> ch2SamplingRate;
+
+	// period + ctrl				NR14
+	bool ch2LengthEnable = false;
+	alignas(64) std::atomic<bool> ch2Enable = false;
+
 
 	//u8 divApuBitMask = DIV_APU_SINGLESPEED_BIT;
 	//u8 divApuCounter = 0;
@@ -340,6 +368,11 @@ private:
 	void SetAPUCh1Envelope(const u8& _data);
 	void SetAPUCh1PeriodLow(const u8& _data);
 	void SetAPUCh1PeriodHighControl(const u8& _data);
+
+	void SetAPUCh2TimerDutyCycle(const u8& _data);
+	void SetAPUCh2Envelope(const u8& _data);
+	void SetAPUCh2PeriodLow(const u8& _data);
+	void SetAPUCh2PeriodHighControl(const u8& _data);
 
 	// memory cpu context
 	machine_context machine_ctx = machine_context();

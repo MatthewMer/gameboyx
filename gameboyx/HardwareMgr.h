@@ -39,6 +39,8 @@ public:
 
 	static void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering);
 
+	static int GetSamplingRate();
+
 private:
 	HardwareMgr() = default;
 	~HardwareMgr() = default;

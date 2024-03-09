@@ -486,6 +486,18 @@ void GameboyMEM::WriteIORegister(const u8& _data, const u16& _addr) {
     case NR14_ADDR:
         SetAPUCh1PeriodHighControl(_data);
         break;
+    case NR21_ADDR:
+        SetAPUCh2TimerDutyCycle(_data);
+        break;
+    case NR22_ADDR:
+        SetAPUCh2Envelope(_data);
+        break;
+    case NR23_ADDR:
+        SetAPUCh2PeriodLow(_data);
+        break;
+    case NR24_ADDR:
+        SetAPUCh2PeriodHighControl(_data);
+        break;
     default:
         IO[_addr - IO_OFFSET] = _data;
         // TODO: remove, only for testing with blargg's instruction test rom
@@ -844,20 +856,23 @@ void GameboyMEM::SetAPUMasterControl(const u8& _data) {
 void GameboyMEM::SetAPUChannelPanning(const u8& _data) {
     IO[NR51_ADDR - IO_OFFSET] = _data;
 
-    u8 data = _data;
-    for (int i = 0; i < 8; i++) {
-        sound_ctx.channelPanning[i] = (data & 0x01 ? true : false);
-        data >>= 1;
-    }
+    sound_ctx.ch1Right.store(_data & 0x01 ? true : false);
+    sound_ctx.ch2Right.store(_data & 0x02 ? true : false);
+    sound_ctx.ch3Right.store(_data & 0x04 ? true : false);
+    sound_ctx.ch4Right.store(_data & 0x08 ? true : false);
+    sound_ctx.ch1Left.store(_data & 0x10 ? true : false);
+    sound_ctx.ch2Left.store(_data & 0x20 ? true : false);
+    sound_ctx.ch3Left.store(_data & 0x40 ? true : false);
+    sound_ctx.ch4Left.store(_data & 0x80 ? true : false);
 }
 
 void GameboyMEM::SetAPUMasterVolume(const u8& _data) {
     IO[NR50_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.masterVolumeRight = (float)VOLUME_MAP.at(_data & MASTER_VOLUME_RIGHT);
-    sound_ctx.masterVolumeLeft = (float)VOLUME_MAP.at((_data & MASTER_VOLUME_LEFT) >> 4);
-    sound_ctx.outRightEnabled = _data & 0x08 ? true : false;
-    sound_ctx.outLeftEnabled = _data & 0x80 ? true : false;
+    sound_ctx.masterVolumeRight.store((float)VOLUME_MAP.at(_data & MASTER_VOLUME_RIGHT));
+    sound_ctx.masterVolumeLeft.store((float)VOLUME_MAP.at((_data & MASTER_VOLUME_LEFT) >> 4));
+    sound_ctx.outRightEnabled.store(_data & 0x08 ? true : false);
+    sound_ctx.outLeftEnabled.store(_data & 0x80 ? true : false);
 }
 
 // channel 1
@@ -872,7 +887,7 @@ void GameboyMEM::SetAPUCh1Sweep(const u8& _data) {
 void GameboyMEM::SetAPUCh1TimerDutyCycle(const u8& _data) {
     IO[NR11_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.ch1DutyCycleIndex = (_data & CH_1_2_DUTY_CYCLE) >> 6;
+    sound_ctx.ch1DutyCycleIndex.store((_data & CH_1_2_DUTY_CYCLE) >> 6);
     sound_ctx.ch1LengthTimer = _data & CH_1_2_LENGTH_TIMER;
     sound_ctx.ch1LengthAltered = true;
 }
@@ -883,25 +898,66 @@ void GameboyMEM::SetAPUCh1Envelope(const u8& _data) {
     sound_ctx.ch1EnvelopeVolume = (_data & CH_1_2_ENV_VOLUME) >> 4;
     sound_ctx.ch1EnvelopeIncrease = (_data & CH_1_2_ENV_DIR ? true : false);
     sound_ctx.ch1EnvelopePace = _data & CH_1_2_ENV_PACE;
+
+    sound_ctx.ch1Volume.store((float)sound_ctx.ch1EnvelopeVolume / 0xF);
 }
 
 void GameboyMEM::SetAPUCh1PeriodLow(const u8& _data) {
     IO[NR13_ADDR - IO_OFFSET] = _data;
 
     sound_ctx.ch1Period = _data | (((u16)IO[NR14_ADDR - IO_OFFSET] & CH_1_2_PERIOD_HIGH) << 8);
-    LOG_INFO("f = ", pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period));
+    sound_ctx.ch1SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period)));
+    //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3));
 }
 
 void GameboyMEM::SetAPUCh1PeriodHighControl(const u8& _data) {
     IO[NR14_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.ch1Enable = _data & CH_1_2_CTRL_TRIGGER ? true : false;
+    sound_ctx.ch1Enable.store(_data & CH_1_2_CTRL_TRIGGER ? true : false);
     sound_ctx.ch1LengthEnable = _data & CH_1_2_CTRL_LENGTH_EN ? true : false;
 
     sound_ctx.ch1Period = (((u16)_data & CH_1_2_PERIOD_HIGH) << 8) | IO[NR13_ADDR - IO_OFFSET];
-    LOG_INFO("f = ", pow(2,17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period));
+    sound_ctx.ch1SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period)));
+    //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3), "; length: ", sound_ctx.ch1LengthEnable ? "true" : "false");
 }
 
+// channel 2
+void GameboyMEM::SetAPUCh2TimerDutyCycle(const u8& _data) {
+    IO[NR21_ADDR - IO_OFFSET] = _data;
+
+    sound_ctx.ch2DutyCycleIndex.store((_data & CH_1_2_DUTY_CYCLE) >> 6);
+    sound_ctx.ch2LengthTimer = _data & CH_1_2_LENGTH_TIMER;
+    sound_ctx.ch2LengthAltered = true;
+}
+
+void GameboyMEM::SetAPUCh2Envelope(const u8& _data) {
+    IO[NR22_ADDR - IO_OFFSET] = _data;
+
+    sound_ctx.ch2EnvelopeVolume = (_data & CH_1_2_ENV_VOLUME) >> 4;
+    sound_ctx.ch2EnvelopeIncrease = (_data & CH_1_2_ENV_DIR ? true : false);
+    sound_ctx.ch2EnvelopePace = _data & CH_1_2_ENV_PACE;
+
+    sound_ctx.ch2Volume.store((float)sound_ctx.ch2EnvelopeVolume / 0xF);
+}
+
+void GameboyMEM::SetAPUCh2PeriodLow(const u8& _data) {
+    IO[NR23_ADDR - IO_OFFSET] = _data;
+
+    sound_ctx.ch2Period = _data | (((u16)IO[NR24_ADDR - IO_OFFSET] & CH_1_2_PERIOD_HIGH) << 8);
+    sound_ctx.ch2SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch2Period)));
+    //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3));
+}
+
+void GameboyMEM::SetAPUCh2PeriodHighControl(const u8& _data) {
+    IO[NR24_ADDR - IO_OFFSET] = _data;
+
+    sound_ctx.ch2Enable.store(_data & CH_1_2_CTRL_TRIGGER ? true : false);
+    sound_ctx.ch2LengthEnable = _data & CH_1_2_CTRL_LENGTH_EN ? true : false;
+
+    sound_ctx.ch2Period = (((u16)_data & CH_1_2_PERIOD_HIGH) << 8) | IO[NR23_ADDR - IO_OFFSET];
+    sound_ctx.ch2SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch2Period)));
+    //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3), "; length: ", sound_ctx.ch1LengthEnable ? "true" : "false");
+}
 
 /* ***********************************************************************************************************
     MEMORY DEBUGGER

@@ -19,14 +19,16 @@ public:
 
 	// public members
 	virtual void ProcessAPU(const int& _ticks) = 0;
-	virtual void SampleAPU(std::vector<std::vector<float>> _data, const int& _samples, int* _sampling_rates) = 0;
+	virtual void SampleAPU(float* _data) = 0;
 
 protected:
 	// constructor
-	BaseAPU() {}
+	BaseAPU() {
+		physSamplingRate = HardwareMgr::GetSamplingRate();
+	}
 	virtual ~BaseAPU() = default;
 
-	std::vector<float> audioData;
+	int physSamplingRate = 0;
 
 private:
 	static BaseAPU* instance;

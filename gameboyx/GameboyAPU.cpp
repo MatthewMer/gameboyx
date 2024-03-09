@@ -4,8 +4,8 @@
 const float CH_1_2_PWM_SIGNALS[4][8] = {
 	{1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f},
 	{-1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f},
-	{-1.f, -1.f, 1.f, 1.f, 1.f, 1.f, -1.f, -1.f},
-	{-1.f, -1.f, -1.f, 1.f, 1.f, -1.f, -1.f, -1.f},
+	{-1.f, 1.f, 1.f, 1.f, 1.f, -1.f, -1.f, -1.f},
+	{1.f, -1.f, -1.f, -1.f, -1.f, -1.f, -1.f, 1.f},
 };
 
 
@@ -19,23 +19,29 @@ void GameboyAPU::ProcessAPU(const int& _ticks) {
 			if (envelopeSweepCounter == ENVELOPE_SWEEP_TICK_RATE) {
 				envelopeSweepCounter = 0;
 				
-				if (soundCtx->ch1Enable) {
+				if (soundCtx->ch1Enable.load()) {
 					ch1EnvelopeSweep();
+				}
+				if (soundCtx->ch2Enable.load()) {
+					ch2EnvelopeSweep();
 				}
 			}
 
 			if (soundLengthCounter == SOUND_LENGTH_TICK_RATE) {
 				soundLengthCounter = 0;
 				
-				if (soundCtx->ch1Enable) {
+				if (soundCtx->ch1Enable.load()) {
 					ch1TickLengthTimer();
+				}
+				if (soundCtx->ch2Enable.load()) {
+					ch2TickLengthTimer();
 				}
 			}
 
 			if (ch1FrequencyCounter == CH1_FREQU_SWEEP_RATE) {
 				ch1FrequencyCounter = 0;
 
-				if (soundCtx->ch1Enable) {
+				if (soundCtx->ch1Enable.load()) {
 					// frequency sweep
 					ch1PeriodSweep();
 				}
@@ -67,7 +73,7 @@ void GameboyAPU::ch1PeriodSweep() {
 
 				if (period > CH_1_2_PERIOD_FLIP - 1) {
 					writeback = false;
-					soundCtx->ch1Enable = false;
+					soundCtx->ch1Enable.store(false);
 				}
 				break;
 			}
@@ -78,8 +84,8 @@ void GameboyAPU::ch1PeriodSweep() {
 				nr14 = (nr14 & ~CH_1_2_PERIOD_HIGH) | ((period >> 8) & CH_1_2_PERIOD_HIGH);
 
 				soundCtx->ch1Period = period;
-
-				LOG_INFO("sweep: fs = ", pow(2, 17) / (CH_1_2_PERIOD_FLIP - soundCtx->ch1Period));
+				soundCtx->ch1SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - soundCtx->ch1Period)));
+				//LOG_INFO("sweep: fs = ", soundCtx->ch1SamplingRate.load() / pow(2, 3), "; dir: ", soundCtx->ch1SweepDirSubtract ? "sub" : "add");
 			}
 		}
 	}
@@ -95,9 +101,9 @@ void GameboyAPU::ch1TickLengthTimer() {
 
 		ch1LengthCounter++;
 		if (ch1LengthCounter == CH_LENGTH_TIMER_THRESHOLD) {
-			soundCtx->ch1Enable = false;
+			soundCtx->ch1Enable.store(false);
 		}
-		LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
+		//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
 	}
 }
 
@@ -109,18 +115,100 @@ void GameboyAPU::ch1EnvelopeSweep() {
 
 			switch (soundCtx->ch1EnvelopeIncrease) {
 			case true:
-				if (soundCtx->ch1EnvelopeVolume < 0xF) { soundCtx->ch1EnvelopeVolume++; }
+				if (soundCtx->ch1EnvelopeVolume < 0xF) { 
+					soundCtx->ch1EnvelopeVolume++; 
+					soundCtx->ch1Volume.store((float)soundCtx->ch1EnvelopeVolume / 0xF);
+				}
 				break;
 			case false:
-				if (soundCtx->ch1EnvelopeVolume > 0x0) { --soundCtx->ch1EnvelopeVolume; }
+				if (soundCtx->ch1EnvelopeVolume > 0x0) { 
+					--soundCtx->ch1EnvelopeVolume;
+					soundCtx->ch1Volume.store((float)soundCtx->ch1EnvelopeVolume / 0xF);
+				}
 				break;
 			}
-			LOG_INFO("envelope: x = ", soundCtx->ch1EnvelopeVolume);
+			//LOG_INFO("envelope: x = ", soundCtx->ch1EnvelopeVolume);
+		}
+	}
+}
+
+void GameboyAPU::ch2TickLengthTimer() {
+	if (soundCtx->ch2LengthEnable) {
+		if (soundCtx->ch2LengthAltered) {
+			ch2LengthCounter = soundCtx->ch2LengthTimer;
+
+			soundCtx->ch2LengthAltered = false;
+		}
+
+		ch2LengthCounter++;
+		if (ch2LengthCounter == CH_LENGTH_TIMER_THRESHOLD) {
+			soundCtx->ch2Enable.store(false);
+		}
+		//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
+	}
+}
+
+void GameboyAPU::ch2EnvelopeSweep() {
+	if (soundCtx->ch2EnvelopePace != 0) {
+		ch2EnvelopeSweepCounter++;
+		if (ch2EnvelopeSweepCounter >= soundCtx->ch2EnvelopePace) {
+			ch2EnvelopeSweepCounter = 0;
+
+			switch (soundCtx->ch2EnvelopeIncrease) {
+			case true:
+				if (soundCtx->ch2EnvelopeVolume < 0xF) {
+					soundCtx->ch2EnvelopeVolume++;
+					soundCtx->ch2Volume.store((float)soundCtx->ch2EnvelopeVolume / 0xF);
+				}
+				break;
+			case false:
+				if (soundCtx->ch2EnvelopeVolume > 0x0) {
+					--soundCtx->ch2EnvelopeVolume;
+					soundCtx->ch2Volume.store((float)soundCtx->ch2EnvelopeVolume / 0xF);
+				}
+				break;
+			}
+			//LOG_INFO("envelope: x = ", soundCtx->ch1EnvelopeVolume);
 		}
 	}
 }
 
 // filles each vector with samples of the virtual channels and sets the virtual sampling rates for each channel (power of 2)
-void GameboyAPU::SampleAPU(std::vector<std::vector<float>> _data, const int& _samples, int* _sampling_rates) {
-	
+/* sample order :
+* 1. front right
+* 2. rear right
+* 3. rear left
+* 4. front left
+*/
+void GameboyAPU::SampleAPU(float* _data) {
+	bool right = soundCtx->outRightEnabled.load();
+	bool left = soundCtx->outLeftEnabled.load();
+	bool vol_right = soundCtx->masterVolumeRight.load();
+	bool vol_left = soundCtx->masterVolumeLeft.load();
+
+	if (soundCtx->ch1Enable.load()) {
+		int ch1_virt_samples_per_sample = physSamplingRate / soundCtx->ch1SamplingRate.load();
+		++ch1SampleCount %= ch1_virt_samples_per_sample;
+		
+		int wave_index = soundCtx->ch1DutyCycleIndex.load();
+		if (soundCtx->ch1Right.load()) {
+			_data[0] += CH_1_2_PWM_SIGNALS[wave_index][ch1SampleCount] * soundCtx->ch1Volume.load() * vol_right;
+		}
+		if (soundCtx->ch1Left.load()) {
+			_data[3] += CH_1_2_PWM_SIGNALS[wave_index][ch1SampleCount] * soundCtx->ch1Volume.load() * vol_left;
+		}
+	}
+
+	if (soundCtx->ch2Enable.load()) {
+		int ch2_virt_samples_per_sample = physSamplingRate / soundCtx->ch2SamplingRate.load();
+		++ch2SampleCount %= ch2_virt_samples_per_sample;
+
+		int wave_index = soundCtx->ch2DutyCycleIndex.load();
+		if (soundCtx->ch2Right.load()) {
+			_data[0] += CH_1_2_PWM_SIGNALS[wave_index][ch2SampleCount] * soundCtx->ch2Volume.load() * vol_right;
+		}
+		if (soundCtx->ch2Left.load()) {
+			_data[3] += CH_1_2_PWM_SIGNALS[wave_index][ch2SampleCount] * soundCtx->ch2Volume.load() * vol_left; 
+		}
+	}
 }

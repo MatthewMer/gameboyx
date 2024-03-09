@@ -63,6 +63,8 @@ public:
 	virtual bool InitAudioBackend(virtual_audio_information& _virt_audio_info) = 0;
 	virtual void DestroyAudioBackend() = 0;
 
+	int GetSamplingRate();
+
 	// clone/assign protection
 	AudioMgr(AudioMgr const&) = delete;
 	AudioMgr(AudioMgr&&) = delete;
