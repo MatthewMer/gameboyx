@@ -364,18 +364,22 @@
 #define CH_1_2_ENV_PACE                 0x07
 
 #define CH_1_2_PERIOD_LOW               0xFF
-#define CH_1_2_PERIOD_HIGH              0x07
+#define CH_1_2_3_PERIOD_HIGH              0x07
 
-#define CH_1_2_CTRL_TRIGGER             0x80
-#define CH_1_2_CTRL_LENGTH_EN           0x40
+#define CH_1_2_3_CTRL_TRIGGER             0x80
+#define CH_1_2_3_CTRL_LENGTH_EN           0x40
 
 #define CH_1_2_TIMER_OVERFLOW           0x40
 
-#define CH_1_2_PERIOD_FLIP              0x800
+#define CH_1_2_3_PERIOD_FLIP              0x800
 #define CH_1_2_PERIOD_CLOCK             0x20000
 #define CH_1_2_PERIOD_THRESHOLD         0x7FF
 
 #define CH_LENGTH_TIMER_THRESHOLD       64
+
+#define CH_3_DAC                        0x80
+
+#define CH_3_VOLUME                     0x60
 
 /* ***********************************************************************************************************
     REGISTERS INITIAL STATES

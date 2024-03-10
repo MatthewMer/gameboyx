@@ -12,6 +12,7 @@
 #include "gameboy_defines.h"
 #include "defs.h"
 #include <atomic>
+#include <mutex>
 
 struct machine_context {
 	std::string title = "";
@@ -151,7 +152,8 @@ inline const std::unordered_map<u8, float> VOLUME_MAP = {
 	{4, 5.f / 8},
 	{5, 6.f / 8},
 	{6, 7.f / 8},
-	{7, 8.f / 8}
+	{7, 8.f / 8},
+	{8, .0f}			// usually not used, just for Channel 3 (muted)
 };
 
 struct sound_context {
@@ -227,11 +229,33 @@ struct sound_context {
 	bool ch2LengthEnable = false;
 	alignas(64) std::atomic<bool> ch2Enable = false;
 
+	// channel 3
+	// control						NR30
+	// see NR34
 
-	//u8 divApuBitMask = DIV_APU_SINGLESPEED_BIT;
-	//u8 divApuCounter = 0;
-	//bool divApuBitWasHigh = false;
-	//bool divApuBitHigh = false;
+	// length						NR31
+	int ch3LengthTimer = 0;
+	bool ch3LengthAltered = false;
+
+	// volume						NR32
+	alignas(64) std::atomic<float> ch3Volume = 1.f;
+
+	// period low					NR33
+	int ch3Period = 0;
+	alignas(64) std::atomic<float> ch3SamplingRate = 1.f;
+
+	// period high and control		NR34
+	bool ch3LengthEnable = false;
+	alignas(64) std::atomic<bool> ch3Enable = false;
+
+	// Ch3 Wave RAM
+	std::mutex mutWaveRam;
+	float waveRam[32] = {
+		.0f, .0f, .0f, .0f, .0f, .0f, .0f, .0f,
+		.0f, .0f, .0f, .0f, .0f, .0f, .0f, .0f,
+		.0f, .0f, .0f, .0f, .0f, .0f, .0f, .0f,
+		.0f, .0f, .0f, .0f, .0f, .0f, .0f, .0f
+	};
 };
 
 struct control_context {
@@ -373,6 +397,13 @@ private:
 	void SetAPUCh2Envelope(const u8& _data);
 	void SetAPUCh2PeriodLow(const u8& _data);
 	void SetAPUCh2PeriodHighControl(const u8& _data);
+
+	void SetAPUCh3DACEnable(const u8& _data);
+	void SetAPUCh3Timer(const u8& _data);
+	void SetAPUCh3Volume(const u8& _data);
+	void SetAPUCh3PeriodLow(const u8& _data);
+	void SetAPUCh3PeriodHighControl(const u8& _data);
+	void SetAPUCh3WaveRam(const u16& _addr, const u8& _data);
 
 	// memory cpu context
 	machine_context machine_ctx = machine_context();

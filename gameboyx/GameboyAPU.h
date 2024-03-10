@@ -51,6 +51,12 @@ private:
 	int ch2SampleCount = 0;
 	float ch2VirtSamples = .0f;
 
+	int ch3LengthCounter = 0;
+	void ch3TickLengthTimer();
+
+	int ch3SampleCount = 0;
+	float ch3VirtSamples = .0f;
+
 	GameboyMEM* memInstance = nullptr;
 	sound_context* soundCtx = nullptr;
 };
