@@ -4,6 +4,7 @@
 
 #include "gameboy_defines.h"
 #include <vector>
+#include <queue>
 
 class GameboyAPU : protected BaseAPU {
 public:
@@ -12,6 +13,8 @@ public:
 	// members
 	void ProcessAPU(const int& _ticks) override;
 	void SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples) override;
+
+	void TickLFSR(const int& _ticks);
 
 private:
 	// constructor
@@ -56,6 +59,19 @@ private:
 
 	int ch3SampleCount = 0;
 	float ch3VirtSamples = .0f;
+
+	int ch4LengthCounter = 0;
+	int ch4EnvelopeSweepCounter = 0;
+
+	int ch4LFSRTickCounter = 0;
+	std::mutex mutLFSR;
+	std::vector<float> ch4LFSRSamples = std::vector<float>(CH_4_LFSR_BUFFER_SIZE);
+	int ch4LFSRWriteCursor = 0;
+	void ch4TickLengthTimer();
+	void ch4EnvelopeSweep();
+
+	int ch4SampleCount = 0;
+	float ch4VirtSamples = .0f;
 
 	GameboyMEM* memInstance = nullptr;
 	sound_context* soundCtx = nullptr;

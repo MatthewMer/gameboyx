@@ -113,8 +113,8 @@ GameboyCPU::GameboyCPU(BaseCartridge* _cartridge) : BaseCPU(_cartridge) {
 
 void GameboyCPU::SetInstances() {
     graphics_instance = BaseGPU::getInstance();
-    sound_instance = BaseAPU::getInstance();
-    ticksPerFrame = graphics_instance->GetTicksPerFrame((float)(BASE_CLOCK_CPU * pow(10, 6)));
+    sound_instance = (GameboyAPU*)BaseAPU::getInstance();
+    ticksPerFrame = graphics_instance->GetTicksPerFrame((float)(BASE_CLOCK_CPU));
 }
 
 /* ***********************************************************************************************************
@@ -280,7 +280,7 @@ void GameboyCPU::TickTimers() {
         machine_ctx->tima_overflow_cycle = false;
     }
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < TICKS_PER_MC; i++) {
         if (machine_ctx->div_low_byte == 0xFF) {
             machine_ctx->div_low_byte = 0x00;
 
@@ -316,6 +316,7 @@ void GameboyCPU::TickTimers() {
     // peripherals directly bound to CPUs timer system (master clock) (PPU not affected by speed mode)
     int ticks = TICKS_PER_MC / machine_ctx->currentSpeed;
     graphics_instance->ProcessGPU(ticks);
+    sound_instance->TickLFSR(ticks);
 }
 
 void GameboyCPU::IncrementTIMA() {

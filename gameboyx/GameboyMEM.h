@@ -232,22 +232,17 @@ struct sound_context {
 	// channel 3
 	// control						NR30
 	// see NR34
-
 	// length						NR31
 	int ch3LengthTimer = 0;
 	bool ch3LengthAltered = false;
-
 	// volume						NR32
 	alignas(64) std::atomic<float> ch3Volume = 1.f;
-
 	// period low					NR33
 	int ch3Period = 0;
 	alignas(64) std::atomic<float> ch3SamplingRate = 1.f;
-
 	// period high and control		NR34
 	bool ch3LengthEnable = false;
 	alignas(64) std::atomic<bool> ch3Enable = false;
-
 	// Ch3 Wave RAM
 	std::mutex mutWaveRam;
 	float waveRam[32] = {
@@ -256,6 +251,24 @@ struct sound_context {
 		.0f, .0f, .0f, .0f, .0f, .0f, .0f, .0f,
 		.0f, .0f, .0f, .0f, .0f, .0f, .0f, .0f
 	};
+
+	// channel 4
+	// length						NR41
+	int ch4LengthTimer = 0;
+	bool ch4LengthAltered = false;
+	// envelope						NR42
+	int ch4EnvelopeVolume = 0;
+	bool ch4EnvelopeIncrease = false;
+	int ch4EnvelopePace = 0;
+	float ch4Volume = .0f;
+	// frequency and randomness		NR43
+	bool ch4LFSRWidth7Bit = false;
+	u16 ch4LFSR = 0;
+	int ch4LFSRThreshold = 0;
+	alignas(64) std::atomic<float> ch4SamplingRate = 1.f;
+	//  and control					NR44
+	bool ch4LengthEnable = false;
+	alignas(64) std::atomic<bool> ch4Enable = false;
 };
 
 struct control_context {
@@ -404,6 +417,11 @@ private:
 	void SetAPUCh3PeriodLow(const u8& _data);
 	void SetAPUCh3PeriodHighControl(const u8& _data);
 	void SetAPUCh3WaveRam(const u16& _addr, const u8& _data);
+
+	void SetAPUCh4Timer(const u8& _data);
+	void SetAPUCh4Envelope(const u8& _data);
+	void SetAPUCh4FrequRandomness(const u8& _data);
+	void SetAPUCh4Control(const u8& _data);
 
 	// memory cpu context
 	machine_context machine_ctx = machine_context();

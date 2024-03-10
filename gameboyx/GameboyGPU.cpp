@@ -12,7 +12,7 @@ using namespace std;
 
 // VK_FORMAT_R8G8B8A8_UNORM, gray scales
 
-#define MC_PER_SCANLINE		((((BASE_CLOCK_CPU / 4) * 1000000) / DISPLAY_FREQUENCY) / LCD_SCANLINES_TOTAL)
+#define MC_PER_SCANLINE		(((((BASE_CLOCK_CPU / pow(10, 6)) / 4) * 1000000) / DISPLAY_FREQUENCY) / LCD_SCANLINES_TOTAL)
 
 // return delta t per frame in nanoseconds
 int GameboyGPU::GetDelayTime() const {

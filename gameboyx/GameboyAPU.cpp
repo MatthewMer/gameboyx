@@ -3,6 +3,8 @@
 
 #include <mutex>
 
+using namespace std;
+
 const float CH_1_2_PWM_SIGNALS[4][8] = {
 	{1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f},
 	{-1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f},
@@ -27,6 +29,9 @@ void GameboyAPU::ProcessAPU(const int& _ticks) {
 				if (soundCtx->ch2Enable.load()) {
 					ch2EnvelopeSweep();
 				}
+				if (soundCtx->ch4Enable.load()) {
+					ch4EnvelopeSweep();
+				}
 			}
 
 			if (soundLengthCounter == SOUND_LENGTH_TICK_RATE) {
@@ -41,6 +46,9 @@ void GameboyAPU::ProcessAPU(const int& _ticks) {
 				if (soundCtx->ch3Enable.load()) {
 					ch3TickLengthTimer();
 				}
+				if (soundCtx->ch4Enable.load()) {
+					ch4TickLengthTimer();
+				}
 			}
 
 			if (ch1SamplingRateCounter == CH1_FREQU_SWEEP_RATE) {
@@ -50,6 +58,49 @@ void GameboyAPU::ProcessAPU(const int& _ticks) {
 					// frequency sweep
 					ch1PeriodSweep();
 				}
+			}
+		}
+	}
+}
+
+void GameboyAPU::TickLFSR(const int& _ticks) {
+	if (soundCtx->ch4Enable.load()) {
+		for (int i = 0; i < _ticks; i++) {
+			ch4LFSRTickCounter++;
+
+			if (ch4LFSRTickCounter >= soundCtx->ch4LFSRThreshold) {
+				ch4LFSRTickCounter = 0;
+
+				// tick LFSR
+				u16 lfsr = soundCtx->ch4LFSR;
+				int next = ((lfsr & 0x01) == ((lfsr >> 1) & 0x01) ? 1 : 0);
+
+				switch (soundCtx->ch4LFSRWidth7Bit) {
+				case true:
+					lfsr = (lfsr & ~(CH_4_LFSR_BIT_7 | CH_4_LFSR_BIT_15)) | ((next << 7) | (next << 15));
+					break;
+				case false:
+					lfsr = (lfsr & ~CH_4_LFSR_BIT_15) | (next << 15);
+					break;
+				}
+
+				unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
+				switch (lfsr & 0x0001) {
+				case 0x0000:
+					ch4LFSRSamples[ch4LFSRWriteCursor] = -soundCtx->ch4Volume;
+					break;
+				case 0x0001:
+					ch4LFSRSamples[ch4LFSRWriteCursor] = soundCtx->ch4Volume;
+					break;
+				}
+				lock_lfsr_buffer.unlock();
+
+				lfsr >>= 1;
+				soundCtx->ch4LFSR = lfsr;
+				++ch4LFSRWriteCursor %= CH_4_LFSR_BUFFER_SIZE;
+
+				//if(ch4LFSRSamples[ch4LFSRWriteCursor] != .0f)
+				//LOG_INFO(ch4LFSRSamples[ch4LFSRWriteCursor], ";", lfsr);
 			}
 		}
 	}
@@ -194,6 +245,47 @@ void GameboyAPU::ch3TickLengthTimer() {
 	}
 }
 
+void GameboyAPU::ch4EnvelopeSweep() {
+	if (soundCtx->ch4EnvelopePace != 0) {
+		ch4EnvelopeSweepCounter++;
+		if (ch4EnvelopeSweepCounter >= soundCtx->ch4EnvelopePace) {
+			ch4EnvelopeSweepCounter = 0;
+
+			switch (soundCtx->ch4EnvelopeIncrease) {
+			case true:
+				if (soundCtx->ch4EnvelopeVolume < 0xF) {
+					soundCtx->ch4EnvelopeVolume++;
+					soundCtx->ch4Volume = (float)soundCtx->ch4EnvelopeVolume / 0xF;
+				}
+				break;
+			case false:
+				if (soundCtx->ch4EnvelopeVolume > 0x0) {
+					--soundCtx->ch4EnvelopeVolume;
+					soundCtx->ch4Volume = (float)soundCtx->ch4EnvelopeVolume / 0xF;
+				}
+				break;
+			}
+			//LOG_INFO("envelope: x = ", soundCtx->ch1EnvelopeVolume);
+		}
+	}
+}
+
+void GameboyAPU::ch4TickLengthTimer() {
+	if (soundCtx->ch4LengthEnable) {
+		if (soundCtx->ch4LengthAltered) {
+			ch4LengthCounter = soundCtx->ch4LengthTimer;
+
+			soundCtx->ch4LengthAltered = false;
+		}
+
+		ch4LengthCounter++;
+		if (ch4LengthCounter >= CH_LENGTH_TIMER_THRESHOLD) {
+			soundCtx->ch4Enable.store(false);
+		}
+		//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
+	}
+}
+
 // filles each vector with samples of the virtual channels and sets the virtual sampling rates for each channel (power of 2)
 /* sample order :
 * 1. front right
@@ -235,6 +327,14 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 	bool ch3_left = soundCtx->ch3Left.load();
 
 	float ch3_vol = soundCtx->ch3Volume.load();
+
+	// channel 4
+	bool ch4_enable = soundCtx->ch4Enable.load();
+
+	float ch4_virt_sample_step = soundCtx->ch4SamplingRate.load() / physSamplingRate;
+
+	bool ch4_right = soundCtx->ch4Right.load();
+	bool ch4_left = soundCtx->ch4Left.load();
 
 	std::unique_lock<std::mutex> lock_wave_ram = std::unique_lock<std::mutex>(soundCtx->mutWaveRam, std::defer_lock);
 
@@ -294,6 +394,22 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 				sample_2 += soundCtx->waveRam[ch3SampleCount] * ch3_vol;
 			}
 			lock_wave_ram.unlock();
+		}
+
+		if (ch4_enable) {
+			ch4VirtSamples += ch4_virt_sample_step;
+			if (ch4VirtSamples >= 1.f) {
+				ch4VirtSamples -= 1.f;
+				++ch4SampleCount %= CH_4_LFSR_BUFFER_SIZE;
+			}
+
+			unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
+			if (ch4_right) {
+				sample_1 += ch4LFSRSamples[ch4SampleCount];
+			}
+			if (ch4_left) {
+				sample_2 += ch4LFSRSamples[ch4SampleCount];
+			}
 		}
 
 		_data[0][i].real = sample_0 * vol_right * .05f;

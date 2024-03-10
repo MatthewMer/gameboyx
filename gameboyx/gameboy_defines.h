@@ -10,7 +10,7 @@
     FREQUENCIES
 *********************************************************************************************************** */
 #define DIV_FREQUENCY                   16384                                                       // Hz
-#define BASE_CLOCK_CPU                  ((4.f * pow(2, 20)) / pow(10, 6))                           // MHz
+#define BASE_CLOCK_CPU                  (4.f * pow(2, 20))                                          // Hz
 #define DISPLAY_FREQUENCY               60                                                          // Hz
 #define TICKS_PER_MC                    4                                                           // clock cycles per machine cycle
 
@@ -356,22 +356,22 @@
 #define CH1_SWEEP_DIR                   0x08
 #define CH1_SWEEP_STEP                  0x07
 
-#define CH_1_2_LENGTH_TIMER             0x3F
+#define CH_1_2_4_LENGTH_TIMER             0x3F
 #define CH_1_2_DUTY_CYCLE               0xC0
 
-#define CH_1_2_ENV_VOLUME               0xF0
-#define CH_1_2_ENV_DIR                  0x08
-#define CH_1_2_ENV_PACE                 0x07
+#define CH_1_2_4_ENV_VOLUME             0xF0
+#define CH_1_2_4_ENV_DIR                0x08
+#define CH_1_2_4_ENV_PACE               0x07
 
 #define CH_1_2_PERIOD_LOW               0xFF
-#define CH_1_2_3_PERIOD_HIGH              0x07
+#define CH_1_2_3_PERIOD_HIGH            0x07
 
-#define CH_1_2_3_CTRL_TRIGGER             0x80
-#define CH_1_2_3_CTRL_LENGTH_EN           0x40
+#define CH_1_2_3_4_CTRL_TRIGGER         0x80
+#define CH_1_2_3_4_CTRL_LENGTH_EN       0x40
 
 #define CH_1_2_TIMER_OVERFLOW           0x40
 
-#define CH_1_2_3_PERIOD_FLIP              0x800
+#define CH_1_2_3_PERIOD_FLIP            0x800
 #define CH_1_2_PERIOD_CLOCK             0x20000
 #define CH_1_2_PERIOD_THRESHOLD         0x7FF
 
@@ -380,6 +380,15 @@
 #define CH_3_DAC                        0x80
 
 #define CH_3_VOLUME                     0x60
+
+#define CH_4_CLOCK_SHIFT                0xF0
+#define CH_4_LFSR_WIDTH                 0x08
+#define CH_4_CLOCK_DIVIDER              0x07
+
+#define CH_4_LFSR_BIT_7                 0x0080
+#define CH_4_LFSR_BIT_15                0x8000
+
+#define CH_4_LFSR_BUFFER_SIZE           512
 
 /* ***********************************************************************************************************
     REGISTERS INITIAL STATES
