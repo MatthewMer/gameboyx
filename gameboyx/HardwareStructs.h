@@ -45,11 +45,12 @@ struct audio_information {
 	int channels_max = 0;
 	int sampling_rate_max = 0;
 
-	float volume = .0f;
 	int channels = 0;
 	int sampling_rate = 0;
 
 	void* device = nullptr;
+
+	alignas(64) std::atomic<float> master_volume = 1.f;
 };
 
 struct graphics_settings {

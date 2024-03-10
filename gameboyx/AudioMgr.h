@@ -65,6 +65,8 @@ public:
 
 	int GetSamplingRate();
 
+	void SetMasterVolume(const float& _volume);
+
 	// clone/assign protection
 	AudioMgr(AudioMgr const&) = delete;
 	AudioMgr(AudioMgr&&) = delete;

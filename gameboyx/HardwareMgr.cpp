@@ -194,3 +194,7 @@ void HardwareMgr::SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_b
 int HardwareMgr::GetSamplingRate() {
 	return audioMgr->GetSamplingRate();
 }
+
+void HardwareMgr::SetMasterVolume(const float& _volume) {
+	audioMgr->SetMasterVolume(_volume);
+}

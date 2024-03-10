@@ -114,7 +114,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 	const int virt_channels = _virt_audio_info->channels;
 
 	// filled with samples per period of virtual channels
-	std::vector<std::vector<float>> virt_samples = std::vector<std::vector<float>>(virt_channels);
+	std::vector<std::vector<complex>> virt_samples = std::vector<std::vector<complex>>(virt_channels);
 
 	std::vector<float> virt_angles;
 	{
@@ -179,14 +179,16 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 
 			// TODO: use FFT and other stuff for different effects
 
-			// transfer samples into ringbuffer
+			// transfer samples into ringbuffer // for now just feed the real part back into the output
+			float volume = _audio_info->master_volume.load();
+
 			float* buffer = _samples->buffer.data() + _samples->write_cursor;
 			for (int i = 0; i < reg_1_samples; i++) {
 				for (int j = 0; j < channels; j++) {
 					buffer[j] = .0f;
 				}
 				for (int j = 0; j < virt_channels; j++) {
-					(*speaker_fn)(buffer, virt_samples[j][i], virt_angles[j]);
+					(*speaker_fn)(buffer, virt_samples[j][i].real * volume, virt_angles[j]);
 				}
 
 				buffer += channels;
@@ -198,7 +200,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 					buffer[j] = .0f;
 				}
 				for (int j = 0; j < virt_channels; j++) {
-					(*speaker_fn)(buffer, virt_samples[j][i], virt_angles[j]);
+					(*speaker_fn)(buffer, virt_samples[j][i].real * volume, virt_angles[j]);
 				}
 
 				buffer += channels;

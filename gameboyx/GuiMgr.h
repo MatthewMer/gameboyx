@@ -77,6 +77,7 @@ private:
 	bool showImGuiDebug = false;
 	bool showGraphicsInfo = false;
 	bool showGraphicsSettings = false;
+	bool showAudioSettings = false;
 
 	// flow control values
 	bool gameRunning = false;
@@ -172,6 +173,9 @@ private:
 
 	bool tripleBufferingEmu = false;
 
+	bool showAudioMenu = false;
+	float volume = .5f;
+
 	void ResetGUI();
 
 	// gui functions
@@ -185,6 +189,7 @@ private:
 	void ShowGraphicsInfo();
 	void ShowGraphicsOverlay();
 	void ShowGraphicsSettings();
+	void ShowAudioSettings();
 
 	// main menur bar elements
 	void ShowEmulationSpeeds();
@@ -216,6 +221,7 @@ private:
 	void ActionGamesSelectAll();
 	void ActionSetFramerateTarget();
 	void ActionSetSwapchainSettings();
+	void ActionSetMasterVolume();
 
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);

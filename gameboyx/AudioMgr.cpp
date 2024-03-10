@@ -24,6 +24,10 @@ int AudioMgr::GetSamplingRate() {
 	return audioInfo.sampling_rate;
 }
 
+void AudioMgr::SetMasterVolume(const float& _volume) {
+	audioInfo.master_volume.store(_volume);
+}
+
 /* 
 FFT algorithm -> transform signal from time domain into frequency domain (application of fourier analysis)
 	FT: X(f) = integral(t=-infinity,infinity) x(t) * e^(-i*2*pi*f*t) dt, where x(t) is the signal and e^(-i*2*pi*f*t) the complex exponential (polar form: e^(j*phi),

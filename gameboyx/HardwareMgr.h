@@ -41,6 +41,8 @@ public:
 
 	static int GetSamplingRate();
 
+	static void SetMasterVolume(const float& _volume);
+
 private:
 	HardwareMgr() = default;
 	~HardwareMgr() = default;

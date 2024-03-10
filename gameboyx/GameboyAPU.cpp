@@ -180,7 +180,7 @@ void GameboyAPU::ch2EnvelopeSweep() {
 * 3. rear left
 * 4. front left
 */
-void GameboyAPU::SampleAPU(std::vector<std::vector<float>>& _data, const int& _samples) {
+void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples) {
 	bool right = soundCtx->outRightEnabled.load();
 	bool left = soundCtx->outLeftEnabled.load();
 	bool vol_right = soundCtx->masterVolumeRight.load();
@@ -206,7 +206,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<float>>& _data, const int& _s
 
 	for (int i = 0; i < _samples; i++) {
 		for (int n = 0; n < 4; n++) {
-			_data[n].emplace_back(.0f);
+			_data[n].emplace_back(.0f, .0f);
 		}
 
 		if (ch1_enable) {
@@ -218,10 +218,10 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<float>>& _data, const int& _s
 
 
 			if (ch1_right) {
-				_data[0][i] += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol;
+				_data[0][i].real += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol;
 			}
 			if (ch1_left) {
-				_data[3][i] += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol;
+				_data[3][i].real += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol;
 			}
 		}
 
@@ -233,16 +233,16 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<float>>& _data, const int& _s
 			}
 
 			if (ch2_right) {
-				_data[0][i] += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol;
+				_data[0][i].real += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol;
 			}
 			if (ch2_left) {
-				_data[3][i] += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol;
+				_data[3][i].real += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol;
 			}
 		}
 
-		_data[0][i] *= vol_right;
-		_data[1][i] *= vol_right;
-		_data[2][i] *= vol_left;
-		_data[3][i] *= vol_left;
+		_data[0][i].real *= vol_right;
+		_data[1][i].real *= vol_right;
+		_data[2][i].real *= vol_left;
+		_data[3][i].real *= vol_left;
 	}
 }

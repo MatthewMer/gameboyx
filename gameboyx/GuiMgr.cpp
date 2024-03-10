@@ -61,6 +61,8 @@ GuiMgr::GuiMgr() {
         graphicsFPSfifo.push(.0f);
     }
 
+    HardwareMgr::SetMasterVolume(volume);
+
     // set emulation speed to 1x
     ActionSetEmulationSpeed(0);
 
@@ -112,6 +114,7 @@ void GuiMgr::ProcessGUI() {
     if (!gameRunning) { ShowGameSelect(); }
     if (showNewGameDialog) { ShowNewGameDialog(); }
     if (showGraphicsSettings) { ShowGraphicsSettings(); }
+    if (showAudioSettings) { ShowAudioSettings(); }
 }
 
 /* ***********************************************************************************************************
@@ -144,8 +147,13 @@ void GuiMgr::ShowMainMenuBar() {
             }
             // Graphics
             if (ImGui::BeginMenu("Graphics", &showGraphicsMenu)) {
-                ImGui::MenuItem("Settings", nullptr, &showGraphicsSettings);
+                ImGui::MenuItem("General", nullptr, &showGraphicsSettings);
                 ImGui::MenuItem("Overlay", nullptr, &showGraphicsOverlay);
+                ImGui::EndMenu();
+            }
+            // Audio
+            if (ImGui::BeginMenu("Audio", &showAudioMenu)) {
+                ImGui::MenuItem("General", nullptr, &showAudioSettings);
                 ImGui::EndMenu();
             }
             // basic
@@ -757,6 +765,39 @@ void GuiMgr::ShowGraphicsSettings() {
     }
 }
 
+void GuiMgr::ShowAudioSettings() {
+    ImGui::SetNextWindowSize(graph_settings_win_size);
+
+    if (ImGui::Begin("Audio Settings", &showAudioSettings, WIN_CHILD_FLAGS)) {
+
+        if (ImGui::BeginTable("audio general", 2, TABLE_FLAGS_NO_BORDER_OUTER_H)) {
+
+            for (int i = 0; i < 2; i++) {
+                ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER);
+            }
+
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+
+            // application ******************************************
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Master volume");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("sets overall volume");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+
+            if (ImGui::SliderFloat("##volume", &volume, APP_MIN_VOLUME, APP_MAX_VOLUME)) {
+                ActionSetMasterVolume();
+            }
+            ImGui::EndTable();
+        }
+        ImGui::End();
+    }
+}
+
 /* ***********************************************************************************************************
     ACTIONS TO READ/WRITE/PROCESS DATA ETC.
 *********************************************************************************************************** */
@@ -976,6 +1017,13 @@ void GuiMgr::ActionSetFramerateTarget() {
 void GuiMgr::ActionSetSwapchainSettings() {
     HardwareMgr::SetSwapchainSettings(vsync, tripleBuffering);
 }
+
+void GuiMgr::ActionSetMasterVolume() {
+    HardwareMgr::SetMasterVolume(volume);
+}
+
+
+
 
 
 void GuiMgr::GetBankAndAddressTable(TableBase& _table_obj, int& _bank, int& _address) {
