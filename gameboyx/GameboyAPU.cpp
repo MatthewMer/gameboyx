@@ -2,10 +2,10 @@
 #include "gameboy_defines.h"
 
 const float CH_1_2_PWM_SIGNALS[4][8] = {
-	{1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, .0f},
-	{.0f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, .0f},
-	{.0f, 1.f, 1.f, 1.f, 1.f, .0f, .0f, .0f},
-	{1.f, .0f, .0f, .0f, .0f, .0f, .0f, 1.f},
+	{1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f},
+	{-1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f},
+	{-1.f, 1.f, 1.f, 1.f, 1.f, -1.f, -1.f, -1.f},
+	{1.f, -1.f, -1.f, -1.f, -1.f, -1.f, -1.f, 1.f},
 };
 
 
@@ -180,43 +180,69 @@ void GameboyAPU::ch2EnvelopeSweep() {
 * 3. rear left
 * 4. front left
 */
-void GameboyAPU::SampleAPU(float* _data) {
+void GameboyAPU::SampleAPU(std::vector<std::vector<float>>& _data, const int& _samples) {
 	bool right = soundCtx->outRightEnabled.load();
 	bool left = soundCtx->outLeftEnabled.load();
 	bool vol_right = soundCtx->masterVolumeRight.load();
 	bool vol_left = soundCtx->masterVolumeLeft.load();
 
-	if (soundCtx->ch1Enable.load()) {
-		float ch1_virt_sample_step = soundCtx->ch1SamplingRate.load() / physSamplingRate;
-		ch1VirtSamples += ch1_virt_sample_step;
-		if (ch1VirtSamples >= 1.f) {
-			ch1VirtSamples -= 1.f;
-			++ch1SampleCount %= 8;
-		}
-		
-		int wave_index = soundCtx->ch1DutyCycleIndex.load();
-		if (soundCtx->ch1Right.load()) {
-			_data[0] += CH_1_2_PWM_SIGNALS[wave_index][ch1SampleCount] * soundCtx->ch1Volume.load() * vol_right;
-		}
-		if (soundCtx->ch1Left.load()) {
-			_data[3] += CH_1_2_PWM_SIGNALS[wave_index][ch1SampleCount] * soundCtx->ch1Volume.load() * vol_left;
-		}
-	}
+	bool ch1_enable = soundCtx->ch1Enable.load();
+	bool ch2_enable = soundCtx->ch2Enable.load();
 
-	if (soundCtx->ch2Enable.load()) {
-		float ch2_virt_sample_step = soundCtx->ch2SamplingRate.load() / physSamplingRate;
-		ch2VirtSamples += ch2_virt_sample_step;
-		if (ch2VirtSamples >= 1.f) {
-			ch2VirtSamples -= 1.f;
-			++ch2SampleCount %= 8;
+	float ch1_virt_sample_step = soundCtx->ch1SamplingRate.load() / physSamplingRate;
+	float ch2_virt_sample_step = soundCtx->ch2SamplingRate.load() / physSamplingRate;
+
+	int ch1_wave_index = soundCtx->ch1DutyCycleIndex.load();
+	int ch2_wave_index = soundCtx->ch2DutyCycleIndex.load();
+
+	bool ch1_right = soundCtx->ch1Right.load();
+	bool ch1_left = soundCtx->ch1Left.load();
+
+	bool ch2_right = soundCtx->ch2Right.load();
+	bool ch2_left = soundCtx->ch2Left.load();
+
+	float ch1_vol = soundCtx->ch1Volume.load();
+	float ch2_vol = soundCtx->ch2Volume.load();
+
+	for (int i = 0; i < _samples; i++) {
+		for (int n = 0; n < 4; n++) {
+			_data[n].emplace_back(.0f);
 		}
 
-		int wave_index = soundCtx->ch2DutyCycleIndex.load();
-		if (soundCtx->ch2Right.load()) {
-			_data[0] += CH_1_2_PWM_SIGNALS[wave_index][ch2SampleCount] * soundCtx->ch2Volume.load() * vol_right;
+		if (ch1_enable) {
+			ch1VirtSamples += ch1_virt_sample_step;
+			if (ch1VirtSamples >= 1.f) {
+				ch1VirtSamples -= 1.f;
+				++ch1SampleCount %= 8;
+			}
+
+
+			if (ch1_right) {
+				_data[0][i] += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol;
+			}
+			if (ch1_left) {
+				_data[3][i] += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol;
+			}
 		}
-		if (soundCtx->ch2Left.load()) {
-			_data[3] += CH_1_2_PWM_SIGNALS[wave_index][ch2SampleCount] * soundCtx->ch2Volume.load() * vol_left; 
+
+		if (ch2_enable) {
+			ch2VirtSamples += ch2_virt_sample_step;
+			if (ch2VirtSamples >= 1.f) {
+				ch2VirtSamples -= 1.f;
+				++ch2SampleCount %= 8;
+			}
+
+			if (ch2_right) {
+				_data[0][i] += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol;
+			}
+			if (ch2_left) {
+				_data[3][i] += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol;
+			}
 		}
+
+		_data[0][i] *= vol_right;
+		_data[1][i] *= vol_right;
+		_data[2][i] *= vol_left;
+		_data[3][i] *= vol_left;
 	}
 }

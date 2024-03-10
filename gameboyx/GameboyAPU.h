@@ -11,7 +11,7 @@ public:
 
 	// members
 	void ProcessAPU(const int& _ticks) override;
-	void SampleAPU(float* _data) override;
+	void SampleAPU(std::vector<std::vector<float>>& _data, const int& _samples) override;
 
 private:
 	// constructor

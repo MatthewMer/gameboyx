@@ -114,10 +114,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 	const int virt_channels = _virt_audio_info->channels;
 
 	// filled with samples per period of virtual channels
-	float* virt_samples = new float[virt_channels];
-	for (int i = 0; i < virt_channels; i++) {
-		virt_samples[i] = .0f;
-	}
+	std::vector<std::vector<float>> virt_samples = std::vector<std::vector<float>>(virt_channels);
 
 	std::vector<float> virt_angles;
 	{
@@ -172,36 +169,36 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 		*/
 
 		if (reg_1_size || reg_2_size) {
+			// get samples from APU
+			int reg_1_samples = reg_1_size / channels;
+			int reg_2_samples = reg_2_size / channels;
+			for (auto& n : virt_samples) {
+				n.clear();
+			}
+			sound_instance->SampleAPU(virt_samples, reg_1_samples + reg_2_samples);
+
+			// TODO: use FFT and other stuff for different effects
+
 			// transfer samples into ringbuffer
 			float* buffer = _samples->buffer.data() + _samples->write_cursor;
-			for (int i = 0; i < reg_1_size / channels; i++) {
+			for (int i = 0; i < reg_1_samples; i++) {
 				for (int j = 0; j < channels; j++) {
 					buffer[j] = .0f;
 				}
 				for (int j = 0; j < virt_channels; j++) {
-					virt_samples[j] = .0f;
-				}
-
-				sound_instance->SampleAPU(virt_samples);
-				for (int j = 0; j < virt_channels; j++) {
-					(*speaker_fn)(buffer, virt_samples[j], virt_angles[j]);
+					(*speaker_fn)(buffer, virt_samples[j][i], virt_angles[j]);
 				}
 
 				buffer += channels;
 			}
 
 			buffer = _samples->buffer.data();
-			for (int i = 0; i < reg_2_size / channels; i++) {
+			for (int i = 0; i < reg_2_samples; i++) {
 				for (int j = 0; j < channels; j++) {
 					buffer[j] = .0f;
 				}
 				for (int j = 0; j < virt_channels; j++) {
-					virt_samples[j] = .0f;
-				}
-
-				sound_instance->SampleAPU(virt_samples);
-				for (int j = 0; j < virt_channels; j++) {
-					//(*speaker_fn)(buffer, virt_samples[j], virt_angles[j]);
+					(*speaker_fn)(buffer, virt_samples[j][i], virt_angles[j]);
 				}
 
 				buffer += channels;
