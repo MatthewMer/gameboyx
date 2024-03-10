@@ -73,7 +73,7 @@ void GameboyAPU::TickLFSR(const int& _ticks) {
 
 				// tick LFSR
 				u16 lfsr = soundCtx->ch4LFSR;
-				int next = ((lfsr & 0x01) == ((lfsr >> 1) & 0x01) ? 1 : 0);
+				int next = ((lfsr & 0x01) ^ ((lfsr >> 1) & 0x01) ? 0 : 1);
 
 				switch (soundCtx->ch4LFSRWidth7Bit) {
 				case true:
@@ -84,20 +84,20 @@ void GameboyAPU::TickLFSR(const int& _ticks) {
 					break;
 				}
 
+				lfsr >>= 1;
+
 				unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
 				switch (lfsr & 0x0001) {
 				case 0x0000:
-					ch4LFSRSamples[ch4LFSRWriteCursor] = -soundCtx->ch4Volume;
+					ch4LFSRSamples.push(-1.f);
 					break;
 				case 0x0001:
-					ch4LFSRSamples[ch4LFSRWriteCursor] = soundCtx->ch4Volume;
+					ch4LFSRSamples.push(1.f);
 					break;
 				}
 				lock_lfsr_buffer.unlock();
 
-				lfsr >>= 1;
 				soundCtx->ch4LFSR = lfsr;
-				++ch4LFSRWriteCursor %= CH_4_LFSR_BUFFER_SIZE;
 
 				//if(ch4LFSRSamples[ch4LFSRWriteCursor] != .0f)
 				//LOG_INFO(ch4LFSRSamples[ch4LFSRWriteCursor], ";", lfsr);
@@ -255,13 +255,13 @@ void GameboyAPU::ch4EnvelopeSweep() {
 			case true:
 				if (soundCtx->ch4EnvelopeVolume < 0xF) {
 					soundCtx->ch4EnvelopeVolume++;
-					soundCtx->ch4Volume = (float)soundCtx->ch4EnvelopeVolume / 0xF;
+					soundCtx->ch4Volume.store((float)soundCtx->ch4EnvelopeVolume / 0xF);
 				}
 				break;
 			case false:
 				if (soundCtx->ch4EnvelopeVolume > 0x0) {
 					--soundCtx->ch4EnvelopeVolume;
-					soundCtx->ch4Volume = (float)soundCtx->ch4EnvelopeVolume / 0xF;
+					soundCtx->ch4Volume.store((float)soundCtx->ch4EnvelopeVolume / 0xF);
 				}
 				break;
 			}
@@ -336,6 +336,8 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 	bool ch4_right = soundCtx->ch4Right.load();
 	bool ch4_left = soundCtx->ch4Left.load();
 
+	float ch4_vol = soundCtx->ch4Volume.load();
+
 	std::unique_lock<std::mutex> lock_wave_ram = std::unique_lock<std::mutex>(soundCtx->mutWaveRam, std::defer_lock);
 
 	for (int i = 0; i < _samples; i++) {
@@ -398,17 +400,22 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 		if (ch4_enable) {
 			ch4VirtSamples += ch4_virt_sample_step;
-			if (ch4VirtSamples >= 1.f) {
-				ch4VirtSamples -= 1.f;
-				++ch4SampleCount %= CH_4_LFSR_BUFFER_SIZE;
-			}
 
 			unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
-			if (ch4_right) {
-				sample_1 += ch4LFSRSamples[ch4SampleCount];
+			if (ch4VirtSamples >= 1.f) {
+				ch4VirtSamples -= 1.f;
+				if (!ch4LFSRSamples.empty()) {
+					ch4LFSRSamples.pop();
+				}
 			}
-			if (ch4_left) {
-				sample_2 += ch4LFSRSamples[ch4SampleCount];
+
+			if (!ch4LFSRSamples.empty()) {
+				if (ch4_right) {
+					sample_1 += ch4LFSRSamples.front() * ch4_vol;
+				}
+				if (ch4_left) {
+					sample_2 += ch4LFSRSamples.front() * ch4_vol;
+				}
 			}
 		}
 

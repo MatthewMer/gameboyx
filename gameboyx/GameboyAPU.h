@@ -65,12 +65,10 @@ private:
 
 	int ch4LFSRTickCounter = 0;
 	std::mutex mutLFSR;
-	std::vector<float> ch4LFSRSamples = std::vector<float>(CH_4_LFSR_BUFFER_SIZE);
-	int ch4LFSRWriteCursor = 0;
+	std::queue<float> ch4LFSRSamples = std::queue<float>();
 	void ch4TickLengthTimer();
 	void ch4EnvelopeSweep();
 
-	int ch4SampleCount = 0;
 	float ch4VirtSamples = .0f;
 
 	GameboyMEM* memInstance = nullptr;

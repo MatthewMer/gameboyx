@@ -1062,7 +1062,7 @@ void GameboyMEM::SetAPUCh4Envelope(const u8& _data) {
     sound_ctx.ch4EnvelopeIncrease = (_data & CH_1_2_4_ENV_DIR ? true : false);
     sound_ctx.ch4EnvelopePace = _data & CH_1_2_4_ENV_PACE;
 
-    sound_ctx.ch4Volume = (float)sound_ctx.ch4EnvelopeVolume / 0xF;
+    sound_ctx.ch4Volume.store((float)sound_ctx.ch4EnvelopeVolume / 0xF);
 }
 
 void GameboyMEM::SetAPUCh4FrequRandomness(const u8& _data) {

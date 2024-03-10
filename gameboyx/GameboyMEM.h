@@ -260,7 +260,7 @@ struct sound_context {
 	int ch4EnvelopeVolume = 0;
 	bool ch4EnvelopeIncrease = false;
 	int ch4EnvelopePace = 0;
-	float ch4Volume = .0f;
+	alignas(64) std::atomic<float> ch4Volume = 1.f;
 	// frequency and randomness		NR43
 	bool ch4LFSRWidth7Bit = false;
 	u16 ch4LFSR = 0;
