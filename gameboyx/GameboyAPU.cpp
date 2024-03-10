@@ -240,9 +240,9 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 			}
 		}
 
-		_data[0][i].real *= vol_right;
-		_data[1][i].real *= vol_right;
-		_data[2][i].real *= vol_left;
-		_data[3][i].real *= vol_left;
+		_data[0][i].real *= vol_right * .05f;
+		_data[1][i].real *= vol_right * .05f;
+		_data[2][i].real *= vol_left * .05f;
+		_data[3][i].real *= vol_left * .05f;
 	}
 }
