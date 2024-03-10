@@ -74,6 +74,9 @@ void AudioSDL::DestroyAudioBackend() {
 	if (audioThread.joinable()) {
 		audioThread.join();
 	}
+	for (auto& n : audioSamples.buffer) {
+		n = .0f;
+	}
 	LOG_INFO("[SDL] audio backend stopped");
 }
 
@@ -118,7 +121,8 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 
 	std::vector<float> virt_angles;
 	{
-		float step = (float)(360.f / _virt_audio_info->channels);
+		// TODO: revise translation from virtual to physical channels (something is here off, too)
+		float step = (float)((360.f - 45.f) / _virt_audio_info->channels);
 		int i = 0;
 		for (float a = 45.f; i < _virt_audio_info->channels; a += step, i++) {
 			virt_angles.push_back(a);
@@ -210,11 +214,11 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 }
 
 const float x = .5f;
-const float D = .9f;		// gain
+const float D = 1.2f;		// gain
 const float a = 2.f;
 
 float calc_sample(const float& _sample, const float& _sample_angle, const float& _speaker_angle) {
-	return tanh(D * _sample);// * exp(a * .5f * cos(_sample_angle - _speaker_angle) - .5f);
+	return tanh(D * _sample) * exp(a * .5f * cos(_sample_angle - _speaker_angle) - .5f);
 }
 
 // TODO: low frequency missing, probably use a low pass filter on all samples and combine and increase amplitude and output on low frequency channel

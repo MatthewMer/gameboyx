@@ -31,7 +31,7 @@ private:
 
 	int envelopeSweepCounter = 0;
 	int soundLengthCounter = 0;
-	int ch1FrequencyCounter = 0;
+	int ch1SamplingRateCounter = 0;
 	
 	int ch1PeriodSweepCounter = 0;
 	int ch1LengthCounter = 0;
@@ -41,6 +41,7 @@ private:
 	void ch1EnvelopeSweep();
 
 	int ch1SampleCount = 0;
+	float ch1VirtSamples = .0f;
 
 	int ch2LengthCounter = 0;
 	int ch2EnvelopeSweepCounter = 0;
@@ -48,6 +49,7 @@ private:
 	void ch2EnvelopeSweep();
 
 	int ch2SampleCount = 0;
+	float ch2VirtSamples = .0f;
 
 	GameboyMEM* memInstance = nullptr;
 	sound_context* soundCtx = nullptr;

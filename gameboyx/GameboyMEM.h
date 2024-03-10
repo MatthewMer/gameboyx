@@ -203,7 +203,7 @@ struct sound_context {
 	alignas(64) std::atomic<float> ch1Volume = .0f;
 	// period						NR13
 	int ch1Period = 0;
-	alignas(64) std::atomic<int> ch1SamplingRate;
+	alignas(64) std::atomic<float> ch1SamplingRate = 1.f;
 
 	// period + ctrl				NR14
 	bool ch1LengthEnable = false;
@@ -221,7 +221,7 @@ struct sound_context {
 	alignas(64) std::atomic<float> ch2Volume = .0f;
 	// period						NR13
 	int ch2Period = 0;
-	alignas(64) std::atomic<int> ch2SamplingRate;
+	alignas(64) std::atomic<float> ch2SamplingRate = 1.f;
 
 	// period + ctrl				NR14
 	bool ch2LengthEnable = false;

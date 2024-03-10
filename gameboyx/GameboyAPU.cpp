@@ -2,10 +2,10 @@
 #include "gameboy_defines.h"
 
 const float CH_1_2_PWM_SIGNALS[4][8] = {
-	{1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f},
-	{-1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f},
-	{-1.f, 1.f, 1.f, 1.f, 1.f, -1.f, -1.f, -1.f},
-	{1.f, -1.f, -1.f, -1.f, -1.f, -1.f, -1.f, 1.f},
+	{1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, .0f},
+	{.0f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, .0f},
+	{.0f, 1.f, 1.f, 1.f, 1.f, .0f, .0f, .0f},
+	{1.f, .0f, .0f, .0f, .0f, .0f, .0f, 1.f},
 };
 
 
@@ -14,7 +14,7 @@ void GameboyAPU::ProcessAPU(const int& _ticks) {
 		for (int i = 0; i < _ticks; i++) {
 			envelopeSweepCounter++;
 			soundLengthCounter++;
-			ch1FrequencyCounter++;
+			ch1SamplingRateCounter++;
 
 			if (envelopeSweepCounter == ENVELOPE_SWEEP_TICK_RATE) {
 				envelopeSweepCounter = 0;
@@ -38,8 +38,8 @@ void GameboyAPU::ProcessAPU(const int& _ticks) {
 				}
 			}
 
-			if (ch1FrequencyCounter == CH1_FREQU_SWEEP_RATE) {
-				ch1FrequencyCounter = 0;
+			if (ch1SamplingRateCounter == CH1_FREQU_SWEEP_RATE) {
+				ch1SamplingRateCounter = 0;
 
 				if (soundCtx->ch1Enable.load()) {
 					// frequency sweep
@@ -84,7 +84,7 @@ void GameboyAPU::ch1PeriodSweep() {
 				nr14 = (nr14 & ~CH_1_2_PERIOD_HIGH) | ((period >> 8) & CH_1_2_PERIOD_HIGH);
 
 				soundCtx->ch1Period = period;
-				soundCtx->ch1SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - soundCtx->ch1Period)));
+				soundCtx->ch1SamplingRate.store((float)(pow(2, 20) / (CH_1_2_PERIOD_FLIP - soundCtx->ch1Period)));
 				//LOG_INFO("sweep: fs = ", soundCtx->ch1SamplingRate.load() / pow(2, 3), "; dir: ", soundCtx->ch1SweepDirSubtract ? "sub" : "add");
 			}
 		}
@@ -187,8 +187,12 @@ void GameboyAPU::SampleAPU(float* _data) {
 	bool vol_left = soundCtx->masterVolumeLeft.load();
 
 	if (soundCtx->ch1Enable.load()) {
-		int ch1_virt_samples_per_sample = physSamplingRate / soundCtx->ch1SamplingRate.load();
-		++ch1SampleCount %= ch1_virt_samples_per_sample;
+		float ch1_virt_sample_step = soundCtx->ch1SamplingRate.load() / physSamplingRate;
+		ch1VirtSamples += ch1_virt_sample_step;
+		if (ch1VirtSamples >= 1.f) {
+			ch1VirtSamples -= 1.f;
+			++ch1SampleCount %= 8;
+		}
 		
 		int wave_index = soundCtx->ch1DutyCycleIndex.load();
 		if (soundCtx->ch1Right.load()) {
@@ -200,8 +204,12 @@ void GameboyAPU::SampleAPU(float* _data) {
 	}
 
 	if (soundCtx->ch2Enable.load()) {
-		int ch2_virt_samples_per_sample = physSamplingRate / soundCtx->ch2SamplingRate.load();
-		++ch2SampleCount %= ch2_virt_samples_per_sample;
+		float ch2_virt_sample_step = soundCtx->ch2SamplingRate.load() / physSamplingRate;
+		ch2VirtSamples += ch2_virt_sample_step;
+		if (ch2VirtSamples >= 1.f) {
+			ch2VirtSamples -= 1.f;
+			++ch2SampleCount %= 8;
+		}
 
 		int wave_index = soundCtx->ch2DutyCycleIndex.load();
 		if (soundCtx->ch2Right.load()) {

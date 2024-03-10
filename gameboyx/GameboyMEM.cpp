@@ -906,7 +906,7 @@ void GameboyMEM::SetAPUCh1PeriodLow(const u8& _data) {
     IO[NR13_ADDR - IO_OFFSET] = _data;
 
     sound_ctx.ch1Period = _data | (((u16)IO[NR14_ADDR - IO_OFFSET] & CH_1_2_PERIOD_HIGH) << 8);
-    sound_ctx.ch1SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period)));
+    sound_ctx.ch1SamplingRate.store((float)(pow(2, 20) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period)));
     //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3));
 }
 
@@ -917,7 +917,7 @@ void GameboyMEM::SetAPUCh1PeriodHighControl(const u8& _data) {
     sound_ctx.ch1LengthEnable = _data & CH_1_2_CTRL_LENGTH_EN ? true : false;
 
     sound_ctx.ch1Period = (((u16)_data & CH_1_2_PERIOD_HIGH) << 8) | IO[NR13_ADDR - IO_OFFSET];
-    sound_ctx.ch1SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period)));
+    sound_ctx.ch1SamplingRate.store((float)(pow(2, 20) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch1Period)));
     //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3), "; length: ", sound_ctx.ch1LengthEnable ? "true" : "false");
 }
 
@@ -944,7 +944,7 @@ void GameboyMEM::SetAPUCh2PeriodLow(const u8& _data) {
     IO[NR23_ADDR - IO_OFFSET] = _data;
 
     sound_ctx.ch2Period = _data | (((u16)IO[NR24_ADDR - IO_OFFSET] & CH_1_2_PERIOD_HIGH) << 8);
-    sound_ctx.ch2SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch2Period)));
+    sound_ctx.ch2SamplingRate.store((int)(pow(2, 20) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch2Period)));
     //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3));
 }
 
@@ -955,7 +955,7 @@ void GameboyMEM::SetAPUCh2PeriodHighControl(const u8& _data) {
     sound_ctx.ch2LengthEnable = _data & CH_1_2_CTRL_LENGTH_EN ? true : false;
 
     sound_ctx.ch2Period = (((u16)_data & CH_1_2_PERIOD_HIGH) << 8) | IO[NR23_ADDR - IO_OFFSET];
-    sound_ctx.ch2SamplingRate.store((int)(pow(2, 17) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch2Period)));
+    sound_ctx.ch2SamplingRate.store((int)(pow(2, 20) / (CH_1_2_PERIOD_FLIP - sound_ctx.ch2Period)));
     //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3), "; length: ", sound_ctx.ch1LengthEnable ? "true" : "false");
 }
 
