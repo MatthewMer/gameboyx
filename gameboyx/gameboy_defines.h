@@ -388,6 +388,13 @@
 #define CH_4_LFSR_BIT_7                 0x0080
 #define CH_4_LFSR_BIT_15                0x8000
 
+#define CH_1_ENABLE                     0x01
+#define CH_2_ENABLE                     0x02
+#define CH_3_ENABLE                     0x04
+#define CH_4_ENABLE                     0x08
+
+#define CH_4_LFSR_INIT_VALUE            0xFFFF
+
 /* ***********************************************************************************************************
     REGISTERS INITIAL STATES
 *********************************************************************************************************** */

@@ -73,7 +73,7 @@ void GameboyAPU::TickLFSR(const int& _ticks) {
 
 				// tick LFSR
 				u16 lfsr = soundCtx->ch4LFSR;
-				int next = ((lfsr & 0x01) ^ ((lfsr >> 1) & 0x01) ? 0 : 1);
+				int next = (lfsr & 0x01) ^ ((lfsr >> 1) & 0x01);
 
 				switch (soundCtx->ch4LFSRWidth7Bit) {
 				case true:
@@ -89,10 +89,10 @@ void GameboyAPU::TickLFSR(const int& _ticks) {
 				unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
 				switch (lfsr & 0x0001) {
 				case 0x0000:
-					ch4LFSRSamples.push(-1.f);
+					ch4LFSRSamples.emplace(-1.f);
 					break;
 				case 0x0001:
-					ch4LFSRSamples.push(1.f);
+					ch4LFSRSamples.emplace(1.f);
 					break;
 				}
 				lock_lfsr_buffer.unlock();
@@ -130,6 +130,7 @@ void GameboyAPU::ch1PeriodSweep() {
 				if (period > CH_1_2_3_PERIOD_FLIP - 1) {
 					writeback = false;
 					soundCtx->ch1Enable.store(false);
+					memInstance->GetIO(NR52_ADDR) &= ~CH_1_ENABLE;
 				}
 				break;
 			}
@@ -158,6 +159,7 @@ void GameboyAPU::ch1TickLengthTimer() {
 		ch1LengthCounter++;
 		if (ch1LengthCounter == CH_LENGTH_TIMER_THRESHOLD) {
 			soundCtx->ch1Enable.store(false);
+			memInstance->GetIO(NR52_ADDR) &= ~CH_1_ENABLE;
 		}
 		//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
 	}
@@ -199,6 +201,7 @@ void GameboyAPU::ch2TickLengthTimer() {
 		ch2LengthCounter++;
 		if (ch2LengthCounter == CH_LENGTH_TIMER_THRESHOLD) {
 			soundCtx->ch2Enable.store(false);
+			memInstance->GetIO(NR52_ADDR) &= ~CH_2_ENABLE;
 		}
 		//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
 	}
@@ -238,8 +241,9 @@ void GameboyAPU::ch3TickLengthTimer() {
 		}
 
 		ch3LengthCounter++;
-		if (ch3LengthCounter >= CH_LENGTH_TIMER_THRESHOLD) {
+		if (ch3LengthCounter == CH_LENGTH_TIMER_THRESHOLD << 1) {
 			soundCtx->ch3Enable.store(false);
+			memInstance->GetIO(NR52_ADDR) &= ~CH_3_ENABLE;
 		}
 		//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
 	}
@@ -279,8 +283,9 @@ void GameboyAPU::ch4TickLengthTimer() {
 		}
 
 		ch4LengthCounter++;
-		if (ch4LengthCounter >= CH_LENGTH_TIMER_THRESHOLD) {
+		if (ch4LengthCounter == CH_LENGTH_TIMER_THRESHOLD) {
 			soundCtx->ch4Enable.store(false);
+			memInstance->GetIO(NR52_ADDR) &= ~CH_4_ENABLE;
 		}
 		//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
 	}
@@ -329,8 +334,6 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 	float ch3_vol = soundCtx->ch3Volume.load();
 
 	// channel 4
-	bool ch4_enable = soundCtx->ch4Enable.load();
-
 	float ch4_virt_sample_step = soundCtx->ch4SamplingRate.load() / physSamplingRate;
 
 	bool ch4_right = soundCtx->ch4Right.load();
@@ -352,7 +355,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 		if (ch1_enable) {
 			ch1VirtSamples += ch1_virt_sample_step;
-			if (ch1VirtSamples >= 1.f) {
+			while (ch1VirtSamples > 1.f) {
 				ch1VirtSamples -= 1.f;
 				++ch1SampleCount %= 8;
 			}
@@ -368,7 +371,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 		if (ch2_enable) {
 			ch2VirtSamples += ch2_virt_sample_step;
-			if (ch2VirtSamples >= 1.f) {
+			while (ch2VirtSamples > 1.f) {
 				ch2VirtSamples -= 1.f;
 				++ch2SampleCount %= 8;
 			}
@@ -383,7 +386,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 		if (ch3_enable) {
 			ch3VirtSamples += ch3_virt_sample_step;
-			if (ch3VirtSamples >= 1.f) {
+			while (ch3VirtSamples > 1.f) {
 				ch3VirtSamples -= 1.f;
 				++ch3SampleCount %= 32;
 			}
@@ -398,11 +401,10 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 			lock_wave_ram.unlock();
 		}
 
-		if (ch4_enable) {
+		unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
+		if (!ch4LFSRSamples.empty()) {
 			ch4VirtSamples += ch4_virt_sample_step;
-
-			unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
-			if (ch4VirtSamples >= 1.f) {
+			while (ch4VirtSamples > 1.f) {
 				ch4VirtSamples -= 1.f;
 				if (!ch4LFSRSamples.empty()) {
 					ch4LFSRSamples.pop();
@@ -418,6 +420,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 				}
 			}
 		}
+		lock_lfsr_buffer.unlock();
 
 		_data[0][i].real = sample_0 * vol_right * .05f;
 		_data[1][i].real = sample_1 * vol_right * .05f;

@@ -210,6 +210,7 @@ struct sound_context {
 	// period + ctrl				NR14
 	bool ch1LengthEnable = false;
 	alignas(64) std::atomic<bool> ch1Enable = false;
+	bool ch1DAC = false;
 
 	// channel 2
 	// timer, duty cycle			NR21
@@ -228,6 +229,7 @@ struct sound_context {
 	// period + ctrl				NR14
 	bool ch2LengthEnable = false;
 	alignas(64) std::atomic<bool> ch2Enable = false;
+	bool ch2DAC = false;
 
 	// channel 3
 	// control						NR30
@@ -243,6 +245,7 @@ struct sound_context {
 	// period high and control		NR34
 	bool ch3LengthEnable = false;
 	alignas(64) std::atomic<bool> ch3Enable = false;
+	bool ch3DAC = false;
 	// Ch3 Wave RAM
 	std::mutex mutWaveRam;
 	float waveRam[32] = {
@@ -263,12 +266,13 @@ struct sound_context {
 	alignas(64) std::atomic<float> ch4Volume = 1.f;
 	// frequency and randomness		NR43
 	bool ch4LFSRWidth7Bit = false;
-	u16 ch4LFSR = 0;
+	u16 ch4LFSR = CH_4_LFSR_INIT_VALUE;
 	int ch4LFSRThreshold = 0;
 	alignas(64) std::atomic<float> ch4SamplingRate = 1.f;
 	//  and control					NR44
 	bool ch4LengthEnable = false;
 	alignas(64) std::atomic<bool> ch4Enable = false;
+	bool ch4DAC = false;
 };
 
 struct control_context {

@@ -931,6 +931,12 @@ void GameboyMEM::SetAPUCh1Envelope(const u8& _data) {
     sound_ctx.ch1EnvelopePace = _data & CH_1_2_4_ENV_PACE;
 
     sound_ctx.ch1Volume.store((float)sound_ctx.ch1EnvelopeVolume / 0xF);
+
+    sound_ctx.ch1DAC = _data & 0xF8 ? true : false;
+    if (!sound_ctx.ch1DAC) {
+        sound_ctx.ch1Enable.store(false);
+        IO[NR52_ADDR - IO_OFFSET] &= ~CH_1_ENABLE;
+    }
 }
 
 void GameboyMEM::SetAPUCh1PeriodLow(const u8& _data) {
@@ -944,7 +950,10 @@ void GameboyMEM::SetAPUCh1PeriodLow(const u8& _data) {
 void GameboyMEM::SetAPUCh1PeriodHighControl(const u8& _data) {
     IO[NR14_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.ch1Enable.store(_data & CH_1_2_3_4_CTRL_TRIGGER ? true : false);
+    if (_data & CH_1_2_3_4_CTRL_TRIGGER && sound_ctx.ch1DAC) {
+        sound_ctx.ch1Enable.store(true);
+        IO[NR52_ADDR - IO_OFFSET] |= CH_1_ENABLE;
+    }
     sound_ctx.ch1LengthEnable = _data & CH_1_2_3_4_CTRL_LENGTH_EN ? true : false;
 
     sound_ctx.ch1Period = (((u16)_data & CH_1_2_3_PERIOD_HIGH) << 8) | IO[NR13_ADDR - IO_OFFSET];
@@ -969,6 +978,12 @@ void GameboyMEM::SetAPUCh2Envelope(const u8& _data) {
     sound_ctx.ch2EnvelopePace = _data & CH_1_2_4_ENV_PACE;
 
     sound_ctx.ch2Volume.store((float)sound_ctx.ch2EnvelopeVolume / 0xF);
+
+    sound_ctx.ch2DAC = _data & 0xF8 ? true : false;
+    if (!sound_ctx.ch2DAC) {
+        sound_ctx.ch2Enable.store(false);
+        IO[NR52_ADDR - IO_OFFSET] &= ~CH_2_ENABLE;
+    }
 }
 
 void GameboyMEM::SetAPUCh2PeriodLow(const u8& _data) {
@@ -982,7 +997,10 @@ void GameboyMEM::SetAPUCh2PeriodLow(const u8& _data) {
 void GameboyMEM::SetAPUCh2PeriodHighControl(const u8& _data) {
     IO[NR24_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.ch2Enable.store(_data & CH_1_2_3_4_CTRL_TRIGGER ? true : false);
+    if (_data & CH_1_2_3_4_CTRL_TRIGGER && sound_ctx.ch2DAC) {
+        sound_ctx.ch2Enable.store(true);
+        IO[NR52_ADDR - IO_OFFSET] |= CH_2_ENABLE;
+    }
     sound_ctx.ch2LengthEnable = _data & CH_1_2_3_4_CTRL_LENGTH_EN ? true : false;
 
     sound_ctx.ch2Period = (((u16)_data & CH_1_2_3_PERIOD_HIGH) << 8) | IO[NR23_ADDR - IO_OFFSET];
@@ -993,7 +1011,11 @@ void GameboyMEM::SetAPUCh2PeriodHighControl(const u8& _data) {
 void GameboyMEM::SetAPUCh3DACEnable(const u8& _data) {
     IO[NR30_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.ch3Enable.store(_data & CH_3_DAC ? true : false);
+    sound_ctx.ch3DAC = _data & CH_3_DAC ? true : false;
+    if (!sound_ctx.ch3DAC) {
+        sound_ctx.ch3Enable.store(false);
+        IO[NR52_ADDR - IO_OFFSET] &= ~CH_3_ENABLE;
+    }
 }
 
 void GameboyMEM::SetAPUCh3Timer(const u8& _data) {
@@ -1032,7 +1054,10 @@ void GameboyMEM::SetAPUCh3PeriodLow(const u8& _data) {
 void GameboyMEM::SetAPUCh3PeriodHighControl(const u8& _data) {
     IO[NR34_ADDR - IO_OFFSET] = _data;
 
-    sound_ctx.ch3Enable.store(_data & CH_1_2_3_4_CTRL_TRIGGER ? true : false);
+    if (_data & CH_1_2_3_4_CTRL_TRIGGER && sound_ctx.ch3DAC) {
+        sound_ctx.ch3Enable.store(true);
+        IO[NR52_ADDR - IO_OFFSET] |= CH_3_ENABLE;
+    }
     sound_ctx.ch3LengthEnable = _data & CH_1_2_3_4_CTRL_LENGTH_EN ? true : false;
 
     sound_ctx.ch3Period = (((u16)_data & CH_1_2_3_PERIOD_HIGH) << 8) | IO[NR33_ADDR - IO_OFFSET];
@@ -1063,6 +1088,12 @@ void GameboyMEM::SetAPUCh4Envelope(const u8& _data) {
     sound_ctx.ch4EnvelopePace = _data & CH_1_2_4_ENV_PACE;
 
     sound_ctx.ch4Volume.store((float)sound_ctx.ch4EnvelopeVolume / 0xF);
+
+    sound_ctx.ch4DAC = _data & 0xF8 ? true : false;
+    if (!sound_ctx.ch4DAC) {
+        sound_ctx.ch4Enable.store(false);
+        IO[NR52_ADDR - IO_OFFSET] &= ~CH_4_ENABLE;
+    }
 }
 
 void GameboyMEM::SetAPUCh4FrequRandomness(const u8& _data) {
@@ -1081,11 +1112,11 @@ void GameboyMEM::SetAPUCh4FrequRandomness(const u8& _data) {
 void GameboyMEM::SetAPUCh4Control(const u8& _data) {
     IO[NR44_ADDR - IO_OFFSET] = _data;
 
-    if (!sound_ctx.ch4Enable.load() && (_data & CH_1_2_3_4_CTRL_TRIGGER)) {
-        sound_ctx.ch4LFSR = 0;
+    if (_data & CH_1_2_3_4_CTRL_TRIGGER && sound_ctx.ch4DAC) {
+        sound_ctx.ch4LFSR = CH_4_LFSR_INIT_VALUE;
+        sound_ctx.ch4Enable.store(true);
+        IO[NR52_ADDR - IO_OFFSET] |= CH_4_ENABLE;
     }
-
-    sound_ctx.ch4Enable.store(_data & CH_1_2_3_4_CTRL_TRIGGER ? true : false);
     sound_ctx.ch4LengthEnable = _data & CH_1_2_3_4_CTRL_LENGTH_EN ? true : false;
 }
 
