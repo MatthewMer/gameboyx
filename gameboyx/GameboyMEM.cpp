@@ -990,7 +990,7 @@ void GameboyMEM::SetAPUCh2PeriodLow(const u8& _data) {
     IO[NR23_ADDR - IO_OFFSET] = _data;
 
     sound_ctx.ch2Period = _data | (((u16)IO[NR24_ADDR - IO_OFFSET] & CH_1_2_3_PERIOD_HIGH) << 8);
-    sound_ctx.ch2SamplingRate.store((int)(pow(2, 20) / (CH_1_2_3_PERIOD_FLIP - sound_ctx.ch2Period)));
+    sound_ctx.ch2SamplingRate.store((float)(pow(2, 20) / (CH_1_2_3_PERIOD_FLIP - sound_ctx.ch2Period)));
     //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3));
 }
 
@@ -1004,7 +1004,7 @@ void GameboyMEM::SetAPUCh2PeriodHighControl(const u8& _data) {
     sound_ctx.ch2LengthEnable = _data & CH_1_2_3_4_CTRL_LENGTH_EN ? true : false;
 
     sound_ctx.ch2Period = (((u16)_data & CH_1_2_3_PERIOD_HIGH) << 8) | IO[NR23_ADDR - IO_OFFSET];
-    sound_ctx.ch2SamplingRate.store((int)(pow(2, 20) / (CH_1_2_3_PERIOD_FLIP - sound_ctx.ch2Period)));
+    sound_ctx.ch2SamplingRate.store((float)(pow(2, 20) / (CH_1_2_3_PERIOD_FLIP - sound_ctx.ch2Period)));
     //LOG_INFO("f = ", sound_ctx.ch1SamplingRate.load() / pow(2, 3), "; length: ", sound_ctx.ch1LengthEnable ? "true" : "false");
 }
 
@@ -1048,7 +1048,7 @@ void GameboyMEM::SetAPUCh3PeriodLow(const u8& _data) {
     IO[NR33_ADDR - IO_OFFSET] = _data;
 
     sound_ctx.ch3Period = _data | (((u16)IO[NR34_ADDR - IO_OFFSET] & CH_1_2_3_PERIOD_HIGH) << 8);
-    sound_ctx.ch3SamplingRate.store((int)(pow(2, 21) / (CH_1_2_3_PERIOD_FLIP - sound_ctx.ch2Period)));
+    sound_ctx.ch3SamplingRate.store((float)(pow(2, 21) / (CH_1_2_3_PERIOD_FLIP - sound_ctx.ch2Period)));
 }
 
 void GameboyMEM::SetAPUCh3PeriodHighControl(const u8& _data) {
@@ -1061,7 +1061,7 @@ void GameboyMEM::SetAPUCh3PeriodHighControl(const u8& _data) {
     sound_ctx.ch3LengthEnable = _data & CH_1_2_3_4_CTRL_LENGTH_EN ? true : false;
 
     sound_ctx.ch3Period = (((u16)_data & CH_1_2_3_PERIOD_HIGH) << 8) | IO[NR33_ADDR - IO_OFFSET];
-    sound_ctx.ch3SamplingRate.store((int)(pow(2, 21) / (CH_1_2_3_PERIOD_FLIP - sound_ctx.ch3Period)));
+    sound_ctx.ch3SamplingRate.store((float)(pow(2, 21) / (CH_1_2_3_PERIOD_FLIP - sound_ctx.ch3Period)));
 }
 
 void GameboyMEM::SetAPUCh3WaveRam(const u16& _addr, const u8& _data) {
@@ -1104,9 +1104,9 @@ void GameboyMEM::SetAPUCh4FrequRandomness(const u8& _data) {
     int ch4_clock_shift = (_data & CH_4_CLOCK_SHIFT) >> 4;
     int t = _data & CH_4_CLOCK_DIVIDER;
     float ch4_clock_divider = t ? (float)t : .5f;
-    sound_ctx.ch4SamplingRate = pow(2, 18) / (ch4_clock_divider * pow(2, ch4_clock_shift));
+    sound_ctx.ch4SamplingRate.store((float)(pow(2, 18) / (ch4_clock_divider * pow(2, ch4_clock_shift))));
 
-    sound_ctx.ch4LFSRThreshold = BASE_CLOCK_CPU / sound_ctx.ch4SamplingRate;
+    sound_ctx.ch4LFSRStep = (float)(sound_ctx.ch4SamplingRate / BASE_CLOCK_CPU);
 }
 
 void GameboyMEM::SetAPUCh4Control(const u8& _data) {
@@ -1148,7 +1148,6 @@ void GameboyMEM::FillMemoryDebugTable(TableSection<memory_entry>& _table_section
         _table_section[i] = table_entry;
     }
 }
-
 
 void GameboyMEM::GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) {
     // access for memory inspector

@@ -386,32 +386,34 @@ void GameboyGPU::DrawScanlineCGB(const u8& _ly) {
 
 void GameboyGPU::SearchOAM(const u8& _ly) {
 	if (graphicsCtx->obj_enable) {
-		int y_pos;
-		int ly = _ly;
-		bool prio;
-		bool add_entry = false;
+		if (oamOffset < OAM_SIZE) {
+			int y_pos;
+			int ly = _ly;
+			bool prio;
+			bool add_entry = false;
+		
+			y_pos = (int)graphicsCtx->OAM[oamOffset + OBJ_ATTR_Y];
 
-		y_pos = (int)graphicsCtx->OAM[oamOffset + OBJ_ATTR_Y];
+			add_entry =
+				(graphicsCtx->obj_size_16 && ((y_pos - ly) > 0 && (y_pos - _ly) < (16 + 1))) ||
+				((y_pos - ly) > 8 && (y_pos - _ly) < (16 + 1));
 
-		add_entry =
-			(graphicsCtx->obj_size_16 && ((y_pos - ly) > 0 && (y_pos - _ly) < (16 + 1))) ||
-			((y_pos - ly) > 8 && (y_pos - _ly) < (16 + 1));
+			if (add_entry) {
+				prio = (graphicsCtx->OAM[oamOffset + OBJ_ATTR_FLAGS] & OBJ_ATTR_PRIO) ? true : false;
 
-		if (add_entry) {
-			prio = (graphicsCtx->OAM[oamOffset + OBJ_ATTR_FLAGS] & OBJ_ATTR_PRIO) ? true : false;
-
-			if (numOAMEntriesPrio1DMG + numOAMEntriesPrio0DMG < 10) {
-				if (prio) {
-					OAMPrio1DMG[numOAMEntriesPrio1DMG] = oamOffset;
-					numOAMEntriesPrio1DMG++;
-				} else {
-					OAMPrio0DMG[numOAMEntriesPrio0DMG] = oamOffset;
-					numOAMEntriesPrio0DMG++;
+				if (numOAMEntriesPrio1DMG + numOAMEntriesPrio0DMG < 10) {
+					if (prio) {
+						OAMPrio1DMG[numOAMEntriesPrio1DMG] = oamOffset;
+						numOAMEntriesPrio1DMG++;
+					} else {
+						OAMPrio0DMG[numOAMEntriesPrio0DMG] = oamOffset;
+						numOAMEntriesPrio0DMG++;
+					}
 				}
 			}
-		}
 
-		oamOffset += PPU_OBJ_ATTR_BYTES;
+			oamOffset += PPU_OBJ_ATTR_BYTES;
+		}
 	}
 }
 

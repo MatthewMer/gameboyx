@@ -267,8 +267,8 @@ struct sound_context {
 	// frequency and randomness		NR43
 	bool ch4LFSRWidth7Bit = false;
 	u16 ch4LFSR = CH_4_LFSR_INIT_VALUE;
-	int ch4LFSRThreshold = 0;
-	alignas(64) std::atomic<float> ch4SamplingRate = 1.f;
+	float ch4LFSRStep = .0f;
+	alignas(64) std::atomic<float> ch4SamplingRate = (float)CH_4_LFSR_MAX_SAMPL_RATE;
 	//  and control					NR44
 	bool ch4LengthEnable = false;
 	alignas(64) std::atomic<bool> ch4Enable = false;

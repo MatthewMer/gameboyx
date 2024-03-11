@@ -63,13 +63,15 @@ private:
 	int ch4LengthCounter = 0;
 	int ch4EnvelopeSweepCounter = 0;
 
-	int ch4LFSRTickCounter = 0;
+	float ch4LFSRTickCounter = 0;
 	std::mutex mutLFSR;
 	std::queue<float> ch4LFSRSamples = std::queue<float>();
 	void ch4TickLengthTimer();
 	void ch4EnvelopeSweep();
 
 	float ch4VirtSamples = .0f;
+
+	int ch4SamplingRateCounter = 0;
 
 	GameboyMEM* memInstance = nullptr;
 	sound_context* soundCtx = nullptr;
