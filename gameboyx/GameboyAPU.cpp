@@ -86,26 +86,27 @@ void GameboyAPU::TickLFSR(const int& _ticks) {
 
 				lfsr >>= 1;
 
+				int write_cursor = ch4WriteCursor.load();
+
 				unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
 				switch (lfsr & 0x0001) {
 				case 0x0000:
-					ch4LFSRSamples.emplace(-1.f);
+					ch4LFSRSamples[write_cursor] = -1.f;
 					break;
 				case 0x0001:
-					ch4LFSRSamples.emplace(1.f);
+					ch4LFSRSamples[write_cursor] = 1.f;
 					break;
 				}
 				lock_lfsr_buffer.unlock();
 
+				++write_cursor %= CH_4_LFSR_BUFFER_SIZE;
+				ch4WriteCursor.store(write_cursor);
 				soundCtx->ch4LFSR = lfsr;
 
 				//if(ch4LFSRSamples[ch4LFSRWriteCursor] != .0f)
 				//LOG_INFO(ch4LFSRSamples[ch4LFSRWriteCursor], ";", lfsr);
 			}
 		}
-	} else {
-		unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
-		if (!ch4LFSRSamples.empty()) { ch4LFSRSamples.pop(); }
 	}
 }
 
@@ -405,23 +406,22 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 			lock_wave_ram.unlock();
 		}
 
-		
-		if (!ch4LFSRSamples.empty()) {
+		{
 			ch4VirtSamples += ch4_virt_sample_step;
 			while (ch4VirtSamples > 1.f) {
 				ch4VirtSamples -= 1.f;
-				if (!ch4LFSRSamples.empty()) {
-					ch4LFSRSamples.pop();
+
+				if (ch4ReadCursor != ch4WriteCursor.load()) {
+					ch4LFSRSamples[ch4ReadCursor] = .0f;
+					++ch4ReadCursor %= CH_4_LFSR_BUFFER_SIZE;
 				}
 			}
 
-			if (!ch4LFSRSamples.empty()) {
-				if (ch4_right) {
-					sample_1 += ch4LFSRSamples.front() * ch4_vol;
-				}
-				if (ch4_left) {
-					sample_2 += ch4LFSRSamples.front() * ch4_vol;
-				}
+			if (ch4_right) {
+				sample_1 += ch4LFSRSamples[ch4ReadCursor] * ch4_vol;
+			}
+			if (ch4_left) {
+				sample_2 += ch4LFSRSamples[ch4ReadCursor] * ch4_vol;
 			}
 		}
 
