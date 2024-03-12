@@ -347,8 +347,8 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 	float ch4_vol = soundCtx->ch4Volume.load();
 
-	std::unique_lock<std::mutex> lock_wave_ram = std::unique_lock<std::mutex>(soundCtx->mutWaveRam, std::defer_lock);
-	unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
+	std::unique_lock<std::mutex> lock_wave_ram(soundCtx->mutWaveRam, std::defer_lock);
+	unique_lock<mutex> lock_lfsr_buffer(mutLFSR, std::defer_lock);
 
 	for (int i = 0; i < _samples; i++) {
 		for (int n = 0; n < 4; n++) {
@@ -409,6 +409,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 		}
 
 		{
+			lock_lfsr_buffer.lock();
 			ch4VirtSamples += ch4_virt_sample_step;
 			while (ch4VirtSamples > 1.f) {
 				ch4VirtSamples -= 1.f;
@@ -425,6 +426,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 			if (ch4_left) {
 				sample_2 += ch4LFSRSamples[ch4ReadCursor] * ch4_vol;
 			}
+			lock_lfsr_buffer.unlock();
 		}
 
 		_data[0][i].real = sample_0 * vol_right * .05f;
