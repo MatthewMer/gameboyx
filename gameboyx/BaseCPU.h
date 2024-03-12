@@ -16,8 +16,6 @@
 #include "defs.h"
 #include "GuiTable.h"
 
-#include "GameboyAPU.h"
-
 class BaseCPU
 {
 public:
@@ -59,7 +57,7 @@ protected:
 
 	BaseMMU* mmu_instance = nullptr;
 	BaseGPU* graphics_instance = nullptr;
-	GameboyAPU* sound_instance = nullptr;
+	BaseAPU* sound_instance = nullptr;
 
 	// members
 	int machineCycleClockCounter = 0;				// counter

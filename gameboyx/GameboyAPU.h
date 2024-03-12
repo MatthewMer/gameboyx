@@ -14,8 +14,6 @@ public:
 	void ProcessAPU(const int& _ticks) override;
 	void SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples) override;
 
-	void TickLFSR(const int& _ticks);
-
 private:
 	// constructor
 	GameboyAPU(BaseCartridge* _cartridge) : BaseAPU() {
@@ -73,6 +71,8 @@ private:
 
 	alignas(64) std::atomic<int> ch4WriteCursor = 0;
 	int ch4ReadCursor = 0;
+
+	void TickLFSR(const int& _ticks);
 
 	GameboyMEM* memInstance = nullptr;
 	sound_context* soundCtx = nullptr;

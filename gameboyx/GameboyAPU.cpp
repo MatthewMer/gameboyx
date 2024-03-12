@@ -60,12 +60,14 @@ void GameboyAPU::ProcessAPU(const int& _ticks) {
 				}
 			}
 		}
+
+		TickLFSR(_ticks);
 	}
 }
 
 void GameboyAPU::TickLFSR(const int& _ticks) {
 	if (soundCtx->ch4Enable.load()) {
-		for (int i = 0; i < _ticks; i++) {
+		for (int i = 0; i < _ticks * CH_4_LFSR_TICKS_PER_APU_TICK; i++) {
 			ch4LFSRTickCounter += soundCtx->ch4LFSRStep;
 
 			if (ch4LFSRTickCounter > 1.f) {

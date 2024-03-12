@@ -328,6 +328,8 @@
 *********************************************************************************************************** */
 #define APU_CHANNELS_NUM                4
 
+#define APU_BASE_CLOCK                  512
+
 #define DIV_APU_SINGLESPEED_BIT         0x10
 #define DIV_APU_DOUBLESPEED_BIT         0x20
 
@@ -398,6 +400,8 @@
 #define CH_4_LFSR_MAX_SAMPL_RATE        (pow(2, 18) / (.5f * pow(2, 0)))
 
 #define CH_4_LFSR_BUFFER_SIZE           16384
+
+#define CH_4_LFSR_TICKS_PER_APU_TICK    ((int)(BASE_CLOCK_CPU / APU_BASE_CLOCK))
 
 /* ***********************************************************************************************************
     REGISTERS INITIAL STATES
