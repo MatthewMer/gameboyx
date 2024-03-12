@@ -69,8 +69,8 @@ private:
 
 	float ch4VirtSamples = .0f;
 
-	alignas(64) std::atomic<int> ch4WriteCursor = 0;
-	int ch4ReadCursor = 0;
+	alignas(64) std::atomic<int> ch4WriteCursor = 1;			// always points to the next sample to write
+	alignas(64) std::atomic<int> ch4ReadCursor = 0;				// always points to the current sample to read
 
 	void TickLFSR(const int& _ticks);
 

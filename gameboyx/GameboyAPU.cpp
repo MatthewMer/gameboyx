@@ -90,19 +90,22 @@ void GameboyAPU::TickLFSR(const int& _ticks) {
 
 				int write_cursor = ch4WriteCursor.load();
 
-				unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
-				switch (lfsr & 0x0001) {
-				case 0x0000:
-					ch4LFSRSamples[write_cursor] = -1.f;
-					break;
-				case 0x0001:
-					ch4LFSRSamples[write_cursor] = 1.f;
-					break;
-				}
-				lock_lfsr_buffer.unlock();
+				if (write_cursor != ch4ReadCursor.load()) {
+					unique_lock<mutex> lock_lfsr_buffer(mutLFSR);
+					switch (lfsr & 0x0001) {
+					case 0x0000:
+						ch4LFSRSamples[write_cursor] = -1.f;
+						break;
+					case 0x0001:
+						ch4LFSRSamples[write_cursor] = 1.f;
+						break;
+					}
+					lock_lfsr_buffer.unlock();
 
-				++write_cursor %= CH_4_LFSR_BUFFER_SIZE;
-				ch4WriteCursor.store(write_cursor);
+					++write_cursor %= CH_4_LFSR_BUFFER_SIZE;
+					ch4WriteCursor.store(write_cursor);
+				}
+
 				soundCtx->ch4LFSR = lfsr;
 
 				//if(ch4LFSRSamples[ch4LFSRWriteCursor] != .0f)
@@ -347,7 +350,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 	float ch4_vol = soundCtx->ch4Volume.load();
 
-	std::unique_lock<std::mutex> lock_wave_ram(soundCtx->mutWaveRam, std::defer_lock);
+	unique_lock<mutex> lock_wave_ram(soundCtx->mutWaveRam, std::defer_lock);
 	unique_lock<mutex> lock_lfsr_buffer(mutLFSR, std::defer_lock);
 
 	for (int i = 0; i < _samples; i++) {
@@ -414,9 +417,12 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 			while (ch4VirtSamples > 1.f) {
 				ch4VirtSamples -= 1.f;
 
-				if (ch4ReadCursor != ch4WriteCursor.load()) {
-					ch4LFSRSamples[ch4ReadCursor] = .0f;
-					++ch4ReadCursor %= CH_4_LFSR_BUFFER_SIZE;
+				int read_cursor = ch4ReadCursor.load();
+
+				if (read_cursor != (ch4WriteCursor.load() - 1) % CH_4_LFSR_BUFFER_SIZE) {
+					ch4LFSRSamples[read_cursor] = .0f;
+					++read_cursor %= CH_4_LFSR_BUFFER_SIZE;
+					ch4ReadCursor.store(read_cursor);
 				}
 			}
 
