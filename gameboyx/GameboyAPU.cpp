@@ -419,6 +419,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 				int read_cursor = ch4ReadCursor.load();
 
+				// (0 - 1) % 10 = -1 % 10 and is defined as -1 * 10 + 9, where the added value is the remainder (remainder is by definition always positiv)
 				if (read_cursor != (ch4WriteCursor.load() - 1) % CH_4_LFSR_BUFFER_SIZE) {
 					ch4LFSRSamples[read_cursor] = .0f;
 					++read_cursor %= CH_4_LFSR_BUFFER_SIZE;
