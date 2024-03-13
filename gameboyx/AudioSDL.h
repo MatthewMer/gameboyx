@@ -34,7 +34,7 @@ protected:
 			audioInfo.channels = audioInfo.channels_max;
 		}
 
-		LOG_INFO("[SDL] ", name, " supports: ", std::format("{:d} channels @ {:.1f}kHz", dev_props.channels, dev_props.freq / pow(10, 3)));
+		LOG_INFO("[SDL] ", name, " supports: ", std::format("{:d} channels @ {:d}Hz", dev_props.channels, dev_props.freq));
 	}
 
 

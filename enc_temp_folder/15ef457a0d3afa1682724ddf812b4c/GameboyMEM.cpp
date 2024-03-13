@@ -576,9 +576,10 @@ void GameboyMEM::CopyDataFromRAM(vector<char>& _data) const {
     DMA
 *********************************************************************************************************** */
 void GameboyMEM::VRAM_DMA(const u8& _data) {
+    // u8 mode = HDMA5 & DMA_MODE_BIT;
+    IO[CGB_HDMA5_ADDR - IO_OFFSET] = _data;
     if (machine_ctx.isCgb) {
-        IO[CGB_HDMA5_ADDR - IO_OFFSET] = _data | 0x80;
-
+        IO[CGB_HDMA5_ADDR - IO_OFFSET] |= 0x80;
         u16 length = ((IO[CGB_HDMA5_ADDR - IO_OFFSET] & 0x7F) + 1) * 0x10;
 
         u16 source_addr = ((u16)IO[CGB_HDMA1_ADDR - IO_OFFSET] << 8) | (IO[CGB_HDMA2_ADDR - IO_OFFSET] & 0xF0);

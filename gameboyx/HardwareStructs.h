@@ -23,7 +23,7 @@ struct virtual_graphics_information {
 
 struct virtual_audio_information {
 	int channels = 0;
-	alignas(64) std::atomic<bool> audio_running = true;
+	alignas(64) std::atomic<bool> audio_running = false;
 	BaseAPU* sound_instance = nullptr;
 
 	constexpr virtual_audio_information& operator=(virtual_audio_information& _right) noexcept {

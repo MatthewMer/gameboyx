@@ -399,7 +399,7 @@
 
 #define CH_4_LFSR_MAX_SAMPL_RATE        (pow(2, 18) / (.5f * pow(2, 0)))
 
-#define CH_4_LFSR_BUFFER_SIZE           8192
+#define CH_4_LFSR_BUFFER_SIZE           16384
 
 #define CH_4_LFSR_TICKS_PER_APU_TICK    ((int)(BASE_CLOCK_CPU / APU_BASE_CLOCK))
 

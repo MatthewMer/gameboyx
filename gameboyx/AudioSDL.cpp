@@ -76,7 +76,7 @@ void AudioSDL::InitAudio(audio_settings& _audio_settings, const bool& _reinit) {
 	audioInfo.device = (void*)&device;
 
 	SDL_PauseAudioDevice(device, 0);
-	LOG_INFO("[SDL] ", name, " set: ", format("{:d} channels @ {:.1f}kHz", audioInfo.channels, audioInfo.sampling_rate / pow(10, 3)));
+	LOG_INFO("[SDL] ", name, " set: ", format("{:d} channels @ {:d}Hz", audioInfo.channels, audioInfo.sampling_rate));
 
 	if (_reinit && _reinit_backend) {
 		InitAudioBackend(virtAudioInfo);
