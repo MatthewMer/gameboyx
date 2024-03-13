@@ -1259,9 +1259,6 @@ void GuiMgr::EventKeyDown(SDL_Keycode& _key) {
         case SDLK_RCTRL:
             sdlkCtrlDown = true;
             break;
-        case SDLK_DELETE:
-            sdlkDelDown = true;
-            break;
         case SDLK_UP:
             ActionGameSelectUp();
             break;
@@ -1313,7 +1310,7 @@ void GuiMgr::EventKeyUp(SDL_Keycode& _key) {
             sdlkCtrlDown = false;
             break;
         case SDLK_DELETE:
-            sdlkDelDown = false;
+            ActionDeleteGames();
             break;
         case SDLK_RETURN:
             ActionGameStart();

@@ -58,7 +58,6 @@ private:
 	bool sdlkCtrlDown = false;
 	bool sdlkCtrlBlocked = false;
 	bool sdlkShiftDown = false;
-	bool sdlkDelDown = false;
 	bool sdlkADown = false;
 	bool sdlScrollDown = false;
 	bool sdlScrollUp = false;

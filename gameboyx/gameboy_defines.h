@@ -292,7 +292,7 @@
 #define OBJ_ATTR_Y_FLIP                 0x40
 #define OBJ_ATTR_PRIO                   0x80
 
-#define PPU_PALETTE_RAM_SIZE_CGB    64
+#define PPU_PALETTE_RAM_SIZE_CGB        64
 
 // screen
 #define PPU_TILES_HORIZONTAL            20
@@ -399,7 +399,7 @@
 
 #define CH_4_LFSR_MAX_SAMPL_RATE        (pow(2, 18) / (.5f * pow(2, 0)))
 
-#define CH_4_LFSR_BUFFER_SIZE           16384
+#define CH_4_LFSR_BUFFER_SIZE           8192
 
 #define CH_4_LFSR_TICKS_PER_APU_TICK    ((int)(BASE_CLOCK_CPU / APU_BASE_CLOCK))
 
