@@ -65,7 +65,9 @@ protected:
 	virtual bool Init2dGraphicsBackend() = 0;
 	virtual void Destroy2dGraphicsBackend() = 0;
 
-	graphics_information graphicsInfo = {};
+	u32 win_width = 0;
+	u32 win_height = 0;
+
 	virtual_graphics_information virtGraphicsInfo = {};
 
 	int shadersCompiled;

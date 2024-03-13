@@ -307,7 +307,7 @@ void GameboyAPU::ch4TickLengthTimer() {
 * 3. rear left
 * 4. front left
 */
-void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples) {
+void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples, const int& _sampling_rate) {
 	bool right = soundCtx->outRightEnabled.load();
 	bool left = soundCtx->outLeftEnabled.load();
 	bool vol_right = soundCtx->masterVolumeRight.load();
@@ -317,8 +317,8 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 	bool ch1_enable = soundCtx->ch1Enable.load();
 	bool ch2_enable = soundCtx->ch2Enable.load();
 
-	float ch1_virt_sample_step = soundCtx->ch1SamplingRate.load() / physSamplingRate;
-	float ch2_virt_sample_step = soundCtx->ch2SamplingRate.load() / physSamplingRate;
+	float ch1_virt_sample_step = soundCtx->ch1SamplingRate.load() / _sampling_rate;
+	float ch2_virt_sample_step = soundCtx->ch2SamplingRate.load() / _sampling_rate;
 
 	int ch1_wave_index = soundCtx->ch1DutyCycleIndex.load();
 	int ch2_wave_index = soundCtx->ch2DutyCycleIndex.load();
@@ -335,7 +335,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 	// channel 3
 	bool ch3_enable = soundCtx->ch3Enable.load();
 
-	float ch3_virt_sample_step = soundCtx->ch3SamplingRate.load() / physSamplingRate;
+	float ch3_virt_sample_step = soundCtx->ch3SamplingRate.load() / _sampling_rate;
 
 	bool ch3_right = soundCtx->ch3Right.load();
 	bool ch3_left = soundCtx->ch3Left.load();
@@ -343,7 +343,7 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 	float ch3_vol = soundCtx->ch3Volume.load();
 
 	// channel 4
-	float ch4_virt_sample_step = soundCtx->ch4SamplingRate.load() / physSamplingRate;
+	float ch4_virt_sample_step = soundCtx->ch4SamplingRate.load() / _sampling_rate;
 
 	bool ch4_right = soundCtx->ch4Right.load();
 	bool ch4_left = soundCtx->ch4Left.load();

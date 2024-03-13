@@ -8,7 +8,7 @@
 class AudioSDL : AudioMgr {
 public:
 	friend class AudioMgr;
-	void InitAudio(const bool& _reinit) override;
+	void InitAudio(audio_settings& _audio_settings, const bool& _reinit) override;
 
 	bool InitAudioBackend(virtual_audio_information& _virt_audio_info) override;
 	void DestroyAudioBackend() override;

@@ -20,8 +20,8 @@ void AudioMgr::resetInstance() {
 	}
 }
 
-int AudioMgr::GetSamplingRate() {
-	return audioInfo.sampling_rate;
+void AudioMgr::SetSamplingRate(audio_settings& _audio_settings) {
+	InitAudio(_audio_settings, true);
 }
 
 void AudioMgr::SetMasterVolume(const float& _volume) {

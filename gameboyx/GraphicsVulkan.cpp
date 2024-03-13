@@ -475,7 +475,7 @@ void GraphicsVulkan::RenderFrame() {
 		begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		begin_info.renderPass = renderPass;
 		begin_info.framebuffer = frameBuffers[image_index];
-		begin_info.renderArea = { {0, 0}, {graphicsInfo.win_width, graphicsInfo.win_height} };
+		begin_info.renderArea = { {0, 0}, {win_width, win_height} };
 		begin_info.clearValueCount = 1;
 		begin_info.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
@@ -973,10 +973,10 @@ bool GraphicsVulkan::InitSwapchain(const VkImageUsageFlags& _flags) {
 		return false;
 	}
 
-	graphicsInfo.win_width = surface_capabilites.currentExtent.width;
-	graphicsInfo.win_height = surface_capabilites.currentExtent.height;
-	viewport = { .0f, .0f, (float)graphicsInfo.win_width, (float)graphicsInfo.win_height, .0f, 1.f };
-	scissor = { {0, 0}, {graphicsInfo.win_width, graphicsInfo.win_height} };
+	win_width = surface_capabilites.currentExtent.width;
+	win_height = surface_capabilites.currentExtent.height;
+	viewport = { .0f, .0f, (float)win_width, (float)win_height, .0f, 1.f };
+	scissor = { {0, 0}, {win_width, win_height} };
 
 	u32 image_num = 0;
 	if (vkGetSwapchainImagesKHR(device, swapchain, &image_num, nullptr) != VK_SUCCESS) {
@@ -1008,7 +1008,7 @@ bool GraphicsVulkan::InitSwapchain(const VkImageUsageFlags& _flags) {
 		}
 	}
 
-	aspectRatio = (float)graphicsInfo.win_width / graphicsInfo.win_height;
+	aspectRatio = (float)win_width / win_height;
 
 	return true;
 }
@@ -1052,8 +1052,8 @@ bool GraphicsVulkan::InitFrameBuffers() {
 		framebuffer_info.renderPass = renderPass;
 		framebuffer_info.attachmentCount = 1;
 		framebuffer_info.pAttachments = &imageViews[i];
-		framebuffer_info.width = graphicsInfo.win_width;
-		framebuffer_info.height = graphicsInfo.win_height;
+		framebuffer_info.width = win_width;
+		framebuffer_info.height = win_height;
 		framebuffer_info.layers = 1;
 
 		if (vkCreateFramebuffer(device, &framebuffer_info, nullptr, &frameBuffers[i]) != VK_SUCCESS) {

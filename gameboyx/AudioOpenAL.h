@@ -8,7 +8,7 @@
 class AudioOpenAL : AudioMgr {
 public:
 	friend class AudioMgr;
-	void InitAudio(const bool& _reinit) override;
+	void InitAudio(audio_settings& _audio_settings, const bool& _reinit) override;
 
 protected:
 	AudioOpenAL() : AudioMgr() {}

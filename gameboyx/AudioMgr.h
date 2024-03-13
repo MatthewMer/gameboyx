@@ -52,18 +52,30 @@ struct audio_samples {
 	int write_cursor = 0;
 };
 
+struct audio_information {
+	int channels_max = 0;
+	int sampling_rate_max = 0;
+
+	int channels = 0;
+	int sampling_rate = 0;
+
+	void* device = nullptr;
+
+	alignas(64) std::atomic<float> master_volume = 1.f;
+};
+
 class AudioMgr {
 public:
 	// get/reset instance
 	static AudioMgr* getInstance();
 	static void resetInstance();
 
-	virtual void InitAudio(const bool& _reinit) = 0;
+	virtual void InitAudio(audio_settings& _audio_settings, const bool& _reinit) = 0;
 
 	virtual bool InitAudioBackend(virtual_audio_information& _virt_audio_info) = 0;
 	virtual void DestroyAudioBackend() = 0;
 
-	int GetSamplingRate();
+	void SetSamplingRate(audio_settings& _audio_settings);
 
 	void SetMasterVolume(const float& _volume);
 
@@ -76,8 +88,13 @@ public:
 protected:
 	// constructor
 	explicit AudioMgr() {
+		int sampling_rate_max = 0;
+		for (const auto& [key, val] : SAMPLING_RATES) {
+			if (val.first > sampling_rate_max) { sampling_rate_max = val.first; }
+		}
+
 		audioInfo.channels_max = SOUND_7_1;
-		audioInfo.sampling_rate_max = SOUND_SAMPLING_RATE_MAX;
+		audioInfo.sampling_rate_max = sampling_rate_max;
 		audioInfo.channels = 0;
 		audioInfo.sampling_rate = 0;
 	}
@@ -89,7 +106,7 @@ protected:
 
 	audio_information audioInfo = {};
 	virtual_audio_information virtAudioInfo = {};
-
+ 
 private:
 	static AudioMgr* instance;
 };

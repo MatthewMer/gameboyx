@@ -18,16 +18,34 @@ void samples_5_1_surround(float* _dest, const float& _sample, const float& _angl
 void samples_stereo(float* _dest, const float& _sample, const float& _angle);
 void samples_mono(float* _dest, const float& _sample, const float& _angle);
 
-void AudioSDL::InitAudio(const bool& _reinit) {
-	if (_reinit) { SDL_CloseAudioDevice(device); }
+void AudioSDL::InitAudio(audio_settings& _audio_settings, const bool& _reinit) {
+	bool _reinit_backend = virtAudioInfo.audio_running.load();
+
+	if (_reinit) { 
+		if (_reinit_backend) {
+			DestroyAudioBackend();
+		}
+		SDL_CloseAudioDevice(device);
+	}
 
 	SDL_zero(want);
 	SDL_zero(have);
 
-	want.freq = audioInfo.sampling_rate;
+	if (_audio_settings.sampling_rate > audioInfo.sampling_rate_max) {
+		_audio_settings.sampling_rate = audioInfo.sampling_rate_max;
+	}
+
+	Uint16 buff_size = 512;
+	for (const auto& [key, val] : SAMPLING_RATES) {
+		if (val.first == _audio_settings.sampling_rate) {
+			buff_size = (Uint16)val.second;
+		}
+	}
+	
+	want.freq = _audio_settings.sampling_rate;
 	want.format = AUDIO_F32;
 	want.channels = (u8)audioInfo.channels;
-	want.samples = SOUND_BUFFER_SIZE;				// buffer size per channel
+	want.samples = buff_size;						// buffer size per channel
 	want.callback = audio_callback;
 	want.userdata = &audioSamples;
 	device = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
@@ -35,6 +53,11 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 	// audio info (settings)
 	audioInfo.sampling_rate = have.freq;
 	audioInfo.channels = (int)have.channels;
+
+	_audio_settings.sampling_rate = have.freq;
+	_audio_settings.sampling_rate_max = audioInfo.sampling_rate_max;
+
+	audioInfo.master_volume.store(_audio_settings.master_volume);
 
 	// audio samples (audio api data)
 	int format_size = SDL_AUDIO_BITSIZE(have.format) / 8;
@@ -44,7 +67,7 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 		SDL_CloseAudioDevice(device);
 		return;
 	}
-	audioSamples.buffer = std::vector<float>(SOUND_BUFFER_SIZE * audioInfo.channels * 4, .0f);
+	audioSamples.buffer = std::vector<float>(buff_size * audioInfo.channels * 4, .0f);
 	audioSamples.buffer_size = (int)audioSamples.buffer.size() * sizeof(float);
 	audioSamples.write_cursor = 0;
 	audioSamples.read_cursor = (audioSamples.write_cursor - (have.samples * have.channels) + (int)audioSamples.buffer.size()) % (int)audioSamples.buffer.size();
@@ -54,6 +77,10 @@ void AudioSDL::InitAudio(const bool& _reinit) {
 
 	SDL_PauseAudioDevice(device, 0);
 	LOG_INFO("[SDL] ", name, " set: ", format("{:d} channels @ {:.1f}kHz", audioInfo.channels, audioInfo.sampling_rate / pow(10, 3)));
+
+	if (_reinit && _reinit_backend) {
+		InitAudioBackend(virtAudioInfo);
+	}
 }
 
 bool AudioSDL::InitAudioBackend(virtual_audio_information& _virt_audio_info) {
@@ -148,6 +175,8 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 	}
 
 	while (_virt_audio_info->audio_running.load()) {
+
+
 		SDL_LockAudioDevice(*device);
 		int reg_1_size, reg_2_size;
 		if (_samples->read_cursor < _samples->write_cursor) {
@@ -161,13 +190,6 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 			reg_2_size = 0;
 		}
 
-		/*
-		if (reg_1_size || reg_2_size) {
-			LOG_WARN(_samples->read_cursor, ";", _samples->write_cursor);
-			LOG_WARN(reg_1_size, ";", reg_2_size);
-		}
-		*/
-
 		if (reg_1_size || reg_2_size) {
 			// get samples from APU
 			int reg_1_samples = reg_1_size / channels;
@@ -175,7 +197,8 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 			for (auto& n : virt_samples) {
 				n.clear();
 			}
-			sound_instance->SampleAPU(virt_samples, reg_1_samples + reg_2_samples);
+
+			sound_instance->SampleAPU(virt_samples, reg_1_samples + reg_2_samples, _audio_info->sampling_rate);
 
 			// TODO: use FFT and other stuff for different effects
 

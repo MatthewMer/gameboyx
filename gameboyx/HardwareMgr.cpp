@@ -6,10 +6,8 @@ GraphicsMgr* HardwareMgr::graphicsMgr = nullptr;
 AudioMgr* HardwareMgr::audioMgr = nullptr;
 SDL_Window* HardwareMgr::window = nullptr;
 
-graphics_information HardwareMgr::graphicsInfo = {};
-audio_information HardwareMgr::audioInfo = {};
-
 graphics_settings HardwareMgr::graphicsSettings = {};
+audio_settings HardwareMgr::audioSettings = {};
 
 std::queue<std::pair<SDL_Keycode, SDL_EventType>> HardwareMgr::keyMap = std::queue<std::pair<SDL_Keycode, SDL_EventType>>();
 Sint32 HardwareMgr::mouseScroll = 0;
@@ -19,19 +17,20 @@ u32 HardwareMgr::currentTimePerFrame = 0;
 steady_clock::time_point HardwareMgr::timeFramePrev = high_resolution_clock::now();
 steady_clock::time_point HardwareMgr::timeFrameCur = high_resolution_clock::now();
 
-u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings) {
+u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings) {
 	errors = 0;
-
-	graphicsSettings = std::move(_graphics_settings);
-	SetFramerateTarget(graphicsSettings.framerateTarget, graphicsSettings.fpsUnlimited);
 
 	if (instance == nullptr) {
 		instance = new HardwareMgr();
-	}else{
+	} else {
 		errors |= HWMGR_ERR_ALREADY_RUNNING;
 		return errors;
 	}
 
+	audioSettings = std::move(_audio_settings);
+	graphicsSettings = std::move(_graphics_settings);
+
+	SetFramerateTarget(graphicsSettings.framerateTarget, graphicsSettings.fpsUnlimited);
 
 	// sdl
 	window = nullptr;
@@ -46,7 +45,7 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings) {
 	graphicsMgr = GraphicsMgr::getInstance(&window);
 	if (graphicsMgr != nullptr) {
 		if (!graphicsMgr->InitGraphics()) { return false; }
-		if (!graphicsMgr->StartGraphics(_graphics_settings.presentModeFifo, _graphics_settings.tripleBuffering)) { return false; }
+		if (!graphicsMgr->StartGraphics(graphicsSettings.presentModeFifo, graphicsSettings.tripleBuffering)) { return false; }
 
 		ImGui::CreateContext();
 		ImGui::StyleColorsDark();
@@ -60,7 +59,7 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings) {
 	// audio
 	audioMgr = AudioMgr::getInstance();
 	if (audioMgr != nullptr) {
-		audioMgr->InitAudio(false);
+		audioMgr->InitAudio(audioSettings, false);
 	}
 
 	return true;
@@ -160,9 +159,6 @@ void HardwareMgr::UpdateGpuData() {
 }
 
 void HardwareMgr::SetFramerateTarget(const int& _target, const bool& _unlimited) {
-	graphicsSettings.framerateTarget = _target;
-	graphicsSettings.fpsUnlimited = _unlimited;
-
 	if (_target > 0 && !_unlimited) {
 		timePerFrame = (u32)((1.f / _target) * pow(10, 6));
 	}
@@ -191,10 +187,18 @@ void HardwareMgr::SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_b
 	graphicsMgr->SetSwapchainSettings(_present_mode_fifo, _triple_buffering);
 }
 
-int HardwareMgr::GetSamplingRate() {
-	return audioMgr->GetSamplingRate();
+void HardwareMgr::SetSamplingRate(int& _sampling_rate) {
+	audioSettings.sampling_rate = _sampling_rate;
+	audioMgr->SetSamplingRate(audioSettings);
+
+	_sampling_rate = audioSettings.sampling_rate;
 }
 
 void HardwareMgr::SetMasterVolume(const float& _volume) {
+	audioSettings.master_volume = _volume;
 	audioMgr->SetMasterVolume(_volume);
+}
+
+void HardwareMgr::GetAudioSettings(audio_settings& _audio_settings) {
+	_audio_settings = audioSettings;
 }

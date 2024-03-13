@@ -36,13 +36,22 @@ int main(int, char**)
 
     // todo: implement a config loader that loads configuration data and pass the data to the different application components
     //          and probably add a namespace that contains all the settings structs instead of passing them around
-    graphics_settings graph_settings = {};
-    graph_settings.framerateTarget = 144;
-    graph_settings.fpsUnlimited = false;
-    graph_settings.presentModeFifo = false;
-    graph_settings.tripleBuffering = false;
+    graphics_settings s_graphics_settings = {};
+    s_graphics_settings.framerateTarget = 144;
+    s_graphics_settings.fpsUnlimited = false;
+    s_graphics_settings.presentModeFifo = false;
+    s_graphics_settings.tripleBuffering = false;
 
-    if (!HardwareMgr::InitHardware(graph_settings))   { return -1; }
+    int sampling_rate_max = 0;
+    for (const auto& [key, val] : SAMPLING_RATES) {
+        if (val.first > sampling_rate_max) { sampling_rate_max = val.first; }
+    }
+
+    audio_settings s_audio_settings = {};
+    s_audio_settings.master_volume = .5f;
+    s_audio_settings.sampling_rate = sampling_rate_max;
+
+    if (!HardwareMgr::InitHardware(s_graphics_settings, s_audio_settings))   { return -1; }
 
     GuiMgr* gui_mgr = GuiMgr::getInstance();
 

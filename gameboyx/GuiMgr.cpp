@@ -49,6 +49,12 @@ GuiMgr::GuiMgr() {
     tripleBuffering = graph_settings.tripleBuffering;
     vsync = graph_settings.presentModeFifo;
 
+    audio_settings aud_settings = {};
+    HardwareMgr::GetAudioSettings(aud_settings);
+    samplingRate = aud_settings.sampling_rate;
+    samplingRateMax = aud_settings.sampling_rate_max;
+    volume = aud_settings.master_volume;
+
     vhwmgr = VHardwareMgr::getInstance();
 
     // init explorer
@@ -60,8 +66,6 @@ GuiMgr::GuiMgr() {
     for (int i = 0; i < FPS_SAMPLES_NUM; i++) {
         graphicsFPSfifo.push(.0f);
     }
-
-    HardwareMgr::SetMasterVolume(volume);
 
     // set emulation speed to 1x
     ActionSetEmulationSpeed(0);
@@ -792,6 +796,47 @@ void GuiMgr::ShowAudioSettings() {
             if (ImGui::SliderFloat("##volume", &volume, APP_MIN_VOLUME, APP_MAX_VOLUME)) {
                 ActionSetMasterVolume();
             }
+            ImGui::TableNextRow();
+            
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Sampling rate");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("sets the sampling rate used by the audio device");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+
+            static const char* current_item = nullptr;
+            if (current_item == nullptr) {
+                for (const auto& [key, val] : SAMPLING_RATES) {
+                    if (samplingRate == val.first) {
+                        current_item = key;
+                    }
+                }
+            }
+
+            if (ImGui::BeginCombo("##samplingrate", current_item)) {
+                for (const auto& [key, val] : SAMPLING_RATES) {
+                    if (val.first <= samplingRateMax) {
+                        const char* item = key;
+                        bool selected = current_item == item;
+
+                        if (ImGui::Selectable(item, selected)) {
+                            current_item = item;
+                            samplingRate = val.first;
+                            ActionSetSamplingRate();
+                        }
+                        if (selected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            ImGui::PopStyleVar();
             ImGui::EndTable();
         }
         ImGui::End();
@@ -1022,7 +1067,9 @@ void GuiMgr::ActionSetMasterVolume() {
     HardwareMgr::SetMasterVolume(volume);
 }
 
-
+void GuiMgr::ActionSetSamplingRate() {
+    HardwareMgr::SetSamplingRate(samplingRate);
+}
 
 
 

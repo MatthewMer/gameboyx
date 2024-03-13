@@ -175,6 +175,8 @@ private:
 
 	bool showAudioMenu = false;
 	float volume = .5f;
+	int samplingRateMax = 0;
+	int samplingRate = 0;
 
 	void ResetGUI();
 
@@ -222,6 +224,7 @@ private:
 	void ActionSetFramerateTarget();
 	void ActionSetSwapchainSettings();
 	void ActionSetMasterVolume();
+	void ActionSetSamplingRate();
 
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);

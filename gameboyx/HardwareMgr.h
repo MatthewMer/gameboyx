@@ -16,7 +16,7 @@ using namespace std::chrono;
 
 class HardwareMgr {
 public:
-	static u8 InitHardware(graphics_settings& _graphics_settings);
+	static u8 InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings);
 	static void ShutdownHardware();
 	static void NextFrame();
 	static void RenderFrame();
@@ -39,9 +39,11 @@ public:
 
 	static void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering);
 
-	static int GetSamplingRate();
+	static void SetSamplingRate(int& _sampling_rate);
 
 	static void SetMasterVolume(const float& _volume);
+
+	static void GetAudioSettings(audio_settings& _audio_settings);
 
 private:
 	HardwareMgr() = default;
@@ -51,10 +53,8 @@ private:
 	static AudioMgr* audioMgr;
 	static SDL_Window* window;
 
-	static graphics_information graphicsInfo;
-	static audio_information audioInfo;
-
 	static graphics_settings graphicsSettings;
+	static audio_settings audioSettings;
 
 	// control
 	static std::queue<std::pair<SDL_Keycode, SDL_EventType>> keyMap;

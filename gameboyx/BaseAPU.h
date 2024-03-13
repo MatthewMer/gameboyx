@@ -19,16 +19,12 @@ public:
 
 	// public members
 	virtual void ProcessAPU(const int& _ticks) = 0;
-	virtual void SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples) = 0;
+	virtual void SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples, const int& _sampling_rate) = 0;
 
 protected:
 	// constructor
-	BaseAPU() {
-		physSamplingRate = HardwareMgr::GetSamplingRate();
-	}
+	BaseAPU() {}
 	virtual ~BaseAPU() = default;
-
-	int physSamplingRate = 0;
 
 private:
 	static BaseAPU* instance;

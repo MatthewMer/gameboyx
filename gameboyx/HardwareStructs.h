@@ -21,11 +21,6 @@ struct virtual_graphics_information {
 	int buffering = 0;
 };
 
-struct graphics_information {
-	u32 win_width = 0;
-	u32 win_height = 0;
-};
-
 struct virtual_audio_information {
 	int channels = 0;
 	alignas(64) std::atomic<bool> audio_running = true;
@@ -41,21 +36,16 @@ struct virtual_audio_information {
 	}
 };
 
-struct audio_information {
-	int channels_max = 0;
-	int sampling_rate_max = 0;
-
-	int channels = 0;
-	int sampling_rate = 0;
-
-	void* device = nullptr;
-
-	alignas(64) std::atomic<float> master_volume = 1.f;
-};
-
 struct graphics_settings {
 	int framerateTarget = 0;
 	bool fpsUnlimited = false;
 	bool tripleBuffering = false;
 	bool presentModeFifo = false;
+};
+
+struct audio_settings {
+	int sampling_rate = 0;
+	float master_volume = 0;
+
+	int sampling_rate_max = 0;
 };

@@ -14,6 +14,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <map>
 
 /* ***********************************************************************************************************
     STORAGE DEFINES
@@ -257,12 +258,18 @@ inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumn
 /* ***********************************************************************************************************
     AUDIO
 *********************************************************************************************************** */
-#define SOUND_SAMPLING_RATE_MAX     44100
-#define SOUND_BUFFER_SIZE           512
 #define SOUND_MONO                  1
 #define SOUND_STEREO                2
 #define SOUND_5_1                   6
 #define SOUND_7_1                   8
+
+inline const std::map<const char*, std::pair<int, int>> SAMPLING_RATES = {
+    {"22050 Hz", {22050, 512}},
+    {"44100 Hz", {44100, 512}},
+    {"48000 Hz", {48000, 512}},
+    {"88200 Hz", {88200, 1024}},
+    {"96000 Hz", {96000, 1024}}
+};
 
 inline const float SOUND_7_1_ANGLES[8] = {
     (float)(337.5f * (M_PI / 180.f)),               // front-left
