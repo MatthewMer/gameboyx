@@ -14,7 +14,7 @@
 #include <atomic>
 #include <mutex>
 
-typedef enum MEM_TYPE {
+enum MEM_TYPE {
 	ROM0 = 0,
 	ROMn = 1,
 	RAMn = 2,

@@ -45,6 +45,8 @@ public:
 
 	static void GetAudioSettings(audio_settings& _audio_settings);
 
+	static bool ExecuteDelay();
+
 private:
 	HardwareMgr() = default;
 	~HardwareMgr() = default;
@@ -64,7 +66,6 @@ private:
 	static u32 errors;
 
 	// for framerate target
-	static void CheckDelay();
 	static u32 timePerFrame;
 	static u32 currentTimePerFrame;
 	static steady_clock::time_point timeFramePrev;

@@ -33,7 +33,7 @@ public:
 	virtual void ProcessGPU(const int& _ticks) = 0;
 	virtual int GetDelayTime() const = 0;
 	virtual int GetTicksPerFrame(const float& _clock) const = 0;
-	virtual int GetFrames() = 0;
+	int GetFrameCount();
 
 protected:
 	// constructor

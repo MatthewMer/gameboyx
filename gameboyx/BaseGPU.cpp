@@ -31,3 +31,9 @@ void BaseGPU::resetInstance() {
 		instance = nullptr;
 	}
 }
+
+int BaseGPU::GetFrameCount() {
+	int frames = frameCounter;
+	frameCounter = 0;
+	return frames;
+}

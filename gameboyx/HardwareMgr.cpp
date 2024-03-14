@@ -89,7 +89,6 @@ void HardwareMgr::NextFrame() {
 }
 
 void HardwareMgr::RenderFrame() {
-	CheckDelay();
 	graphicsMgr->RenderFrame();
 }
 
@@ -167,16 +166,19 @@ void HardwareMgr::SetFramerateTarget(const int& _target, const bool& _unlimited)
 	}
 }
 
-void HardwareMgr::CheckDelay() {
+bool HardwareMgr::ExecuteDelay() {
 	if (!graphicsSettings.fpsUnlimited) {
-		while (currentTimePerFrame < timePerFrame) {
+		if (currentTimePerFrame < timePerFrame) {
 			timeFrameCur = high_resolution_clock::now();
 			currentTimePerFrame = (u32)duration_cast<microseconds>(timeFrameCur - timeFramePrev).count();
+			return false;
+		} else {
+			timeFramePrev = timeFrameCur;
+			currentTimePerFrame = 0;
 		}
-
-		timeFramePrev = timeFrameCur;
-		currentTimePerFrame = 0;
 	}
+
+	return true;
 }
 
 void HardwareMgr::GetGraphicsSettings(graphics_settings& _graphics_settings) {

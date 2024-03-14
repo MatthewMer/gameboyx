@@ -107,11 +107,10 @@ public:
 	friend class BaseCPU;
 
 	void RunCycles() override;
-	void RunCycle() override;
+	void RunInstruction() override;
 
 	void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const override;
 	void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const override;
-	u32 GetCurrentClockCycles() override;
 	void GetCurrentPCandBank(int& _pc, int& _bank) const override;
 
 	void GetInstrDebugTable(Table<instr_entry>& _table) override;

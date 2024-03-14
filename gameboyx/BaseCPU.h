@@ -31,11 +31,10 @@ public:
 
 	// public members
 	virtual void RunCycles() = 0;
-	virtual void RunCycle() = 0;
+	virtual void RunInstruction() = 0;
 
 	virtual void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const = 0;
 	virtual void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const = 0;
-	virtual u32 GetCurrentClockCycles() = 0;
 	virtual void GetCurrentPCandBank(int& _pc, int& _bank) const = 0;
 
 	virtual void GetInstrDebugTable(Table<instr_entry>& _table) = 0;
@@ -47,6 +46,8 @@ public:
 	virtual u16 Read16Bit(const u16& _addr) = 0;
 
 	virtual void SetInstances() = 0;
+
+	int GetClockCycles();
 
 protected:
 	// constructor
@@ -64,7 +65,7 @@ protected:
 
 	int currentTicks = 0;
 	int ticksPerFrame = 0;
-	u32 tickCounter = 0;
+	int tickCounter = 0;
 
 	virtual void ExecuteInstruction() = 0;
 	virtual bool CheckInterrupts() = 0;

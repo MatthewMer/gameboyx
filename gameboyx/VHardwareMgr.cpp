@@ -63,7 +63,6 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settin
                 timePerFrame = graphics_instance->GetDelayTime();
 
                 InitMembers(_emu_settings);
-                buffering = (int)_virt_graphics_settings.buffering;
 
                 hardwareThread = thread([this]() -> void { ProcessHardware(); });
                 if (!hardwareThread.joinable()) {
@@ -128,44 +127,35 @@ void VHardwareMgr::ProcessHardware() {
   
     while (running.load()) {
         if (debugEnable.load()) {
-
             if (!pauseExecution.load()) {
-                lock_hardware.lock();
-                core_instance->RunCycle();
-                lock_hardware.unlock();
-
-                CheckFpsAndClock();
-
                 pauseExecution.store(true);
+
+                lock_hardware.lock();
+                core_instance->RunInstruction();
+                lock_hardware.unlock();
             }
         }
         else {
-            for (int i = 0; i < buffering; i++) {
-                if (CheckDelay()) {
-                    for (int j = 0; j < emulationSpeed.load(); j++) {
-                        lock_hardware.lock();
-                        core_instance->RunCycles();
-                        lock_hardware.unlock();
-                    }
-                    CheckFpsAndClock();
-                }                    
+            ExecuteDelay();
+            for (int j = 0; j < emulationSpeed.load(); j++) {
+                lock_hardware.lock();
+                core_instance->RunCycles();
+                lock_hardware.unlock();
             }
         }
+
+        ProcessSecond();
     }
 }
 
-bool VHardwareMgr::CheckDelay() {
-    timeFrameCur = high_resolution_clock::now();
-    currentTimePerFrame = (u32)duration_cast<microseconds>(timeFrameCur - timeFramePrev).count();
-
-    if (currentTimePerFrame >= timePerFrame) {
-        timeFramePrev = timeFrameCur;
-        currentTimePerFrame = 0;
-
-        return true;
-    } else {
-        return false;
+void VHardwareMgr::ExecuteDelay() {
+    while (currentTimePerFrame < timePerFrame) {
+        timeFrameCur = high_resolution_clock::now();
+        currentTimePerFrame = (u32)duration_cast<microseconds>(timeFrameCur - timeFramePrev).count();
     }
+
+    timeFramePrev = timeFrameCur;
+    currentTimePerFrame = 0;
 }
 
 void VHardwareMgr::InitMembers(emulation_settings& _settings) {
@@ -180,15 +170,18 @@ void VHardwareMgr::InitMembers(emulation_settings& _settings) {
     emulationSpeed.store(_settings.emulation_speed);
 }
 
-void VHardwareMgr::CheckFpsAndClock() {
+void VHardwareMgr::CalcFpsAndClock() {
+    currentFrequency.store((float)core_instance->GetClockCycles() / accumulatedTime);
+    currentFramerate.store(graphics_instance->GetFrameCount() / (accumulatedTime / (float)pow(10, 6)));
+}
+
+void VHardwareMgr::ProcessSecond() {
     timeSecondCur = high_resolution_clock::now();
     accumulatedTime += (u32)duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
     if (accumulatedTime > 999999) {
-        currentFrequency = ((float)core_instance->GetCurrentClockCycles() / accumulatedTime);
-        currentFramerate = graphics_instance->GetFrames() / (accumulatedTime / (float)pow(10, 6));
-
+        CalcFpsAndClock();
         accumulatedTime = 0;
     }
 }
@@ -198,12 +191,12 @@ void VHardwareMgr::CheckFpsAndClock() {
 *********************************************************************************************************** */
 void VHardwareMgr::GetFpsAndClock(int& _fps, float& _clock) {
     //unique_lock<mutex> lock_hardware(mutHardware);
-    _clock = currentFrequency;
-    _fps = (int)currentFramerate;
+    _clock = currentFrequency.load();
+    _fps = (int)currentFramerate.load();
 }
 
 void VHardwareMgr::GetCurrentPCandBank(int& _pc, int& _bank) {
-    //unique_lock<mutex> lock_hardware(mutHardware);
+    unique_lock<mutex> lock_hardware(mutHardware);
     core_instance->GetCurrentPCandBank(_pc, _bank);
 }
    

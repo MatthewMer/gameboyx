@@ -84,30 +84,37 @@ GuiMgr::~GuiMgr() {
 /* ***********************************************************************************************************
     GUI PROCESS ENTRY POINT
 *********************************************************************************************************** */
-void GuiMgr::ProcessGUI() {
-    //IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
-
+void GuiMgr::ProcessData() {
     ProcessInput();
 
-    if (gameRunning) {
-        if (showGraphicsOverlay || showHardwareInfo) { vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency); }
-        if (showHardwareInfo) { vhwmgr->GetHardwareInfo(hardwareInfo); }
-    }
-    if (showInstrDebugger) { 
+    if (showInstrDebugger) {
         if (!instrDebugWasEnabled) {
             instrDebugWasEnabled = true;
             vhwmgr->SetDebugEnabled(true);
         }
 
         if (gameRunning) {
-            vhwmgr->GetInstrDebugFlags(regValues, flagValues, miscValues);
+            CheckPCandBank();
+            if (continueExecutionAuto) {
+                ContinueBreakpoint();
+            }
         }
     } else if (instrDebugWasEnabled) {
         instrDebugWasEnabled = false;
         vhwmgr->SetDebugEnabled(false);
     }
+}
 
-    if (showMainMenuBar) { ShowMainMenuBar(); }
+void GuiMgr::ProcessGUI() {
+    //IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
+    if (gameRunning) {
+        if (showGraphicsOverlay || showHardwareInfo) { vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency); }
+        if (showHardwareInfo) { vhwmgr->GetHardwareInfo(hardwareInfo); }
+        if (showInstrDebugger) {
+            vhwmgr->GetInstrDebugFlags(regValues, flagValues, miscValues);
+        }
+    }
+
     if (showInstrDebugger) { ShowDebugInstructions(); }
     if (showWinAbout) { ShowWindowAbout(); }
     if (showHardwareInfo) { ShowHardwareInfo(); }
@@ -119,6 +126,7 @@ void GuiMgr::ProcessGUI() {
     if (showNewGameDialog) { ShowNewGameDialog(); }
     if (showGraphicsSettings) { ShowGraphicsSettings(); }
     if (showAudioSettings) { ShowAudioSettings(); }
+    if (showMainMenuBar) { ShowMainMenuBar(); }
 }
 
 /* ***********************************************************************************************************
@@ -209,10 +217,6 @@ void GuiMgr::ShowWindowAbout() {
 void GuiMgr::ShowDebugInstructions() {
     ImGui::SetNextWindowSize(debug_instr_win_size);
 
-    if (gameRunning) {
-        CheckPCandBank();
-    }
-
     if (ImGui::Begin("Instruction Debugger", &showInstrDebugger, WIN_CHILD_FLAGS)) {
         CheckWindow(DEBUG_INSTR);
         ShowDebugInstrButtonsHead();
@@ -243,10 +247,12 @@ void GuiMgr::ShowDebugInstrButtonsHead() {
         ImGui::Button("Reset");
         ImGui::EndDisabled();
     }
-
+    
     ImGui::SameLine();
     ImGui::Checkbox("Auto run", &autoRun);
-    if (autoRun) { ActionContinueExecutionBreakpoint(); }
+    if (autoRun != continueExecutionAuto) {
+        ActionContinueExecutionBreakpoint(autoRun);
+    }
 }
 
 void GuiMgr::ShowDebugInstrTable() {
@@ -897,13 +903,8 @@ void GuiMgr::ActionContinueExecution() {
     }
 }
 
-void GuiMgr::ActionContinueExecutionBreakpoint() {
-    if (gameRunning) {
-        auto& breakpoint_list = (pcSetToRam ? breakpointsTmp : breakpoints);
-        if (!(find(breakpoint_list.begin(), breakpoint_list.end(), debugInstrCurrentInstrIndex) != breakpoint_list.end())) {
-            ActionContinueExecution();
-        }
-    }
+void GuiMgr::ActionContinueExecutionBreakpoint(const bool& _auto) {
+    continueExecutionAuto = _auto;
 }
 
 void GuiMgr::ActionGamesSelect(const int& _index) {
@@ -1072,6 +1073,17 @@ void GuiMgr::ActionSetSamplingRate() {
 }
 
 
+
+
+
+void GuiMgr::ContinueBreakpoint() {
+    if (gameRunning) {
+        auto& breakpoint_list = (pcSetToRam ? breakpointsTmp : breakpoints);
+        if (!(find(breakpoint_list.begin(), breakpoint_list.end(), debugInstrCurrentInstrIndex) != breakpoint_list.end())) {
+            ActionContinueExecution();
+        }
+    }
+}
 
 void GuiMgr::GetBankAndAddressTable(TableBase& _table_obj, int& _bank, int& _address) {
     bank_index centre = _table_obj.GetCurrentIndexCentre();

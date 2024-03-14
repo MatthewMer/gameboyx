@@ -49,7 +49,6 @@ private:
 
 	int GetDelayTime() const override;
 	int GetTicksPerFrame(const float& _clock) const override;
-	int GetFrames() override;
 
 	// memory access
 	GameboyMEM* memInstance = nullptr;

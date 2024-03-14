@@ -77,13 +77,6 @@ const unordered_map<cgb_data_types, string> DATA_NAMES{
 /* ***********************************************************************************************************
     ACCESS CPU STATUS
 *********************************************************************************************************** */
-// return clock cycles per second
-u32 GameboyCPU::GetCurrentClockCycles() {
-    u32 result = tickCounter;
-    tickCounter = 0;
-    return result;
-}
-
 void GameboyCPU::GetCurrentPCandBank(int& _pc, int& _bank) const {
     _pc = (u32)Regs.PC;
 
@@ -176,7 +169,7 @@ void GameboyCPU::RunCycles() {
     tickCounter += currentTicks;
 }
 
-void GameboyCPU::RunCycle() {
+void GameboyCPU::RunInstruction() {
     currentTicks = 0;
 
     if (stopped) {

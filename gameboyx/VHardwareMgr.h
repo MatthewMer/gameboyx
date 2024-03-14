@@ -86,20 +86,22 @@ private:
     // execution time (e.g. 60FPS -> 1/60th of a second)
     u32 timePerFrame;
     u32 currentTimePerFrame;
+    u32 timePerFrameCounter = 0;
     steady_clock::time_point timeFramePrev;
     steady_clock::time_point timeFrameCur;
+
+    int ticksPerFrame = 0;
 
     // timestamps for core virtualFrequency and virtualFramerate calculation
     steady_clock::time_point timeSecondPrev;
     steady_clock::time_point timeSecondCur;
-    u32 accumulatedTime;
+    u32 accumulatedTime = 0;
+    u32 accumulatedTimeTmp = 0;
 
     u8 errors;
 
-    int buffering = (int)V_DOUBLE_BUFFERING;
-
-    float currentFrequency;
-    float currentFramerate;
+    alignas(64) std::atomic<float> currentFrequency = 0;
+    alignas(64) std::atomic<float> currentFramerate = 0;
 
     std::thread hardwareThread;
     std::mutex mutHardware;
@@ -109,8 +111,10 @@ private:
     alignas(64) std::atomic<bool> pauseExecution;
     alignas(64) std::atomic<int> emulationSpeed;
 
-    bool CheckDelay();
+    void ExecuteDelay();
+    //void CheckDelay();
     void InitMembers(emulation_settings& _settings);
-    void CheckFpsAndClock();
+    void CalcFpsAndClock();
+    void ProcessSecond();
 };
 

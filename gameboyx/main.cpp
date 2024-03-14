@@ -62,10 +62,13 @@ int main(int, char**)
     while (running)
     {
         HardwareMgr::ProcessInput(running);
+        gui_mgr->ProcessData();
 
-        HardwareMgr::NextFrame();
-        gui_mgr->ProcessGUI();
-        HardwareMgr::RenderFrame();
+        if (HardwareMgr::ExecuteDelay()) {
+            HardwareMgr::NextFrame();
+            gui_mgr->ProcessGUI();
+            HardwareMgr::RenderFrame();
+        }
     }
     
     gui_mgr->resetInstance();

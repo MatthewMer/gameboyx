@@ -26,3 +26,9 @@ void BaseCPU::resetInstance() {
 		instance = nullptr;
 	}
 }
+
+int BaseCPU::GetClockCycles() {
+	int result = tickCounter;
+	tickCounter = 0;
+	return result;
+}

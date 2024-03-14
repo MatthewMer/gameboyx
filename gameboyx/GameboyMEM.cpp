@@ -602,6 +602,7 @@ const std::vector<u8>& GameboyMEM::GetBank(const MEM_TYPE& _type, const int& _ba
 void GameboyMEM::VRAM_DMA(const u8& _data) {
     if (machine_ctx.isCgb) {
         if (graphics_ctx.dma_hblank) {
+            //LOG_WARN("HDMA5 while DMA");
             bool proceed = _data & 0x80 ? true : false;
             if (!proceed) {
                 graphics_ctx.dma_hblank = false;
@@ -640,7 +641,7 @@ void GameboyMEM::VRAM_DMA(const u8& _data) {
             graphics_ctx.dma_dest_addr = dest_addr;
             graphics_ctx.dma_hblank = true;
 
-
+            //LOG_WARN("VRAM HBLANK DMA: ", graphics_ctx.dma_length * 0x10);
         } else {
             u16 length = ((IO[CGB_HDMA5_ADDR - IO_OFFSET] & 0x7F) + 1) * 0x10;
 

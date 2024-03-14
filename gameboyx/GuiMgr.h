@@ -39,6 +39,7 @@ public:
 	GuiMgr& operator=(GuiMgr&&) = delete;
 
 	// functions
+	void ProcessData();
 	void ProcessGUI();
 
 	// sdl functions
@@ -86,6 +87,7 @@ private:
 	bool requestDeleteGames = false;
 	bool autoRun = false;
 	bool pcSetToRam = false;
+	bool continueExecutionAuto = false;
 
 	void ProcessInput();
 	bool windowActive;
@@ -212,7 +214,7 @@ private:
 	void ActionGameSelectUp();
 	void ActionGameSelectDown();
 	void ActionContinueExecution();
-	void ActionContinueExecutionBreakpoint();
+	void ActionContinueExecutionBreakpoint(const bool& _auto);
 	void ActionToggleMainMenuBar();
 	void ActionSetToCurrentPC();
 	void ActionSetToBank(TableBase& _table_obj, int& _bank);
@@ -231,6 +233,7 @@ private:
 	void CheckPCandBank();
 	void ActionSetBreakPoint(std::list<bank_index>& _breakpoints, const bank_index& _current_index);
 	void GetBankAndAddressTable(TableBase& _tyble_obj, int& _bank, int& _address);
+	void ContinueBreakpoint();
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();
