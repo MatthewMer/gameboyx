@@ -572,39 +572,95 @@ void GameboyMEM::CopyDataFromRAM(vector<char>& _data) const {
     }
 }
 
+const std::vector<u8>& GameboyMEM::GetBank(const MEM_TYPE& _type, const int& _bank) {
+    switch (_type) {
+    case ROM0:
+        return ROM_0;
+        break;
+    case ROMn:
+        return ROM_N[_bank];
+        break;
+    case RAMn:
+        return RAM_N[_bank];
+        break;
+    case WRAM0:
+        return WRAM_0;
+        break;
+    case WRAMn:
+        return WRAM_N[_bank];
+        break;
+    default:
+        LOG_ERROR("[emu] GetBank: memory area access not implemented");
+        return std::vector<u8>();
+        break;
+    }
+}
+
 /* ***********************************************************************************************************
     DMA
 *********************************************************************************************************** */
 void GameboyMEM::VRAM_DMA(const u8& _data) {
     if (machine_ctx.isCgb) {
-        IO[CGB_HDMA5_ADDR - IO_OFFSET] = _data | 0x80;
+        if (graphics_ctx.dma_hblank) {
+            bool proceed = _data & 0x80 ? true : false;
+            if (!proceed) {
+                graphics_ctx.dma_hblank = false;
+                IO[CGB_HDMA5_ADDR - IO_OFFSET] |= 0x80;
+                return;
+            }
+        }
 
-        u16 length = ((IO[CGB_HDMA5_ADDR - IO_OFFSET] & 0x7F) + 1) * 0x10;
+        IO[CGB_HDMA5_ADDR - IO_OFFSET] = _data & 0x7F;
 
         u16 source_addr = ((u16)IO[CGB_HDMA1_ADDR - IO_OFFSET] << 8) | (IO[CGB_HDMA2_ADDR - IO_OFFSET] & 0xF0);
         u16 dest_addr = (((u16)(IO[CGB_HDMA3_ADDR - IO_OFFSET] & 0x1F)) << 8) | (IO[CGB_HDMA4_ADDR - IO_OFFSET] & 0xF0);
 
-        if (source_addr < ROM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &ROM_0[source_addr], length);
-        }
-        else if (source_addr < VRAM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &ROM_N[machine_ctx.rom_bank_selected][source_addr - ROM_N_OFFSET], length);
-        }
-        else if (source_addr < WRAM_0_OFFSET && source_addr > RAM_N_OFFSET - 1) {
-            memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &RAM_N[machine_ctx.ram_bank_selected][source_addr - RAM_N_OFFSET], length);
-        }
-        else if (source_addr < WRAM_N_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
-        }
-        else if (source_addr < MIRROR_WRAM_OFFSET) {
-            memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &WRAM_N[machine_ctx.wram_bank_selected][source_addr - WRAM_N_OFFSET], length);
-        }
-        else {
-            LOG_ERROR("[emu] VRAM DMA source address not implemented / allowed");
-            return;
-        }
+        if (_data & 0x80) {
+            if (source_addr < ROM_N_OFFSET) {
+                graphics_ctx.dma_source_addr = source_addr;
+                graphics_ctx.dma_source_mem = ROM0;
+            } else if (source_addr < VRAM_N_OFFSET) {
+                graphics_ctx.dma_source_addr = source_addr - ROM_N_OFFSET;
+                graphics_ctx.dma_source_mem = ROMn;
+            } else if (source_addr < WRAM_0_OFFSET && source_addr > RAM_N_OFFSET - 1) {
+                graphics_ctx.dma_source_addr = source_addr - RAM_N_OFFSET;
+                graphics_ctx.dma_source_mem = RAMn;
+            } else if (source_addr < WRAM_N_OFFSET) {
+                graphics_ctx.dma_source_addr = source_addr - WRAM_0_OFFSET;
+                graphics_ctx.dma_source_mem = WRAM0;
+            } else if (source_addr < MIRROR_WRAM_OFFSET) {
+                graphics_ctx.dma_source_addr = source_addr - WRAM_N_OFFSET;
+                graphics_ctx.dma_source_mem = WRAMn;
+            } else {
+                LOG_ERROR("[emu] VRAM DMA source address not implemented / allowed");
+                return;
+            }
 
-        IO[CGB_HDMA5_ADDR - IO_OFFSET] = 0xFF;
+            graphics_ctx.dma_length = (IO[CGB_HDMA5_ADDR - IO_OFFSET] & 0x7F) + 1;
+            graphics_ctx.dma_dest_addr = dest_addr;
+            graphics_ctx.dma_hblank = true;
+
+
+        } else {
+            u16 length = ((IO[CGB_HDMA5_ADDR - IO_OFFSET] & 0x7F) + 1) * 0x10;
+
+            if (source_addr < ROM_N_OFFSET) {
+                memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &ROM_0[source_addr], length);
+            } else if (source_addr < VRAM_N_OFFSET) {
+                memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &ROM_N[machine_ctx.rom_bank_selected][source_addr - ROM_N_OFFSET], length);
+            } else if (source_addr < WRAM_0_OFFSET && source_addr > RAM_N_OFFSET - 1) {
+                memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &RAM_N[machine_ctx.ram_bank_selected][source_addr - RAM_N_OFFSET], length);
+            } else if (source_addr < WRAM_N_OFFSET) {
+                memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
+            } else if (source_addr < MIRROR_WRAM_OFFSET) {
+                memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &WRAM_N[machine_ctx.wram_bank_selected][source_addr - WRAM_N_OFFSET], length);
+            } else {
+                LOG_ERROR("[emu] VRAM DMA source address not implemented / allowed");
+                return;
+            }
+
+            IO[CGB_HDMA5_ADDR - IO_OFFSET] = 0xFF;
+        }
     }
 }
 

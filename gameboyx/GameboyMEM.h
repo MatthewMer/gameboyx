@@ -14,6 +14,14 @@
 #include <atomic>
 #include <mutex>
 
+typedef enum MEM_TYPE {
+	ROM0 = 0,
+	ROMn = 1,
+	RAMn = 2,
+	WRAM0 = 3,
+	WRAMn = 4
+};
+
 struct machine_context {
 	std::string title = "";
 	bool battery_buffered = false;
@@ -142,6 +150,12 @@ struct graphics_context {
 		{DMG_COLOR_WHITE_ALT, DMG_COLOR_LIGHTGREY_ALT, DMG_COLOR_DARKGREY_ALT, DMG_COLOR_BLACK_ALT},
 		{DMG_COLOR_WHITE_ALT, DMG_COLOR_LIGHTGREY_ALT, DMG_COLOR_DARKGREY_ALT, DMG_COLOR_BLACK_ALT}
 	};
+
+	bool dma_hblank = false;
+	u16 dma_source_addr = 0;
+	u16 dma_dest_addr = 0;
+	int dma_length = 0;
+	MEM_TYPE dma_source_mem = ROM0;
 };
 
 inline const std::unordered_map<u8, float> VOLUME_MAP = {
@@ -342,6 +356,8 @@ public:
 	void UnsetButton(const u8& _bit, const bool& _is_button);
 
 	void GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) override;
+
+	const std::vector<u8>& GetBank(const MEM_TYPE& _type, const int& _bank);
 
 	// actual memory
 	std::vector<u8> ROM_0;

@@ -142,6 +142,46 @@ void GameboyGPU::EnterMode0() {
 
 	graphicsCtx->mode = PPU_MODE_0;
 	SET_MODE(stat, PPU_MODE_0);
+
+	CheckHBlankDma();
+}
+
+void GameboyGPU::CheckHBlankDma() {
+	if (graphicsCtx->dma_hblank) {
+		int bank;
+
+		switch (graphicsCtx->dma_source_mem) {
+		case ROM0:
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][graphicsCtx->dma_dest_addr], &memInstance->GetBank(ROM0, 0)[graphicsCtx->dma_source_addr], 0x10);
+			break;
+		case ROMn:
+			bank = machineCtx->rom_bank_selected;
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][graphicsCtx->dma_dest_addr], &memInstance->GetBank(ROMn, bank)[graphicsCtx->dma_source_addr], 0x10);
+			break;
+		case RAMn:
+			bank = machineCtx->ram_bank_selected;
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][graphicsCtx->dma_dest_addr], &memInstance->GetBank(RAMn, bank)[graphicsCtx->dma_source_addr], 0x10);
+			break;
+		case WRAM0:
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][graphicsCtx->dma_dest_addr], &memInstance->GetBank(WRAM0, 0)[graphicsCtx->dma_source_addr], 0x10);
+			break;
+		case WRAMn:
+			bank = machineCtx->wram_bank_selected;
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][graphicsCtx->dma_dest_addr], &memInstance->GetBank(WRAMn, bank)[graphicsCtx->dma_source_addr], 0x10);
+			break;
+		}
+
+		u8& hdma5 = memInstance->GetIO(CGB_HDMA5_ADDR);
+		--graphicsCtx->dma_length;
+		if (graphicsCtx->dma_length > 0) {
+			graphicsCtx->dma_source_addr += 0x10;
+			graphicsCtx->dma_dest_addr += 0x10;
+			--hdma5;
+		} else {
+			graphicsCtx->dma_hblank = false;
+			hdma5 = 0xFF;
+		}
+	}
 }
 
 void GameboyGPU::EnterMode1() {

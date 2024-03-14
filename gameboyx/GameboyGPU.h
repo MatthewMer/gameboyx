@@ -62,6 +62,8 @@ private:
 	void EnterMode0();
 	void EnterMode1();
 
+	void CheckHBlankDma();
+
 	typedef void (GameboyGPU::* scanline_draw_function)(const u8& _ly);
 	scanline_draw_function DrawScanline;
 	void DrawScanlineDMG(const u8& _ly);
