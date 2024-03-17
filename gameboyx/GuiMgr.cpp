@@ -85,8 +85,6 @@ GuiMgr::~GuiMgr() {
     GUI PROCESS ENTRY POINT
 *********************************************************************************************************** */
 void GuiMgr::ProcessData() {
-    ProcessInput();
-
     if (showInstrDebugger) {
         if (!instrDebugWasEnabled) {
             instrDebugWasEnabled = true;
@@ -106,6 +104,8 @@ void GuiMgr::ProcessData() {
 }
 
 void GuiMgr::ProcessGUI() {
+    ProcessInput();
+
     //IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
     if (gameRunning) {
         if (showGraphicsOverlay || showHardwareInfo) { vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency); }
