@@ -45,9 +45,8 @@ public:
 	static VHardwareMgr* getInstance();
 	static void resetInstance();
 
-    u8 InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings);
+    u8 InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset);
     void ShutdownHardware();
-    u8 ResetHardware();
 
 	// members for running hardware
 	void ProcessHardware();
@@ -86,11 +85,13 @@ private:
     // execution time (e.g. 60FPS -> 1/60th of a second)
     u32 timePerFrame;
     u32 currentTimePerFrame;
-    u32 timePerFrameCounter = 0;
     steady_clock::time_point timeFramePrev;
     steady_clock::time_point timeFrameCur;
 
-    int ticksPerFrame = 0;
+    void Delay();
+
+    int frameCount = 0;
+    int clockCount = 0;
 
     // timestamps for core virtualFrequency and virtualFramerate calculation
     steady_clock::time_point timeSecondPrev;
@@ -111,10 +112,7 @@ private:
     alignas(64) std::atomic<bool> pauseExecution;
     alignas(64) std::atomic<int> emulationSpeed;
 
-    void ExecuteDelay();
-    //void CheckDelay();
+    void CheckFpsAndClock();
     void InitMembers(emulation_settings& _settings);
-    void CalcFpsAndClock();
-    void ProcessSecond();
 };
 

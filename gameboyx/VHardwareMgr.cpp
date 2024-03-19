@@ -35,8 +35,12 @@ VHardwareMgr::~VHardwareMgr() {
 /* ***********************************************************************************************************
     RUN HARDWARE
 *********************************************************************************************************** */
-u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings) {
+u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset) {
     errors = 0x00;
+
+    if (_reset) {
+        ShutdownHardware();
+    }
 
     if (_cartridge == nullptr) {
         errors |= VHWMGR_ERR_CART_NULL;
@@ -114,48 +118,29 @@ void VHardwareMgr::ShutdownHardware() {
     LOG_INFO("[emu] hardware for ", title, " stopped");
 }
 
-u8 VHardwareMgr::ResetHardware() {
-    errors = 0x00;
-
-
-
-    return errors;
-}
-
 void VHardwareMgr::ProcessHardware() {
     unique_lock<mutex> lock_hardware(mutHardware, defer_lock);
-  
+
     while (running.load()) {
         if (debugEnable.load()) {
             if (!pauseExecution.load()) {
                 pauseExecution.store(true);
 
                 lock_hardware.lock();
-                core_instance->RunInstruction();
+                core_instance->RunCycle();
                 lock_hardware.unlock();
             }
-        }
-        else {
-            ExecuteDelay();
-            for (int j = 0; j < emulationSpeed.load(); j++) {
+        } else {
+            for (int i = 0; i < emulationSpeed.load(); i++) {
                 lock_hardware.lock();
                 core_instance->RunCycles();
                 lock_hardware.unlock();
             }
+            Delay();
         }
 
-        ProcessSecond();
+        CheckFpsAndClock();
     }
-}
-
-void VHardwareMgr::ExecuteDelay() {
-    while (currentTimePerFrame < timePerFrame) {
-        timeFrameCur = high_resolution_clock::now();
-        currentTimePerFrame = (u32)duration_cast<microseconds>(timeFrameCur - timeFramePrev).count();
-    }
-
-    timeFramePrev = timeFrameCur;
-    currentTimePerFrame = 0;
 }
 
 void VHardwareMgr::InitMembers(emulation_settings& _settings) {
@@ -164,26 +149,42 @@ void VHardwareMgr::InitMembers(emulation_settings& _settings) {
     timeSecondPrev = high_resolution_clock::now();
     timeSecondCur = high_resolution_clock::now();
 
+    timeFramePrev = high_resolution_clock::now();
+    timeFrameCur = high_resolution_clock::now();
+
     running.store(true);
     debugEnable.store(_settings.debug_enabled);
     pauseExecution.store(_settings.pause_execution);
     emulationSpeed.store(_settings.emulation_speed);
 }
 
-void VHardwareMgr::CalcFpsAndClock() {
-    currentFrequency.store((float)core_instance->GetClockCycles() / accumulatedTime);
-    currentFramerate.store(graphics_instance->GetFrameCount() / (accumulatedTime / (float)pow(10, 6)));
-}
-
-void VHardwareMgr::ProcessSecond() {
+void VHardwareMgr::CheckFpsAndClock() {
     timeSecondCur = high_resolution_clock::now();
     accumulatedTime += (u32)duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
+    clockCount += core_instance->GetClockCycles();
+    frameCount += graphics_instance->GetFrameCount();
+
     if (accumulatedTime > 999999) {
-        CalcFpsAndClock();
+        currentFrequency.store((float)clockCount / accumulatedTime);
+        currentFramerate.store((float)frameCount / (accumulatedTime / pow(10, 6)));
+
+        clockCount = 0;
+        frameCount = 0;
+
         accumulatedTime = 0;
     }
+}
+
+void VHardwareMgr::Delay() {
+    while (currentTimePerFrame < timePerFrame) {
+        timeFrameCur = high_resolution_clock::now();
+        currentTimePerFrame = (u32)duration_cast<microseconds>(timeFrameCur - timeFramePrev).count();
+    }
+
+    timeFramePrev = timeFrameCur;
+    currentTimePerFrame = 0;
 }
 
 /* ***********************************************************************************************************

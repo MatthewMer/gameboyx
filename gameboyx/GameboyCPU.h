@@ -107,7 +107,7 @@ public:
 	friend class BaseCPU;
 
 	void RunCycles() override;
-	void RunInstruction() override;
+	void RunCycle() override;
 
 	void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const override;
 	void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const override;
@@ -129,6 +129,8 @@ private:
 	// instruction data
 	u8 opcode;
 	u16 data;
+
+	void RunCpu();
 
 	void ExecuteInstruction() override;
 	bool CheckInterrupts() override;

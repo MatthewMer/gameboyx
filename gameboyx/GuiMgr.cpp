@@ -854,25 +854,7 @@ void GuiMgr::ShowAudioSettings() {
 *********************************************************************************************************** */
 void GuiMgr::ActionGameStart() {
     if (!gameRunning) {
-        if (games.size() > 0) {
-            // gather settings
-            virtual_graphics_settings graphics_settings = {};
-            graphics_settings.buffering = tripleBufferingEmu ? V_TRIPPLE_BUFFERING : V_DOUBLE_BUFFERING;
-
-            emulation_settings emu_settings = {};
-            emu_settings.debug_enabled = showInstrDebugger;
-            emu_settings.pause_execution = !autoRun;
-            emu_settings.emulation_speed = currentSpeed;
-
-            if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings, emu_settings) != 0x00) {
-                gameRunning = false;
-            }
-            else {
-                vhwmgr->GetInstrDebugTable(debugInstrTable);
-                vhwmgr->GetMemoryDebugTables(debugMemoryTables);
-                gameRunning = true;
-            }
-        }
+        StartGame(false);
     }
     requestGameStart = false;
 }
@@ -887,12 +869,7 @@ void GuiMgr::ActionGameStop() {
 
 void GuiMgr::ActionGameReset() {
     if (gameRunning) {
-        if (vhwmgr->ResetHardware() != 0x00) {
-            gameRunning = false;
-        }
-        else {
-            gameRunning = true;
-        }
+        StartGame(true);
     }
     requestGameReset = false;
 }
@@ -1074,7 +1051,26 @@ void GuiMgr::ActionSetSamplingRate() {
 
 
 
+void GuiMgr::StartGame(const bool& _restart) {
+    if (games.size() > 0) {
+        // gather settings
+        virtual_graphics_settings graphics_settings = {};
+        graphics_settings.buffering = tripleBufferingEmu ? V_TRIPPLE_BUFFERING : V_DOUBLE_BUFFERING;
 
+        emulation_settings emu_settings = {};
+        emu_settings.debug_enabled = showInstrDebugger;
+        emu_settings.pause_execution = !autoRun;
+        emu_settings.emulation_speed = currentSpeed;
+
+        if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings, emu_settings, _restart) != 0x00) {
+            gameRunning = false;
+        } else {
+            vhwmgr->GetInstrDebugTable(debugInstrTable);
+            vhwmgr->GetMemoryDebugTables(debugMemoryTables);
+            gameRunning = true;
+        }
+    }
+}
 
 void GuiMgr::ContinueBreakpoint() {
     if (gameRunning) {

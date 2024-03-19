@@ -234,6 +234,7 @@ private:
 	void ActionSetBreakPoint(std::list<bank_index>& _breakpoints, const bank_index& _current_index);
 	void GetBankAndAddressTable(TableBase& _tyble_obj, int& _bank, int& _address);
 	void ContinueBreakpoint();
+	void StartGame(const bool& _restart);
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();

@@ -31,7 +31,7 @@ public:
 
 	// public members
 	virtual void RunCycles() = 0;
-	virtual void RunInstruction() = 0;
+	virtual void RunCycle() = 0;
 
 	virtual void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const = 0;
 	virtual void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const = 0;

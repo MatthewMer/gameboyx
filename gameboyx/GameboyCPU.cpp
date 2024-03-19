@@ -145,33 +145,21 @@ void GameboyCPU::RunCycles() {
     currentTicks = 0;
 
     while ((currentTicks < (ticksPerFrame * machine_ctx->currentSpeed))) {
-        if (stopped) {
-            // check button press
-            if (mem_instance->GetIO(IF_ADDR) & IRQ_JOYPAD) {
-                stopped = false;
-            } else {
-                return;
-            }
-            
-        } else if (halted) {
-            TickTimers();
-
-            // check pending and enabled interrupts
-            if (machine_ctx->IE & mem_instance->GetIO(IF_ADDR)) {
-                halted = false;
-            }
-        } else {
-            CheckInterrupts();
-            ExecuteInstruction();
-        }
+        RunCpu();
     }
 
     tickCounter += currentTicks;
 }
 
-void GameboyCPU::RunInstruction() {
+void GameboyCPU::RunCycle() {
     currentTicks = 0;
 
+    RunCpu();
+
+    tickCounter += currentTicks;
+}
+
+void GameboyCPU::RunCpu() {
     if (stopped) {
         // check button press
         if (mem_instance->GetIO(IF_ADDR) & IRQ_JOYPAD) {
@@ -181,24 +169,17 @@ void GameboyCPU::RunInstruction() {
         }
 
     } else if (halted) {
-        while (halted) {
-            // exit loop after ticks per frame have passed, otherwise application would just stall forever in case no interrupts have been enabled
-            if (currentTicks >= ticksPerFrame) { break; }
+        TickTimers();
 
-            TickTimers();
-
-            // check pending and enabled interrupts
-            if (machine_ctx->IE & mem_instance->GetIO(IF_ADDR)) {
-                halted = false;
-            }
+        // check pending and enabled interrupts
+        if (machine_ctx->IE & mem_instance->GetIO(IF_ADDR)) {
+            halted = false;
         }
     } else {
         if (!CheckInterrupts()) {
             ExecuteInstruction();
         }
     }
-
-    tickCounter += currentTicks;
 }
 
 void GameboyCPU::ExecuteInstruction() {
