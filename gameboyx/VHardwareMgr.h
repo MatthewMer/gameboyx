@@ -25,7 +25,6 @@ using namespace std::chrono;
 
 struct emulation_settings {
     bool debug_enabled = false;
-    bool pause_execution = true;
     int emulation_speed = 1;
 };
 
@@ -34,10 +33,11 @@ struct emulation_settings {
 #define VHWMGR_ERR_INIT_HW			0x04
 #define VHWMGR_ERR_CART_NULL		0x08
 #define VHWMGR_ERR_THREAD_RUNNING	0x10
+#define VHWMGR_ERR_HW_NOT_INIT      0x20
 
 class BaseCartridge;
-//class GuiMgr;
-//typedef void (GuiMgr::* gui_callback)();
+class GuiMgr;
+typedef void (GuiMgr::* debug_callback)(const int&, const int&);
 
 class VHardwareMgr
 {
@@ -45,7 +45,8 @@ public:
 	static VHardwareMgr* getInstance();
 	static void resetInstance();
 
-    u8 InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset);
+    u8 InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset, GuiMgr* _guimgr, debug_callback _callback);
+    u8 StartHardware();
     void ShutdownHardware();
 
 	// members for running hardware
@@ -56,7 +57,7 @@ public:
     void EventKeyUp(SDL_Keycode& _key);
 
 	void SetDebugEnabled(const bool& _debug_enabled);
-	void SetPauseExecution(const bool& _pause_execution);
+	void SetProceedExecution(const bool& _proceed_execution);
 	void SetEmulationSpeed(const int& _emulation_speed);
 	
 	void GetFpsAndClock(int& _fps, float& _clock);
@@ -100,6 +101,7 @@ private:
     u32 accumulatedTimeTmp = 0;
 
     u8 errors;
+    bool initialized = false;
 
     alignas(64) std::atomic<float> currentFrequency = 0;
     alignas(64) std::atomic<float> currentFramerate = 0;
@@ -109,10 +111,14 @@ private:
 
     alignas(64) std::atomic<bool> running;
     alignas(64) std::atomic<bool> debugEnable;
-    alignas(64) std::atomic<bool> pauseExecution;
+    alignas(64) std::atomic<bool> proceedExecution;
+    alignas(64) std::atomic<bool> autoRun;
     alignas(64) std::atomic<int> emulationSpeed;
 
     void CheckFpsAndClock();
     void InitMembers(emulation_settings& _settings);
+
+    GuiMgr* guimgr;
+    debug_callback dbgCallback;
 };
 

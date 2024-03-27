@@ -75,6 +75,11 @@ private:
 	void DrawTileOBJDMG(const int& _x, const int& _y, const u32* _color_palette, const bool& _prio, const bool& _x_flip);
 	void DrawTileBGWINDMG(const int& _x, const int& _y, const u32* _color_palette);
 
+	void DrawBackgroundCGB(const u8& _ly);
+	void DrawWindowCGB(const u8& _ly);
+
+	void DrawTileBGWINCGB(const int& _x, const int& _y, const u32* _color_palette, const bool& _x_flip);
+
 	int OAMPrio1DMG[10];
 	int numOAMEntriesPrio1DMG = 0;
 	bool objPrio1DMG[PPU_SCREEN_X];
@@ -92,9 +97,9 @@ private:
 	bool mode3scxPauseEn = false;
 
 	void SearchOAM(const u8& _ly);
-	void FetchTileDataOBJ(u8& _tile_offset, const int& _tile_sub_offset);
+	void FetchTileDataOBJ(u8& _tile_offset, const int& _tile_sub_offset, const int& _bank);
 
-	void FetchTileDataBGWIN(u8& _tile_offset, const int& _tile_sub_offset);
+	void FetchTileDataBGWIN(u8& _tile_offset, const int& _tile_sub_offset, const int& _bank);
 
 	u8 tileDataCur[PPU_TILE_SIZE_SCANLINE];
 

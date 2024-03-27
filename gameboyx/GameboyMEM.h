@@ -126,6 +126,9 @@ struct graphics_context {
 	// CGB
 	bool obj_prio_mode_cgb = false;
 
+	bool obp_increment = false;
+	bool bgp_increment = false;
+
 	u8 cgb_obp_palette_ram[PPU_PALETTE_RAM_SIZE_CGB] = {};
 	u8 cgb_bgp_palette_ram[PPU_PALETTE_RAM_SIZE_CGB] = {};
 
@@ -139,7 +142,6 @@ struct graphics_context {
 		{DMG_COLOR_WHITE_ALT, DMG_COLOR_LIGHTGREY_ALT, DMG_COLOR_DARKGREY_ALT, DMG_COLOR_BLACK_ALT},
 		{DMG_COLOR_WHITE_ALT, DMG_COLOR_LIGHTGREY_ALT, DMG_COLOR_DARKGREY_ALT, DMG_COLOR_BLACK_ALT}
 	};
-
 	u32 cgb_bgp_color_palettes[8][4] = {
 		{DMG_COLOR_WHITE_ALT, DMG_COLOR_LIGHTGREY_ALT, DMG_COLOR_DARKGREY_ALT, DMG_COLOR_BLACK_ALT},
 		{DMG_COLOR_WHITE_ALT, DMG_COLOR_LIGHTGREY_ALT, DMG_COLOR_DARKGREY_ALT, DMG_COLOR_BLACK_ALT},
@@ -407,6 +409,11 @@ private:
 	void SetObjPrio(const u8& _data);
 
 	void SetColorPaletteValues(const u8& _data, u32* _color_palette);
+
+	void SetBGWINPaletteValues(const u8& _data);
+	void SetOBJPaletteValues(const u8& _data);
+	void SetBCPS(const u8& _data);
+	void SetOCPS(const u8& _data);
 
 	// action for LCDC write
 	void SetLCDCValues(const u8& _data);

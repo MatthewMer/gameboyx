@@ -12,6 +12,7 @@
 #include <vector>
 #include <array>
 #include <queue>
+#include <mutex>
 
 #include "BaseCartridge.h"
 #include "helper_functions.h"
@@ -86,10 +87,7 @@ private:
 	bool requestGameReset = false;
 	bool requestDeleteGames = false;
 	bool autoRun = false;
-	bool pcSetToRam = false;
-	bool continueExecutionAuto = false;
 
-	void ProcessInput();
 	bool windowActive;
 	bool windowHovered;
 	windowID activeId;
@@ -119,7 +117,6 @@ private:
 	const int mainColNum = (int)GAMES_COLUMNS.size();
 
 	// debug instructions
-	bool instrDebugWasEnabled = false;
 	int bankSelect = 0;
 	int addrSelect = 0;
 	std::list<bank_index> breakpoints = std::list<bank_index>();
@@ -128,6 +125,7 @@ private:
 	int currentPc = -1;
 	int lastBank = -1;
 	int currentBank = -1;
+	bool pcSetToRam = false;
 	bank_index debugInstrCurrentInstrIndex = bank_index(0, 0);
 	const int debugInstrColNum = (int)DEBUG_INSTR_COLUMNS.size();
 	const int debugInstrRegColNum = (int)DEBUG_REGISTER_COLUMNS.size();
@@ -214,7 +212,6 @@ private:
 	void ActionGameSelectUp();
 	void ActionGameSelectDown();
 	void ActionContinueExecution();
-	void ActionContinueExecutionBreakpoint(const bool& _auto);
 	void ActionToggleMainMenuBar();
 	void ActionSetToCurrentPC();
 	void ActionSetToBank(TableBase& _table_obj, int& _bank);
@@ -230,14 +227,17 @@ private:
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);
 	void ReloadGamesGuiCtx();
-	void CheckPCandBank();
 	void ActionSetBreakPoint(std::list<bank_index>& _breakpoints, const bank_index& _current_index);
 	void GetBankAndAddressTable(TableBase& _tyble_obj, int& _bank, int& _address);
-	void ContinueBreakpoint();
 	void StartGame(const bool& _restart);
 
 	const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();
 	const ImGuiIO& GUI_IO = ImGui::GetIO();
 	const ImVec4& HIGHLIGHT_COLOR = GUI_STYLE.Colors[ImGuiCol_TabActive];
+
+	void DebugCallback(const int& _pc, const int& _bank);
+	alignas(64) std::atomic<bool> nextInstruction = false;
+	alignas(64) std::atomic<bool> autoRunInstructions = false;
+	std::mutex mutDebugTable;
 };

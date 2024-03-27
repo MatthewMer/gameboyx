@@ -61,7 +61,7 @@ int main(int, char**)
     bool running = true;
     while (running)
     {
-        HardwareMgr::ProcessInput(running);
+        HardwareMgr::ProcessData(running);
         gui_mgr->ProcessData();
 
         if (HardwareMgr::ExecuteDelay()) {

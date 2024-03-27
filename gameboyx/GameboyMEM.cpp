@@ -445,17 +445,32 @@ void GameboyMEM::WriteIORegister(const u8& _data, const u16& _addr) {
     case CGB_WRAM_SELECT_ADDR:
         SetWRAMBank(_data);
         break;
+        // DMG only
     case BGP_ADDR:
         IO[BGP_ADDR - IO_OFFSET] = _data;
         SetColorPaletteValues(_data, graphics_ctx.dmg_bgp_color_palette);
         break;
+        // DMG only
     case OBP0_ADDR:
         IO[OBP0_ADDR - IO_OFFSET] = _data;
         SetColorPaletteValues(_data, graphics_ctx.dmg_obp0_color_palette);
         break;
     case OBP1_ADDR:
+        // DMG only
         IO[OBP1_ADDR - IO_OFFSET] = _data;
         SetColorPaletteValues(_data, graphics_ctx.dmg_obp1_color_palette);
+        break;
+    case BCPD_BGPD_ADDR:
+        SetBGWINPaletteValues(_data);
+        break;
+    case OCPD_OBPD_ADDR:
+        SetOBJPaletteValues(_data);
+        break;
+    case BCPS_BGPI_ADDR:
+        SetBCPS(_data);
+        break;
+    case OCPS_OBPI_ADDR:
+        SetOCPS(_data);
         break;
     case LY_ADDR:
         if (!graphics_ctx.ppu_enable) {
@@ -531,10 +546,6 @@ void GameboyMEM::WriteIORegister(const u8& _data, const u16& _addr) {
             SetAPUCh3WaveRam(_addr, _data);
         } else {
             IO[_addr - IO_OFFSET] = _data;
-            // TODO: remove, only for testing with blargg's instruction test rom
-            if (_addr == SERIAL_DATA) {
-                printf("%c", (char)IO[_addr - IO_OFFSET]);
-            }
         }
         break;
     }
@@ -911,6 +922,66 @@ void GameboyMEM::SetColorPaletteValues(const u8& _data, u32* _color_palette) {
     }
 }
 
+void GameboyMEM::SetBGWINPaletteValues(const u8& _data) {
+    u8 addr = IO[BCPS_BGPI_ADDR - IO_OFFSET] & 0x3F;
+
+    if (graphics_ctx.mode != PPU_MODE_3) {
+        u8 addr = IO[BCPS_BGPI_ADDR - IO_OFFSET] & 0x3F;
+        graphics_ctx.cgb_bgp_palette_ram[addr] = _data;
+
+        // set new palette value                        // this is the fastes possible implementation I could think of (in general CPUs prefere 1. integers 2. addition/subtraction and bitwise)
+        int ram_index = addr & 0xFE;                    // get index in color ram, first bit irrelevant because colors aligned as 2 bytes
+        int palette_index = addr >> 3;                  // get index of palette (divide by 8 (divide by 2^3 -> shift by 3), because each palette has 4 colors @ 2 bytes = 8 bytes each)
+        int color_index = (addr & 0x07) >> 1;           // get index of color within palette (lower 3 bit -> can address 8 byte; shift by 1 because each color has 2 bytes (divide by 2^1))
+
+        // NOTE: CGB has RGB555 in little endian -> reverse order
+        u16 rgb555_color = graphics_ctx.cgb_bgp_palette_ram[ram_index] | ((u16)graphics_ctx.cgb_bgp_palette_ram[ram_index + 1] << 8);
+        u32 rgba8888_color = ((u32)(rgb555_color & PPU_CGB_RED) << 26) | ((u32)(rgb555_color & PPU_CGB_GREEN) << 13) | ((u32)(rgb555_color & PPU_CGB_BLUE)) | 0xFF;        // additionally leftshift each value by 2 -> 5 bit to 8 bit 'scaling'
+
+        graphics_ctx.cgb_bgp_color_palettes[palette_index][color_index] = rgba8888_color;
+        //LOG_WARN(format("{:08x}", rgba8888_color));
+    }
+
+    if (graphics_ctx.bgp_increment) {
+        addr++;
+        IO[BCPS_BGPI_ADDR - IO_OFFSET] = (IO[BCPS_BGPI_ADDR - IO_OFFSET] & PPU_CGB_PALETTE_INDEX_INC) | (addr & 0x3F);
+    }
+}
+
+void GameboyMEM::SetOBJPaletteValues(const u8& _data) {
+    u8 addr = IO[OCPS_OBPI_ADDR - IO_OFFSET] & 0x3F;
+
+    if (graphics_ctx.mode != PPU_MODE_3) {        
+        graphics_ctx.cgb_obp_palette_ram[addr] = _data;
+
+        // set new palette value
+        int ram_index = addr & 0xFE;
+        int palette_index = addr >> 3;
+        int color_index = (addr & 0x07) >> 1;
+
+        u16 rgb555_color = graphics_ctx.cgb_obp_palette_ram[ram_index] | ((u16)graphics_ctx.cgb_obp_palette_ram[ram_index + 1] << 8);
+        u32 rgba8888_color = ((u32)(rgb555_color & PPU_CGB_RED) << 26) | ((u32)(rgb555_color & PPU_CGB_GREEN) << 13) | ((u32)(rgb555_color & PPU_CGB_BLUE)) | 0xFF;
+
+        graphics_ctx.cgb_obp_color_palettes[palette_index][color_index] = rgba8888_color;
+        //LOG_WARN(format("{:08x}", rgba8888_color));
+    }
+
+    if (graphics_ctx.obp_increment) {
+        addr++;
+        IO[OCPS_OBPI_ADDR - IO_OFFSET] = (IO[OCPS_OBPI_ADDR - IO_OFFSET] & PPU_CGB_PALETTE_INDEX_INC) | (addr & 0x3F);
+    }
+}
+
+void GameboyMEM::SetBCPS(const u8& _data) {
+    IO[BCPS_BGPI_ADDR - IO_OFFSET] = _data;
+    graphics_ctx.bgp_increment = (_data & PPU_CGB_PALETTE_INDEX_INC ? true : false);
+}
+
+void GameboyMEM::SetOCPS(const u8& _data) {
+    IO[OCPS_OBPI_ADDR - IO_OFFSET] = _data;
+    graphics_ctx.obp_increment = (_data & PPU_CGB_PALETTE_INDEX_INC ? true : false);
+}
+
 /* ***********************************************************************************************************
     MISC BANK SELECT
 *********************************************************************************************************** */
@@ -926,7 +997,7 @@ void GameboyMEM::SetWRAMBank(const u8& _data) {
         IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x07;
         if (IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] == 0) IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = 1;
 
-        machine_ctx.wram_bank_selected = IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] - 1;
+        machine_ctx.wram_bank_selected = IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] - 1; 
     }
 }
 

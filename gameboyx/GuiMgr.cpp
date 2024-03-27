@@ -85,27 +85,54 @@ GuiMgr::~GuiMgr() {
     GUI PROCESS ENTRY POINT
 *********************************************************************************************************** */
 void GuiMgr::ProcessData() {
-    if (showInstrDebugger) {
-        if (!instrDebugWasEnabled) {
-            instrDebugWasEnabled = true;
-            vhwmgr->SetDebugEnabled(true);
+    // debug
+    static bool debug_enabled = showInstrDebugger;
+    if (debug_enabled != showInstrDebugger) {
+        debug_enabled = showInstrDebugger;
+
+        vhwmgr->SetDebugEnabled(debug_enabled);
+    }
+
+    // keys
+    auto& inputs = HardwareMgr::GetKeys();
+
+    while (!inputs.empty()) {
+        pair<SDL_Keycode, SDL_EventType>& input = inputs.front();
+
+        switch (input.second) {
+        case SDL_KEYDOWN:
+            EventKeyDown(input.first);
+            break;
+        case SDL_KEYUP:
+            EventKeyUp(input.first);
+            break;
         }
 
-        if (gameRunning) {
-            CheckPCandBank();
-            if (continueExecutionAuto) {
-                ContinueBreakpoint();
-            }
-        }
-    } else if (instrDebugWasEnabled) {
-        instrDebugWasEnabled = false;
-        vhwmgr->SetDebugEnabled(false);
+        inputs.pop();
     }
+
+    windowActive = false;
+    for (const auto& [key, value] : windowsActive) {
+        if (value) {
+            activeId = key;
+            windowActive = true;
+        }
+    }
+
+    windowHovered = false;
+    for (const auto& [key, value] : windowsHovered) {
+        if (value) {
+            hoveredId = key;
+            windowHovered = true;
+        }
+    }
+
+    // mouse scroll - only used for tables (not optimal but works so far)
+    const auto& scroll = HardwareMgr::GetScroll();
+    EventMouseWheel(scroll);
 }
 
 void GuiMgr::ProcessGUI() {
-    ProcessInput();
-
     //IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
     if (gameRunning) {
         if (showGraphicsOverlay || showHardwareInfo) { vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency); }
@@ -127,6 +154,9 @@ void GuiMgr::ProcessGUI() {
     if (showGraphicsSettings) { ShowGraphicsSettings(); }
     if (showAudioSettings) { ShowAudioSettings(); }
     if (showMainMenuBar) { ShowMainMenuBar(); }
+
+    sdlScrollUp = false;
+    sdlScrollDown = false;
 }
 
 /* ***********************************************************************************************************
@@ -250,8 +280,10 @@ void GuiMgr::ShowDebugInstrButtonsHead() {
     
     ImGui::SameLine();
     ImGui::Checkbox("Auto run", &autoRun);
-    if (autoRun != continueExecutionAuto) {
-        ActionContinueExecutionBreakpoint(autoRun);
+    static bool auto_run = autoRun;
+    if (auto_run != autoRun) {
+        auto_run = autoRun;
+        autoRunInstructions.store(auto_run);
     }
 }
 
@@ -272,6 +304,7 @@ void GuiMgr::ShowDebugInstrTable() {
             auto& table = (pcSetToRam ? debugInstrTableTmp : debugInstrTable);
             auto& breakpts = (pcSetToRam ? breakpointsTmp : breakpoints);
 
+            unique_lock<mutex> lock_dbg_table(mutDebugTable);
             CheckScroll(DEBUG_INSTR, table);
             GetBankAndAddressTable(table, bankSelect, addrSelect);
 
@@ -294,6 +327,7 @@ void GuiMgr::ShowDebugInstrTable() {
                 ImGui::TextUnformatted(cur_entry.second.c_str());
                 ImGui::TableNextRow();
             }
+            lock_dbg_table.unlock();
         } else {
             for (int i = 0; i < DEBUG_INSTR_LINES; i++) {
                 ImGui::TableNextColumn();
@@ -876,12 +910,8 @@ void GuiMgr::ActionGameReset() {
 
 void GuiMgr::ActionContinueExecution() {
     if (gameRunning) {
-        vhwmgr->SetPauseExecution(false);
+        nextInstruction.store(true);
     }
-}
-
-void GuiMgr::ActionContinueExecutionBreakpoint(const bool& _auto) {
-    continueExecutionAuto = _auto;
 }
 
 void GuiMgr::ActionGamesSelect(const int& _index) {
@@ -1059,24 +1089,19 @@ void GuiMgr::StartGame(const bool& _restart) {
 
         emulation_settings emu_settings = {};
         emu_settings.debug_enabled = showInstrDebugger;
-        emu_settings.pause_execution = !autoRun;
         emu_settings.emulation_speed = currentSpeed;
 
-        if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings, emu_settings, _restart) != 0x00) {
+        if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings, emu_settings, _restart, this, &GuiMgr::DebugCallback) != 0x00) {
             gameRunning = false;
         } else {
             vhwmgr->GetInstrDebugTable(debugInstrTable);
             vhwmgr->GetMemoryDebugTables(debugMemoryTables);
-            gameRunning = true;
-        }
-    }
-}
 
-void GuiMgr::ContinueBreakpoint() {
-    if (gameRunning) {
-        auto& breakpoint_list = (pcSetToRam ? breakpointsTmp : breakpoints);
-        if (!(find(breakpoint_list.begin(), breakpoint_list.end(), debugInstrCurrentInstrIndex) != breakpoint_list.end())) {
-            ActionContinueExecution();
+            if (vhwmgr->StartHardware() == 0x00) {
+                gameRunning = true;
+            } else {
+                gameRunning = false;
+            }
         }
     }
 }
@@ -1087,75 +1112,9 @@ void GuiMgr::GetBankAndAddressTable(TableBase& _table_obj, int& _bank, int& _add
     _address = _table_obj.GetAddressByIndex(centre);
 }
 
-void GuiMgr::CheckPCandBank() {
-    vhwmgr->GetCurrentPCandBank(currentPc, currentBank);
-
-    if (currentPc != lastPc || currentBank != lastBank) {
-        if (pcSetToRam != (currentBank < 0)) {
-            pcSetToRam = !pcSetToRam;
-
-            if (pcSetToRam) {
-                vhwmgr->GetInstrDebugTableTmp(debugInstrTableTmp);
-            }
-        }
-
-        auto& table = (pcSetToRam ? debugInstrTableTmp : debugInstrTable);
-        if (currentBank != lastBank) {
-            lastBank = currentBank;
-            table.SearchBank(currentBank);
-        }
-        if (currentPc != lastPc) {
-            lastPc = currentPc;
-            table.SearchAddress(currentPc);
-        }
-
-        debugInstrCurrentInstrIndex = table.GetIndexByAddress(lastPc);
-    }
-}
-
 void GuiMgr::CheckWindow(const windowID& _id) {
     windowsActive.at(_id) = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
     windowsHovered.at(_id) = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
-}
-
-void GuiMgr::ProcessInput() {
-    // keys
-    auto& inputs = HardwareMgr::GetKeys();
-
-    while (!inputs.empty()) {
-        pair<SDL_Keycode, SDL_EventType>& input = inputs.front();
-
-        switch (input.second) {
-        case SDL_KEYDOWN:
-            EventKeyDown(input.first);
-            break;
-        case SDL_KEYUP:
-            EventKeyUp(input.first);
-            break;
-        }
-
-        inputs.pop();
-    }
-
-    // mouse scroll
-    const auto& scroll = HardwareMgr::GetScroll();
-    EventMouseWheel(scroll);
-
-    windowActive = false;
-    for (const auto& [key, value] : windowsActive) {
-        if (value) {
-            activeId = key;
-            windowActive = true;
-        }
-    }
-
-    windowHovered = false;
-    for (const auto& [key, value] : windowsHovered) {
-        if (value) {
-            hoveredId = key;
-            windowHovered = true;
-        }
-    }
 }
 
 // needs revision, but works so far
@@ -1164,16 +1123,10 @@ void GuiMgr::CheckScroll(const windowID& _id, Table<T>& _table) {
     if (sdlScrollUp || sdlScrollDown) {
         bool scroll = false;
 
-        if (windowActive) {
-            if (windowHovered) {
-                scroll = _id == hoveredId;
-            }
-            else {
-                scroll = _id == activeId;
-            }
-        }
-        else if (windowHovered) {
+        if (windowHovered) {
             scroll = _id == hoveredId;
+        } else if (windowActive) {
+            scroll = _id == activeId;
         }
 
         if (scroll) {
@@ -1341,8 +1294,50 @@ void GuiMgr::EventMouseWheel(const Sint32& _wheel_y) {
         sdlScrollDown = true;
         sdlScrollUp = false;
     }
-    else {
-        sdlScrollDown = false;
-        sdlScrollUp = false;
+}
+
+/* ***********************************************************************************************************
+    CALLBACKS
+*********************************************************************************************************** */
+void GuiMgr::DebugCallback(const int& _pc, const int& _bank) {
+    unique_lock<mutex> lock_dbg_table(mutDebugTable);
+    currentPc = _pc;
+    currentBank = _bank;
+
+    if (currentPc != lastPc || currentBank != lastBank) {
+        bool pc_set_to_ram = pcSetToRam;
+
+        if (pc_set_to_ram != (currentBank < 0)) {
+            pc_set_to_ram = !pc_set_to_ram;
+
+            if (pc_set_to_ram) {
+                vhwmgr->GetInstrDebugTableTmp(debugInstrTableTmp);
+            }
+        }
+
+        auto& table = (pc_set_to_ram ? debugInstrTableTmp : debugInstrTable);
+        if (currentBank != lastBank) {
+            lastBank = currentBank;
+            table.SearchBank(currentBank);
+        }
+        if (currentPc != lastPc) {
+            lastPc = currentPc;
+            table.SearchAddress(currentPc);
+        }
+
+        debugInstrCurrentInstrIndex = table.GetIndexByAddress(lastPc);
+
+        pcSetToRam = pc_set_to_ram;
     }
+
+    if (autoRunInstructions.load()) {
+        auto& breakpoint_list = (pcSetToRam ? breakpointsTmp : breakpoints);
+        if (!(find(breakpoint_list.begin(), breakpoint_list.end(), debugInstrCurrentInstrIndex) != breakpoint_list.end())) {
+            vhwmgr->SetProceedExecution(true);
+        }
+    }
+    if (nextInstruction.load()) {
+        vhwmgr->SetProceedExecution(true);
+    }
+    nextInstruction.store(false);
 }

@@ -92,7 +92,7 @@ void HardwareMgr::RenderFrame() {
 	graphicsMgr->RenderFrame();
 }
 
-void HardwareMgr::ProcessInput(bool& _running) {
+void HardwareMgr::ProcessData(bool& _running) {
 	SDL_Event event;
 
 	while (SDL_PollEvent(&event)) {

@@ -2,7 +2,6 @@
 
 #include "logger.h"
 
-
 using namespace std;
 
 /* ***********************************************************************************************************
@@ -35,8 +34,9 @@ VHardwareMgr::~VHardwareMgr() {
 /* ***********************************************************************************************************
     RUN HARDWARE
 *********************************************************************************************************** */
-u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset) {
+u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset, GuiMgr* _guimgr, debug_callback _callback) {
     errors = 0x00;
+    initialized = false;
 
     if (_reset) {
         ShutdownHardware();
@@ -68,12 +68,11 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settin
 
                 InitMembers(_emu_settings);
 
-                hardwareThread = thread([this]() -> void { ProcessHardware(); });
-                if (!hardwareThread.joinable()) {
-                    errors |= VHWMGR_ERR_INIT_THREAD;
-                } else {
-                    LOG_INFO("[emu] hardware for ", cart_instance->title, " initialized");
-                }
+                guimgr = _guimgr;
+                dbgCallback = _callback;
+
+                LOG_INFO("[emu] hardware for ", cart_instance->title, " initialized");
+                initialized = true;
             } else {
                 errors |= VHWMGR_ERR_INIT_HW;
             }
@@ -90,7 +89,35 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settin
         } else {
             title = cart_instance->title;
         }
-        LOG_ERROR("[emu] starting game ", title);
+        LOG_ERROR("[emu] initializing hardware for ", title);
+        resetInstance();
+    }
+
+    return errors;
+}
+
+u8 VHardwareMgr::StartHardware() {
+    errors = 0x00;
+
+    if (initialized) {
+        hardwareThread = thread([this]() -> void { ProcessHardware(); });
+        if (!hardwareThread.joinable()) {
+            errors |= VHWMGR_ERR_INIT_THREAD;
+        } else {
+            LOG_INFO("[emu] hardware for ", cart_instance->title, " started");
+        }
+    } else {
+        errors |= VHWMGR_ERR_HW_NOT_INIT;
+    }
+
+    if (errors) {
+        string title;
+        if (errors | VHWMGR_ERR_CART_NULL) {
+            title = N_A;
+        } else {
+            title = cart_instance->title;
+        }
+        LOG_ERROR("[emu] starting hardware for ", title);
         resetInstance();
     }
 
@@ -120,15 +147,20 @@ void VHardwareMgr::ShutdownHardware() {
 
 void VHardwareMgr::ProcessHardware() {
     unique_lock<mutex> lock_hardware(mutHardware, defer_lock);
+    int bank;
+    int pc;
 
     while (running.load()) {
         if (debugEnable.load()) {
-            if (!pauseExecution.load()) {
-                pauseExecution.store(true);
+            core_instance->GetCurrentPCandBank(pc, bank);
+            (guimgr->*dbgCallback)(pc, bank);
 
+            if (proceedExecution.load()) {
                 lock_hardware.lock();
                 core_instance->RunCycle();
                 lock_hardware.unlock();
+
+                proceedExecution.store(false);
             }
         } else {
             for (int i = 0; i < emulationSpeed.load(); i++) {
@@ -154,7 +186,6 @@ void VHardwareMgr::InitMembers(emulation_settings& _settings) {
 
     running.store(true);
     debugEnable.store(_settings.debug_enabled);
-    pauseExecution.store(_settings.pause_execution);
     emulationSpeed.store(_settings.emulation_speed);
 }
 
@@ -215,8 +246,8 @@ void VHardwareMgr::SetDebugEnabled(const bool& _debug_enabled) {
     debugEnable.store(_debug_enabled);
 }
 
-void VHardwareMgr::SetPauseExecution(const bool& _pause_execution) {
-    pauseExecution.store(_pause_execution);
+void VHardwareMgr::SetProceedExecution(const bool& _proceed_execution) {
+    proceedExecution.store(_proceed_execution);
 }
 
 void VHardwareMgr::SetEmulationSpeed(const int& _emulation_speed) {

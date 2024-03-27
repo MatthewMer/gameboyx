@@ -323,6 +323,11 @@
 #define PPU_DOTS_MODE_2                 80
 #define PPU_DOTS_PER_OAM_ENTRY          2
 
+#define PPU_CGB_PALETTE_INDEX_INC       0x80
+#define PPU_CGB_RED                     0x001F
+#define PPU_CGB_GREEN                   0x03E0
+#define PPU_CGB_BLUE                    0x7C00
+
 /* ***********************************************************************************************************
     AUDIO DEFINES
 *********************************************************************************************************** */
