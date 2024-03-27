@@ -354,7 +354,7 @@ void GameboyGPU::DrawTileOBJDMG(const int& _x, const int& _y, const u32* _color_
 			x++;
 		}
 	} else {
-		for (int i = 7; i > -1; --i) {
+		for (int i = 7; i > -1; i--) {
 			if (x > -1 && x < PPU_SCREEN_X) {
 				color_index = (((tileDataCur[1] & bit_mask) >> i) << 1) | ((tileDataCur[0] & bit_mask) >> i);
 
@@ -386,7 +386,7 @@ void GameboyGPU::DrawTileBGWINDMG(const int& _x, const int& _y, const u32* _colo
 
 	u8 bit_mask = 0x80;
 	int x = _x;
-	for (int i = 7; i > -1; --i) {
+	for (int i = 7; i > -1; i--) {
 		if (x > -1 && x < PPU_SCREEN_X) {
 			color_index = (((tileDataCur[1] & bit_mask) >> i) << 1) | ((tileDataCur[0] & bit_mask) >> i);
 
@@ -410,19 +410,19 @@ void GameboyGPU::DrawTileBGWINDMG(const int& _x, const int& _y, const u32* _colo
 
 void GameboyGPU::DrawScanlineCGB(const u8& _ly) {
 	if (graphicsCtx->obj_enable) {
-		DrawObjectsDMG(_ly, OAMPrio1DMG, numOAMEntriesPrio1DMG, true);
+		DrawObjectsCGB(_ly, OAMPrio1DMG, numOAMEntriesPrio1DMG, true);
 	}
 
 	//if (graphicsCtx->bg_win_enable) {
 	DrawBackgroundCGB(_ly);
 
 		if (graphicsCtx->win_enable) {
-			//DrawWindowCGB(_ly);
+			DrawWindowCGB(_ly);
 		}
 	//}
 
 	if (graphicsCtx->obj_enable) {
-		DrawObjectsDMG(_ly, OAMPrio0DMG, numOAMEntriesPrio0DMG, false);
+		DrawObjectsCGB(_ly, OAMPrio0DMG, numOAMEntriesPrio0DMG, false);
 	}
 }
 
@@ -462,7 +462,7 @@ void GameboyGPU::DrawBackgroundCGB(const u8& _ly) {
 		tile_attr = graphicsCtx->VRAM_N[1][index];
 
 		palette_index = tile_attr & BG_ATTR_PALETTE_CGB;
-		bank = (tile_attr & BG_ATTR_VRAM_BANK_CGB) >> 2;
+		bank = (tile_attr & BG_ATTR_VRAM_BANK_CGB ? 1 : 0);
 		x_flip = (tile_attr & BG_ATTR_FLIP_HORIZONTAL ? true : false);
 		y_flip = (tile_attr & BG_ATTR_FLIP_VERTICAL ? true : false);
 		prio = (tile_attr & BG_ATTR_OAM_PRIORITY ? true : false);			// NOT USED CURRENTLY !!!
@@ -473,7 +473,7 @@ void GameboyGPU::DrawBackgroundCGB(const u8& _ly) {
 			y_clip_ = y_clip;
 		}
 
-		FetchTileDataBGWIN(tile_offset, y_clip_ * 2, bank);
+		FetchTileDataBGWIN(tile_offset, y_clip_ * 2, 0);
 		DrawTileBGWINCGB(x - x_clip, ly, graphicsCtx->cgb_bgp_color_palettes[palette_index], x_flip);
 	}
 }
@@ -542,8 +542,8 @@ void GameboyGPU::DrawTileBGWINCGB(const int& _x, const int& _y, const u32* _colo
 			bit_mask <<= 1;
 			x++;
 		}
-	} else {
-		for (int i = 7; i > -1; --i) {
+	 } else {
+		for (int i = 7; i > -1; i--) {
 			if (x > -1 && x < PPU_SCREEN_X) {
 				color_index = (((tileDataCur[1] & bit_mask) >> i) << 1) | ((tileDataCur[0] & bit_mask) >> i);
 
@@ -563,6 +563,46 @@ void GameboyGPU::DrawTileBGWINCGB(const int& _x, const int& _y, const u32* _colo
 			bit_mask >>= 1;
 			x++;
 		}
+	}
+}
+
+void GameboyGPU::DrawObjectsCGB(const u8& _ly, const int* _objects, const int& _num_objects, const bool& _prio) {
+	// TODO: due to drawing objects stored in _objects from last to first element, priority ('z fighting', even though there is no z-axis) gets resolved like on CGB.
+	// on DMG this is actually done by comparing the x coordinate of the objects in oam. the smaller value wins
+
+	for (int i = _num_objects - 1; i > -1; i--) {
+		int oam_offset = _objects[i];
+
+		int y_pos = (int)graphicsCtx->OAM[oam_offset + OBJ_ATTR_Y];
+		int x_pos = (int)graphicsCtx->OAM[oam_offset + OBJ_ATTR_X];
+		u8 tile_offset = graphicsCtx->OAM[oam_offset + OBJ_ATTR_INDEX];
+		u8 flags = graphicsCtx->OAM[oam_offset + OBJ_ATTR_FLAGS];
+
+		int ly = _ly;
+
+		int y_clip;
+		if (graphicsCtx->obj_size_16) {
+			if (flags & OBJ_ATTR_Y_FLIP) {
+				y_clip = y_pos - ly - 1;
+			} else {
+				y_clip = PPU_TILE_SIZE_Y_16 - (y_pos - ly);
+			}
+		} else {
+			if (flags & OBJ_ATTR_Y_FLIP) {
+				y_clip = (y_pos - ly) - (PPU_TILE_SIZE_Y + 1);
+			} else {
+				y_clip = PPU_TILE_SIZE_Y - ((y_pos - ly) - PPU_TILE_SIZE_Y);
+			}
+		}
+
+		int palette_index = flags & OBJ_ATTR_PALETTE_CGB;
+		u32* palette = graphicsCtx->cgb_obp_color_palettes[palette_index];
+		int bank = flags & OBJ_ATTR_VRAM_BANK_CGB ? 1 : 0;
+
+		bool x_flip = (flags & OBJ_ATTR_X_FLIP) ? true : false;
+
+		FetchTileDataOBJ(tile_offset, y_clip * 2, bank);
+		DrawTileOBJDMG(x_pos - 8, ly, palette, _prio, x_flip);
 	}
 }
 

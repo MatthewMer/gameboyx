@@ -3728,7 +3728,9 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
                     case HL_INC_ref:
                     case HL_DEC_ref:
                     case C_ref:
-                        result_string += DATA_NAMES.at(arg);
+                        result_string += (i == 0 ? "" : ",");
+
+                        result_string += " " + DATA_NAMES.at(arg);
                         break;
                     default:
                         break;

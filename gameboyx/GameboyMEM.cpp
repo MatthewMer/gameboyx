@@ -356,16 +356,7 @@ u8 GameboyMEM::ReadIORegister(const u16& _addr) {
             return 0xFF;
         }
         else if(machine_ctx.isCgb){
-            switch (_addr) {
-            case 0xFF47:
-            case 0xFF48:
-            case 0xFF49:
-                return 0xFF;
-                break;
-            default:
-                return IO[_addr - IO_OFFSET];
-                break;
-            }
+            return IO[_addr - IO_OFFSET];
         }
         else {
             switch (_addr) {
@@ -926,20 +917,26 @@ void GameboyMEM::SetBGWINPaletteValues(const u8& _data) {
     u8 addr = IO[BCPS_BGPI_ADDR - IO_OFFSET] & 0x3F;
 
     if (graphics_ctx.mode != PPU_MODE_3) {
-        u8 addr = IO[BCPS_BGPI_ADDR - IO_OFFSET] & 0x3F;
         graphics_ctx.cgb_bgp_palette_ram[addr] = _data;
 
-        // set new palette value                        // this is the fastes possible implementation I could think of (in general CPUs prefere 1. integers 2. addition/subtraction and bitwise)
+        // set new palette value
         int ram_index = addr & 0xFE;                    // get index in color ram, first bit irrelevant because colors aligned as 2 bytes
         int palette_index = addr >> 3;                  // get index of palette (divide by 8 (divide by 2^3 -> shift by 3), because each palette has 4 colors @ 2 bytes = 8 bytes each)
         int color_index = (addr & 0x07) >> 1;           // get index of color within palette (lower 3 bit -> can address 8 byte; shift by 1 because each color has 2 bytes (divide by 2^1))
 
         // NOTE: CGB has RGB555 in little endian -> reverse order
         u16 rgb555_color = graphics_ctx.cgb_bgp_palette_ram[ram_index] | ((u16)graphics_ctx.cgb_bgp_palette_ram[ram_index + 1] << 8);
-        u32 rgba8888_color = ((u32)(rgb555_color & PPU_CGB_RED) << 26) | ((u32)(rgb555_color & PPU_CGB_GREEN) << 13) | ((u32)(rgb555_color & PPU_CGB_BLUE)) | 0xFF;        // additionally leftshift each value by 2 -> 5 bit to 8 bit 'scaling'
+        u32 rgba8888_color = ((u32)(rgb555_color & PPU_CGB_RED) << 27) | ((u32)(rgb555_color & PPU_CGB_GREEN) << 14) | ((u32)(rgb555_color & PPU_CGB_BLUE) << 1) | 0xFF;        // additionally leftshift each value by 3 -> 5 bit to 8 bit 'scaling'
 
         graphics_ctx.cgb_bgp_color_palettes[palette_index][color_index] = rgba8888_color;
-        //LOG_WARN(format("{:08x}", rgba8888_color));
+        
+        /*
+        LOG_WARN("------------");
+        LOG_WARN("RAM: ", ram_index, "; Palette: ", palette_index, "; Color: ", color_index, "; Data: ", format("{:02x}", _data));
+        for (int i = 0; i < 8; i++) {
+            LOG_INFO("Palette ", i, ": ", format("{:08x}", graphics_ctx.cgb_bgp_color_palettes[i][0]), format("{:08x}", graphics_ctx.cgb_bgp_color_palettes[i][1]), format("{:08x}", graphics_ctx.cgb_bgp_color_palettes[i][2]), format("{:08x}", graphics_ctx.cgb_bgp_color_palettes[i][3]));
+        }
+        */
     }
 
     if (graphics_ctx.bgp_increment) {
@@ -960,10 +957,9 @@ void GameboyMEM::SetOBJPaletteValues(const u8& _data) {
         int color_index = (addr & 0x07) >> 1;
 
         u16 rgb555_color = graphics_ctx.cgb_obp_palette_ram[ram_index] | ((u16)graphics_ctx.cgb_obp_palette_ram[ram_index + 1] << 8);
-        u32 rgba8888_color = ((u32)(rgb555_color & PPU_CGB_RED) << 26) | ((u32)(rgb555_color & PPU_CGB_GREEN) << 13) | ((u32)(rgb555_color & PPU_CGB_BLUE)) | 0xFF;
+        u32 rgba8888_color = ((u32)(rgb555_color & PPU_CGB_RED) << 27) | ((u32)(rgb555_color & PPU_CGB_GREEN) << 14) | ((u32)(rgb555_color & PPU_CGB_BLUE) << 1) | 0xFF;
 
         graphics_ctx.cgb_obp_color_palettes[palette_index][color_index] = rgba8888_color;
-        //LOG_WARN(format("{:08x}", rgba8888_color));
     }
 
     if (graphics_ctx.obp_increment) {

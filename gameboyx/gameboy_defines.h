@@ -270,8 +270,8 @@
 #define PPU_TILE_MAP0                   0x9800
 #define PPU_TILE_MAP1                   0x9C00
 
-#define BG_ATTR_PALETTE_CGB             0x03
-#define BG_ATTR_VRAM_BANK_CGB           0x04
+#define BG_ATTR_PALETTE_CGB             0x07
+#define BG_ATTR_VRAM_BANK_CGB           0x08
 #define BG_ATTR_FLIP_HORIZONTAL         0x20
 #define BG_ATTR_FLIP_VERTICAL           0x40
 #define BG_ATTR_OAM_PRIORITY            0x80
@@ -312,7 +312,7 @@
 #define DMG_COLOR_DARKGREY              0x306230FF
 #define DMG_COLOR_BLACK                 0x0f380fFF
 
-// alternative monochromatic color p    alette for DMG (less greenish)
+// alternative color palette for DMG
 #define DMG_COLOR_WHITE_ALT             0xf8e8f8FF
 #define DMG_COLOR_LIGHTGREY_ALT         0xd0a8b0FF
 #define DMG_COLOR_DARKGREY_ALT          0x787890FF

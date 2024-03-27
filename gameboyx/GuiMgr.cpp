@@ -200,6 +200,9 @@ void GuiMgr::ShowMainMenuBar() {
             }
             // basic
             ImGui::MenuItem("Show menu bar", nullptr, &showMainMenuBar);
+            if (!gameRunning && !showMainMenuBar) {
+                showMainMenuBar = true;
+            }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
@@ -889,6 +892,7 @@ void GuiMgr::ShowAudioSettings() {
 void GuiMgr::ActionGameStart() {
     if (!gameRunning) {
         StartGame(false);
+        showMainMenuBar = false;
     }
     requestGameStart = false;
 }
@@ -897,6 +901,7 @@ void GuiMgr::ActionGameStop() {
     if (gameRunning) {
         vhwmgr->ShutdownHardware();
         gameRunning = false;
+        showMainMenuBar = true;
     }
     requestGameStop = false;
 }
@@ -911,6 +916,17 @@ void GuiMgr::ActionGameReset() {
 void GuiMgr::ActionContinueExecution() {
     if (gameRunning) {
         nextInstruction.store(true);
+        autoRun = false;
+        autoRunInstructions.store(false);
+    }
+}
+
+void GuiMgr::ActionAutoExecution() {
+    if (gameRunning) {
+        autoRun = !autoRun;
+
+        nextInstruction.store(autoRun);
+        autoRunInstructions.store(autoRun);
     }
 }
 
@@ -1051,7 +1067,9 @@ void GuiMgr::ActionGameSelectDown() {
 }
 
 void GuiMgr::ActionToggleMainMenuBar() {
-    showMainMenuBar = !showMainMenuBar;
+    if (gameRunning) {
+        showMainMenuBar = !showMainMenuBar;
+    }
 }
 
 void GuiMgr::ActionSetBreakPoint(list<bank_index>& _breakpoints, const bank_index& _current_index) {
@@ -1240,6 +1258,9 @@ void GuiMgr::EventKeyUp(SDL_Keycode& _key) {
             break;
         case SDLK_LSHIFT:
             sdlkShiftDown = false;
+            break;
+        case SDLK_F9:
+            ActionAutoExecution();
             break;
         case SDLK_F1:
             ActionGameReset();

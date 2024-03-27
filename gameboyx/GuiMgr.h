@@ -223,6 +223,7 @@ private:
 	void ActionSetSwapchainSettings();
 	void ActionSetMasterVolume();
 	void ActionSetSamplingRate();
+	void ActionAutoExecution();
 
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);

@@ -141,7 +141,12 @@ bool read_data(std::vector<char>& _input, const std::string& _file_path) {
         }
 
         _input = vector<char>(istreambuf_iterator<char>(is), istreambuf_iterator<char>());
-        return true;
+        if (_input.size() > 0) {
+            return true;
+        } else {
+            LOG_ERROR("[emu] file ", _file_path, " damaged");
+            return false;
+        }
     } else {
         LOG_ERROR("[emu] file ", _file_path, " does not exist");
         return false;

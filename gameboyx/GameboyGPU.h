@@ -77,6 +77,7 @@ private:
 
 	void DrawBackgroundCGB(const u8& _ly);
 	void DrawWindowCGB(const u8& _ly);
+	void DrawObjectsCGB(const u8& _ly, const int* _objects, const int& _num_objects, const bool& _prio);
 
 	void DrawTileBGWINCGB(const int& _x, const int& _y, const u32* _color_palette, const bool& _x_flip);
 
