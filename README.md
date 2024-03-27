@@ -11,7 +11,19 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ```
 * compile with Visual Studio 2022 (open ./gameboyx.sln, set to Release and your target platform and start the build process)
 
-### Shortcuts/Control ###
+### Control/Shortcuts ###
+
+## Game control ##
+
+| Keybinds | Description |
+| --- | --- |
+| `Up`,`Down`,`Left`,`Right`  | Up, Down, Left, Right |
+| `F` | A |
+| `D` | B |
+| `G` | Start |
+| `R` | Select |
+
+## General ##
 
 | Keybinds | Description |
 | --- | --- |
@@ -24,6 +36,8 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 | `F1` | reset game |
 | `F3` | next instruction (debugger) |
 | `F9` | auto run instructions (debugger) |
+| `F10` | toggle menu bar |
+| `F11` | toggle fullscreen |
 | `Shift` + `mouse scroll` | scroll entire page (debugger/memory inspector) |
 
 ### Tested Games (Currently only ROM, MBC1 and MBC3 mapper for DMG) ###

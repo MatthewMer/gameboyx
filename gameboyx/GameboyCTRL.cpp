@@ -15,10 +15,10 @@ enum key_codes {
 void GameboyCTRL::InitKeyMap() {
 	keyMap = std::unordered_map<SDL_Keycode, int>();
 
-	keyMap[SDLK_c] = START;
-	keyMap[SDLK_d] = SELECT;
-	keyMap[SDLK_y] = B;
-	keyMap[SDLK_x] = A;
+	keyMap[SDLK_g] = START;
+	keyMap[SDLK_r] = SELECT;
+	keyMap[SDLK_d] = B;
+	keyMap[SDLK_f] = A;
 	keyMap[SDLK_DOWN] = DOWN;
 	keyMap[SDLK_UP] = UP;
 	keyMap[SDLK_LEFT] = LEFT;
