@@ -13,7 +13,7 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 
 ### Control/Shortcuts ###
 
-## Game control ##
+#### Game control ####
 
 | Keybinds | Description |
 | --- | --- |
@@ -23,7 +23,7 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 | `G` | Start |
 | `R` | Select |
 
-## General ##
+#### General ####
 
 | Keybinds | Description |
 | --- | --- |
