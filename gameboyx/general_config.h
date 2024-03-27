@@ -276,10 +276,10 @@ inline const float SOUND_7_1_ANGLES[8] = {
     (float)(22.5f * (M_PI / 180.f)),                // front-right
     (float)(.0f * (M_PI / 180.f)),                  // centre
     .0f,                                            // low frequency (not needed)
-    (float)(275.f * (M_PI / 180.f)),                // center-left
-    (float)(85.f * (M_PI / 180.f)),                 // center-right
     (float)(220.f * (M_PI / 180.f)),                // rear-left
-    (float)(140.f * (M_PI / 180.f))                 // rear-right
+    (float)(140.f * (M_PI / 180.f)),                // rear-right
+    (float)(275.f * (M_PI / 180.f)),                // centre-left
+    (float)(85.f * (M_PI / 180.f))                  // centre-right
 };
 
 inline const float SOUND_5_1_ANGLES[6] = {

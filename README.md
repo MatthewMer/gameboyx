@@ -3,12 +3,28 @@
 This is a Gameboy (Color) emulator utilising [ImGui](https://github.com/ocornut/imgui) with [SDL2](https://github.com/libsdl-org/SDL/releases/tag/release-2.28.2) and [Vulkan](https://vulkan.lunarg.com/) graphics API.
 
 ### How do I get set up? ###
+
 * install latest [Vulkan SDK](https://vulkan.lunarg.com/)
 * clone repository with following command (to clone the required submodules):
 ```
 git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ```
 * compile with Visual Studio 2022 (open ./gameboyx.sln, set to Release and your target platform and start the build process)
+
+### Shortcuts/Control ###
+
+| Keybinds | Description |
+| --- | --- |
+| `Return` | start selected game |
+| `Up`/`Down` | navigate games |
+| `Esc` | end game |
+| `Delete` | delete selected games |
+| `Shift` + `left mouse` | multiselect (like Windows explorer) |
+| `Ctrl` + `left mouse` | (un)select single games |
+| `F1` | reset game |
+| `F3` | next instruction (debugger) |
+| `F9` | auto run instructions (debugger) |
+| `Shift` + `mouse scroll` | scroll entire page (debugger/memory inspector) |
 
 ### Tested Games (Currently only ROM, MBC1 and MBC3 mapper for DMG) ###
 

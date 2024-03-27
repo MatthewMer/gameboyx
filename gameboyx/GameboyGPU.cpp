@@ -473,7 +473,7 @@ void GameboyGPU::DrawBackgroundCGB(const u8& _ly) {
 			y_clip_ = y_clip;
 		}
 
-		FetchTileDataBGWIN(tile_offset, y_clip_ * 2, 0);
+		FetchTileDataBGWIN(tile_offset, y_clip_ * 2, bank);
 		DrawTileBGWINCGB(x - x_clip, ly, graphicsCtx->cgb_bgp_color_palettes[palette_index], x_flip);
 	}
 }

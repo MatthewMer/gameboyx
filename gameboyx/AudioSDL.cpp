@@ -145,8 +145,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 
 	std::vector<float> virt_angles;
 	{
-		// TODO: revise translation from virtual to physical channels (something is here off, too)
-		float step = (float)((360.f - 45.f) / _virt_audio_info->channels);
+		float step = (float)(360.f / _virt_audio_info->channels);
 		int i = 0;
 		for (float a = 45.f; i < _virt_audio_info->channels; a += step, i++) {
 			virt_angles.push_back(a);
@@ -245,13 +244,13 @@ float calc_sample(const float& _sample, const float& _sample_angle, const float&
 
 // TODO: low frequency missing, probably use a low pass filter on all samples and combine and increase amplitude and output on low frequency channel
 void samples_7_1_surround(float* _dest, const float& _sample, const float& _angle) {
-	_dest[0] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[0]);
-	_dest[1] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[1]);
-	_dest[2] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[2]);
-	_dest[4] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[4]);
-	_dest[5] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[5]);
-	_dest[6] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[6]);
-	_dest[7] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[7]);
+	_dest[0] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[0]);	// front-left
+	_dest[1] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[1]);	// front-right
+	_dest[2] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[2]);	// centre
+	_dest[4] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[4]);	// rear-left
+	_dest[5] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[5]);	// rear-right
+	_dest[6] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[6]);	// centre-left
+	_dest[7] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[7]);	// centre-right
 }
 
 void samples_5_1_surround(float* _dest, const float& _sample, const float& _angle) {
