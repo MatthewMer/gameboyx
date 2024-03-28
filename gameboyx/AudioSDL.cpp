@@ -145,7 +145,13 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 
 	std::vector<float> virt_angles;
 	{
-		float a = 45.f;
+		float a;
+		if (_audio_info->channels == SOUND_7_1 || _audio_info->channels == SOUND_5_1) {
+			a = 22.5f;
+		} else {
+			a = 45.f;
+		}
+
 		float step = (float)((360.f - (2 * a)) / (_virt_audio_info->channels - 1));
 		
 		for (int i = 0; i < _virt_audio_info->channels; i++) {

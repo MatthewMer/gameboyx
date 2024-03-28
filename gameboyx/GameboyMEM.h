@@ -102,26 +102,9 @@ struct graphics_context {
 	// bit 6
 	bool lyc_ly_int_sel = false;
 
-	u32 dmg_bgp_color_palette[4] = {
-		DMG_COLOR_WHITE_ALT,
-		DMG_COLOR_LIGHTGREY_ALT,
-		DMG_COLOR_DARKGREY_ALT,
-		DMG_COLOR_BLACK_ALT
-	};
-
-	u32 dmg_obp0_color_palette[4] = {
-		DMG_COLOR_WHITE_ALT,
-		DMG_COLOR_LIGHTGREY_ALT,
-		DMG_COLOR_DARKGREY_ALT,
-		DMG_COLOR_BLACK_ALT
-	};
-
-	u32 dmg_obp1_color_palette[4] = {
-		DMG_COLOR_WHITE_ALT,
-		DMG_COLOR_LIGHTGREY_ALT,
-		DMG_COLOR_DARKGREY_ALT,
-		DMG_COLOR_BLACK_ALT
-	};
+	u32 dmg_bgp_color_palette[4];
+	u32 dmg_obp0_color_palette[4];
+	u32 dmg_obp1_color_palette[4];
 
 	// CGB
 	bool obj_prio_mode_cgb = false;
@@ -133,24 +116,24 @@ struct graphics_context {
 	u8 cgb_bgp_palette_ram[PPU_PALETTE_RAM_SIZE_CGB] = {};
 
 	u32 cgb_obp_color_palettes[8][4] = {
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT}
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE}
 	};
 	u32 cgb_bgp_color_palettes[8][4] = {
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT},
-		{DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT, DMG_COLOR_WHITE_ALT}
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE},
+		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE}
 	};
 
 	bool dma_hblank = false;
@@ -350,7 +333,7 @@ public:
 	u8& GetIO(const u16& _addr);
 	void SetIO(const u16& _addr, const u8& _data);
 	void CopyDataToRAM(const std::vector<char>& _data);
-	void CopyDataFromRAM(std::vector<char>& _data) const;
+	void CopyDataFromRAM(std::vector<char>& _data);
 
 	std::vector<u8>* GetProgramData(const int& _bank) const override;
 
@@ -378,6 +361,26 @@ private:
 		machine_ctx.battery_buffered = _cartridge->batteryBuffered;
 		machine_ctx.ram_present = _cartridge->ramPresent;
 		machine_ctx.timer_present = _cartridge->timerPresent;
+
+		if (machine_ctx.isCgb) {
+			graphics_ctx.dmg_bgp_color_palette[0] = CGB_DMG_COLOR_WHITE;
+			graphics_ctx.dmg_bgp_color_palette[1] = CGB_DMG_COLOR_LIGHTGREY;
+			graphics_ctx.dmg_bgp_color_palette[2] = CGB_DMG_COLOR_DARKGREY;
+			graphics_ctx.dmg_bgp_color_palette[3] = CGB_DMG_COLOR_BLACK;
+		} else {
+			graphics_ctx.dmg_bgp_color_palette[0] = DMG_COLOR_WHITE_ALT;
+			graphics_ctx.dmg_bgp_color_palette[1] = DMG_COLOR_LIGHTGREY_ALT;
+			graphics_ctx.dmg_bgp_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
+			graphics_ctx.dmg_bgp_color_palette[3] = DMG_COLOR_BLACK_ALT;
+			graphics_ctx.dmg_obp0_color_palette[0] = DMG_COLOR_WHITE_ALT;
+			graphics_ctx.dmg_obp0_color_palette[1] = DMG_COLOR_LIGHTGREY_ALT;
+			graphics_ctx.dmg_obp0_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
+			graphics_ctx.dmg_obp0_color_palette[3] = DMG_COLOR_BLACK_ALT;
+			graphics_ctx.dmg_obp1_color_palette[0] = DMG_COLOR_WHITE_ALT;
+			graphics_ctx.dmg_obp1_color_palette[1] = DMG_COLOR_LIGHTGREY_ALT;
+			graphics_ctx.dmg_obp1_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
+			graphics_ctx.dmg_obp1_color_palette[3] = DMG_COLOR_BLACK_ALT;
+		}
 	};
 	// destructor
 	~GameboyMEM() override = default;

@@ -17,6 +17,15 @@
 
 #include "BaseCartridge.h"
 
+#include <string>
+#include <thread>
+#include <mutex>
+#include <chrono>
+using namespace std::chrono;
+
+class BaseMMU;
+void save_thread(BaseMMU* _obj, std::string _file);
+
 class BaseMMU
 {
 public:
@@ -37,13 +46,26 @@ public:
 	virtual u8 Read8Bit(const u16& _addr) = 0;
 	//virtual u16 Read16Bit(const u16& _addr) = 0;
 
+	u32 GetSaveTimeDiff();
+	std::vector<char> GetSaveData();
+
 protected:
 	// constructor
 	BaseMMU() = default;
-	virtual ~BaseMMU() {}
+	virtual ~BaseMMU() {
+		if (saveThread.joinable()) {
+			saveThread.join();
+		}
+	}
 
 	virtual void ReadSave() = 0;
-	virtual void WriteSave() const = 0;
+	virtual void WriteSave() = 0;
 
 	static BaseMMU* instance;
+
+	std::thread saveThread;
+	std::vector<char> saveData = std::vector<char>();
+	steady_clock::time_point saveTimePrev;
+	std::mutex mutSave;
+	std::atomic<bool> saveFinished = true;
 };

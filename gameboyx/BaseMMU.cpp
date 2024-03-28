@@ -7,6 +7,23 @@
 
 using namespace std;
 
+void save_thread(BaseMMU* _obj, std::string _file) {
+	bool saving = true;
+	u32 time_delta = 0;
+
+	while (saving) {
+		time_delta = _obj->GetSaveTimeDiff();
+
+		if (time_delta > 500000) {
+			saving = false;
+		}
+	}
+
+	auto data = _obj->GetSaveData();
+	write_data(data, _file, true);
+	LOG_INFO("[emu] saved in file ", _file);
+}
+
 /* ***********************************************************************************************************
 	MMU BASE CLASS
 *********************************************************************************************************** */
@@ -37,4 +54,15 @@ void BaseMMU::resetInstance() {
 		delete instance;
 		instance = nullptr;
 	}
+}
+
+u32 BaseMMU::GetSaveTimeDiff() {
+	unique_lock<mutex> lock_save_time(mutSave);
+	steady_clock::time_point save_time_cur = high_resolution_clock::now();
+	return (u32)duration_cast<microseconds>(save_time_cur - saveTimePrev).count();
+}
+
+vector<char> BaseMMU::GetSaveData() {
+	saveFinished.store(true);
+	return saveData;
 }

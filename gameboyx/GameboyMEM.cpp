@@ -564,8 +564,10 @@ void GameboyMEM::CopyDataToRAM(const vector<char>& _data) {
     }
 }
 
-void GameboyMEM::CopyDataFromRAM(vector<char>& _data) const {
-    _data = vector<char>(RAM_N.size() * RAM_N_SIZE);
+void GameboyMEM::CopyDataFromRAM(vector<char>& _data) {
+    if (_data.size() != RAM_N.size() * RAM_N_SIZE) {
+        _data = vector<char>(RAM_N.size() * RAM_N_SIZE);
+    }
 
     for (int i = 0; i < RAM_N.size(); i++) {
         for (int j = 0; j < RAM_N_SIZE; j++) {
@@ -893,23 +895,46 @@ void GameboyMEM::SetLCDSTATValues(const u8& _data) {
 
 void GameboyMEM::SetColorPaletteValues(const u8& _data, u32* _color_palette) {
     u8 colors = _data;
-    for (int i = 0; i < 4; i++) {
-        switch (colors & 0x03) {
-        case 0x00:
-            _color_palette[i] = DMG_COLOR_WHITE_ALT;
-            break;
-        case 0x01:
-            _color_palette[i] = DMG_COLOR_LIGHTGREY_ALT;
-            break;
-        case 0x02:
-            _color_palette[i] = DMG_COLOR_DARKGREY_ALT;
-            break;
-        case 0x03:
-            _color_palette[i] = DMG_COLOR_BLACK_ALT;
-            break;
-        }
 
-        colors >>= 2;
+    // TODO: CGB is able to set different color palettes for DMG games
+    if (machine_ctx.isCgb) {
+        for (int i = 0; i < 4; i++) {
+            switch (colors & 0x03) {
+            case 0x00:
+                _color_palette[i] = CGB_DMG_COLOR_WHITE;
+                break;
+            case 0x01:
+                _color_palette[i] = CGB_DMG_COLOR_LIGHTGREY;
+                break;
+            case 0x02:
+                _color_palette[i] = CGB_DMG_COLOR_DARKGREY;
+                break;
+            case 0x03:
+                _color_palette[i] = CGB_DMG_COLOR_BLACK;
+                break;
+            }
+
+            colors >>= 2;
+        }
+    } else {
+        for (int i = 0; i < 4; i++) {
+            switch (colors & 0x03) {
+            case 0x00:
+                _color_palette[i] = DMG_COLOR_WHITE_ALT;
+                break;
+            case 0x01:
+                _color_palette[i] = DMG_COLOR_LIGHTGREY_ALT;
+                break;
+            case 0x02:
+                _color_palette[i] = DMG_COLOR_DARKGREY_ALT;
+                break;
+            case 0x03:
+                _color_palette[i] = DMG_COLOR_BLACK_ALT;
+                break;
+            }
+
+            colors >>= 2;
+        }
     }
 }
 

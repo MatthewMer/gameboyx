@@ -318,6 +318,11 @@
 #define DMG_COLOR_DARKGREY_ALT          0x787890FF
 #define DMG_COLOR_BLACK_ALT             0x000000FF
 
+#define CGB_DMG_COLOR_WHITE             0xffffffff
+#define CGB_DMG_COLOR_LIGHTGREY         0xa9a9a9ff
+#define CGB_DMG_COLOR_DARKGREY          0x545454ff
+#define CGB_DMG_COLOR_BLACK             0x000000ff
+
 #define PPU_DOTS_PER_FRAME              70224
 #define PPU_DOTS_PER_SCANLINE           (PPU_DOTS_PER_FRAME / LCD_SCANLINES_TOTAL)
 #define PPU_DOTS_MODE_2                 80

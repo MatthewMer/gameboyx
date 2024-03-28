@@ -506,7 +506,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		if (_addr < MBC3_ROM_BANK_NUMBER_SELECT) {
 			timerRamEnable = (_data & MBC3_RAM_ENABLE_MASK) == MBC3_RAM_ENABLE;
 			if (!timerRamEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
-				//WriteSave();
+				WriteSave();
 			}
 		}
 		// ROM Bank number

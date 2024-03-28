@@ -54,14 +54,25 @@ protected:
 		}
 	}
 
-	void WriteSave() const override {
-		const std::string save_file = SAVE_FOLDER + machine_ctx->title + SAVE_EXT;
+	void WriteSave() override {
+		if (saveFinished.load()) {
+			if (saveThread.joinable()) {
+				saveThread.join();
+			}
 
-		check_and_create_file(save_file);
-		auto data = std::vector<char>();
-		mem_instance->CopyDataFromRAM(data);
+			std::string save_file = SAVE_FOLDER + machine_ctx->title + SAVE_EXT;
+			check_and_create_file(save_file);
 
-		write_data(data, save_file, true);
+			saveFinished.store(false);
+			saveTimePrev = high_resolution_clock::now();
+			saveThread = std::thread(save_thread, (BaseMMU*)this, save_file);
+
+			LOG_INFO("[emu] saving ...");
+		}
+
+		std::unique_lock<std::mutex> lock_save_time(mutSave);
+		mem_instance->CopyDataFromRAM(saveData);
+		saveTimePrev = steady_clock::now();
 	}
 };
 
