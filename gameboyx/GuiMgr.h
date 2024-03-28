@@ -122,9 +122,7 @@ private:
 	std::list<bank_index> breakpoints = std::list<bank_index>();
 	std::list<bank_index> breakpointsTmp = std::list<bank_index>();
 	int lastPc = -1;
-	int currentPc = -1;
 	int lastBank = -1;
-	int currentBank = -1;
 	bool pcSetToRam = false;
 	bank_index debugInstrCurrentInstrIndex = bank_index(0, 0);
 	const int debugInstrColNum = (int)DEBUG_INSTR_COLUMNS.size();
@@ -200,7 +198,7 @@ private:
 	void ShowDebugInstrTable();
 	void ShowDebugInstrSelect();
 	void ShowDebugInstrMiscData(const char* _title, const int& _col_num, const std::vector<float>& _columns, const std::vector<reg_entry>& _data);
-	
+
 	void ShowDebugMemoryTab(Table<memory_entry>& _table);
 
 	// actions

@@ -45,7 +45,7 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 			SearchOAM(ly);
 			SearchOAM(ly);
 
-			if (tickCounter == PPU_DOTS_MODE_2) {
+			if (tickCounter > PPU_DOTS_MODE_2) {
 				EnterMode3();
 			}
 			break;
@@ -60,7 +60,7 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 		case PPU_MODE_0:
 			statSignal = ly_lyc || graphicsCtx->mode_0_int_sel;
 
-			if (tickCounter == PPU_DOTS_PER_SCANLINE) {
+			if (tickCounter > PPU_DOTS_PER_SCANLINE) {
 				tickCounter = 0;
 				ly++;
 
@@ -76,7 +76,7 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 		case PPU_MODE_1:
 			statSignal = ly_lyc || graphicsCtx->mode_1_int_sel || graphicsCtx->mode_2_int_sel;
 			
-			if (tickCounter == PPU_DOTS_PER_SCANLINE) {
+			if (tickCounter > PPU_DOTS_PER_SCANLINE) {
 				tickCounter = 0;
 				ly++;
 				if (ly == LCD_SCANLINES_TOTAL) {

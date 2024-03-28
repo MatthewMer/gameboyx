@@ -225,7 +225,7 @@ template <class T> void Table<T>::ScrollDownPage() {
 
 template <class T> void Table<T>::SearchBank(int& _bank) {
     if (_bank < 0) { _bank = 0; }
-    else if (_bank > tableSections.size() - 1) { _bank = (int)tableSections.size() - 1; }
+    else if (_bank >= tableSections.size()) { _bank = (int)tableSections.size() - 1; }
 
     startIndex = bank_index(_bank, 0);
     endIndex = bank_index(_bank, currentlyVisibleElements);

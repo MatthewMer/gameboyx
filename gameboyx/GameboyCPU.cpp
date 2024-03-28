@@ -78,7 +78,7 @@ const unordered_map<cgb_data_types, string> DATA_NAMES{
     ACCESS CPU STATUS
 *********************************************************************************************************** */
 void GameboyCPU::GetCurrentPCandBank(int& _pc, int& _bank) const {
-    _pc = (u32)Regs.PC;
+    _pc = (int)Regs.PC;
 
     if (_pc < ROM_N_OFFSET) {
         _bank = 0;
@@ -154,9 +154,7 @@ void GameboyCPU::RunCycles() {
 void GameboyCPU::RunCycle() {
     currentTicks = 0;
 
-    do {
-        RunCpu();
-    } while (halted);
+    RunCpu();
 
     tickCounter += currentTicks;
 }
@@ -3591,16 +3589,16 @@ void GameboyCPU::GetInstrDebugFlags(std::vector<reg_entry>& _register_values, st
     _flag_values.emplace_back(FLAG_NAMES.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
 
     _misc_values.clear();
-    _misc_values.emplace_back("LCDC", format("{:02x}", mem_instance->GetIO(LCDC_ADDR)));
-    _misc_values.emplace_back("STAT", format("{:02x}", mem_instance->GetIO(STAT_ADDR)));
-    _misc_values.emplace_back("WRAM", format("{:02x}", mem_instance->GetIO(CGB_WRAM_SELECT_ADDR)));
-    _misc_values.emplace_back("VRAM", format("{:02x}", mem_instance->GetIO(CGB_VRAM_SELECT_ADDR)));
-    _misc_values.emplace_back("LY", format("{:02x}", mem_instance->GetIO(LY_ADDR)));
-    _misc_values.emplace_back("LYC", format("{:02x}", mem_instance->GetIO(LYC_ADDR)));
-    _misc_values.emplace_back("SCX", format("{:02x}", mem_instance->GetIO(SCX_ADDR)));
-    _misc_values.emplace_back("SCY", format("{:02x}", mem_instance->GetIO(SCY_ADDR)));
-    _misc_values.emplace_back("WX", format("{:02x}", mem_instance->GetIO(WX_ADDR)));
-    _misc_values.emplace_back("WY", format("{:02x}", mem_instance->GetIO(WY_ADDR)));
+    _misc_values.emplace_back("LCDC", format("{:08b} (bin)", mem_instance->GetIO(LCDC_ADDR)));
+    _misc_values.emplace_back("STAT", format("{:08b} (bin)", mem_instance->GetIO(STAT_ADDR)));
+    _misc_values.emplace_back("WRAM", format("{:01d} (dec)", mem_instance->GetIO(CGB_WRAM_SELECT_ADDR)));
+    _misc_values.emplace_back("VRAM", format("{:01d} (dec)", mem_instance->GetIO(CGB_VRAM_SELECT_ADDR)));
+    _misc_values.emplace_back("LY", format("{:03d} (dec)", mem_instance->GetIO(LY_ADDR)));
+    _misc_values.emplace_back("LYC", format("{:03d} (dec)", mem_instance->GetIO(LYC_ADDR)));
+    _misc_values.emplace_back("SCX", format("{:03d} (dec)", mem_instance->GetIO(SCX_ADDR)));
+    _misc_values.emplace_back("SCY", format("{:03d} (dec)", mem_instance->GetIO(SCY_ADDR)));
+    _misc_values.emplace_back("WX", format("{:03d} (dec)", mem_instance->GetIO(WX_ADDR)));
+    _misc_values.emplace_back("WY", format("{:03d} (dec)", mem_instance->GetIO(WY_ADDR)));
 }
 
 /* ***********************************************************************************************************

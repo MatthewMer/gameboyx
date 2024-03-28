@@ -21,7 +21,6 @@ void save_thread(BaseMMU* _obj, std::string _file) {
 
 	auto data = _obj->GetSaveData();
 	write_data(data, _file, true);
-	LOG_INFO("[emu] saved in file ", _file);
 }
 
 /* ***********************************************************************************************************

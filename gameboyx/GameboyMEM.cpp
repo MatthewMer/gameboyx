@@ -374,8 +374,6 @@ u8 GameboyMEM::ReadIORegister(const u16& _addr) {
             case OCPD_OBPD_ADDR:
             case CGB_OBJ_PRIO_ADDR:
             case CGB_WRAM_SELECT_ADDR:
-            case PCM12_ADDR:
-            case PCM34_ADDR:
                 return 0xFF;
                 break;
             default:
@@ -464,9 +462,6 @@ void GameboyMEM::WriteIORegister(const u8& _data, const u16& _addr) {
         SetOCPS(_data);
         break;
     case LY_ADDR:
-        if (!graphics_ctx.ppu_enable) {
-            IO[LY_ADDR - IO_OFFSET] = _data;
-        }
         break;
     case NR52_ADDR:
         SetAPUMasterControl(_data);

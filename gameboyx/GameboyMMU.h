@@ -66,8 +66,6 @@ protected:
 			saveFinished.store(false);
 			saveTimePrev = high_resolution_clock::now();
 			saveThread = std::thread(save_thread, (BaseMMU*)this, save_file);
-
-			LOG_INFO("[emu] saving ...");
 		}
 
 		std::unique_lock<std::mutex> lock_save_time(mutSave);
