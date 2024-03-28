@@ -141,14 +141,15 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 	const int virt_channels = _virt_audio_info->channels;
 
 	// filled with samples per period of virtual channels
-	std::vector<std::vector<complex>> virt_samples = std::vector<std::vector<complex>>(virt_channels);
+	std::vector<complex> virt_samples = std::vector<complex>();
 
 	std::vector<float> virt_angles;
 	{
 		float step = (float)(360.f / _virt_audio_info->channels);
-		int i = 0;
-		for (float a = 45.f; i < _virt_audio_info->channels; a += step, i++) {
-			virt_angles.push_back(a);
+		float a = 45.f;
+		for (int i = 0; i < _virt_audio_info->channels; i++) {
+		virt_angles.push_back(a * (float)(M_PI / 180.f));
+			a += step;
 		}
 	}
 
@@ -193,9 +194,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 			// get samples from APU
 			int reg_1_samples = reg_1_size / channels;
 			int reg_2_samples = reg_2_size / channels;
-			for (auto& n : virt_samples) {
-				n.clear();
-			}
+			virt_samples.clear();
 
 			sound_instance->SampleAPU(virt_samples, reg_1_samples + reg_2_samples, _audio_info->sampling_rate);
 
@@ -210,7 +209,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 					buffer[j] = .0f;
 				}
 				for (int j = 0; j < virt_channels; j++) {
-					(*speaker_fn)(buffer, virt_samples[j][i].real * volume, virt_angles[j]);
+					(*speaker_fn)(buffer, virt_samples[i * virt_channels + j].real * volume, virt_angles[j]);
 				}
 
 				buffer += channels;
@@ -222,7 +221,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 					buffer[j] = .0f;
 				}
 				for (int j = 0; j < virt_channels; j++) {
-					(*speaker_fn)(buffer, virt_samples[j][i].real * volume, virt_angles[j]);
+					(*speaker_fn)(buffer, virt_samples[i * virt_channels + j].real * volume, virt_angles[j]);
 				}
 
 				buffer += channels;
@@ -238,6 +237,7 @@ const float x = .5f;
 const float D = 1.2f;		// gain
 const float a = 2.f;
 
+// using angles in rad
 float calc_sample(const float& _sample, const float& _sample_angle, const float& _speaker_angle) {
 	return tanh(D * _sample) * exp(a * .5f * cos(_sample_angle - _speaker_angle) - .5f);
 }

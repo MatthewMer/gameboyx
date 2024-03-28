@@ -12,7 +12,7 @@ public:
 
 	// members
 	void ProcessAPU(const int& _ticks) override;
-	void SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples, const int& _sampling_rate) override;
+	void SampleAPU(std::vector<complex>& _data, const int& _samples, const int& _sampling_rate) override;
 
 private:
 	// constructor
@@ -20,8 +20,10 @@ private:
 		memInstance = (GameboyMEM*)BaseMEM::getInstance();
 		soundCtx = memInstance->GetSoundContext();
 
+		virtualChannels = APU_CHANNELS_NUM;
+
 		virtual_audio_information virt_audio_info = {};
-		virt_audio_info.channels = APU_CHANNELS_NUM;
+		virt_audio_info.channels = virtualChannels;
 		virt_audio_info.sound_instance = this;
 		HardwareMgr::InitAudioBackend(virt_audio_info);
 	}
@@ -68,6 +70,8 @@ private:
 	void ch4EnvelopeSweep();
 
 	float ch4VirtSamples = .0f;
+
+	int virtualChannels = 0;
 
 	alignas(64) std::atomic<int> ch4WriteCursor = 1;			// always points to the next sample to write
 	alignas(64) std::atomic<int> ch4ReadCursor = 0;				// always points to the current sample to read

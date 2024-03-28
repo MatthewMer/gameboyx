@@ -272,26 +272,26 @@ inline const std::map<const char*, std::pair<int, int>> SAMPLING_RATES = {
 };
 
 inline const float SOUND_7_1_ANGLES[8] = {
-    (float)(337.5f * (M_PI / 180.f)),               // front-left
-    (float)(22.5f * (M_PI / 180.f)),                // front-right
-    (float)(.0f * (M_PI / 180.f)),                  // centre
-    .0f,                                            // low frequency (not needed)
-    (float)(220.f * (M_PI / 180.f)),                // rear-left
-    (float)(140.f * (M_PI / 180.f)),                // rear-right
-    (float)(275.f * (M_PI / 180.f)),                // centre-left
-    (float)(85.f * (M_PI / 180.f))                  // centre-right
+    337.5f * (float)(M_PI / 180.f),               // front-left
+    22.5f * (float)(M_PI / 180.f),                // front-right
+    .0f * (float)(M_PI / 180.f),                  // centre
+    .0f * (float)(M_PI / 180.f),                  // low frequency (not needed)
+    220.f * (float)(M_PI / 180.f),                // rear-left
+    140.f * (float)(M_PI / 180.f),                // rear-right
+    275.f * (float)(M_PI / 180.f),                // centre-left
+    85.f * (float)(M_PI / 180.f)                  // centre-right
 };
 
 inline const float SOUND_5_1_ANGLES[6] = {
-    (float)(337.5f * (M_PI / 180.f)),               // front-left
-    (float)(22.5f * (M_PI / 180.f)),                // front-right
-    (float)(.0f * (M_PI / 180.f)),                  // centre
-    .0f,                                            // low frequency (not needed)
-    (float)(220.f * (M_PI / 180.f)),                // rear-left
-    (float)(140.f * (M_PI / 180.f))                 // rear-right
+    337.5f * (float)(M_PI / 180.f),               // front-left
+    22.5f * (float)(M_PI / 180.f),                // front-right
+    .0f * (float)(M_PI / 180.f),                  // centre
+    .0f * (float)(M_PI / 180.f),                  // low frequency (not needed)
+    220.f * (float)(M_PI / 180.f),                // rear-left
+    140.f * (float)(M_PI / 180.f)                 // rear-right
 };
 
 inline const float SOUND_STEREO_ANGLES[2] = {
-    (float)(270.f * (M_PI / 180.f)),                // left
-    (float)(90.f * (M_PI / 180.f))                  // right
+    270.f * (float)(M_PI / 180.f),                // left
+    90.f * (float)(M_PI / 180.f)                  // right
 };

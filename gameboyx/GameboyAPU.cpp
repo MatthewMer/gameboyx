@@ -307,7 +307,7 @@ void GameboyAPU::ch4TickLengthTimer() {
 * 3. rear left
 * 4. front left
 */
-void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples, const int& _sampling_rate) {
+void GameboyAPU::SampleAPU(std::vector<complex>& _data, const int& _samples, const int& _sampling_rate) {
 	bool right = soundCtx->outRightEnabled.load();
 	bool left = soundCtx->outLeftEnabled.load();
 	bool vol_right = soundCtx->masterVolumeRight.load();
@@ -315,53 +315,79 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 	// channel 1 & 2
 	bool ch1_enable = soundCtx->ch1Enable.load();
-	bool ch2_enable = soundCtx->ch2Enable.load();
-
 	float ch1_virt_sample_step = soundCtx->ch1SamplingRate.load() / _sampling_rate;
-	float ch2_virt_sample_step = soundCtx->ch2SamplingRate.load() / _sampling_rate;
-
 	int ch1_wave_index = soundCtx->ch1DutyCycleIndex.load();
-	int ch2_wave_index = soundCtx->ch2DutyCycleIndex.load();
-
 	bool ch1_right = soundCtx->ch1Right.load();
 	bool ch1_left = soundCtx->ch1Left.load();
+	float ch1_vol = soundCtx->ch1Volume.load();
 
+	float ch1_amp;
+	if (ch1_left || ch1_right) {
+		if (ch1_left && ch1_right) {
+			ch1_amp = 1.f;
+		} else {
+			ch1_amp = 2.f;
+		}
+	}
+
+	bool ch2_enable = soundCtx->ch2Enable.load();
+	float ch2_virt_sample_step = soundCtx->ch2SamplingRate.load() / _sampling_rate;
+	int ch2_wave_index = soundCtx->ch2DutyCycleIndex.load();
 	bool ch2_right = soundCtx->ch2Right.load();
 	bool ch2_left = soundCtx->ch2Left.load();
-
-	float ch1_vol = soundCtx->ch1Volume.load();
 	float ch2_vol = soundCtx->ch2Volume.load();
 
-	// channel 3
+	float ch2_amp;
+	if (ch2_left || ch2_right) {
+		if (ch2_left && ch2_right) {
+			ch2_amp = 1.f;
+		} else {
+			ch2_amp = 2.f;
+		}
+	}
+
 	bool ch3_enable = soundCtx->ch3Enable.load();
-
 	float ch3_virt_sample_step = soundCtx->ch3SamplingRate.load() / _sampling_rate;
-
 	bool ch3_right = soundCtx->ch3Right.load();
 	bool ch3_left = soundCtx->ch3Left.load();
-
 	float ch3_vol = soundCtx->ch3Volume.load();
 
-	// channel 4
-	float ch4_virt_sample_step = soundCtx->ch4SamplingRate.load() / _sampling_rate;
+	float ch3_amp;
+	if (ch3_left || ch3_right) {
+		if (ch3_left && ch3_right) {
+			ch3_amp = 1.f;
+		} else {
+			ch3_amp = 2.f;
+		}
+	}
 
+	float ch4_virt_sample_step = soundCtx->ch4SamplingRate.load() / _sampling_rate;
 	bool ch4_right = soundCtx->ch4Right.load();
 	bool ch4_left = soundCtx->ch4Left.load();
-
 	float ch4_vol = soundCtx->ch4Volume.load();
+
+	float ch4_amp;
+
+	if (ch4_left || ch4_right) {
+		if (ch4_left && ch4_right) {
+			ch4_amp = 1.f;
+		} else {
+			ch4_amp = 2.f;
+		}
+	}
 
 	unique_lock<mutex> lock_wave_ram(soundCtx->mutWaveRam, std::defer_lock);
 	unique_lock<mutex> lock_lfsr_buffer(mutLFSR, std::defer_lock);
 
 	for (int i = 0; i < _samples; i++) {
 		for (int n = 0; n < 4; n++) {
-			_data[n].emplace_back();
+			_data.emplace_back();
 		}
 
-		float sample_0 = .0f;
-		float sample_1 = .0f;
-		float sample_2 = .0f;
-		float sample_3 = .0f;
+		float sample_0 = .0f;	// front-left
+		float sample_1 = .0f;	// front-right
+		float sample_2 = .0f;	// rear-left
+		float sample_3 = .0f;	// rear-right
 
 		if (ch1_enable) {
 			ch1VirtSamples += ch1_virt_sample_step;
@@ -372,10 +398,10 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 
 			if (ch1_right) {
-				sample_0 += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol;
+				sample_1 += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol * ch1_amp;
 			}
 			if (ch1_left) {
-				sample_3 += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol;
+				sample_0 += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol * ch1_amp;
 			}
 		}
 
@@ -387,10 +413,10 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 			}
 
 			if (ch2_right) {
-				sample_0 += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol;
+				sample_1 += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol * ch2_amp;
 			}
 			if (ch2_left) {
-				sample_3 += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol;
+				sample_0 += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol * ch2_amp;
 			}
 		}
 
@@ -403,10 +429,10 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 
 			lock_wave_ram.lock();
 			if (ch3_right) {
-				sample_1 += soundCtx->waveRam[ch3SampleCount] * ch3_vol;
+				sample_3 += soundCtx->waveRam[ch3SampleCount] * ch3_vol * ch3_amp;
 			}
 			if (ch3_left) {
-				sample_2 += soundCtx->waveRam[ch3SampleCount] * ch3_vol;
+				sample_2 += soundCtx->waveRam[ch3SampleCount] * ch3_vol * ch3_amp;
 			}
 			lock_wave_ram.unlock();
 		}
@@ -428,17 +454,17 @@ void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& 
 			}
 
 			if (ch4_right) {
-				sample_1 += ch4LFSRSamples[ch4ReadCursor] * ch4_vol;
+				sample_3 += ch4LFSRSamples[ch4ReadCursor] * ch4_vol * ch4_amp;
 			}
 			if (ch4_left) {
-				sample_2 += ch4LFSRSamples[ch4ReadCursor] * ch4_vol;
+				sample_2 += ch4LFSRSamples[ch4ReadCursor] * ch4_vol * ch4_amp;
 			}
 			lock_lfsr_buffer.unlock();
 		}
 
-		_data[0][i].real = sample_0 * vol_right * .05f;
-		_data[1][i].real = sample_1 * vol_right * .05f;
-		_data[2][i].real = sample_2 * vol_left * .05f;
-		_data[3][i].real = sample_3 * vol_left * .05f;
+		_data[i * virtualChannels].real = sample_1 * vol_right * .05f;		// front-right
+		_data[i * virtualChannels + 1].real = sample_3 * vol_right * .05f;	// rear-right
+		_data[i * virtualChannels + 2].real = sample_2 * vol_left * .05f;	// rear-left
+		_data[i * virtualChannels + 3].real = sample_0 * vol_left * .05f;	// front-left
 	}
 }
