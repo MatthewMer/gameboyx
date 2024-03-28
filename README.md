@@ -17,7 +17,7 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 
 | Keybinds | Description |
 | --- | --- |
-| `Up`,`Down`,`Left`,`Right`  | Up, Down, Left, Right |
+| `Up` `Down` `Left` `Right`  | Up, Down, Left, Right |
 | `F` | A |
 | `D` | B |
 | `G` | Start |
@@ -28,7 +28,7 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 | Keybinds | Description |
 | --- | --- |
 | `Return` | start selected game |
-| `Up`/`Down` | navigate games |
+| `Up` `Down` | navigate games |
 | `Esc` | end game |
 | `Delete` | delete selected games |
 | `Shift` + `left mouse` | multiselect (like Windows explorer) |
@@ -43,6 +43,8 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ### Tested Games (Currently only ROM, MBC1 and MBC3 mapper for DMG) ###
 
 * Pokemon Red (MBC3)
+
+* Pokemon Silver / Crystal (MBC3)
 
 * Zelda - Link's Awakening (MBC1)
 
