@@ -539,7 +539,7 @@ void GuiMgr::ShowNewGameDialog() {
     check_and_create_config_folders();
 
     string current_path = get_current_path();
-    string s_path_rom_folder = current_path + ROM_FOLDER;
+    string s_path_rom_folder = ROM_FOLDER;
 
     auto filter_items = std::vector<nfdfilteritem_t>();
     for (const auto& [key, value] : FILE_EXTS) {

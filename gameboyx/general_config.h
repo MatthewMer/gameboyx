@@ -15,22 +15,38 @@
 #include <string>
 #include <unordered_map>
 #include <map>
+#include <algorithm>
 
 /* ***********************************************************************************************************
     STORAGE DEFINES
 *********************************************************************************************************** */
+#ifdef GBX_INSTALLER
+inline std::string replace_char(std::string _in, char _o, char _n) {
+    std::string res = _in;
+    std::replace(res.begin(), res.end(), _o, _n);
+    return res;
+}
+
+inline const std::string APPDATA = replace_char(std::string(getenv("APPDATA")), '\\', '/');
+inline const std::string APPDATA_GBX = APPDATA + std::string("/GameboyX/");
+
+inline const std::string ROM_FOLDER = APPDATA_GBX + "rom/";
+inline const std::string CONFIG_FOLDER = APPDATA_GBX + "config/";
+inline const std::string LOG_FOLDER = APPDATA_GBX + "logs/";
+inline const std::string SHADER_FOLDER = APPDATA_GBX + "shader/";
+inline const std::string SPIR_V_FOLDER = APPDATA_GBX + "shader/cache/";
+inline const std::string SAVE_FOLDER = APPDATA_GBX + "save/";
+#else
 inline const std::string ROM_FOLDER = "rom/";
-
 inline const std::string CONFIG_FOLDER = "config/";
-inline const std::string GAMES_CONFIG_FILE = "games.ini";
-
 inline const std::string LOG_FOLDER = "logs/";
-inline const std::string DEBUG_INSTR_LOG = "_instructions.log";
-
 inline const std::string SHADER_FOLDER = "shader/";
-inline const std::string SPIR_V_FOLDER = "shader/spir_v/";
-
+inline const std::string SPIR_V_FOLDER = "shader/cache/";
 inline const std::string SAVE_FOLDER = "save/";
+#endif
+
+inline const std::string GAMES_CONFIG_FILE = "games.ini";
+inline const std::string DEBUG_INSTR_LOG = "_instructions.log";
 
 inline const std::string SAVE_EXT = ".sav";
 

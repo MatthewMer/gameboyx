@@ -30,7 +30,7 @@ bool write_games_to_config(const vector<BaseCartridge*>& _games, const bool& _re
     games_to_string(_games, config_games);
 
     if (write_data(config_games, CONFIG_FOLDER + GAMES_CONFIG_FILE, _rewrite)) {
-        if (!_rewrite) LOG_INFO("[emu] ", (int)_games.size(), " game(s) added to ." + CONFIG_FOLDER + GAMES_CONFIG_FILE);
+        if (!_rewrite) LOG_INFO("[emu] ", (int)_games.size(), " game(s) added to " + CONFIG_FOLDER + GAMES_CONFIG_FILE);
         return true;
     }
 
@@ -100,7 +100,7 @@ bool delete_games_from_config(vector<BaseCartridge*>& _games) {
         return false;
     }
 
-    LOG_INFO("[emu] ", (int)_games.size(), " game(s) removed from .", CONFIG_FOLDER + GAMES_CONFIG_FILE);
+    LOG_INFO("[emu] ", (int)_games.size(), " game(s) removed from ", CONFIG_FOLDER + GAMES_CONFIG_FILE);
 
     return true;
 }

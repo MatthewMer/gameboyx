@@ -9,7 +9,25 @@ This is a Gameboy (Color) emulator utilising [ImGui](https://github.com/ocornut/
 ```
 git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ```
-* compile with Visual Studio 2022 (open ./gameboyx.sln, set to Release and your target platform and start the build process)
+* in the cloned repository open gameboyx.sln with Visual Studio 2022
+* you can either build an installer or create a portable executable, as described in the following section
+
+### Portable: ###
+* set configuration to `Release_portable` , set your target platform and start compilation
+* required files in `./x64/Release/` are `gameboyx.exe` and `SDL2.dll`, the application will automatically create the folder hierarchy on execution
+
+### Installer: ###
+#### Option 1: ####
+* go to `Tools -> Options` , navigate in the dialog to `Projects and Solutions -> Build and Run` and uncheck `Only build startup projects and dependencies on Run`
+* set configuration to `Release_installer` , set your target platform and start compilation
+
+#### Option 2: ####
+* set configuration to `Release_installer` and set your target platform
+* in the Solution Explorer right-click on `gameboyx_win_x64` or `gameboyx_win_x86` (depending on your target platform) and click on `Build`
+
+(the resulting installer executable and msi package are found in `./gameboyx_win_x64/Release` or `./gameboyx_win_x86/Release` , depending on the selected platform)
+
+Note: in the installer version folders for roms, configs, etc. are located in `%APPDATA%/<username>/GameboyX/`
 
 ### Control/Shortcuts ###
 

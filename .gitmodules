@@ -20,3 +20,6 @@
 [submodule "submodules/openal-soft"]
 	path = submodules/openal-soft
 	url = https://github.com/kcat/openal-soft.git
+[submodule "submodules/SDL_GameControllerDB"]
+	path = submodules/SDL_GameControllerDB
+	url = https://github.com/mdqinc/SDL_GameControllerDB.git
