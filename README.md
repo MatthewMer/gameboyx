@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/96gwu2lp9txol3w5?svg=true)](https://ci.appveyor.com/project/MatthewMer/gameboyx)
+
 ## GBX (Game Boy Color Emulator Extended) ##
 
 This is a Gameboy (Color) emulator utilising [ImGui](https://github.com/ocornut/imgui) with [SDL2](https://github.com/libsdl-org/SDL/releases/tag/release-2.28.2) and [Vulkan](https://vulkan.lunarg.com/) graphics API.
