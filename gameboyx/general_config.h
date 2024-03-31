@@ -48,6 +48,9 @@ inline const std::string SAVE_FOLDER = "save/";
 inline const std::string GAMES_CONFIG_FILE = "games.ini";
 inline const std::string DEBUG_INSTR_LOG = "_instructions.log";
 
+inline const std::string CONTROL_FOLDER = "control/";
+inline const std::string CONTROL_DB = "gamecontrollerdb.txt";
+
 inline const std::string SAVE_EXT = ".sav";
 
 /* ***********************************************************************************************************

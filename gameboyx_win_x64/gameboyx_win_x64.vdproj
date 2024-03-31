@@ -57,12 +57,6 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_5A6B93008A8DC0A5ED611E6E04D029B0"
-        "OwnerKey" = "8:_EEFD6A6E12D64C44BA5B585E9C908D89"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_5BB6323227CA416AEF3056212AFFA1B0"
         "OwnerKey" = "8:_EEFD6A6E12D64C44BA5B585E9C908D89"
         "MsmSig" = "8:_UNDEFINED"
@@ -338,26 +332,6 @@
             {
             "SourcePath" = "8:VCRUNTIME140_1.dll"
             "TargetName" = "8:VCRUNTIME140_1.dll"
-            "Tag" = "8:"
-            "Folder" = "8:_F43F02CF4D58492A9B1A5071C716008A"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:TRUE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_5A6B93008A8DC0A5ED611E6E04D029B0"
-            {
-            "SourcePath" = "8:api-ms-win-crt-environment-l1-1-0.dll"
-            "TargetName" = "8:api-ms-win-crt-environment-l1-1-0.dll"
             "Tag" = "8:"
             "Folder" = "8:_F43F02CF4D58492A9B1A5071C716008A"
             "Condition" = "8:"
@@ -741,7 +715,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:GameboyX"
         "ProductCode" = "8:{17339D97-78B4-45E2-BB3F-19C3A042F5E7}"
-        "PackageCode" = "8:{6CB3AD1E-D376-4793-82A3-41649CFEA9C3}"
+        "PackageCode" = "8:{46E40C5C-01D2-48BE-9F44-40FE35DCE79E}"
         "UpgradeCode" = "8:{C302A6FE-7BAB-4C63-9FC1-E243066B4D0A}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"

@@ -336,4 +336,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="CopyCustomContent" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
+    <Copy SourceFiles="..\submodules\SDL_GameControllerDB\gamecontrollerdb.txt" DestinationFolder="$(OutDir)\control" />
+  </Target>
 </Project>
