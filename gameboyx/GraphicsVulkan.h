@@ -144,7 +144,7 @@ private:
 	VkDevice device = VK_NULL_HANDLE;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceProperties physicalDeviceProperties = {};
-	VkDebugUtilsMessengerEXT debugCallback = nullptr;
+	VkDebugUtilsMessengerEXT debugCallback = 0;
 
 	// renderpass
 	VkRenderPass renderPass = {};
@@ -207,7 +207,7 @@ private:
 	bool InitImage(vulkan_image& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
 	bool InitSemaphore(VkSemaphore& _semaphore);
 
-	bool LoadBuffer(vulkan_buffer& _buffer, void* _data, u64 _size);
+	bool LoadBuffer(vulkan_buffer& _buffer, void* _data, size_t _size);
 
 	// deinitialize
 	void DestroySwapchain(const bool& _rebuild);

@@ -552,7 +552,7 @@ void GameboyMEM::SetIO(const u16& _addr, const u8& _data) {
 }
 
 void GameboyMEM::CopyDataToRAM(const vector<char>& _data) {
-    for (int i = 0; i < RAM_N.size(); i++) {
+    for (int i = 0; i < (int)RAM_N.size(); i++) {
         for (int j = 0; j < RAM_N_SIZE; j++) {
             RAM_N[i][j] = _data[i * RAM_N_SIZE + j];
         }
@@ -564,35 +564,38 @@ void GameboyMEM::CopyDataFromRAM(vector<char>& _data) {
         _data = vector<char>(RAM_N.size() * RAM_N_SIZE);
     }
 
-    for (int i = 0; i < RAM_N.size(); i++) {
+    for (int i = 0; i < (int)RAM_N.size(); i++) {
         for (int j = 0; j < RAM_N_SIZE; j++) {
             _data[i * RAM_N_SIZE + j] = RAM_N[i][j];
         }
     }
 }
 
-const std::vector<u8>& GameboyMEM::GetBank(const MEM_TYPE& _type, const int& _bank) {
+bool GameboyMEM::GetBank(const MEM_TYPE& _type, const int& _bank, u8* _data) {
     switch (_type) {
     case ROM0:
-        return ROM_0;
+        _data = ROM_0.data();
         break;
     case ROMn:
-        return ROM_N[_bank];
+        _data = ROM_N[_bank].data();
         break;
     case RAMn:
-        return RAM_N[_bank];
+        _data = RAM_N[_bank].data();
         break;
     case WRAM0:
-        return WRAM_0;
+        _data = WRAM_0.data();
         break;
     case WRAMn:
-        return WRAM_N[_bank];
+        _data = WRAM_N[_bank].data();
         break;
     default:
         LOG_ERROR("[emu] GetBank: memory area access not implemented");
-        return std::vector<u8>();
+        _data = nullptr;
+        return false;
         break;
     }
+
+    return true;
 }
 
 /* ***********************************************************************************************************
@@ -1418,7 +1421,7 @@ void GameboyMEM::GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables)
 vector<u8>* GameboyMEM::GetProgramData(const int& _bank) const {
     if (_bank == 0) {
         return (vector<u8>*)&ROM_0;
-    } else if (_bank <= ROM_N.size()) {
+    } else if (_bank <= (int)ROM_N.size()) {
         return (vector<u8>*)&ROM_N[_bank - 1];
     } else {
         return nullptr;

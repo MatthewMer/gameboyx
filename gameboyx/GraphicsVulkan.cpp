@@ -1343,7 +1343,7 @@ bool GraphicsVulkan::InitBuffer(vulkan_buffer& _buffer, u64 _size, VkBufferUsage
 	return true;
 }
 
-bool GraphicsVulkan::LoadBuffer(vulkan_buffer& _buffer, void* _data, u64 _size) {
+bool GraphicsVulkan::LoadBuffer(vulkan_buffer& _buffer, void* _data, size_t _size) {
 	if (resizableBar) {
 		void* data;
 		if (vkMapMemory(device, _buffer.memory, 0, _size, 0, &data) != VK_SUCCESS) {

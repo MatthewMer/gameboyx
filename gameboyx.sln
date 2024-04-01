@@ -117,7 +117,6 @@ Global
 		{3C0EB161-547C-44CC-9317-114451754A06}.Release_installer|x86.Build.0 = Release
 		{3C0EB161-547C-44CC-9317-114451754A06}.Release_portable|x64.ActiveCfg = Release
 		{3C0EB161-547C-44CC-9317-114451754A06}.Release_portable|x86.ActiveCfg = Release
-		{3C0EB161-547C-44CC-9317-114451754A06}.Release_portable|x86.Build.0 = Release
 		{3C0EB161-547C-44CC-9317-114451754A06}.Release|x64.ActiveCfg = Release
 		{3C0EB161-547C-44CC-9317-114451754A06}.Release|x64.Build.0 = Release
 		{3C0EB161-547C-44CC-9317-114451754A06}.Release|x86.ActiveCfg = Release

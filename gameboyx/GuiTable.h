@@ -126,8 +126,8 @@ template <class T> constexpr void Table<T>::SetElementsToShow() {
     endIndex = startIndex;
     
     int bank = 0;
-    for (size_t i = 0; const auto & n : tableSections) {
-        i += n.size();
+    for (int i = 0; const auto & n : tableSections) {
+        i += (int)n.size();
         if (i >= currentlyVisibleElements) { 
             endIndex.bank = bank;
             endIndex.index = currentlyVisibleElements - (int)(i - n.size());
@@ -184,7 +184,7 @@ template <class T> void Table<T>::ScrollDown(const int& _num) {
     bool full_scroll = true;
     int current_buf_size_end = (int)tableSections[endIndex.bank].size();
 
-    if (endIndex.bank < tableSections.size() - 1 || endIndex.index < current_buf_size_end) {
+    if (endIndex.bank < (int)tableSections.size() - 1 || endIndex.index < current_buf_size_end) {
         endIndex.index += _num;
         if (endIndex.index > (int)tableSections[endIndex.bank].size()) {
             if (endIndex.bank == tableSections.size() - 1) {
@@ -225,7 +225,7 @@ template <class T> void Table<T>::ScrollDownPage() {
 
 template <class T> void Table<T>::SearchBank(int& _bank) {
     if (_bank < 0) { _bank = 0; }
-    else if (_bank >= tableSections.size()) { _bank = (int)tableSections.size() - 1; }
+    else if (_bank >= (int)tableSections.size()) { _bank = (int)tableSections.size() - 1; }
 
     startIndex = bank_index(_bank, 0);
     endIndex = bank_index(_bank, currentlyVisibleElements);
@@ -243,7 +243,7 @@ template <class T> void Table<T>::SearchAddress(int& _addr) {
     else if (_addr > last_address) { _addr = last_address; }
 
     int i;
-    for (i = 0; i < current_bank.size() - 1; i++) {
+    for (i = 0; i < (int)current_bank.size() - 1; i++) {
         if (get<ST_ENTRY_ADDRESS>(current_bank[i]) <= _addr &&
             get<ST_ENTRY_ADDRESS>(current_bank[i + 1]) > _addr)
         {
@@ -323,7 +323,7 @@ template <class T> bank_index Table<T>::GetIndexByAddress(const int& _address) {
     else if (addr > last_address) { addr = last_address; }
 
     int i;
-    for (i = 0; i < current_bank.size() - 1; i++) {
+    for (i = 0; i < (int)current_bank.size() - 1; i++) {
         if (get<ST_ENTRY_ADDRESS>(current_bank[i]) <= addr &&
             get<ST_ENTRY_ADDRESS>(current_bank[i + 1]) > addr)
         {

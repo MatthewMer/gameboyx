@@ -13,6 +13,7 @@
 #include "defs.h"
 #include <atomic>
 #include <mutex>
+#include <vector>
 
 enum MEM_TYPE {
 	ROM0 = 0,
@@ -342,7 +343,7 @@ public:
 
 	void GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) override;
 
-	const std::vector<u8>& GetBank(const MEM_TYPE& _type, const int& _bank);
+	bool GetBank(const MEM_TYPE& _type, const int& _bank, u8* _data);
 
 	// actual memory
 	std::vector<u8> ROM_0;

@@ -53,14 +53,14 @@ protected:
 		std::string file;
 
 		auto file_split = split_string(_file, "\\");
-		for (int i = 0; i < file_split.size() - 1; i++) {
+		for (size_t i = 0; i < file_split.size() - 1; i++) {
 			file += file_split[i] + "/";
 		}
 		file += file_split.back();
 
 		file_split = split_string(file, "/");
 		file = "";
-		for (int i = 0; i < file_split.size() - 1; i++) {
+		for (size_t i = 0; i < file_split.size() - 1; i++) {
 			file += file_split[i] + "/";
 		}
 

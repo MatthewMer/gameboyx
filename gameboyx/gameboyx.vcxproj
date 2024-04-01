@@ -121,7 +121,7 @@
     <LibraryPath>$(VULKAN_SDK)\Lib32;$(SolutionDir)gameboyx\lib32;$(LibraryPath)</LibraryPath>
     <LinkIncremental>
     </LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\Release\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_installer|Win32'">
