@@ -147,36 +147,24 @@ void GameboyGPU::CheckHBlankDma() {
 		u16& source_addr = graphicsCtx->dma_source_addr;
 		u16& dest_addr = graphicsCtx->dma_dest_addr;
 
-		u8* data = nullptr;
-
 		switch (graphicsCtx->dma_source_mem) {
 		case ROM0:
-			if (memInstance->GetBank(ROM0, 0, data)) {
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &data[source_addr], 0x10);
-			}
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(ROM0, 0))[source_addr], 0x10);
 			break;
 		case ROMn:
 			bank = machineCtx->rom_bank_selected;
-			if (memInstance->GetBank(ROMn, bank, data)) {
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &data[source_addr], 0x10);
-			}
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(ROMn, bank))[source_addr], 0x10);
 			break;
 		case RAMn:
 			bank = machineCtx->ram_bank_selected;
-			if (memInstance->GetBank(RAMn, bank, data)) {
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &data[source_addr], 0x10);
-			}
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(RAMn, bank))[source_addr], 0x10);
 			break;
 		case WRAM0:
-			if (memInstance->GetBank(WRAM0, 0, data)) {
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &data[source_addr], 0x10);
-			}
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(WRAM0, 0))[source_addr], 0x10);
 			break;
 		case WRAMn:
 			bank = machineCtx->wram_bank_selected;
-			if (memInstance->GetBank(WRAMn, bank, data)) {
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &data[source_addr], 0x10);
-			}
+			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(WRAMn, bank))[source_addr], 0x10);
 			break;
 		}
 

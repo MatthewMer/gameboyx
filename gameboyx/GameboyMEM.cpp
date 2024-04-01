@@ -571,31 +571,28 @@ void GameboyMEM::CopyDataFromRAM(vector<char>& _data) {
     }
 }
 
-bool GameboyMEM::GetBank(const MEM_TYPE& _type, const int& _bank, u8* _data) {
+const std::vector<u8>* GameboyMEM::GetBank(const MEM_TYPE& _type, const int& _bank) {
     switch (_type) {
     case ROM0:
-        _data = ROM_0.data();
+        return &ROM_0;
         break;
     case ROMn:
-        _data = ROM_N[_bank].data();
+        return &ROM_N[_bank];
         break;
     case RAMn:
-        _data = RAM_N[_bank].data();
+        return &RAM_N[_bank];
         break;
     case WRAM0:
-        _data = WRAM_0.data();
+        return &WRAM_0;
         break;
     case WRAMn:
-        _data = WRAM_N[_bank].data();
+        return &WRAM_N[_bank];
         break;
     default:
         LOG_ERROR("[emu] GetBank: memory area access not implemented");
-        _data = nullptr;
-        return false;
+        return nullptr;
         break;
     }
-
-    return true;
 }
 
 /* ***********************************************************************************************************

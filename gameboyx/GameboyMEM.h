@@ -343,7 +343,7 @@ public:
 
 	void GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) override;
 
-	bool GetBank(const MEM_TYPE& _type, const int& _bank, u8* _data);
+	const std::vector<u8>* GetBank(const MEM_TYPE& _type, const int& _bank);
 
 	// actual memory
 	std::vector<u8> ROM_0;
