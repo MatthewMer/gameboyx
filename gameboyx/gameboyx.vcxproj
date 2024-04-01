@@ -161,7 +161,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL</AdditionalIncludeDirectories>
@@ -181,7 +181,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;GBX_INSTALLER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL</AdditionalIncludeDirectories>
