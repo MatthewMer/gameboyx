@@ -1,7 +1,5 @@
 #include "HardwareMgr.h"
 
-#include "SDL_image.h"
-
 HardwareMgr* HardwareMgr::instance = nullptr;
 u32 HardwareMgr::errors = 0x00000000;
 GraphicsMgr* HardwareMgr::graphicsMgr = nullptr;
@@ -47,8 +45,8 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settin
 	graphicsMgr = GraphicsMgr::getInstance(&window);
 	if (graphicsMgr != nullptr) {
 		std::string file_s = ICON_FOLDER + ICON_FILE;
-		const char* file = file_s.c_str();
-		SDL_Surface* icon = IMG_Load(file);
+		const char* file_c = file_s.c_str();
+		SDL_Surface* icon = SDL_LoadBMP(file_c);
 
 		SDL_SetWindowIcon(window, icon);
 

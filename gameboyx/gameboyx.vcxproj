@@ -315,6 +315,7 @@
     <ClInclude Include="AudioMgr.h" />
     <ClInclude Include="AudioOpenAL.h" />
     <ClInclude Include="GameboyAPU.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="VHardwareMgr.h" />
     <ClInclude Include="GraphicsVulkan.h" />
     <ClInclude Include="VHardwareStructs.h" />
@@ -332,9 +333,12 @@
     <ProjectReference Include="..\submodules\SDL\VisualC\SDL\SDL.vcxproj">
       <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\submodules\SDL_image\VisualC\SDL_image.vcxproj">
-      <Project>{2bd5534e-00e2-4bea-ac96-d9a92ea24696}</Project>
-    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="gameboyx.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="icon\gameboyx.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -54,7 +54,7 @@ inline const std::string CONTROL_DB = "gamecontrollerdb.txt";
 inline const std::string SAVE_EXT = ".sav";
 
 inline const std::string ICON_FOLDER = "icon/";
-inline const std::string ICON_FILE = "gameboyx.ico";
+inline const std::string ICON_FILE = "gameboyx.bmp";
 
 /* ***********************************************************************************************************
     GRAPHICS BACKEND
