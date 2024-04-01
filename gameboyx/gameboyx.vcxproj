@@ -104,20 +104,20 @@
     <LinkIncremental />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_portable|x64'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL;$(IncludePath);$(SolutionDir)submodules\SDL_image\include</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib;$(SolutionDir)gameboyx\lib;$(LibraryPath)</LibraryPath>
     <LinkIncremental>
     </LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform)\Release\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_installer|x64'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL;$(IncludePath);$(SolutionDir)submodules\SDL_image\include</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib;$(SolutionDir)gameboyx\lib;$(LibraryPath)</LibraryPath>
     <LinkIncremental />
     <OutDir>$(SolutionDir)$(Platform)\Release\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_portable|Win32'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(IncludePath);$(SolutionDir)submodules\SDL_image\include</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib32;$(SolutionDir)gameboyx\lib32;$(LibraryPath)</LibraryPath>
     <LinkIncremental>
     </LinkIncremental>
@@ -125,7 +125,7 @@
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_installer|Win32'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(IncludePath);$(SolutionDir)submodules\SDL_image\include</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib32;$(SolutionDir)gameboyx\lib32;$(LibraryPath)</LibraryPath>
     <LinkIncremental />
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
@@ -164,7 +164,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL;$(SolutionDir)submodules\SDL_image\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -184,7 +184,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;GBX_INSTALLER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL;$(SolutionDir)submodules\SDL_image\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -221,7 +221,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL;$(SolutionDir)submodules\SDL_image\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -241,7 +241,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;GBX_INSTALLER</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(SolutionDir)submodules\openal-soft\include\AL;$(SolutionDir)submodules\SDL_image\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -331,6 +331,9 @@
     </ProjectReference>
     <ProjectReference Include="..\submodules\SDL\VisualC\SDL\SDL.vcxproj">
       <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\submodules\SDL_image\VisualC\SDL_image.vcxproj">
+      <Project>{2bd5534e-00e2-4bea-ac96-d9a92ea24696}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
