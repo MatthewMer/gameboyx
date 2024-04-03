@@ -705,7 +705,7 @@ void GameboyCPU::NOP() {
     return;
 }
 
-// machine_ctx->stopped
+// stopped
 void GameboyCPU::STOP() {
     u8 isr_requested = mem_instance->GetIO(IF_ADDR);
 

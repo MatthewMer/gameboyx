@@ -104,7 +104,7 @@ void AudioSDL::DestroyAudioBackend() {
 	for (auto& n : audioSamples.buffer) {
 		n = .0f;
 	}
-	LOG_INFO("[SDL] audio backend machine_ctx->stopped");
+	LOG_INFO("[SDL] audio backend stopped");
 }
 
 // _user_data: struct passed to audiospec, _device_buffer: the audio buffer snippet that needs to be filled, _length: length of this buffer snippet

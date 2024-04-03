@@ -430,7 +430,7 @@ void GraphicsVulkan::Destroy2dGraphicsBackend() {
 	updateFunction = &GraphicsVulkan::UpdateDummy;
 	bindPipelines = &GraphicsVulkan::BindPipelinesDummy;
 
-	LOG_INFO("[vulkan] 2d graphics backend machine_ctx->stopped");
+	LOG_INFO("[vulkan] 2d graphics backend stopped");
 }
 
 void GraphicsVulkan::RenderFrame() {
