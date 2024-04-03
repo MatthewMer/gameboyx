@@ -160,20 +160,20 @@ void GameboyCPU::RunCycle() {
 }
 
 void GameboyCPU::RunCpu() {
-    if (stopped) {
+    if (machine_ctx->stopped) {
         // check button press
         if (mem_instance->GetIO(IF_ADDR) & IRQ_JOYPAD) {
-            stopped = false;
+            machine_ctx->stopped = false;
         } else {
             return;
         }
 
-    } else if (halted) {
+    } else if (machine_ctx->halted) {
         TickTimers();
 
         // check pending and enabled interrupts
         if (machine_ctx->IE & mem_instance->GetIO(IF_ADDR)) {
-            halted = false;
+            machine_ctx->halted = false;
         }
     } else {
         if (!CheckInterrupts()) {
@@ -236,6 +236,7 @@ bool GameboyCPU::CheckInterrupts() {
     return false;
 }
 
+// ticks the timers for 4 clock cycles / 1 machine cycle and everything thats related to it
 void GameboyCPU::TickTimers() {
     bool div_low_byte_selected = machine_ctx->timaDivMask < 0x100;
     u8& div = mem_instance->GetIO(DIV_ADDR);
@@ -288,9 +289,7 @@ void GameboyCPU::TickTimers() {
     currentTicks += TICKS_PER_MC;
 
     // peripherals directly bound to CPUs timer system (master clock) (PPU not affected by speed mode)
-    int ticks = TICKS_PER_MC / machine_ctx->currentSpeed;
-    graphics_instance->ProcessGPU(ticks);
-    //sound_instance->TickLFSR(ticks);
+    graphics_instance->ProcessGPU(TICKS_PER_MC / machine_ctx->currentSpeed);
 }
 
 void GameboyCPU::IncrementTIMA() {
@@ -706,7 +705,7 @@ void GameboyCPU::NOP() {
     return;
 }
 
-// stopped
+// machine_ctx->stopped
 void GameboyCPU::STOP() {
     u8 isr_requested = mem_instance->GetIO(IF_ADDR);
 
@@ -720,7 +719,7 @@ void GameboyCPU::STOP() {
         }
         else {
             two_byte = true;
-            halted = true;
+            machine_ctx->halted = true;
         }
     }
     else {
@@ -728,7 +727,7 @@ void GameboyCPU::STOP() {
             if (machine_ctx->IE & isr_requested) {
                 if (ime) {
                     LOG_ERROR("[emu] STOP Glitch encountered");
-                    halted = true;
+                    machine_ctx->halted = true;
                     // set IE to 0x00 (this case is undefined behaviour, simply prevent cpu from execution)
                     machine_ctx->IE = 0x00;
                 }
@@ -737,14 +736,14 @@ void GameboyCPU::STOP() {
                 }
             }
             else {
-                // skipping halted, not necessary
+                // skipping machine_ctx->halted, not necessary
                 two_byte = true;
                 div_reset = true;
             }
         }
         else {
             two_byte = machine_ctx->IE & isr_requested ? false : true;
-            stopped = true;
+            machine_ctx->stopped = true;
             div_reset = true;
         }
     }
@@ -773,9 +772,9 @@ void GameboyCPU::STOP() {
     }
 }
 
-// halted
+// machine_ctx->halted
 void GameboyCPU::HALT() {
-    halted = true;
+    machine_ctx->halted = true;
 }
 
 // flip c

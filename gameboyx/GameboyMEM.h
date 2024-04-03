@@ -32,6 +32,9 @@ struct machine_context {
 	// interrupt
 	u8 IE = 0x00;
 
+	bool halted = false;
+	bool stopped = false;
+
 	// speed switch
 	int currentSpeed = 1;
 	bool speed_switch_requested = false;
@@ -140,8 +143,8 @@ struct graphics_context {
 	bool dma_hblank = false;
 	u16 dma_source_addr = 0;
 	u16 dma_dest_addr = 0;
-	int dma_length = 0;
 	MEM_TYPE dma_source_mem = ROM0;
+	bool dma_hblank_ppu_en = false;
 };
 
 inline const std::unordered_map<u8, float> VOLUME_MAP = {
@@ -404,7 +407,7 @@ private:
 	void WriteIORegister(const u8& _data, const u16& _addr);
 	u8 ReadIORegister(const u16& _addr);
 	void VRAM_DMA(const u8& _data);
-	void OAM_DMA();
+	void OAM_DMA(const u8& _data);
 
 	// speed switch
 	void SwitchSpeed(const u8& _data);

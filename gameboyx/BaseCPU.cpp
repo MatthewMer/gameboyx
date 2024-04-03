@@ -27,6 +27,13 @@ void BaseCPU::resetInstance() {
 	}
 }
 
+BaseCPU* BaseCPU::getInstance() {
+	if (instance == nullptr) {
+		LOG_ERROR("[emu] CPU instance is nullptr");
+	}
+	return instance;
+}
+
 int BaseCPU::GetClockCycles() {
 	int result = tickCounter;
 	tickCounter = 0;

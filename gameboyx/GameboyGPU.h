@@ -10,6 +10,7 @@
 #include "BaseGPU.h"
 #include "GameboyMEM.h"
 #include "HardwareMgr.h"
+#include "GameboyCPU.h"
 
 class GameboyGPU : protected BaseGPU {
 public:
@@ -17,6 +18,8 @@ public:
 
 	// members
 	void ProcessGPU(const int& _ticks) override;
+
+	void HBlankDmaNextBlock();
 
 private:
 	// constructor
@@ -41,6 +44,8 @@ private:
 		} else {
 			DrawScanline = &GameboyGPU::DrawScanlineDMG;
 		}
+
+		coreInstance = (GameboyCPU*)BaseCPU::getInstance(_cartridge);
 	}
 	// destructor
 	~GameboyGPU() override {
@@ -60,8 +65,6 @@ private:
 	void EnterMode3();
 	void EnterMode0();
 	void EnterMode1();
-
-	void CheckHBlankDma();
 
 	typedef void (GameboyGPU::* scanline_draw_function)(const u8& _ly);
 	scanline_draw_function DrawScanline;
@@ -107,4 +110,6 @@ private:
 	bool drawWindow = false;
 
 	int mode3Dots;
+
+	GameboyCPU* coreInstance;
 };

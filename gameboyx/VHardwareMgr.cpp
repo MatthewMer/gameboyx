@@ -142,7 +142,7 @@ void VHardwareMgr::ShutdownHardware() {
         title = cart_instance->title;
     }
 
-    LOG_INFO("[emu] hardware for ", title, " stopped");
+    LOG_INFO("[emu] hardware for ", title, " machine_ctx->stopped");
 }
 
 void VHardwareMgr::ProcessHardware() {

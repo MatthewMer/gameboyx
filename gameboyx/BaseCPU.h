@@ -23,6 +23,8 @@ public:
 	static BaseCPU* getInstance(BaseCartridge* _cartridge);
 	static void resetInstance();
 
+	static BaseCPU* getInstance();
+
 	// clone/assign protection
 	BaseCPU(BaseCPU const&) = delete;
 	BaseCPU(BaseCPU&&) = delete;

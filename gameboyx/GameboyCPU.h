@@ -118,6 +118,8 @@ public:
 	
 	void SetInstances() override;
 
+	void TickTimers();
+
 private:
 	// constructor
 	explicit GameboyCPU(BaseCartridge* _cartridge);
@@ -134,7 +136,6 @@ private:
 
 	void ExecuteInstruction() override;
 	bool CheckInterrupts() override;
-	void TickTimers();
 	void IncrementTIMA();
 
 	void FetchOpCode();
@@ -153,12 +154,8 @@ private:
 	void InitRegisterStates() override;
 
 	// cpu states and checks
-	bool halted = false;
 	bool was_halted = false;
-	bool stopped = false;
 	bool ime = false;
-
-	void ProcessHALT();
 
 	bool timaEnAndDivOverflowPrev = false;
 	bool timaEnAndDivOverflowCur = false;

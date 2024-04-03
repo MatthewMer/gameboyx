@@ -137,51 +137,59 @@ void GameboyGPU::EnterMode0() {
 	graphicsCtx->mode = PPU_MODE_0;
 	SET_MODE(stat, PPU_MODE_0);
 
-	CheckHBlankDma();
+	HBlankDmaNextBlock();
 }
 
-void GameboyGPU::CheckHBlankDma() {
+void GameboyGPU::HBlankDmaNextBlock() {
 	if (graphicsCtx->dma_hblank) {
-		int bank;
-
-		u16& source_addr = graphicsCtx->dma_source_addr;
-		u16& dest_addr = graphicsCtx->dma_dest_addr;
-
-		switch (graphicsCtx->dma_source_mem) {
-		case ROM0:
-			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(ROM0, 0))[source_addr], 0x10);
-			break;
-		case ROMn:
-			bank = machineCtx->rom_bank_selected;
-			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(ROMn, bank))[source_addr], 0x10);
-			break;
-		case RAMn:
-			bank = machineCtx->ram_bank_selected;
-			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(RAMn, bank))[source_addr], 0x10);
-			break;
-		case WRAM0:
-			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(WRAM0, 0))[source_addr], 0x10);
-			break;
-		case WRAMn:
-			bank = machineCtx->wram_bank_selected;
-			memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(WRAMn, bank))[source_addr], 0x10);
-			break;
-		}
-
 		u8& hdma5 = memInstance->GetIO(CGB_HDMA5_ADDR);
-		int& dma_length = graphicsCtx->dma_length;
+		int length = (int)(hdma5 & 0x7F) + 1;
 
-		//LOG_INFO("LY: ", std::format("{:d}", memInstance->GetIO(LY_ADDR)), "; source: ", std::format("0x{:04x}", source_addr), "; dest: ", std::format("0x{:04x}", dest_addr), "; remaining: ", (dma_length - 1) * 0x10);
+		if (length > 0) {
+			int bank;
 
-		--dma_length;
-		if (dma_length > 0) {
-			source_addr += 0x10;
-			dest_addr += 0x10;
-			--hdma5;
-		} else {
-			graphicsCtx->dma_hblank = false;
-			hdma5 = 0xFF;
-			LOG_ERROR("finish");
+			u16& source_addr = graphicsCtx->dma_source_addr;
+			u16& dest_addr = graphicsCtx->dma_dest_addr;
+
+			switch (graphicsCtx->dma_source_mem) {
+			case ROM0:
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(ROM0, 0))[source_addr], 0x10);
+				break;
+			case ROMn:
+				bank = machineCtx->rom_bank_selected;
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(ROMn, bank))[source_addr], 0x10);
+				break;
+			case RAMn:
+				bank = machineCtx->ram_bank_selected;
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(RAMn, bank))[source_addr], 0x10);
+				break;
+			case WRAM0:
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(WRAM0, 0))[source_addr], 0x10);
+				break;
+			case WRAMn:
+				bank = machineCtx->wram_bank_selected;
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(WRAMn, bank))[source_addr], 0x10);
+				break;
+			}
+
+			--length;
+
+			int machine_cycles = (VRAM_DMA_MC_PER_BLOCK * machineCtx->currentSpeed) + 1;
+			for (int i = 0; i < machine_cycles; i++) {
+				coreInstance->TickTimers();
+			}
+
+			if (length == 0) {
+				graphicsCtx->dma_hblank = false;
+				hdma5 = 0xFF;
+				//LOG_ERROR("finish");
+			} else {
+				source_addr += 0x10;
+				dest_addr += 0x10;
+				--hdma5;
+			}
+
+			//LOG_INFO("LY: ", std::format("{:d}", memInstance->GetIO(LY_ADDR)), "; source: ", std::format("0x{:04x}", source_addr), "; dest: ", std::format("0x{:04x}", dest_addr), "; remaining: ", length * 0x10);
 		}
 	}
 }
