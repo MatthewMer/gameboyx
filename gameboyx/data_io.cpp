@@ -37,20 +37,32 @@ bool write_games_to_config(const vector<BaseCartridge*>& _games, const bool& _re
     return false;
 }
 
-string check_and_create_path(const string& _path_rel) {
-    if (!fs::is_directory(_path_rel) || !fs::exists(_path_rel)) {
-        fs::create_directory(_path_rel);
+bool check_and_create_path(const string& _path_rel) {
+    auto path = split_string(_path_rel, "/");
+    bool exists = true;
+
+    for (size_t i = 0; i < path.size(); i++) {
+        string sub_path = "";
+        for (int j = 0; j <= i; j++) {
+            sub_path += path[j] + "/";
+        }
+
+        if (!fs::exists(sub_path) || !fs::is_directory(sub_path)) {
+            fs::create_directory(sub_path);
+            exists = false;
+        }
     }
 
-    return get_current_path() + "/" + _path_rel;
+    return exists;
 }
 
-string check_and_create_file(const string& _path_to_file) {
+bool check_and_create_file(const string& _path_to_file) {
     if (!fs::exists(_path_to_file)) {
         ofstream(_path_to_file).close();
+        return false;
+    } else {
+        return true;
     }
-
-    return _path_to_file;
 }
 
 bool check_file(const string& _path_to_file) {
@@ -114,11 +126,11 @@ bool write_to_debug_log(const string& _output, const string& _file_path, const b
 
 
 bool read_data(vector<string>& _input, const string& _file_path) {
-    string file_path = check_and_create_file(_file_path);
+    check_and_create_file(_file_path);
 
-    ifstream is(file_path, ios::beg);
+    ifstream is(_file_path, ios::beg);
     if (!is) {
-        LOG_WARN("[emu] Couldn't open ", file_path);
+        LOG_WARN("[emu] Couldn't open ", _file_path);
         return false;
     }
 
@@ -154,11 +166,11 @@ bool read_data(std::vector<char>& _input, const std::string& _file_path) {
 }
 
 bool write_data(const vector<string>& _output, const string& _file_path, const bool& _rewrite) {
-    string file_path = check_and_create_file(_file_path);
+    check_and_create_file(_file_path);
 
-    ofstream os(file_path, (_rewrite ? ios::trunc : ios::app));
+    ofstream os(_file_path, (_rewrite ? ios::trunc : ios::app));
     if (!os.is_open()) {
-        LOG_WARN("[emu] Couldn't write ", file_path);
+        LOG_WARN("[emu] Couldn't write ", _file_path);
         return false;
     }
 
@@ -171,11 +183,11 @@ bool write_data(const vector<string>& _output, const string& _file_path, const b
 }
 
 bool write_data(const vector<char>& _output, const string& _file_path, const bool& _rewrite) {
-    string file_path = check_and_create_file(_file_path);
+    check_and_create_file(_file_path);
 
-    ofstream os(file_path, (_rewrite ? ios::trunc : ios::app) | ios::binary);
+    ofstream os(_file_path, (_rewrite ? ios::trunc : ios::app) | ios::binary);
     if (!os.is_open()) {
-        LOG_WARN("[emu] Couldn't write ", file_path);
+        LOG_WARN("[emu] Couldn't write ", _file_path);
         return false;
     }
 

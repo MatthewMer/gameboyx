@@ -19,8 +19,8 @@ bool read_data(std::vector<char>& _input, const std::string& _file_path);
 bool write_data(const std::vector<char>& _output, const std::string& _file_path, const bool& _rewrite);
 
 bool check_file(const std::string& _path_to_file);
-std::string check_and_create_file(const std::string& _path_to_file);
-std::string check_and_create_path(const std::string& _path);
+bool check_and_create_file(const std::string& _path_to_file);
+bool check_and_create_path(const std::string& _path);
 bool check_file_exists(const std::string& _path_to_file);
 
 std::string get_current_path();
