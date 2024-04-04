@@ -181,3 +181,39 @@ private:
 	u8 ReadClock();
 	void WriteClock(const u8& _data);
 };
+
+/* ***********************************************************************************************************
+*
+*		MBC5
+*
+*********************************************************************************************************** */
+class MmuSM83_MBC5 : protected GameboyMMU {
+public:
+	friend class GameboyMMU;
+
+	// members
+	void Write8Bit(const u8& _data, const u16& _addr) override;
+	void Write16Bit(const u16& _data, const u16& _addr) override;
+	u8 Read8Bit(const u16& _addr) override;
+	//u16 Read16Bit(const u16& _addr) override;
+
+	// access machine states
+	//int GetCurrentSpeed() const override;
+	//u8 GetInterruptEnable() const override;
+	//u8 GetInterruptRequests() const override;
+	//void ResetInterruptRequest(const u8& _isr_flags) override;
+
+private:
+	// constructor
+	explicit MmuSM83_MBC5(BaseCartridge* _cartridge);
+	// destructor
+	~MmuSM83_MBC5() override {
+		BaseMEM::resetInstance();
+	}
+
+	// mbc1 control
+	bool ramEnable = false;
+	int ramBankMask = 0x00;
+
+	bool rom0Mapped = false;
+};

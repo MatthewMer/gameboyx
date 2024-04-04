@@ -106,6 +106,13 @@ GameboyMMU* GameboyMMU::getInstance(BaseCartridge* _cartridge) {
 		case MBC3:
 			return new MmuSM83_MBC3(_cartridge);
 			break;
+		case MBC5_RAM_BATTERY:
+			_cartridge->batteryBuffered = true;
+		case MBC5_RAM:
+			_cartridge->ramPresent = true;
+		case MBC5:
+			return new MmuSM83_MBC5(_cartridge);
+			break;
 		default:
 			LOG_WARN("Mapper type ", format("{:02x}", type_code), " not implemented");
 			return nullptr;
@@ -281,7 +288,7 @@ u8 MmuSM83_ROM::Read8Bit(const u16& _addr) {
 #define MBC1_RAM_ROM_BANK_MASK			0x03
 
 // values
-#define MBC1_RAM_ENABLE					0x0A
+#define MBC1_RAM_ENABLE_BITS			0x0A
 
 /* ***********************************************************************************************************
 	CONSTRUCTOR
@@ -321,7 +328,7 @@ void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 	if (_addr < ROM_N_OFFSET) {
 		// RAM/TIMER enable
 		if (_addr < MBC1_ROM_BANK_NUMBER_SEL_0_4) {
-			ramEnable = (_data & MBC1_RAM_ENABLE_MASK) == MBC1_RAM_ENABLE;
+			ramEnable = (_data & MBC1_RAM_ENABLE_MASK) == MBC1_RAM_ENABLE_BITS;
 
 			if (!ramEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
 				WriteSave();
@@ -489,7 +496,7 @@ u8 MmuSM83_MBC1::Read8Bit(const u16& _addr) {
 #define MBC3_RAM_BANK_MASK				0x0F
 
 // values
-#define MBC3_RAM_ENABLE					0x0A
+#define MBC3_RAM_ENABLE_BITS			0x0A
 
 /* ***********************************************************************************************************
 	CONSTRUCTOR
@@ -506,7 +513,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 		if (_addr < MBC3_ROM_BANK_NUMBER_SELECT) {
 			static bool was_enabled = false;
 
-			timerRamEnable = (_data & MBC3_RAM_ENABLE_MASK) == MBC3_RAM_ENABLE;
+			timerRamEnable = (_data & MBC3_RAM_ENABLE_MASK) == MBC3_RAM_ENABLE_BITS;
 			if (was_enabled && !timerRamEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
 				WriteSave();
 				was_enabled = false;
@@ -672,4 +679,194 @@ u8 MmuSM83_MBC3::ReadClock() {
 
 void MmuSM83_MBC3::WriteClock(const u8& _data) {
 
+}
+
+/* ***********************************************************************************************************
+*
+*		MBC5
+*
+*********************************************************************************************************** */
+
+/* ***********************************************************************************************************
+	MBC5 DEFINES
+*********************************************************************************************************** */
+// addresses
+#define MBC5_RAM_ENABLE					0x0000
+#define MBC5_ROM_BANK_NUMBER_SEL_0_7	0x2000
+#define MBC5_ROM_BANK_NUMBER_SEL_5_6	0x3000
+
+#define MBC5_RAM_BANK_NUMBER			0x4000
+#define MBC5_BANKING_MODE				0x6000
+
+// masks
+#define MBC5_ROM_BANK_MASK_0_7			0xFF
+#define MBC5_ROM_BANK_MASK_8			0x01
+#define MBC5_RAM_ENABLE_MASK			0x0F
+
+// values
+#define MBC5_RAM_ENABLE_BITS			0x0A
+
+/* ***********************************************************************************************************
+	CONSTRUCTOR
+*********************************************************************************************************** */
+MmuSM83_MBC5::MmuSM83_MBC5(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {}
+
+/* ***********************************************************************************************************
+	MEMORY ACCESS
+*********************************************************************************************************** */
+void MmuSM83_MBC5::Write8Bit(const u8& _data, const u16& _addr) {
+	// ROM Bank 0 -> RAM/Timer enable and ROM Bank select
+	if (_addr < ROM_N_OFFSET) {
+		// RAM enable
+		if (_addr < MBC5_ROM_BANK_NUMBER_SEL_0_7) {
+			ramEnable = (_data & MBC5_RAM_ENABLE_MASK) == MBC5_RAM_ENABLE;
+
+			if (!ramEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
+				WriteSave();
+			}
+
+		}
+		// ROM Bank number
+		else if (_addr < MBC5_ROM_BANK_NUMBER_SEL_5_6) {
+			machine_ctx->rom_bank_selected = (machine_ctx->rom_bank_selected & ~MBC5_ROM_BANK_MASK_0_7) | _data;
+			if (machine_ctx->ram_bank_selected == 0) {
+				rom0Mapped = true;
+			} else {
+				rom0Mapped = false;
+				--machine_ctx->ram_bank_selected;
+			}
+		}
+		else {
+			machine_ctx->rom_bank_selected = (machine_ctx->rom_bank_selected & ~MBC5_ROM_BANK_MASK_8) | ((int)_data << 8);
+			if (machine_ctx->ram_bank_selected == 0) {
+				rom0Mapped = true;
+			} else {
+				rom0Mapped = false;
+			}
+			machine_ctx->ram_bank_selected--;
+		}
+	}
+	// ROM Bank 1-n -> RAM Bank select
+	else if (_addr < VRAM_N_OFFSET) {
+		// RAM Bank number
+		if (_addr < MBC5_BANKING_MODE) {
+			if (_data < 0x10) {
+				machine_ctx->ram_bank_selected = _data;
+			}
+		}
+	}
+	// VRAM 0-n
+	else if (_addr < RAM_N_OFFSET) {
+		mem_instance->WriteVRAM_N(_data, _addr);
+	}
+	// RAM 0-n
+	else if (_addr < WRAM_0_OFFSET) {
+		if (machine_ctx->ram_present) {
+			if (ramEnable) {
+				mem_instance->WriteRAM_N(_data, _addr);
+			}
+		} else {
+			LOG_ERROR("[emu] tried to access nonpresent RAM");
+		}
+	}
+	// WRAM 0
+	else if (_addr < WRAM_N_OFFSET) {
+		mem_instance->WriteWRAM_0(_data, _addr);
+	}
+	// WRAM 1-n
+	else if (_addr < MIRROR_WRAM_OFFSET) {
+		mem_instance->WriteWRAM_N(_data, _addr);
+	}
+	// MIRROR WRAM, prohibited
+	else if (_addr < OAM_OFFSET) {
+		return;
+	}
+	// OAM
+	else if (_addr < NOT_USED_MEMORY_OFFSET) {
+		mem_instance->WriteOAM(_data, _addr);
+	}
+	// NOT USED
+	else if (_addr < IO_OFFSET) {
+		return;
+	}
+	// IO REGISTERS
+	else if (_addr < HRAM_OFFSET) {
+		mem_instance->WriteIO(_data, _addr);
+	}
+	// HRAM (stack,...)
+	else if (_addr < IE_OFFSET) {
+		mem_instance->WriteHRAM(_data, _addr);
+	}
+	// IE register
+	else {
+		mem_instance->WriteIE(_data);
+	}
+}
+
+// CGB is little endian: low byte first, high byte second
+void MmuSM83_MBC5::Write16Bit(const u16& _data, const u16& _addr) {
+	Write8Bit(_data & 0xFF, _addr);
+	Write8Bit((_data & 0xFF00) >> 8, _addr + 1);
+}
+
+
+u8 MmuSM83_MBC5::Read8Bit(const u16& _addr) {
+	// ROM Bank 0
+	if (_addr < ROM_N_OFFSET) {
+		return mem_instance->ReadROM_0(_addr);
+	}
+	// ROM Bank 1-n
+	else if (_addr < VRAM_N_OFFSET) {
+		if (rom0Mapped) {
+			return mem_instance->ReadROM_0(_addr - ROM_N_OFFSET);
+		} else {
+			return mem_instance->ReadROM_N(_addr);
+		}
+	}
+	// VRAM 0-n
+	else if (_addr < RAM_N_OFFSET) {
+		return mem_instance->ReadVRAM_N(_addr);
+	}
+	// RAM 0-n
+	else if (_addr < WRAM_0_OFFSET) {
+		if (ramEnable && machine_ctx->ram_present) {
+			return mem_instance->ReadRAM_N(_addr);
+		} else {
+			return 0xFF;
+		}
+	}
+	// WRAM 0
+	else if (_addr < WRAM_N_OFFSET) {
+		return mem_instance->ReadWRAM_0(_addr);
+	}
+	// WRAM 1-n
+	else if (_addr < MIRROR_WRAM_OFFSET) {
+		return mem_instance->ReadWRAM_N(_addr);
+	}
+	// MIRROR WRAM (prohibited)
+	else if (_addr < OAM_OFFSET) {
+		return mem_instance->ReadWRAM_0(_addr);
+	}
+	// OAM
+	else if (_addr < NOT_USED_MEMORY_OFFSET) {
+		return mem_instance->ReadOAM(_addr);
+	}
+	// NOT USED
+	else if (_addr < IO_OFFSET) {
+		return 0x00;
+	}
+	// IO REGISTERS
+	else if (_addr < HRAM_OFFSET) {
+		return mem_instance->ReadIO(_addr);
+	}
+	// HRAM (stack,...)
+	else if (_addr < IE_OFFSET) {
+		return mem_instance->ReadHRAM(_addr);
+	}
+	// IE register
+	else {
+		return mem_instance->ReadIE();
+	}
+
+	return 0xFF;
 }

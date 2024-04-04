@@ -119,11 +119,16 @@ private:
 	// debug instructions
 	int bankSelect = 0;
 	int addrSelect = 0;
-	std::list<bank_index> breakpoints = std::list<bank_index>();
-	std::list<bank_index> breakpointsTmp = std::list<bank_index>();
+	std::vector<bank_index> breakpointsTable = std::vector<bank_index>();
+	std::vector<bank_index> breakpointsTableTmp = std::vector<bank_index>();
+	std::vector<std::pair<int, int>> breakpointsAddr = std::vector<std::pair<int, int>>();
+	std::vector<std::pair<int, int>> breakpointsAddrTmp = std::vector<std::pair<int, int>>();
 	int lastPc = -1;
 	int lastBank = -1;
-	bool pcSetToRam = false;
+	alignas(64) std::atomic<int> currentPc = -1;
+	alignas(64) std::atomic<int> currentBank = -1;
+	alignas(64) std::atomic<bool> pcSetToRam = false;
+	alignas(64) std::atomic<bool> debugInstrAutoscroll = false;
 	bank_index debugInstrCurrentInstrIndex = bank_index(0, 0);
 	const int debugInstrColNum = (int)DEBUG_INSTR_COLUMNS.size();
 	const int debugInstrRegColNum = (int)DEBUG_REGISTER_COLUMNS.size();
@@ -226,7 +231,7 @@ private:
 	// helpers
 	void AddGameGuiCtx(BaseCartridge* _game_ctx);
 	void ReloadGamesGuiCtx();
-	void ActionSetBreakPoint(std::list<bank_index>& _breakpoints, const bank_index& _current_index);
+	void ActionSetBreakPoint(std::vector<bank_index>& _table_breakpoints, const bank_index& _current_index, std::vector<std::pair<int, int>>& _breakpoints, TableBase& _table_obj);
 	void GetBankAndAddressTable(TableBase& _tyble_obj, int& _bank, int& _address);
 	void StartGame(const bool& _restart);
 
@@ -238,5 +243,6 @@ private:
 	void DebugCallback(const int& _pc, const int& _bank);
 	alignas(64) std::atomic<bool> nextInstruction = false;
 	alignas(64) std::atomic<bool> autoRunInstructions = false;
-	std::mutex mutDebugTable;
+	std::mutex mutDebugInstr;
+	std::mutex mutDebugBreakpoints;
 };
