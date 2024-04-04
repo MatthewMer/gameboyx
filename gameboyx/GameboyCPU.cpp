@@ -154,7 +154,9 @@ void GameboyCPU::RunCycles() {
 void GameboyCPU::RunCycle() {
     currentTicks = 0;
 
-    RunCpu();
+    do {
+        RunCpu();
+    } while (machine_ctx->halted);
 
     tickCounter += currentTicks;
 }

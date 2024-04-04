@@ -728,22 +728,14 @@ void MmuSM83_MBC5::Write8Bit(const u8& _data, const u16& _addr) {
 		}
 		// ROM Bank number
 		else if (_addr < MBC5_ROM_BANK_NUMBER_SEL_5_6) {
-			machine_ctx->rom_bank_selected = (machine_ctx->rom_bank_selected & ~MBC5_ROM_BANK_MASK_0_7) | _data;
-			if (machine_ctx->ram_bank_selected == 0) {
-				rom0Mapped = true;
-			} else {
-				rom0Mapped = false;
-				--machine_ctx->ram_bank_selected;
-			}
+			romBankValue = (romBankValue & ~MBC5_ROM_BANK_MASK_0_7) | _data;
+			rom0Mapped = (romBankValue == 0);
+			machine_ctx->rom_bank_selected = romBankValue - 1;
 		}
 		else {
-			machine_ctx->rom_bank_selected = (machine_ctx->rom_bank_selected & ~MBC5_ROM_BANK_MASK_8) | ((int)_data << 8);
-			if (machine_ctx->ram_bank_selected == 0) {
-				rom0Mapped = true;
-			} else {
-				rom0Mapped = false;
-			}
-			machine_ctx->ram_bank_selected--;
+			romBankValue = (romBankValue & ~MBC5_ROM_BANK_MASK_8) | ((int)(_data & MBC5_ROM_BANK_MASK_8) << 8);
+			rom0Mapped = (romBankValue == 0);
+			machine_ctx->rom_bank_selected = romBankValue - 1;
 		}
 	}
 	// ROM Bank 1-n -> RAM Bank select

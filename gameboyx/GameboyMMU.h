@@ -215,5 +215,6 @@ private:
 	bool ramEnable = false;
 	int ramBankMask = 0x00;
 
+	int romBankValue = 0x00;
 	bool rom0Mapped = false;
 };
