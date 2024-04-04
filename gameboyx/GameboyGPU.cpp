@@ -184,14 +184,14 @@ void GameboyGPU::VRAMDMANextBlock() {
 			if (length == 0) {
 				graphicsCtx->vram_dma = false;
 				hdma5 = 0xFF;
-				LOG_ERROR("finish");
+				//LOG_ERROR("finish");
 			} else {
 				source_addr += 0x10;
 				dest_addr += 0x10;
 				--hdma5;
 			}
 
-			LOG_INFO("LY: ", std::format("{:d}", memInstance->GetIO(LY_ADDR)), "; source: ", std::format("0x{:04x}", source_addr), "; dest: ", std::format("0x{:04x}", dest_addr), "; remaining: ", length * 0x10);
+			//LOG_INFO("LY: ", std::format("{:d}", memInstance->GetIO(LY_ADDR)), "; source: ", std::format("0x{:04x}", source_addr), "; dest: ", std::format("0x{:04x}", dest_addr), "; remaining: ", length * 0x10);
 		}
 	}
 }
