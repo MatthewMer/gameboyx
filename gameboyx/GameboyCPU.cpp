@@ -3632,8 +3632,7 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
             instr_tuple* instr_ptr;
 
             // check for default or CB instruction and add opcode to result
-            if (cb)     { instr_ptr = &(instrMapCB[opcode]); } 
-            else        { instr_ptr = &(instrMap[opcode]); }
+            instr_ptr = &(instrMap[opcode]);
             cb = (opcode == 0xCB);
 
             // proccess instruction mnemonic
@@ -3734,6 +3733,16 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
                         break;
                     }
                 }
+
+                if (cb) {
+                    opcode = bank_data[addr];
+                    addr++;
+                    instr_ptr = &(instrMapCB[opcode]);
+
+                    result_string += " " + get<INSTR_MNEMONIC>(*instr_ptr);
+                    result_binary += " " + format("{:02x}", opcode);
+                }
+                
 
                 get<ST_ENTRY_DATA>(current_entry).first = result_binary;
                 get<ST_ENTRY_DATA>(current_entry).second = result_string;

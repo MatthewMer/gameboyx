@@ -469,3 +469,17 @@
     DMA
 *********************************************************************************************************** */
 #define VRAM_DMA_MC_PER_BLOCK           8
+
+/* ***********************************************************************************************************
+    HRADWARE DEFINES (HEADER)
+*********************************************************************************************************** */
+#define RAM_BANK_NUM_0_VAL              0
+#define RAM_BANK_NUM_1_VAL              2
+#define RAM_BANK_NUM_4_VAL              3
+#define RAM_BANK_NUM_8_VAL              5
+#define RAM_BANK_NUM_16_VAL             4
+
+#define RAM_BANK_MASK_0_1               0x00
+#define RAM_BANK_MASK_4                 0x03
+#define RAM_BANK_MASK_8                 0x07
+#define RAM_BANK_MASK_16                0x0F

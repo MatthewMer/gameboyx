@@ -298,14 +298,13 @@ MmuSM83_MBC1::MmuSM83_MBC1(BaseCartridge* _cartridge): GameboyMMU(_cartridge) {
 	switch (machine_ctx->ram_bank_num) {
 	case 0:
 	case 1:
-		ramBankMask = 0x00;
+		ramBankMask = RAM_BANK_MASK_0_1;
 		break;
-	case 2:
-		ramBankMask = 0x01;
-		break;
-	case 3:
 	case 4:
-		ramBankMask = 0x03;
+		ramBankMask = RAM_BANK_MASK_4;
+		break;
+	default:
+		LOG_ERROR("[emu] RAM bank number ", format("{:d}", machine_ctx->ram_bank_num), " unsupported by MBC1");
 		break;
 	}
 
@@ -693,7 +692,7 @@ void MmuSM83_MBC3::WriteClock(const u8& _data) {
 // addresses
 #define MBC5_RAM_ENABLE					0x0000
 #define MBC5_ROM_BANK_NUMBER_SEL_0_7	0x2000
-#define MBC5_ROM_BANK_NUMBER_SEL_5_6	0x3000
+#define MBC5_ROM_BANK_NUMBER_SEL_8		0x3000
 
 #define MBC5_RAM_BANK_NUMBER			0x4000
 #define MBC5_BANKING_MODE				0x6000
@@ -709,7 +708,23 @@ void MmuSM83_MBC3::WriteClock(const u8& _data) {
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-MmuSM83_MBC5::MmuSM83_MBC5(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {}
+MmuSM83_MBC5::MmuSM83_MBC5(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {
+	switch (machine_ctx->ram_bank_num) {
+	case 0:
+	case 1:
+		ramBankMask = RAM_BANK_MASK_0_1;
+		break;
+	case 4:
+		ramBankMask = RAM_BANK_MASK_4;
+		break;
+	case 16:
+		ramBankMask = RAM_BANK_MASK_16;
+		break;
+	default:
+		LOG_ERROR("[emu] RAM bank number ", format("{:d}", machine_ctx->ram_bank_num), " unsupported by MBC5");
+		break;
+	}
+}
 
 /* ***********************************************************************************************************
 	MEMORY ACCESS
@@ -727,7 +742,7 @@ void MmuSM83_MBC5::Write8Bit(const u8& _data, const u16& _addr) {
 
 		}
 		// ROM Bank number
-		else if (_addr < MBC5_ROM_BANK_NUMBER_SEL_5_6) {
+		else if (_addr < MBC5_ROM_BANK_NUMBER_SEL_8) {
 			romBankValue = (romBankValue & ~MBC5_ROM_BANK_MASK_0_7) | _data;
 			rom0Mapped = (romBankValue == 0);
 			machine_ctx->rom_bank_selected = romBankValue - 1;
@@ -743,7 +758,7 @@ void MmuSM83_MBC5::Write8Bit(const u8& _data, const u16& _addr) {
 		// RAM Bank number
 		if (_addr < MBC5_BANKING_MODE) {
 			if (_data < 0x10) {
-				machine_ctx->ram_bank_selected = _data;
+				machine_ctx->ram_bank_selected = _data & ramBankMask;
 			}
 		}
 	}

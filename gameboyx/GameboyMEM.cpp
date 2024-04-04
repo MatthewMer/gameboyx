@@ -168,23 +168,23 @@ bool GameboyMEM::ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) {
     // get ram info
     value = _vec_rom[ROM_HEAD_RAMSIZE];
     switch (value) {
-    case 0x00:
+    case RAM_BANK_NUM_0_VAL:
         machine_ctx.ram_bank_num = 0;
         break;
-    case 0x02:
+    case RAM_BANK_NUM_1_VAL:
         machine_ctx.ram_bank_num = 1;
         break;
-    case 0x03:
+    case RAM_BANK_NUM_4_VAL:
         machine_ctx.ram_bank_num = 4;
         break;
         // not allowed
-    case 0x04:
-        machine_ctx.ram_bank_num = 16;
+    case RAM_BANK_NUM_8_VAL:
+        machine_ctx.ram_bank_num = 8;
         return false;
         break;
         // not allowed
-    case 0x05:
-        machine_ctx.ram_bank_num = 8;
+    case RAM_BANK_NUM_16_VAL:
+        machine_ctx.ram_bank_num = 16;
         return false;
         break;
     default:
