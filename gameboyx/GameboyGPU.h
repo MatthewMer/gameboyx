@@ -19,7 +19,8 @@ public:
 	// members
 	void ProcessGPU(const int& _ticks) override;
 
-	void HBlankDmaNextBlock();
+	void VRAMDMANextBlock();
+	void OAMDMANextBlock();
 
 private:
 	// constructor

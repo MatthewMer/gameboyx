@@ -288,8 +288,7 @@ void GameboyCPU::TickTimers() {
 
     currentTicks += TICKS_PER_MC;
 
-    // peripherals directly bound to CPUs timer system (master clock) (PPU not affected by speed mode)
-    graphics_instance->ProcessGPU(TICKS_PER_MC / machine_ctx->currentSpeed);
+    graphics_instance->ProcessGPU(TICKS_PER_MC);
 }
 
 void GameboyCPU::IncrementTIMA() {

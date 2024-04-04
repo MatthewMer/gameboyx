@@ -597,9 +597,9 @@ const std::vector<u8>* GameboyMEM::GetBank(const MEM_TYPE& _type, const int& _ba
 *********************************************************************************************************** */
 void GameboyMEM::VRAM_DMA(const u8& _data) {
     if (machine_ctx.isCgb) {
-        if (graphics_ctx.dma_hblank) {
+        if (graphics_ctx.vram_dma) {
             //LOG_WARN("HDMA5 while DMA");
-            graphics_ctx.dma_hblank = false;
+            graphics_ctx.vram_dma = false;
             if (!(_data & 0x80)) {
                 IO[CGB_HDMA5_ADDR - IO_OFFSET] = 0x80 | _data;
                 return;
@@ -611,7 +611,7 @@ void GameboyMEM::VRAM_DMA(const u8& _data) {
         u16 source_addr = ((u16)IO[CGB_HDMA1_ADDR - IO_OFFSET] << 8) | (IO[CGB_HDMA2_ADDR - IO_OFFSET] & 0xF0);
         u16 dest_addr = (((u16)(IO[CGB_HDMA3_ADDR - IO_OFFSET] & 0x1F)) << 8) | (IO[CGB_HDMA4_ADDR - IO_OFFSET] & 0xF0);
 
-        graphics_ctx.dma_hblank_ppu_en = graphics_ctx.ppu_enable;
+        graphics_ctx.vram_dma_ppu_en = graphics_ctx.ppu_enable;
 
         GameboyCPU* core_instance = (GameboyCPU*)BaseCPU::getInstance();
 
@@ -620,33 +620,33 @@ void GameboyMEM::VRAM_DMA(const u8& _data) {
             core_instance->TickTimers();
 
             if (source_addr < ROM_N_OFFSET) {
-                graphics_ctx.dma_source_addr = source_addr;
-                graphics_ctx.dma_source_mem = ROM0;
+                graphics_ctx.vram_dma_src_addr = source_addr;
+                graphics_ctx.vram_dma_mem = ROM0;
             } else if (source_addr < VRAM_N_OFFSET) {
-                graphics_ctx.dma_source_addr = source_addr - ROM_N_OFFSET;
-                graphics_ctx.dma_source_mem = ROMn;
+                graphics_ctx.vram_dma_src_addr = source_addr - ROM_N_OFFSET;
+                graphics_ctx.vram_dma_mem = ROMn;
             } else if (source_addr < RAM_N_OFFSET) {
                 LOG_ERROR("[emu] HDMA source address ", std::format("{:04x}", source_addr), " undefined copy");
                 return;
             } else if (source_addr < WRAM_0_OFFSET) {
-                graphics_ctx.dma_source_addr = source_addr - RAM_N_OFFSET;
-                graphics_ctx.dma_source_mem = RAMn;
+                graphics_ctx.vram_dma_src_addr = source_addr - RAM_N_OFFSET;
+                graphics_ctx.vram_dma_mem = RAMn;
             } else if (source_addr < WRAM_N_OFFSET) {
-                graphics_ctx.dma_source_addr = source_addr - WRAM_0_OFFSET;
-                graphics_ctx.dma_source_mem = WRAM0;
+                graphics_ctx.vram_dma_src_addr = source_addr - WRAM_0_OFFSET;
+                graphics_ctx.vram_dma_mem = WRAM0;
             } else if (source_addr < MIRROR_WRAM_OFFSET) {
-                graphics_ctx.dma_source_addr = source_addr - WRAM_N_OFFSET;
-                graphics_ctx.dma_source_mem = WRAMn;
+                graphics_ctx.vram_dma_src_addr = source_addr - WRAM_N_OFFSET;
+                graphics_ctx.vram_dma_mem = WRAMn;
             } else {
-                graphics_ctx.dma_source_addr = source_addr - (RAM_N_OFFSET + 0x4000);
-                graphics_ctx.dma_source_mem = RAMn;
+                graphics_ctx.vram_dma_src_addr = source_addr - (RAM_N_OFFSET + 0x4000);
+                graphics_ctx.vram_dma_mem = RAMn;
             }
 
-            graphics_ctx.dma_dest_addr = dest_addr;
-            graphics_ctx.dma_hblank = true;
+            graphics_ctx.vram_dma_dst_addr = dest_addr;
+            graphics_ctx.vram_dma = true;
 
             if (graphics_ctx.mode == PPU_MODE_0 || !graphics_ctx.ppu_enable) {
-                ((GameboyGPU*)BaseGPU::getInstance())->HBlankDmaNextBlock();
+                ((GameboyGPU*)BaseGPU::getInstance())->VRAMDMANextBlock();
             }
 
             //LOG_WARN("VRAM HBLANK DMA: ", graphics_ctx.dma_length * 0x10);
@@ -683,28 +683,39 @@ void GameboyMEM::VRAM_DMA(const u8& _data) {
 }
 
 void GameboyMEM::OAM_DMA(const u8& _data) {
-    IO[OAM_DMA_ADDR - IO_OFFSET] = _data;
-    u16 source_address = IO[OAM_DMA_ADDR - IO_OFFSET] * 0x100;
+    graphics_ctx.oam_dma = false;
+    
+    GameboyCPU* core_instance = (GameboyCPU*)BaseCPU::getInstance();
+    core_instance->TickTimers();
 
-    if (source_address < ROM_N_OFFSET) {
-        memcpy(graphics_ctx.OAM.data(), &ROM_0[source_address], OAM_DMA_LENGTH);
-    }
-    else if (source_address < VRAM_N_OFFSET) {
-        memcpy(graphics_ctx.OAM.data(), &ROM_N[machine_ctx.rom_bank_selected][source_address - ROM_N_OFFSET], OAM_DMA_LENGTH);
-    }
-    else if (source_address < WRAM_0_OFFSET && source_address > RAM_N_OFFSET - 1) {
-        memcpy(graphics_ctx.OAM.data(), &RAM_N[machine_ctx.ram_bank_selected][source_address - RAM_N_OFFSET], OAM_DMA_LENGTH);
-    }
-    else if (source_address < WRAM_N_OFFSET) {
-        memcpy(graphics_ctx.OAM.data(), &WRAM_0[source_address - WRAM_0_OFFSET], OAM_DMA_LENGTH);
-    }
-    else if (source_address < MIRROR_WRAM_OFFSET) {
-        memcpy(graphics_ctx.OAM.data(), &WRAM_N[machine_ctx.wram_bank_selected][source_address - WRAM_N_OFFSET], OAM_DMA_LENGTH);
-    } else if (source_address < IE_OFFSET && source_address > HRAM_OFFSET - 1) {
-        memcpy(graphics_ctx.OAM.data(), &HRAM[source_address - HRAM_OFFSET] , OAM_DMA_LENGTH);
+    IO[OAM_DMA_ADDR - IO_OFFSET] = _data;
+    u16 source_addr = (u16)IO[OAM_DMA_ADDR - IO_OFFSET] << 8;
+
+    if (source_addr < ROM_N_OFFSET) {
+        graphics_ctx.oam_dma_src_addr = source_addr;
+        graphics_ctx.oam_dma_mem = ROM0;
+    } else if (source_addr < VRAM_N_OFFSET) {
+        graphics_ctx.oam_dma_src_addr = source_addr - ROM_N_OFFSET;
+        graphics_ctx.oam_dma_mem = ROMn;
+    } else if (source_addr < RAM_N_OFFSET) {
+        LOG_ERROR("[emu] OAM DMA source address ", std::format("{:04x}", source_addr), " undefined copy");
+        return;
+    } else if (source_addr < WRAM_0_OFFSET) {
+        graphics_ctx.oam_dma_src_addr = source_addr - RAM_N_OFFSET;
+        graphics_ctx.oam_dma_mem = RAMn;
+    } else if (source_addr < WRAM_N_OFFSET) {
+        graphics_ctx.oam_dma_src_addr = source_addr - WRAM_0_OFFSET;
+        graphics_ctx.oam_dma_mem = WRAM0;
+    } else if (source_addr < MIRROR_WRAM_OFFSET) {
+        graphics_ctx.oam_dma_src_addr = source_addr - WRAM_N_OFFSET;
+        graphics_ctx.oam_dma_mem = WRAMn;
     } else {
         LOG_ERROR("[emu] OAM DMA source address not implemented / allowed");
+        return;
     }
+
+    graphics_ctx.oam_dma = true;
+    graphics_ctx.oam_dma_counter = 0;
 }
 
 /* ***********************************************************************************************************
@@ -876,9 +887,9 @@ void GameboyMEM::SetLCDCValues(const u8& _data) {
         IO[LY_ADDR - IO_OFFSET] = 0x00;
         graphics_ctx.mode = PPU_MODE_2;
 
-        if (graphics_ctx.dma_hblank_ppu_en) {
-            ((GameboyGPU*)BaseGPU::getInstance())->HBlankDmaNextBlock();
-            graphics_ctx.dma_hblank_ppu_en = false;             // needs to be investigated if this is correct, docs state that the block transfer happens when ppu was enabled when hdma started and ppu gets disabled afterwards
+        if (graphics_ctx.vram_dma_ppu_en) {
+            ((GameboyGPU*)BaseGPU::getInstance())->VRAMDMANextBlock();
+            graphics_ctx.vram_dma_ppu_en = false;             // needs to be investigated if this is correct, docs state that the block transfer happens when ppu was enabled when hdma started and ppu gets disabled afterwards
         }
     }
 }

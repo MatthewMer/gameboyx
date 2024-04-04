@@ -321,7 +321,7 @@ void GuiMgr::ShowDebugInstrTable() {
                     lastPc = current_pc;
                     table.SearchAddress(lastPc);
                 } else if (current_pc != lastPc) {
-                    lastPc = currentPc;
+                    lastPc = current_pc;
                     table.SearchAddress(lastPc);
                 }
 

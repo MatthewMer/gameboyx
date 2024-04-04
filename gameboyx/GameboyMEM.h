@@ -140,11 +140,16 @@ struct graphics_context {
 		{CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE, CGB_DMG_COLOR_WHITE}
 	};
 
-	bool dma_hblank = false;
-	u16 dma_source_addr = 0;
-	u16 dma_dest_addr = 0;
-	MEM_TYPE dma_source_mem = ROM0;
-	bool dma_hblank_ppu_en = false;
+	bool vram_dma = false;
+	u16 vram_dma_src_addr = 0;
+	u16 vram_dma_dst_addr = 0;
+	MEM_TYPE vram_dma_mem = ROM0;
+	bool vram_dma_ppu_en = false;
+
+	bool oam_dma = false;
+	u16 oam_dma_src_addr = 0;
+	MEM_TYPE oam_dma_mem = ROM0;
+	int oam_dma_counter = 0;
 };
 
 inline const std::unordered_map<u8, float> VOLUME_MAP = {
