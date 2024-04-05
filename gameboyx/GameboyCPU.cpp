@@ -3608,6 +3608,7 @@ void GameboyCPU::GetInstrDebugFlags(std::vector<reg_entry>& _register_values, st
     _misc_values.emplace_back("SCY", format("{:03d} (dec)", mem_instance->GetIO(SCY_ADDR)));
     _misc_values.emplace_back("WX", format("{:03d} (dec)", mem_instance->GetIO(WX_ADDR)));
     _misc_values.emplace_back("WY", format("{:03d} (dec)", mem_instance->GetIO(WY_ADDR)));
+    _misc_values.emplace_back("Mode", format("{:1d} (dec)", graphics_ctx->mode));
 }
 
 /* ***********************************************************************************************************
@@ -3621,16 +3622,37 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
     auto current_entry = TableEntry<instr_entry>();                // a table entry consists of the address and a pair of two strings (left and right column of debugger)
     u8* bank_data = _bank_data->data();
 
+    std::string info = "";
+
     for (u16 addr = 0; addr < _bank_data->size();) {
         current_entry = TableEntry<instr_entry>();
 
-        if (addr == ROM_HEAD_LOGO && _bank_num == 0) {
-            get<ST_ENTRY_ADDRESS>(current_entry) = addr;
-            get<ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr);
-            get<ST_ENTRY_DATA>(current_entry).second = "- HEADER INFO -";
-            addr = ROM_HEAD_END + 1;
-            _program_buffer.emplace_back(current_entry);
-            current_entry = TableEntry<instr_entry>();
+        if (_bank_num == 0) {
+            switch (addr) {
+            case ISR_VBLANK_HANDLER_ADDR:
+                info = "VBLANK";
+                break;
+            case ISR_LCD_STAT_HANDLER_ADDR:
+                info = "STAT";
+                break;
+            case ISR_TIMER_HANDLER_ADDR:
+                info = "TIMER";
+                break;
+            case ISR_SERIAL_HANDLER_ADDR:
+                info = "SERIAL";
+                break;
+            case ISR_JOYPAD_HANDLER_ADDR:
+                info = "JOYPAD";
+                break;
+            case ROM_HEAD_LOGO:
+                get<ST_ENTRY_ADDRESS>(current_entry) = addr;
+                get<ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr);
+                get<ST_ENTRY_DATA>(current_entry).second = "- HEADER INFO -";
+                addr = ROM_HEAD_END + 1;
+                _program_buffer.emplace_back(current_entry);
+                current_entry = TableEntry<instr_entry>();
+                break;
+            }
         }
 
         // get opcode and set entry address
@@ -3752,9 +3774,15 @@ void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, v
                     result_binary += " " + format("{:02x}", opcode);
                 }
                 
+                if (info.compare("") != 0) {
+                    while (result_string.length() < 20) {
+                        result_string += " ";
+                    }
+                }
 
                 get<ST_ENTRY_DATA>(current_entry).first = result_binary;
-                get<ST_ENTRY_DATA>(current_entry).second = result_string;
+                get<ST_ENTRY_DATA>(current_entry).second = result_string + info;
+                info = "";
             }
         }
 

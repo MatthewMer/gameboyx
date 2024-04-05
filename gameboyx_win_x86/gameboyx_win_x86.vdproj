@@ -87,6 +87,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_9C3E522CD86E45978310A2353D3382AE"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_A686AC5771D3241007FDD0D4F6B818EB"
         "OwnerKey" = "8:_04F06596652B42E3823D09D2E76022EF"
         "MsmSig" = "8:_UNDEFINED"
@@ -131,6 +137,12 @@
         {
         "MsmKey" = "8:_EC9E17DC4B0E96325E9B60FB1F33E3EF"
         "OwnerKey" = "8:_04F06596652B42E3823D09D2E76022EF"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_EDA87E1F67A14E4094CE60D3AD99598E"
+        "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
     }
@@ -445,6 +457,26 @@
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9C3E522CD86E45978310A2353D3382AE"
+            {
+            "SourcePath" = "8:..\\gameboyx\\boot\\cgb_boot.bin"
+            "TargetName" = "8:cgb_boot.bin"
+            "Tag" = "8:"
+            "Folder" = "8:_F3D1D3979E224461974CA665F6376AC9"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_A686AC5771D3241007FDD0D4F6B818EB"
             {
             "SourcePath" = "8:api-ms-win-crt-environment-l1-1-0.dll"
@@ -605,6 +637,26 @@
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_EDA87E1F67A14E4094CE60D3AD99598E"
+            {
+            "SourcePath" = "8:..\\gameboyx\\boot\\dmg_boot.bin"
+            "TargetName" = "8:dmg_boot.bin"
+            "Tag" = "8:"
+            "Folder" = "8:_F3D1D3979E224461974CA665F6376AC9"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
         }
         "FileType"
         {
@@ -639,6 +691,17 @@
                     "Condition" = "8:"
                     "Transitive" = "11:FALSE"
                     "Property" = "8:_60B3EF983CF14CA7B1753551C365A230"
+                        "Folders"
+                        {
+                        }
+                    }
+                    "{9EF0B969-E518-4E46-987F-47570745A589}:_F3D1D3979E224461974CA665F6376AC9"
+                    {
+                    "Name" = "8:boot"
+                    "AlwaysCreate" = "11:FALSE"
+                    "Condition" = "8:"
+                    "Transitive" = "11:FALSE"
+                    "Property" = "8:_26AA298EC378453EB34B8B7D124C067E"
                         "Folders"
                         {
                         }

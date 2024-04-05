@@ -37,17 +37,17 @@ protected:
 	// hardware info and access
 	machine_context* machine_ctx;
 
-	void ReadSave() override {
-		std::string save_file = SAVE_FOLDER + machine_ctx->title + SAVE_EXT;
+	std::string saveFile = "";
 
-		if (check_file_exists(save_file)) {
+	void ReadSave() override {
+		if (check_file_exists(saveFile)) {
 			auto data = std::vector<char>();
 
-			if (read_data(data, save_file)) {
+			if (read_data(data, saveFile)) {
 				mem_instance->CopyDataToRAM(data);
-				LOG_INFO("[emu] loaded from ", save_file);
+				LOG_INFO("[emu] loaded from ", saveFile);
 			} else {
-				LOG_ERROR("[emu] reading save file ", save_file);
+				LOG_ERROR("[emu] reading save file ", saveFile);
 			}
 		} else {
 			LOG_INFO("[emu] no save file found");
@@ -60,12 +60,11 @@ protected:
 				saveThread.join();
 			}
 
-			std::string save_file = SAVE_FOLDER + machine_ctx->title + SAVE_EXT;
-			check_and_create_file(save_file);
+			check_and_create_file(saveFile);
 
 			saveFinished.store(false);
 			saveTimePrev = high_resolution_clock::now();
-			saveThread = std::thread(save_thread, (BaseMMU*)this, save_file);
+			saveThread = std::thread(save_thread, (BaseMMU*)this, saveFile);
 		}
 
 		std::unique_lock<std::mutex> lock_save_time(mutSave);

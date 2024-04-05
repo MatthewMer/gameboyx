@@ -24,7 +24,6 @@ enum MEM_TYPE {
 };
 
 struct machine_context {
-	std::string title = "";
 	bool battery_buffered = false;
 	bool ram_present = false;
 	bool timer_present = false;
@@ -366,7 +365,6 @@ private:
 	// constructor
 	explicit GameboyMEM(BaseCartridge* _cartridge) {
 		InitMemory(_cartridge);
-		machine_ctx.title = _cartridge->title;
 		machine_ctx.battery_buffered = _cartridge->batteryBuffered;
 		machine_ctx.ram_present = _cartridge->ramPresent;
 		machine_ctx.timer_present = _cartridge->timerPresent;

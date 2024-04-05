@@ -127,6 +127,15 @@ GameboyMMU* GameboyMMU::getInstance(BaseCartridge* _cartridge) {
 GameboyMMU::GameboyMMU(BaseCartridge* _cartridge){
 	mem_instance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
 	machine_ctx = mem_instance->GetMachineContext();
+
+	auto file_name = split_string(_cartridge->fileName, ".");
+	saveFile = SAVE_FOLDER;
+
+	for (int i = 0; i < file_name.size() - 1; i++) {
+		saveFile += file_name[i];
+	}
+	saveFile += SAVE_EXT;
+
 	if (machine_ctx->battery_buffered && machine_ctx->ram_present) {
 		ReadSave();
 	}

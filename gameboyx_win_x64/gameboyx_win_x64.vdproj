@@ -99,6 +99,18 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_B18175D1338F4D01A35F2FFA7836B198"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_BCAC80B3419D474590A49E58768551C1"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_BEC93F482E196224E9CE16C6728E8547"
         "OwnerKey" = "8:_EEFD6A6E12D64C44BA5B585E9C908D89"
         "MsmSig" = "8:_UNDEFINED"
@@ -505,6 +517,46 @@
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_B18175D1338F4D01A35F2FFA7836B198"
+            {
+            "SourcePath" = "8:..\\gameboyx\\boot\\cgb_boot.bin"
+            "TargetName" = "8:cgb_boot.bin"
+            "Tag" = "8:"
+            "Folder" = "8:_369EDC381CBA4D8B9CCC1B26059800D1"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_BCAC80B3419D474590A49E58768551C1"
+            {
+            "SourcePath" = "8:..\\gameboyx\\boot\\dmg_boot.bin"
+            "TargetName" = "8:dmg_boot.bin"
+            "Tag" = "8:"
+            "Folder" = "8:_369EDC381CBA4D8B9CCC1B26059800D1"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_BEC93F482E196224E9CE16C6728E8547"
             {
             "SourcePath" = "8:api-ms-win-crt-math-l1-1-0.dll"
@@ -742,6 +794,17 @@
                         {
                         }
                     }
+                    "{9EF0B969-E518-4E46-987F-47570745A589}:_369EDC381CBA4D8B9CCC1B26059800D1"
+                    {
+                    "Name" = "8:boot"
+                    "AlwaysCreate" = "11:FALSE"
+                    "Condition" = "8:"
+                    "Transitive" = "11:FALSE"
+                    "Property" = "8:_2D0F5EBC277441AF8CDD36EC7419B2B1"
+                        "Folders"
+                        {
+                        }
+                    }
                     "{9EF0B969-E518-4E46-987F-47570745A589}:_61BAD22A9059455DA6700776A73F5533"
                     {
                     "Name" = "8:icon"
@@ -772,7 +835,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:GameboyX"
         "ProductCode" = "8:{17339D97-78B4-45E2-BB3F-19C3A042F5E7}"
-        "PackageCode" = "8:{5A19ADB8-DECC-4D27-B643-5C99B09B3838}"
+        "PackageCode" = "8:{EFE0A161-4971-47D8-A038-5823112ADEC0}"
         "UpgradeCode" = "8:{C302A6FE-7BAB-4C63-9FC1-E243066B4D0A}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"

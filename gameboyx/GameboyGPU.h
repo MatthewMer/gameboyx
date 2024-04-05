@@ -22,6 +22,8 @@ public:
 	void VRAMDMANextBlock();
 	void OAMDMANextBlock();
 
+	void SetMode(const int& _mode);
+
 private:
 	// constructor
 	GameboyGPU(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings) {

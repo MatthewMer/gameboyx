@@ -109,10 +109,7 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 void GameboyGPU::EnterMode2() {
 	memset(objPrio1DMG, false, PPU_SCREEN_X);
 
-	u8& stat = memInstance->GetIO(STAT_ADDR);
-
-	graphicsCtx->mode = PPU_MODE_2;
-	SET_MODE(stat, PPU_MODE_2);
+	SetMode(PPU_MODE_2);
 
 	modeTickCounter = 0;
 	oamOffset = 0;
@@ -122,11 +119,9 @@ void GameboyGPU::EnterMode2() {
 }
 
 void GameboyGPU::EnterMode3() {
-	u8& stat = memInstance->GetIO(STAT_ADDR);
 	u8& ly = memInstance->GetIO(LY_ADDR);
 
-	graphicsCtx->mode = PPU_MODE_3;
-	SET_MODE(stat, PPU_MODE_3);
+	SetMode(PPU_MODE_3);
 
 	//mode3scxPause = memInstance->GetIO(SCX_ADDR) % 8;
 
@@ -134,12 +129,24 @@ void GameboyGPU::EnterMode3() {
 }
 
 void GameboyGPU::EnterMode0() {
-	u8& stat = memInstance->GetIO(STAT_ADDR);
-
-	graphicsCtx->mode = PPU_MODE_0;
-	SET_MODE(stat, PPU_MODE_0);
+	SetMode(PPU_MODE_0);
 
 	VRAMDMANextBlock();
+}
+
+void GameboyGPU::EnterMode1() {
+	SetMode(PPU_MODE_1);
+
+	memInstance->RequestInterrupts(IRQ_VBLANK);
+
+	drawWindow = false;
+}
+
+void GameboyGPU::SetMode(const int& _mode) {
+	u8& stat = memInstance->GetIO(STAT_ADDR);
+
+	graphicsCtx->mode = _mode;
+	SET_MODE(stat, _mode);
 }
 
 void GameboyGPU::VRAMDMANextBlock() {
@@ -236,17 +243,6 @@ void GameboyGPU::OAMDMANextBlock() {
 			//LOG_INFO("OAM Addr.", format("{:04x}", source_addr), "; Index ", format("{:d}", counter));
 		}
 	}
-}
-
-void GameboyGPU::EnterMode1() {
-	u8& stat = memInstance->GetIO(STAT_ADDR);
-
-	graphicsCtx->mode = PPU_MODE_1;
-	SET_MODE(stat, PPU_MODE_1);
-
-	memInstance->RequestInterrupts(IRQ_VBLANK);
-
-	drawWindow = false;
 }
 
 void GameboyGPU::DrawScanlineDMG(const u8& _ly) {

@@ -214,7 +214,7 @@ u8 GameboyMEM::ReadROM_N(const u16& _addr) {
 }
 
 u8 GameboyMEM::ReadVRAM_N(const u16& _addr) {
-    if (graphics_ctx.mode == PPU_MODE_3) {
+    if (graphics_ctx.ppu_enable && graphics_ctx.mode == PPU_MODE_3) {
         return 0xFF;
     } else {
         return graphics_ctx.VRAM_N[IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET]][_addr - VRAM_N_OFFSET];
@@ -234,7 +234,7 @@ u8 GameboyMEM::ReadWRAM_N(const u16& _addr) {
 }
 
 u8 GameboyMEM::ReadOAM(const u16& _addr) {
-    if (graphics_ctx.mode == PPU_MODE_3 || graphics_ctx.mode == PPU_MODE_2) {
+    if (graphics_ctx.ppu_enable && (graphics_ctx.mode == PPU_MODE_3 || graphics_ctx.mode == PPU_MODE_2)) {
         return 0xFF;
     } else {
         return graphics_ctx.OAM[_addr - OAM_OFFSET];
@@ -255,7 +255,7 @@ u8 GameboyMEM::ReadIE() {
 
 // write *****
 void GameboyMEM::WriteVRAM_N(const u8& _data, const u16& _addr) {
-    if (graphics_ctx.mode == PPU_MODE_3) {
+    if (graphics_ctx.ppu_enable && graphics_ctx.mode == PPU_MODE_3) {
         return;
     } else {
         graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][_addr - VRAM_N_OFFSET] = _data;
@@ -275,7 +275,7 @@ void GameboyMEM::WriteWRAM_N(const u8& _data, const u16& _addr) {
 }
 
 void GameboyMEM::WriteOAM(const u8& _data, const u16& _addr) {
-    if (graphics_ctx.mode == PPU_MODE_3 || graphics_ctx.mode == PPU_MODE_2) {
+    if (graphics_ctx.ppu_enable && (graphics_ctx.mode == PPU_MODE_3 || graphics_ctx.mode == PPU_MODE_2)) {
         return;
     } else {
         graphics_ctx.OAM[_addr - OAM_OFFSET] = _data;
@@ -885,10 +885,13 @@ void GameboyMEM::SetLCDCValues(const u8& _data) {
     } else {
         graphics_ctx.ppu_enable = false;
         IO[LY_ADDR - IO_OFFSET] = 0x00;
-        graphics_ctx.mode = PPU_MODE_2;
+
+        GameboyGPU* graphics_instance = (GameboyGPU*)BaseGPU::getInstance();
+
+        graphics_instance->SetMode(PPU_MODE_2);
 
         if (graphics_ctx.vram_dma_ppu_en) {
-            ((GameboyGPU*)BaseGPU::getInstance())->VRAMDMANextBlock();
+            graphics_instance->VRAMDMANextBlock();
             graphics_ctx.vram_dma_ppu_en = false;             // needs to be investigated if this is correct, docs state that the block transfer happens when ppu was enabled when hdma started and ppu gets disabled afterwards
         }
     }
@@ -971,7 +974,7 @@ void GameboyMEM::SetColorPaletteValues(const u8& _data, u32* _color_palette) {
 void GameboyMEM::SetBGWINPaletteValues(const u8& _data) {
     u8 addr = IO[BCPS_BGPI_ADDR - IO_OFFSET] & 0x3F;
 
-    if (graphics_ctx.mode != PPU_MODE_3) {
+    if (!graphics_ctx.ppu_enable || graphics_ctx.mode != PPU_MODE_3) {
         graphics_ctx.cgb_bgp_palette_ram[addr] = _data;
 
         // set new palette value
@@ -1003,7 +1006,7 @@ void GameboyMEM::SetBGWINPaletteValues(const u8& _data) {
 void GameboyMEM::SetOBJPaletteValues(const u8& _data) {
     u8 addr = IO[OCPS_OBPI_ADDR - IO_OFFSET] & 0x3F;
 
-    if (graphics_ctx.mode != PPU_MODE_3) {        
+    if (!graphics_ctx.ppu_enable || graphics_ctx.mode != PPU_MODE_3) {
         graphics_ctx.cgb_obp_palette_ram[addr] = _data;
 
         // set new palette value
