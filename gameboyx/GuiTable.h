@@ -234,7 +234,8 @@ template <class T> void Table<T>::SearchBank(int& _bank) {
 }
 
 template <class T> void Table<T>::SearchAddress(int& _addr) {
-    TableSection<T>& current_bank = tableSections[startIndex.bank];
+    bank_index current_index = GetCurrentIndexCentre();
+    TableSection<T>& current_bank = tableSections[current_index.bank];
 
     int first_address = get<ST_ENTRY_ADDRESS>(current_bank.front());
     int last_address = get<ST_ENTRY_ADDRESS>(current_bank.back());
@@ -251,9 +252,8 @@ template <class T> void Table<T>::SearchAddress(int& _addr) {
         }
     }
 
-    int index = i - visibleElements / 2;
-    if (index < startIndex.index) { ScrollUp(startIndex.index - index); }
-    else if (index > startIndex.index) { ScrollDown(index - startIndex.index); }
+    if (i < current_index.index) { ScrollUp(current_index.index - i); }
+    else if (i > current_index.index) { ScrollDown(i - current_index.index); }
 
     indexIterator = startIndex;
 }
@@ -290,15 +290,15 @@ template <class T> bank_index& Table<T>::GetCurrentIndex() {
 
 template <class T> bank_index Table<T>::GetCurrentIndexCentre() {
     if (size > 0) {
-        size_t n = (size_t)currentlyVisibleElements / 2;
-        size_t m = tableSections[startIndex.bank].size() - (size_t)startIndex.index;
+        int n = currentlyVisibleElements / 2;
+        int m = (int)tableSections[startIndex.bank].size() - startIndex.index;
         int bank = startIndex.bank;
-        while (m < n) {
+        while (m <= n) {
             bank++;
-            m += tableSections[bank].size();
+            m += (int)tableSections[bank].size();
         }
 
-        int index = ((int)(n - (m - tableSections[bank].size())));
+        int index = ((int)(n - (m - (int)tableSections[bank].size())));
         return bank_index(bank, index);
     }
     else {
@@ -313,7 +313,8 @@ template <class T> int& Table<T>::GetAddressByIndex(const bank_index& _index) {
 
 // search correcponding index(bank,index) by address in current table section
 template <class T> bank_index Table<T>::GetIndexByAddress(const int& _address) {
-    TableSection<T>& current_bank = tableSections[startIndex.bank];
+    bank_index current_index = GetCurrentIndexCentre();
+    TableSection<T>& current_bank = tableSections[current_index.bank];
 
     int first_address = get<ST_ENTRY_ADDRESS>(current_bank.front());
     int last_address = get<ST_ENTRY_ADDRESS>(current_bank.back());
@@ -331,5 +332,5 @@ template <class T> bank_index Table<T>::GetIndexByAddress(const int& _address) {
         }
     }
 
-    return bank_index(startIndex.bank, i);
+    return bank_index(current_index.bank, i);
 }

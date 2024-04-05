@@ -309,8 +309,6 @@ void GuiMgr::ShowDebugInstrTable() {
 
             auto& table = (pc_set_to_ram ? debugInstrTableTmp : debugInstrTable);
 
-            CheckScroll(DEBUG_INSTR, table);
-
             if (debugInstrAutoscroll.load()) {
                 int current_pc = currentPc.load();
                 int current_bank = currentBank.load();
@@ -326,6 +324,9 @@ void GuiMgr::ShowDebugInstrTable() {
                 }
 
                 debugInstrCurrentInstrIndex = table.GetIndexByAddress(lastPc);
+                debugInstrAutoscroll.store(false);
+            } else {
+                CheckScroll(DEBUG_INSTR, table);
             }
             
             GetBankAndAddressTable(table, bankSelect, addrSelect);

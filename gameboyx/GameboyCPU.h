@@ -155,6 +155,7 @@ private:
 
 	// cpu states and checks
 	bool was_halted = false;
+	bool imeEnable = false;
 	bool ime = false;
 
 	bool timaEnAndDivOverflowPrev = false;

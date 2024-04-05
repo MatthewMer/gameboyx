@@ -156,6 +156,7 @@ void GameboyCPU::RunCycle() {
 
     do {
         RunCpu();
+        if ((currentTicks > (ticksPerFrame * machine_ctx->currentSpeed))) { break; }
     } while (machine_ctx->halted);
 
     tickCounter += currentTicks;
@@ -185,6 +186,8 @@ void GameboyCPU::RunCpu() {
 }
 
 void GameboyCPU::ExecuteInstruction() {
+    bool ime_enable = imeEnable;
+
     curPC = Regs.PC;
     FetchOpCode();
 
@@ -198,6 +201,11 @@ void GameboyCPU::ExecuteInstruction() {
 
     functionPtr = get<INSTR_FUNC>(*instrPtr);
     (this->*functionPtr)();
+
+    if (ime_enable) {
+        ime = true;
+        imeEnable = false;
+    }
 }
 
 bool GameboyCPU::CheckInterrupts() {
@@ -803,7 +811,8 @@ void GameboyCPU::DI() {
 
 // eneable interrupts
 void GameboyCPU::EI() {
-    ime = true;
+    // gets enabled with with 1 cycle delay -> execute one more instruction
+    imeEnable = true;
 }
 
 // enable CB sm83_instructions for next opcode
