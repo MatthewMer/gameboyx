@@ -131,8 +131,10 @@ GameboyMMU::GameboyMMU(BaseCartridge* _cartridge){
 	auto file_name = split_string(_cartridge->fileName, ".");
 	saveFile = SAVE_FOLDER;
 
-	for (int i = 0; i < file_name.size() - 1; i++) {
+	int j = file_name.size() - 1;
+	for (int i = 0; i < j; i++) {
 		saveFile += file_name[i];
+		if (i < j - 1) { saveFile += "."; }
 	}
 	saveFile += SAVE_EXT;
 
@@ -257,7 +259,7 @@ u8 MmuSM83_ROM::Read8Bit(const u16& _addr) {
 	}
 	// NOT USED
 	else if (_addr < IO_OFFSET) {
-		return 0x00;
+		return 0xFF;
 	}
 	// IO REGISTERS
 	else if (_addr < HRAM_OFFSET) {

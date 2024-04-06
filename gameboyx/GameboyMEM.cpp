@@ -788,9 +788,9 @@ void GameboyMEM::SetControlValues(const u8& _data) {
             }
         }
 
-        IO[JOYP_ADDR - IO_OFFSET] = data;
+        IO[JOYP_ADDR - IO_OFFSET] = data | 0xC0;
     } else {
-        IO[JOYP_ADDR - IO_OFFSET] = (_data & JOYP_SELECT_MASK) | JOYP_RESET_BUTTONS;
+        IO[JOYP_ADDR - IO_OFFSET] = ((_data & JOYP_SELECT_MASK) | JOYP_RESET_BUTTONS) | 0xC0;
     }
 }
 

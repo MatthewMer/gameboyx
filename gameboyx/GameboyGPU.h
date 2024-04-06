@@ -44,8 +44,10 @@ private:
 
 		if (machineCtx->isCgb) {
 			DrawScanline = &GameboyGPU::DrawScanlineCGB;
+			SearchOam = &GameboyGPU::SearchOAMCGB;
 		} else {
 			DrawScanline = &GameboyGPU::DrawScanlineDMG;
+			SearchOam = &GameboyGPU::SearchOAMDMG;
 		}
 
 		coreInstance = (GameboyCPU*)BaseCPU::getInstance(_cartridge);
@@ -69,41 +71,39 @@ private:
 	void EnterMode0();
 	void EnterMode1();
 
-	typedef void (GameboyGPU::* scanline_draw_function)(const u8& _ly);
-	scanline_draw_function DrawScanline;
+	typedef void (GameboyGPU::* ppu_function)(const u8& _ly);
+	ppu_function DrawScanline;
+	ppu_function SearchOam;
 	void DrawScanlineDMG(const u8& _ly);
 	void DrawScanlineCGB(const u8& _ly);
 
 	void DrawBackgroundDMG(const u8& _ly);
 	void DrawWindowDMG(const u8& _ly);
-	void DrawObjectsDMG(const u8& _ly, const int* _objects, const int& _num_objects, const bool& _prio);
+	void DrawObjectsDMG(const u8& _ly, const int* _objects, const int& _num_objects, const bool& _no_prio);
 
-	void DrawTileOBJDMG(const int& _x, const int& _y, const u32* _color_palette, const bool& _prio, const bool& _x_flip);
+	void DrawTileOBJ(const int& _x, const int& _y, const u32* _color_palette, const bool& _no_prio, const bool& _x_flip);
 	void DrawTileBGWINDMG(const int& _x, const int& _y, const u32* _color_palette);
 
 	void DrawBackgroundCGB(const u8& _ly);
 	void DrawWindowCGB(const u8& _ly);
-	void DrawObjectsCGB(const u8& _ly, const int* _objects, const int& _num_objects, const bool& _prio);
+	void DrawObjectsCGB(const u8& _ly, const int* _objects, const int& _num_objects, const bool& _no_prio);
 
-	void DrawTileBGWINCGB(const int& _x, const int& _y, const u32* _color_palette, const bool& _x_flip);
+	void DrawTileBGWINCGB(const int& _x, const int& _y, const u32* _color_palette, const bool& _x_flip, const bool& _prio);
 
-	int OAMPrio1DMG[10];
-	int numOAMEntriesPrio1DMG = 0;
-	bool objPrio1DMG[PPU_SCREEN_X];
-	int OAMPrio0DMG[10];
-	int numOAMEntriesPrio0DMG = 0;
+	int OAMPrio0[10];
+	int numOAMPrio0 = 0;
+	bool objNoPrio[PPU_SCREEN_X];
+	int OAMPrio1[10];
+	int numOAMPrio1 = 0;
+	bool bgwinPrio[PPU_SCREEN_X];
 
-	int modeTickCounter = 0;
-	int modeTickTarget = 0;
 	int oamOffset = 0;
 
 	bool statSignal = false;
 	bool statSignalPrev = false;
 
-	int mode3scxPause = 0;
-	bool mode3scxPauseEn = false;
-
-	void SearchOAM(const u8& _ly);
+	void SearchOAMDMG(const u8& _ly);
+	void SearchOAMCGB(const u8& _ly);
 	void FetchTileDataOBJ(u8& _tile_offset, const int& _tile_sub_offset, const int& _bank);
 
 	void FetchTileDataBGWIN(u8& _tile_offset, const int& _tile_sub_offset, const int& _bank);

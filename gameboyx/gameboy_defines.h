@@ -218,7 +218,7 @@ inline const std::string CGB_BOOT_ROM = "cgb_boot.bin";
 /* ***********************************************************************************************************
     CONTROL DEFINES
 *********************************************************************************************************** */
-#define JOYP_SELECT_MASK                0xF0
+#define JOYP_SELECT_MASK                0x30
 #define JOYP_BUTTON_MASK                0x0F
 
 #define JOYP_SELECT_BUTTONS             0x20
@@ -333,6 +333,9 @@ inline const std::string CGB_BOOT_ROM = "cgb_boot.bin";
 #define PPU_DOTS_PER_SCANLINE           (PPU_DOTS_PER_FRAME / LCD_SCANLINES_TOTAL)
 #define PPU_DOTS_MODE_2                 80
 #define PPU_DOTS_PER_OAM_ENTRY          2
+#define PPU_DOTS_MODE_2_3               376
+#define PPU_DOTS_MODE_3_MIN             174     // 160 pixels + 6 clocks fill shift registers + 8 clocks shift out 8 pixels while fetching again
+#define PPU_OBJ_TILE_FETCH_TICKS        6
 
 #define PPU_CGB_PALETTE_INDEX_INC       0x80
 #define PPU_CGB_RED                     0x001F
