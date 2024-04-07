@@ -181,14 +181,22 @@ void HardwareMgr::ProcessTimedEvents() {
 	// process mouse
 	if (!controlSettings.mouse_always_visible) {
 		static int x, y;
+		static bool visible = true;
 
 		if (controlMgr->CheckMouseMove(x, y)) {
-			currentMouseMove = 0;
+			if (!visible) {
+				controlMgr->SetMouseVisible(true);
+				visible = true;
+			}
 		} else {
 			if (currentMouseMove < HWMGR_SECOND) {
 				currentMouseMove += time_diff;
 			} else {
-				controlMgr->DisableMouse();
+				if (visible) {
+					controlMgr->SetMouseVisible(false);
+					currentMouseMove = 0;
+					visible = false;
+				}
 			}
 		}
 	}
@@ -233,4 +241,7 @@ void HardwareMgr::GetAudioSettings(audio_settings& _audio_settings) {
 
 void HardwareMgr::SetMouseAlwaysVisible(const bool& _visible) {
 	controlSettings.mouse_always_visible = _visible;
+	if (_visible) {
+		controlMgr->SetMouseVisible(true);
+	}
 }

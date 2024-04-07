@@ -1,9 +1,15 @@
 #include "ControlMgr.h"
 
-#include "imgui_impl_sdl2.h"
 #include "general_config.h"
 #include "logger.h"
 #include <format>
+
+enum gamepad_data {
+	GP_DEVICE_INDEX,
+	GP_DEVICE_NAME,
+	GP_GUID,
+	GP_USED
+};
 
 ControlMgr* ControlMgr::instance = nullptr;
 
@@ -23,28 +29,12 @@ void ControlMgr::resetInstance() {
 }
 
 void ControlMgr::InitControl(control_settings& _control_settings) {
+	// mouse cursor
+	io.ConfigFlags |= (ImGuiConfigFlags_NoMouseCursorChange & ~ImGuiConfigFlags_NavEnableGamepad);
+
 	// init controller DB
 	controllerDatabase = CONTROL_FOLDER + CONTROL_DB;
 	SDL_GameControllerAddMappingsFromFile(controllerDatabase.c_str());
-
-	/*
-	// setup gamepad
-	int count = SDL_NumJoysticks();
-	LOG_INFO("[SDL] gamepads detected: ", count);
-	for (int i = 0; i < count; i++) {
-		LOG_INFO("[SDL] ", i, ": ", SDL_JoystickNameForIndex(i));
-	}
-	if (count > 0) {
-		gamepad = SDL_Game(0);
-		guid = SDL_JoystickGetGUID(gamepad);
-
-		char c_guid[33];
-		SDL_GUIDToString(guid, c_guid, 33);
-		sGuid = std::string(c_guid);
-
-		LOG_INFO("[SDL] selected 0: ", SDL_JoystickNameForIndex(0), " - GUID: ", sGuid);
-	}
-	*/
 }
 
 void ControlMgr::ProcessEvents(bool& _running, SDL_Window* _window) {
@@ -102,49 +92,163 @@ bool ControlMgr::CheckMouseMove(int& _x, int& _y) {
 	}
 }
 
-void ControlMgr::DisableMouse() {
-	ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-
-	if (ImGuiMouseCursor have = ImGui::GetMouseCursor(); have != ImGuiMouseCursor_None) {
-		std::string result;
-		switch (have) {
-		case ImGuiMouseCursor_Arrow:
-			result = "enabled";
-			break;
-		case ImGuiMouseCursor_None:
-			result = "disabled";
-			break;
-		}
-
-		LOG_ERROR("[SDL] set cursor state: ", result);
-	}
+void ControlMgr::SetMouseVisible(const bool& _visible) {
+	SDL_ShowCursor(_visible ? SDL_ENABLE : SDL_DISABLE);
 }
 
 void ControlMgr::OnGamepadConnect(SDL_ControllerDeviceEvent& e) {
 	int device_index = e.which;
-
-	if (!connected && SDL_IsGameController(device_index)) {
-		gamepad = SDL_GameControllerOpen(device_index);
-
-		SDL_Joystick* joystick = SDL_GameControllerGetJoystick(gamepad);
-		guid = SDL_JoystickGetGUID(joystick);
-
-		char c_guid[33];
-		SDL_GUIDToString(guid, c_guid, 33);
-		LOG_INFO("[SDL] gamepad connected: ", SDL_JoystickNameForIndex(device_index), " - GUID: {", c_guid, "}");
-
-		connected = true;
-	} else {
-		LOG_ERROR("[SDL] gamepad not recognized");
-	}
+	AddController(device_index);
 }
 
 void ControlMgr::OnGamepadDisconnect(SDL_ControllerDeviceEvent& e) {
-	int device_index = e.which;
+	Sint32 instance_id = e.which;
+	RemoveController(instance_id);
+}
 
-	if (connected) {
-		SDL_GameControllerClose(gamepad);
-	} else {
-		LOG_ERROR("[SDL] gamepad not recognized");
+void ControlMgr::AddController(const int& _device_index) {
+	if (SDL_IsGameController(_device_index)) {
+		SDL_GameController* gamepad;
+		SDL_JoystickID id;
+		std::string name;
+		SDL_JoystickGUID guid;
+		std::string s_guid;
+
+		gamepad = SDL_GameControllerOpen(_device_index);
+		id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(gamepad));
+
+		name = std::string(SDL_JoystickNameForIndex(_device_index));
+
+		guid = SDL_JoystickGetGUID(SDL_GameControllerGetJoystick(gamepad));
+		char c_guid[33];
+		SDL_GUIDToString(guid, c_guid, 33);
+		s_guid = std::string(c_guid);
+
+		bool used = false;
+		int i = 0;
+		for (auto& n : connectedGamepads) {
+			if (!n.has_controller) {
+				n.instance_id = id;
+				n.gamepad = gamepad;
+				n.mapping = SDL_GameControllerMappingForGUID(guid);
+				n.has_controller = true;
+
+				used = true;
+				break;
+			}
+			i++;
+		}
+
+		availableGamepads[id] = { _device_index, name , guid, used };
+
+		if (used) {
+			LOG_INFO("[SDL] gamepad connected for player ", i + 1, " (instance ", id, "; index ", _device_index, "): ", name, " - GUID: {", s_guid, "}");
+		} else {
+			LOG_INFO("[SDL] gamepad added (instance ", id, "; index ", _device_index, "): ", name, " - GUID: {", s_guid, "}");
+			SDL_GameControllerClose(gamepad);
+		}
+
 	}
+
+		/*
+		bool found = false;
+		for (auto it = gamepads.begin(); it != gamepads.end(); it++) {
+			if (get<GP_DEVICE_INDEX>(it->second) == _device_index) {
+				found = true;
+			}
+		}
+
+		if (!found) {
+			SDL_GameController* gamepad;
+			SDL_JoystickGUID guid;
+			SDL_JoystickID id;
+			std::string s_guid;
+
+			gamepad = SDL_GameControllerOpen(_device_index);
+
+			SDL_Joystick* joystick = SDL_GameControllerGetJoystick(gamepad);
+			guid = SDL_JoystickGetGUID(joystick);
+			id = SDL_JoystickInstanceID(joystick);
+
+			char c_guid[33];
+			SDL_GUIDToString(guid, c_guid, 33);
+			s_guid = std::string(c_guid);
+
+			std::string name = std::string(SDL_JoystickNameForIndex(_device_index));
+
+			char* mapping = SDL_GameControllerMappingForGUID(guid);
+			if (mapping == nullptr) {
+				SDL_GameControllerClose(gamepad);
+				const char* res = SDL_GetError();
+				LOG_ERROR("[SDL] no mapping found for gamepad (", _device_index, "): ", res);
+				return;
+			}
+
+			gamepads[id] = std::tuple(_device_index, gamepad, guid, mapping, name);
+
+			LOG_INFO("[SDL] gamepad connected (", _device_index, "): ", get<GP_DEVICE_NAME>(gamepads[_device_index]), " - GUID: {", s_guid, "}");
+		} else {
+			LOG_WARN("[SDL] gamepad already added");
+		}
+		*/
+}
+
+void ControlMgr::RemoveController(const Sint32& _instance_id) {
+	if (auto it = availableGamepads.find(_instance_id); it != availableGamepads.end()) {
+
+		int i = 0;
+		bool used = false;
+		if (get<GP_USED>(it->second)) {
+			
+			for (auto& n : connectedGamepads) {
+				if (n.has_controller && n.instance_id == _instance_id) {
+					SDL_GameControllerClose(n.gamepad);
+					n.has_controller = false;
+					used = true;
+					break;
+				}
+				i++;
+			}
+		}
+
+		Sint32 instance_id = it->first;
+		int device_index = get<GP_DEVICE_INDEX>(it->second);
+		std::string name = get<GP_DEVICE_NAME>(it->second);
+		SDL_JoystickGUID guid = get<GP_GUID>(it->second);
+
+		char c_guid[33];
+		SDL_GUIDToString(guid, c_guid, 33);
+		std::string s_guid = std::string(c_guid);
+			
+		availableGamepads.erase(_instance_id);
+
+		if (used) {
+			LOG_INFO("[SDL] gamepad disconnected for player ", i + 1, " (instance ", instance_id, "; index ", device_index, "): ", name, " - GUID: {", s_guid, "}");
+		} else {
+			LOG_INFO("[SDL] gamepad removed (instance ", instance_id, "; index ", device_index, "): ", name, " - GUID: {", s_guid, "}");
+		}
+	}
+
+
+	/*
+	for (auto it = gamepads.begin(); it != gamepads.end(); it++) {
+		if (get<GP_DEVICE_INDEX>(it->second) == _device_index) {
+			SDL_GameControllerClose(get<GP_GAMEPAD>(it->second));
+
+			std::string name = get<GP_DEVICE_NAME>(it->second);
+
+			char c_guid[33];
+			SDL_GUIDToString(get<GP_GUID>(it->second), c_guid, 33);
+			std::string s_guid = std::string(c_guid);
+
+			SDL_free(get<GP_MAPPING>(it->second));
+
+			SDL_JoystickID id = it->first;
+			gamepads.erase(id);
+
+			LOG_INFO("[SDL] gamepad disconnected (", _device_index, "): ", name, " - GUID: {", s_guid, "}");
+			return;
+		}
+	}
+	*/
 }

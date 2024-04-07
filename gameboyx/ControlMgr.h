@@ -1,8 +1,23 @@
 #pragma once
 
 #include "HardwareStructs.h"
+
 #include <queue>
+#include <tuple>
+#include <map>
+#include <array>
+
 #include "SDL.h"
+#include "imgui_impl_sdl2.h"
+
+struct controller_data{
+	bool has_controller = false;
+
+	SDL_JoystickID instance_id = 0;
+	SDL_GameController* gamepad = nullptr;
+	char* mapping = nullptr;
+	SDL_JoystickGUID guid = {};
+};
 
 class ControlMgr {
 public:
@@ -22,7 +37,7 @@ public:
 	std::queue<std::pair<SDL_Keycode, SDL_EventType>>& GetKeys();
 	Sint32 GetScroll();
 	bool CheckMouseMove(int& _x, int& _y);
-	void DisableMouse();
+	void SetMouseVisible(const bool& _visible);
 
 protected:
 	// constructor
@@ -41,13 +56,15 @@ private:
 	int mouseMoveX = 0;
 	int mouseMoveY = 0;
 
-	SDL_GameController* gamepad;
-	SDL_JoystickGUID guid;
-	std::string sGuid;
-
-	bool connected = false;
+	ImGuiIO& io = ImGui::GetIO();
 
 	void OnGamepadConnect(SDL_ControllerDeviceEvent& e);
 	void OnGamepadDisconnect(SDL_ControllerDeviceEvent& e);
-};
 
+	void AddController(const int& _device_index);
+	void RemoveController(const Sint32& _instance_id);
+
+	std::array<controller_data, 1> connectedGamepads;
+
+	std::map<SDL_JoystickID, std::tuple<int, std::string, SDL_JoystickGUID, bool>> availableGamepads;
+};
