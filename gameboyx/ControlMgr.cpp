@@ -30,7 +30,7 @@ void ControlMgr::resetInstance() {
 
 void ControlMgr::InitControl(control_settings& _control_settings) {
 	// mouse cursor
-	io.ConfigFlags |= (ImGuiConfigFlags_NoMouseCursorChange & ~ImGuiConfigFlags_NavEnableGamepad);
+	io.ConfigFlags |= (ImGuiConfigFlags_NoMouseCursorChange | ImGuiConfigFlags_NavEnableGamepad);		// perhaps need to toggle NavEnableGamepad when in game or menu, needs some testing
 
 	// init controller DB
 	controllerDatabase = CONTROL_FOLDER + CONTROL_DB;
