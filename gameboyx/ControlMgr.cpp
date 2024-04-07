@@ -3,6 +3,7 @@
 #include "imgui_impl_sdl2.h"
 #include "general_config.h"
 #include "logger.h"
+#include <format>
 
 ControlMgr* ControlMgr::instance = nullptr;
 
@@ -22,12 +23,31 @@ void ControlMgr::resetInstance() {
 }
 
 void ControlMgr::InitControl(control_settings& _control_settings) {
+	// init controller DB
 	controllerDatabase = CONTROL_FOLDER + CONTROL_DB;
-
 	SDL_GameControllerAddMappingsFromFile(controllerDatabase.c_str());
+
+	/*
+	// setup gamepad
+	int count = SDL_NumJoysticks();
+	LOG_INFO("[SDL] gamepads detected: ", count);
+	for (int i = 0; i < count; i++) {
+		LOG_INFO("[SDL] ", i, ": ", SDL_JoystickNameForIndex(i));
+	}
+	if (count > 0) {
+		gamepad = SDL_Game(0);
+		guid = SDL_JoystickGetGUID(gamepad);
+
+		char c_guid[33];
+		SDL_GUIDToString(guid, c_guid, 33);
+		sGuid = std::string(c_guid);
+
+		LOG_INFO("[SDL] selected 0: ", SDL_JoystickNameForIndex(0), " - GUID: ", sGuid);
+	}
+	*/
 }
 
-void ControlMgr::ProcessInput(bool& _running, SDL_Window* _window) {
+void ControlMgr::ProcessEvents(bool& _running, SDL_Window* _window) {
 	SDL_Event event;
 
 	while (SDL_PollEvent(&event)) {
@@ -47,6 +67,12 @@ void ControlMgr::ProcessInput(bool& _running, SDL_Window* _window) {
 			break;
 		case SDL_MOUSEWHEEL:
 			mouseScroll = event.wheel.y;
+			break;
+		case SDL_CONTROLLERDEVICEADDED:
+			OnGamepadConnect(event.cdevice);
+			break;
+		case SDL_CONTROLLERDEVICEREMOVED:
+			OnGamepadDisconnect(event.cdevice);
 			break;
 		default:
 			break;
@@ -91,5 +117,34 @@ void ControlMgr::DisableMouse() {
 		}
 
 		LOG_ERROR("[SDL] set cursor state: ", result);
+	}
+}
+
+void ControlMgr::OnGamepadConnect(SDL_ControllerDeviceEvent& e) {
+	int device_index = e.which;
+
+	if (!connected && SDL_IsGameController(device_index)) {
+		gamepad = SDL_GameControllerOpen(device_index);
+
+		SDL_Joystick* joystick = SDL_GameControllerGetJoystick(gamepad);
+		guid = SDL_JoystickGetGUID(joystick);
+
+		char c_guid[33];
+		SDL_GUIDToString(guid, c_guid, 33);
+		LOG_INFO("[SDL] gamepad connected: ", SDL_JoystickNameForIndex(device_index), " - GUID: {", c_guid, "}");
+
+		connected = true;
+	} else {
+		LOG_ERROR("[SDL] gamepad not recognized");
+	}
+}
+
+void ControlMgr::OnGamepadDisconnect(SDL_ControllerDeviceEvent& e) {
+	int device_index = e.which;
+
+	if (connected) {
+		SDL_GameControllerClose(gamepad);
+	} else {
+		LOG_ERROR("[SDL] gamepad not recognized");
 	}
 }

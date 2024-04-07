@@ -64,7 +64,7 @@ int main(int, char**)
     bool running = true;
     while (running)
     {
-        HardwareMgr::ProcessInput(running);
+        HardwareMgr::ProcessEvents(running);
         gui_mgr->ProcessInput();
 
         HardwareMgr::ProcessTimedEvents();

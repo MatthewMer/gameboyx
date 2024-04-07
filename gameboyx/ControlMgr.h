@@ -18,7 +18,7 @@ public:
 	ControlMgr& operator=(ControlMgr const&) = delete;
 	ControlMgr& operator=(ControlMgr&&) = delete;
 
-	void ProcessInput(bool& _running, SDL_Window* _window);
+	void ProcessEvents(bool& _running, SDL_Window* _window);
 	std::queue<std::pair<SDL_Keycode, SDL_EventType>>& GetKeys();
 	Sint32 GetScroll();
 	bool CheckMouseMove(int& _x, int& _y);
@@ -40,5 +40,14 @@ private:
 
 	int mouseMoveX = 0;
 	int mouseMoveY = 0;
+
+	SDL_GameController* gamepad;
+	SDL_JoystickGUID guid;
+	std::string sGuid;
+
+	bool connected = false;
+
+	void OnGamepadConnect(SDL_ControllerDeviceEvent& e);
+	void OnGamepadDisconnect(SDL_ControllerDeviceEvent& e);
 };
 

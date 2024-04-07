@@ -20,7 +20,7 @@ public:
 	static void ShutdownHardware();
 	static void NextFrame();
 	static void RenderFrame();
-	static void ProcessInput(bool& _running);
+	static void ProcessEvents(bool& _running);
 	static void ToggleFullscreen();
 
 	static void InitGraphicsBackend(virtual_graphics_information& _virt_graphics_info);

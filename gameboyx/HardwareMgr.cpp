@@ -114,8 +114,8 @@ void HardwareMgr::RenderFrame() {
 	graphicsMgr->RenderFrame();
 }
 
-void HardwareMgr::ProcessInput(bool& _running) {
-	controlMgr->ProcessInput(_running, window);
+void HardwareMgr::ProcessEvents(bool& _running) {
+	controlMgr->ProcessEvents(_running, window);
 }
 
 std::queue<std::pair<SDL_Keycode, SDL_EventType>>& HardwareMgr::GetKeys() {

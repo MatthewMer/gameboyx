@@ -13,189 +13,237 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\backend">
+      <UniqueIdentifier>{9f6a34b3-0954-4747-adbb-e82fa4725fd7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\backend\audio">
+      <UniqueIdentifier>{4832283c-23d5-451a-8d83-02e1eef77a91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\backend\graphics">
+      <UniqueIdentifier>{ae204152-83da-4101-92d7-5844028b1f93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\backend\control">
+      <UniqueIdentifier>{e3795ebf-6dcf-4b5a-af56-3976e44fcf0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\backend">
+      <UniqueIdentifier>{6453587c-bd0f-4830-88a6-ba1bcad57779}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\backend\audio">
+      <UniqueIdentifier>{e6f59193-1409-4410-b3d6-403a27cc5271}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\backend\graphics">
+      <UniqueIdentifier>{7ab7f6ed-8841-415c-aaaf-ea0366213bd6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\backend\control">
+      <UniqueIdentifier>{b07bd187-c05f-4274-9389-754eb7f82cea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\gui">
+      <UniqueIdentifier>{9ffc7034-00c9-41fd-87ca-a103ba859857}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\gui">
+      <UniqueIdentifier>{dd77a4c6-3db2-4b34-a006-f1c4bc6cd90e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\emulator">
+      <UniqueIdentifier>{b693a5c0-ce32-4392-a8a1-9413ca9d5ea4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\emulator\gameboy">
+      <UniqueIdentifier>{d56c1710-34c3-427d-b98a-67f6fa3e65a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\misc">
+      <UniqueIdentifier>{9dbfe5c4-a691-4309-8c4a-2feb25452599}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\emulator">
+      <UniqueIdentifier>{38bd0e83-b908-4d5f-813e-3412c5c9f4f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\emulator\gameboy">
+      <UniqueIdentifier>{f7e2b1f5-8fa1-4081-8dff-b2fea6a49bbf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\misc">
+      <UniqueIdentifier>{38e1f00f-002d-4014-b9f5-0513610e406c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GameboyCartridge.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GuiMgr.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="data_io.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\simple_logger.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="helper_functions.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BaseCPU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BaseMMU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GameboyMEM.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BaseGPU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GameboyCPU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GameboyMMU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GameboyGPU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="VHardwareMgr.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GraphicsVulkan.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BaseAPU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GameboyAPU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GameboyCTRL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BaseCTRL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AudioMgr.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GraphicsMgr.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\backend\audio</Filter>
     </ClCompile>
     <ClCompile Include="AudioOpenAL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BaseCartridge.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\backend\audio</Filter>
     </ClCompile>
     <ClCompile Include="AudioSDL.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\backend\audio</Filter>
     </ClCompile>
-    <ClCompile Include="HardwareMgr.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="GraphicsMgr.cpp">
+      <Filter>Source Files\backend\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="BaseMEM.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="GraphicsVulkan.cpp">
+      <Filter>Source Files\backend\graphics</Filter>
     </ClCompile>
     <ClCompile Include="ControlMgr.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\backend\control</Filter>
+    </ClCompile>
+    <ClCompile Include="GuiMgr.cpp">
+      <Filter>Source Files\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="HardwareMgr.cpp">
+      <Filter>Source Files\backend</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseAPU.cpp">
+      <Filter>Source Files\emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseCartridge.cpp">
+      <Filter>Source Files\emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseCPU.cpp">
+      <Filter>Source Files\emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseCTRL.cpp">
+      <Filter>Source Files\emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseGPU.cpp">
+      <Filter>Source Files\emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseMEM.cpp">
+      <Filter>Source Files\emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseMMU.cpp">
+      <Filter>Source Files\emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="VHardwareMgr.cpp">
+      <Filter>Source Files\emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="GameboyAPU.cpp">
+      <Filter>Source Files\emulator\gameboy</Filter>
+    </ClCompile>
+    <ClCompile Include="GameboyCartridge.cpp">
+      <Filter>Source Files\emulator\gameboy</Filter>
+    </ClCompile>
+    <ClCompile Include="GameboyCPU.cpp">
+      <Filter>Source Files\emulator\gameboy</Filter>
+    </ClCompile>
+    <ClCompile Include="GameboyCTRL.cpp">
+      <Filter>Source Files\emulator\gameboy</Filter>
+    </ClCompile>
+    <ClCompile Include="GameboyGPU.cpp">
+      <Filter>Source Files\emulator\gameboy</Filter>
+    </ClCompile>
+    <ClCompile Include="GameboyMEM.cpp">
+      <Filter>Source Files\emulator\gameboy</Filter>
+    </ClCompile>
+    <ClCompile Include="GameboyMMU.cpp">
+      <Filter>Source Files\emulator\gameboy</Filter>
+    </ClCompile>
+    <ClCompile Include="data_io.cpp">
+      <Filter>Source Files\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="helper_functions.cpp">
+      <Filter>Source Files\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="include\simple_logger.cpp">
+      <Filter>Source Files\misc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="GameboyCartridge.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="gameboy_defines.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="defs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GuiMgr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="data_io.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\logger.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="helper_functions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="general_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BaseCPU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BaseMMU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GameboyMEM.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BaseGPU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GameboyCPU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GameboyMMU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BaseMEM.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GameboyGPU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="VHardwareMgr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GuiTable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GraphicsVulkan.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BaseAPU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GameboyAPU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GameboyCTRL.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BaseCTRL.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="AudioMgr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GraphicsMgr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioOpenAL.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BaseCartridge.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioSDL.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HardwareMgr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HardwareStructs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="VHardwareStructs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\backend\audio</Filter>
     </ClInclude>
     <ClInclude Include="ControlMgr.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\backend\control</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphicsMgr.h">
+      <Filter>Header Files\backend\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioOpenAL.h">
+      <Filter>Header Files\backend\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioSDL.h">
+      <Filter>Header Files\backend\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphicsVulkan.h">
+      <Filter>Header Files\backend\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="GuiMgr.h">
+      <Filter>Header Files\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="GuiTable.h">
+      <Filter>Header Files\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="HardwareMgr.h">
+      <Filter>Header Files\backend</Filter>
+    </ClInclude>
+    <ClInclude Include="HardwareStructs.h">
+      <Filter>Header Files\backend</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseCPU.h">
+      <Filter>Header Files\emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseAPU.h">
+      <Filter>Header Files\emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseCartridge.h">
+      <Filter>Header Files\emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseCTRL.h">
+      <Filter>Header Files\emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseGPU.h">
+      <Filter>Header Files\emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseMEM.h">
+      <Filter>Header Files\emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseMMU.h">
+      <Filter>Header Files\emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="VHardwareMgr.h">
+      <Filter>Header Files\emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="VHardwareStructs.h">
+      <Filter>Header Files\emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="gameboy_defines.h">
+      <Filter>Header Files\emulator\gameboy</Filter>
+    </ClInclude>
+    <ClInclude Include="GameboyAPU.h">
+      <Filter>Header Files\emulator\gameboy</Filter>
+    </ClInclude>
+    <ClInclude Include="GameboyCartridge.h">
+      <Filter>Header Files\emulator\gameboy</Filter>
+    </ClInclude>
+    <ClInclude Include="GameboyCPU.h">
+      <Filter>Header Files\emulator\gameboy</Filter>
+    </ClInclude>
+    <ClInclude Include="GameboyCTRL.h">
+      <Filter>Header Files\emulator\gameboy</Filter>
+    </ClInclude>
+    <ClInclude Include="GameboyGPU.h">
+      <Filter>Header Files\emulator\gameboy</Filter>
+    </ClInclude>
+    <ClInclude Include="GameboyMEM.h">
+      <Filter>Header Files\emulator\gameboy</Filter>
+    </ClInclude>
+    <ClInclude Include="GameboyMMU.h">
+      <Filter>Header Files\emulator\gameboy</Filter>
+    </ClInclude>
+    <ClInclude Include="data_io.h">
+      <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="defs.h">
+      <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="helper_functions.h">
+      <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\logger.h">
+      <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files\misc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
