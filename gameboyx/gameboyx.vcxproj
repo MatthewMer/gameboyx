@@ -259,6 +259,7 @@
     </ClCompile>
     <ClCompile Include="BaseCartridge.cpp" />
     <ClCompile Include="BaseMEM.cpp" />
+    <ClCompile Include="ControlMgr.cpp" />
     <ClCompile Include="GameboyCartridge.cpp" />
     <ClCompile Include="BaseCTRL.cpp" />
     <ClCompile Include="GameboyCTRL.cpp" />
@@ -289,6 +290,7 @@
   <ItemGroup>
     <ClInclude Include="AudioSDL.h" />
     <ClInclude Include="BaseCartridge.h" />
+    <ClInclude Include="ControlMgr.h" />
     <ClInclude Include="GameboyCartridge.h" />
     <ClInclude Include="BaseCTRL.h" />
     <ClInclude Include="GameboyCTRL.h" />

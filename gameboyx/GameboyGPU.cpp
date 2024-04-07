@@ -33,7 +33,7 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 		const u8& lyc = memInstance->GetIO(LYC_ADDR);
 		u8& stat = memInstance->GetIO(STAT_ADDR);
 
-		for (; current_ticks > 0; current_ticks -= 2) {
+		for (; current_ticks > 0; current_ticks-=2) {
 			
 			tickCounter += 2;
 

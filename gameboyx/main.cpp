@@ -51,7 +51,10 @@ int main(int, char**)
     s_audio_settings.master_volume = .5f;
     s_audio_settings.sampling_rate = sampling_rate_max;
 
-    if (!HardwareMgr::InitHardware(s_graphics_settings, s_audio_settings))   { return -1; }
+    control_settings s_control_settings = {};
+    s_control_settings.mouse_always_visible = false;
+
+    if (!HardwareMgr::InitHardware(s_graphics_settings, s_audio_settings, s_control_settings))   { return -1; }
 
     GuiMgr* gui_mgr = GuiMgr::getInstance();
 
@@ -61,10 +64,12 @@ int main(int, char**)
     bool running = true;
     while (running)
     {
-        HardwareMgr::ProcessData(running);
-        gui_mgr->ProcessData();
+        HardwareMgr::ProcessInput(running);
+        gui_mgr->ProcessInput();
 
-        if (HardwareMgr::ExecuteDelay()) {
+        HardwareMgr::ProcessTimedEvents();
+
+        if (HardwareMgr::CheckFrame()) {
             HardwareMgr::NextFrame();
             gui_mgr->ProcessGUI();
             HardwareMgr::RenderFrame();

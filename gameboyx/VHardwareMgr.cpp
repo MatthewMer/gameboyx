@@ -199,7 +199,7 @@ void VHardwareMgr::CheckFpsAndClock() {
 
     if (accumulatedTime > 999999) {
         currentFrequency.store((float)clockCount / accumulatedTime);
-        currentFramerate.store((float)frameCount / (accumulatedTime / pow(10, 6)));
+        currentFramerate.store((float)frameCount / (accumulatedTime / (float)pow(10, 6)));
 
         clockCount = 0;
         frameCount = 0;

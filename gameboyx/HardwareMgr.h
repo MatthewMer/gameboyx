@@ -1,6 +1,5 @@
 #pragma once
 
-#include <queue>
 #include <chrono>
 using namespace std::chrono;
 
@@ -11,16 +10,17 @@ using namespace std::chrono;
 #include <SDL.h>
 #include "logger.h"
 #include "HardwareStructs.h"
+#include "ControlMgr.h"
 
 #define HWMGR_ERR_ALREADY_RUNNING		0x00000001
 
 class HardwareMgr {
 public:
-	static u8 InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings);
+	static u8 InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings, control_settings& _control_settings);
 	static void ShutdownHardware();
 	static void NextFrame();
 	static void RenderFrame();
-	static void ProcessData(bool& _running);
+	static void ProcessInput(bool& _running);
 	static void ToggleFullscreen();
 
 	static void InitGraphicsBackend(virtual_graphics_information& _virt_graphics_info);
@@ -30,7 +30,6 @@ public:
 
 	static void UpdateGpuData();
 
-	static std::queue<std::pair<SDL_Keycode, SDL_EventType>>& GetKeys();
 	static Sint32 GetScroll();
 
 	static void GetGraphicsSettings(graphics_settings& _graphics_settings);
@@ -45,22 +44,32 @@ public:
 
 	static void GetAudioSettings(audio_settings& _audio_settings);
 
-	static bool ExecuteDelay();
+	static void ProcessTimedEvents();
+
+	static bool CheckFrame();
+
+	static std::queue<std::pair<SDL_Keycode, SDL_EventType>>& GetKeys();
+
+	static void SetMouseAlwaysVisible(const bool& _visible);
 
 private:
 	HardwareMgr() = default;
-	~HardwareMgr() = default;
+	~HardwareMgr() {
+		ShutdownHardware();
+
+		GraphicsMgr::resetInstance();
+		AudioMgr::resetInstance();
+		ControlMgr::resetInstance();
+	}
 
 	static GraphicsMgr* graphicsMgr;
 	static AudioMgr* audioMgr;
+	static ControlMgr* controlMgr;
 	static SDL_Window* window;
 
 	static graphics_settings graphicsSettings;
 	static audio_settings audioSettings;
-
-	// control
-	static std::queue<std::pair<SDL_Keycode, SDL_EventType>> keyMap;
-	static Sint32 mouseScroll;
+	static control_settings controlSettings;
 
 	static HardwareMgr* instance;
 	static u32 errors;
@@ -68,6 +77,11 @@ private:
 	// for framerate target
 	static u32 timePerFrame;
 	static u32 currentTimePerFrame;
-	static steady_clock::time_point timeFramePrev;
-	static steady_clock::time_point timeFrameCur;
+	static steady_clock::time_point timePointCur;
+	static steady_clock::time_point timePointPrev;
+
+	static bool nextFrame;
+
+	// control
+	static u32 currentMouseMove;
 };

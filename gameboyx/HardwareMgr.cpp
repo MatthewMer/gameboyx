@@ -4,20 +4,24 @@ HardwareMgr* HardwareMgr::instance = nullptr;
 u32 HardwareMgr::errors = 0x00000000;
 GraphicsMgr* HardwareMgr::graphicsMgr = nullptr;
 AudioMgr* HardwareMgr::audioMgr = nullptr;
+ControlMgr* HardwareMgr::controlMgr = nullptr;
 SDL_Window* HardwareMgr::window = nullptr;
 
 graphics_settings HardwareMgr::graphicsSettings = {};
 audio_settings HardwareMgr::audioSettings = {};
-
-std::queue<std::pair<SDL_Keycode, SDL_EventType>> HardwareMgr::keyMap = std::queue<std::pair<SDL_Keycode, SDL_EventType>>();
-Sint32 HardwareMgr::mouseScroll = 0;
+control_settings HardwareMgr::controlSettings = {};
 
 u32 HardwareMgr::timePerFrame = 0;
 u32 HardwareMgr::currentTimePerFrame = 0;
-steady_clock::time_point HardwareMgr::timeFramePrev = high_resolution_clock::now();
-steady_clock::time_point HardwareMgr::timeFrameCur = high_resolution_clock::now();
+steady_clock::time_point HardwareMgr::timePointCur = high_resolution_clock::now();
+steady_clock::time_point HardwareMgr::timePointPrev = high_resolution_clock::now();
+bool HardwareMgr::nextFrame = false;
 
-u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings) {
+u32 HardwareMgr::currentMouseMove = 0;
+
+#define HWMGR_SECOND	999999999
+
+u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings, control_settings& _control_settings) {
 	errors = 0;
 
 	if (instance == nullptr) {
@@ -29,6 +33,7 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settin
 
 	audioSettings = std::move(_audio_settings);
 	graphicsSettings = std::move(_graphics_settings);
+	controlSettings = std::move(_control_settings);
 
 	SetFramerateTarget(graphicsSettings.framerateTarget, graphicsSettings.fpsUnlimited);
 
@@ -58,6 +63,8 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settin
 		if (!graphicsMgr->InitImgui()) { return false; }
 
 		graphicsMgr->EnumerateShaders();
+	} else {
+		return false;
 	}
 
 	SDL_SetWindowMinimumSize(window, GUI_WIN_WIDTH_MIN, GUI_WIN_HEIGHT_MIN);
@@ -66,6 +73,15 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settin
 	audioMgr = AudioMgr::getInstance();
 	if (audioMgr != nullptr) {
 		audioMgr->InitAudio(audioSettings, false);
+	} else {
+		return false;
+	}
+
+	controlMgr = ControlMgr::getInstance();
+	if(controlMgr != nullptr){
+		controlMgr->InitControl(controlSettings);
+	} else {
+		return false;
 	}
 
 	return true;
@@ -98,41 +114,16 @@ void HardwareMgr::RenderFrame() {
 	graphicsMgr->RenderFrame();
 }
 
-void HardwareMgr::ProcessData(bool& _running) {
-	SDL_Event event;
-
-	while (SDL_PollEvent(&event)) {
-		ImGui_ImplSDL2_ProcessEvent(&event);
-		if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-			_running = false;
-
-		switch (event.type) {
-		case SDL_QUIT:
-			_running = false;
-			break;
-		case SDL_KEYDOWN:
-			keyMap.push(std::pair(event.key.keysym.sym, SDL_KEYDOWN));
-			break;
-		case SDL_KEYUP:
-			keyMap.push(std::pair(event.key.keysym.sym, SDL_KEYUP));
-			break;
-		case SDL_MOUSEWHEEL:
-			mouseScroll = event.wheel.y;
-			break;
-		default:
-			break;
-		}
-	}
+void HardwareMgr::ProcessInput(bool& _running) {
+	controlMgr->ProcessInput(_running, window);
 }
 
 std::queue<std::pair<SDL_Keycode, SDL_EventType>>& HardwareMgr::GetKeys() {
-	return keyMap;
+	return controlMgr->GetKeys();
 }
 
 Sint32 HardwareMgr::GetScroll() {
-	Sint32 scroll = mouseScroll;
-	mouseScroll = 0;
-	return scroll;
+	return controlMgr->GetScroll();
 }
 
 void HardwareMgr::ToggleFullscreen() {
@@ -164,27 +155,56 @@ void HardwareMgr::UpdateGpuData() {
 }
 
 void HardwareMgr::SetFramerateTarget(const int& _target, const bool& _unlimited) {
-	if (_target > 0 && !_unlimited) {
-		timePerFrame = (u32)((1.f / _target) * pow(10, 6));
+	graphicsSettings.fpsUnlimited = _unlimited;
+	graphicsSettings.framerateTarget = _target;
+
+	if (graphicsSettings.framerateTarget > 0) {
+		timePerFrame = (u32)((1.f / graphicsSettings.framerateTarget) * pow(10, 9));
 	}
 	else {
 		timePerFrame = 0;
 	}
 }
 
-bool HardwareMgr::ExecuteDelay() {
-	if (!graphicsSettings.fpsUnlimited) {
-		if (currentTimePerFrame < timePerFrame) {
-			timeFrameCur = high_resolution_clock::now();
-			currentTimePerFrame = (u32)duration_cast<microseconds>(timeFrameCur - timeFramePrev).count();
-			return false;
-		} else {
-			timeFramePrev = timeFrameCur;
-			currentTimePerFrame = 0;
-		}
+void HardwareMgr::ProcessTimedEvents() {
+	timePointCur = high_resolution_clock::now();
+	u32 time_diff = (u32)duration_cast<nanoseconds>(timePointCur - timePointPrev).count();
+	timePointPrev = timePointCur;
+
+	// framerate
+	currentTimePerFrame += time_diff;
+	if (currentTimePerFrame > timePerFrame) {
+		currentTimePerFrame = 0;
+		nextFrame = true;
 	}
 
-	return true;
+	// process mouse
+	if (!controlSettings.mouse_always_visible) {
+		static int x, y;
+
+		if (controlMgr->CheckMouseMove(x, y)) {
+			currentMouseMove = 0;
+		} else {
+			if (currentMouseMove < HWMGR_SECOND) {
+				currentMouseMove += time_diff;
+			} else {
+				controlMgr->DisableMouse();
+			}
+		}
+	}
+}
+
+bool HardwareMgr::CheckFrame() {
+	if (graphicsSettings.fpsUnlimited) {
+		return true;
+	} else {
+		if (nextFrame) {
+			nextFrame = false;
+			return true;
+		} else {
+			return false;
+		}
+	}
 }
 
 void HardwareMgr::GetGraphicsSettings(graphics_settings& _graphics_settings) {
@@ -209,4 +229,8 @@ void HardwareMgr::SetMasterVolume(const float& _volume) {
 
 void HardwareMgr::GetAudioSettings(audio_settings& _audio_settings) {
 	_audio_settings = audioSettings;
+}
+
+void HardwareMgr::SetMouseAlwaysVisible(const bool& _visible) {
+	controlSettings.mouse_always_visible = _visible;
 }

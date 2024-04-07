@@ -40,7 +40,7 @@ public:
 	GuiMgr& operator=(GuiMgr&&) = delete;
 
 	// functions
-	void ProcessData();
+	void ProcessInput();
 	void ProcessGUI();
 
 	// sdl functions

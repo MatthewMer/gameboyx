@@ -49,3 +49,7 @@ struct audio_settings {
 
 	int sampling_rate_max = 0;
 };
+
+struct control_settings {
+	bool mouse_always_visible = false;
+};

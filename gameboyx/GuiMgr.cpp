@@ -72,6 +72,8 @@ GuiMgr::GuiMgr() {
 
     // read games from config
     ReloadGamesGuiCtx();
+
+    HardwareMgr::SetMouseAlwaysVisible(true);
 }
 
 GuiMgr::~GuiMgr() {
@@ -84,7 +86,7 @@ GuiMgr::~GuiMgr() {
 /* ***********************************************************************************************************
     GUI PROCESS ENTRY POINT
 *********************************************************************************************************** */
-void GuiMgr::ProcessData() {
+void GuiMgr::ProcessInput() {
     // debug
     static bool debug_enabled = showInstrDebugger;
     if (debug_enabled != showInstrDebugger) {
@@ -910,6 +912,7 @@ void GuiMgr::ActionGameStart() {
     if (!gameRunning) {
         StartGame(false);
         showMainMenuBar = false;
+        HardwareMgr::SetMouseAlwaysVisible(false);
     }
     requestGameStart = false;
 }
@@ -920,6 +923,7 @@ void GuiMgr::ActionGameStop() {
         gameRunning = false;
         showMainMenuBar = true;
         ResetGUI();
+        HardwareMgr::SetMouseAlwaysVisible(true);
     }
     requestGameStop = false;
 }
