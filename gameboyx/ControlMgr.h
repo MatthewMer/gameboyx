@@ -53,10 +53,10 @@ private:
 
 	std::string controllerDatabase;
 
+	ImGuiIO& io = ImGui::GetIO();
+
 	int mouseMoveX = 0;
 	int mouseMoveY = 0;
-
-	ImGuiIO& io = ImGui::GetIO();
 
 	void OnGamepadConnect(SDL_ControllerDeviceEvent& e);
 	void OnGamepadDisconnect(SDL_ControllerDeviceEvent& e);

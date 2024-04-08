@@ -37,3 +37,8 @@ void GraphicsMgr::DestroyGraphicsBackend() {
 		Destroy2dGraphicsBackend();
 	}
 }
+
+ImFont* GraphicsMgr::GetFont(const int& _index) {
+	if (fonts.size() > _index) { return fonts[_index]; }
+	else { return nullptr; }
+}

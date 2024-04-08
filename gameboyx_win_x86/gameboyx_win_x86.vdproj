@@ -27,6 +27,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_2F8FD44B0D0749FDB444C724E59E6883"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_4CBA5AFECD8DD1C4DD814D06E0512CB6"
         "OwnerKey" = "8:_04F06596652B42E3823D09D2E76022EF"
         "MsmSig" = "8:_UNDEFINED"
@@ -52,6 +58,12 @@
         "Entry"
         {
         "MsmKey" = "8:_6542C3C8EF484A7CB2BFD28B3F35C8BA"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_6C6540AAEC904D4F9DAF40E58A59E745"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -257,6 +269,26 @@
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_2F8FD44B0D0749FDB444C724E59E6883"
+            {
+            "SourcePath" = "8:..\\gameboyx\\font\\Inter.ttf"
+            "TargetName" = "8:Inter.ttf"
+            "Tag" = "8:"
+            "Folder" = "8:_B11A37FD22104D6299A0F32C0ADDBD32"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_4CBA5AFECD8DD1C4DD814D06E0512CB6"
             {
             "SourcePath" = "8:api-ms-win-crt-math-l1-1-0.dll"
@@ -343,6 +375,26 @@
             "TargetName" = "8:gamecontrollerdb.txt"
             "Tag" = "8:"
             "Folder" = "8:_EC4D9C7B1123433C81DBE3598FA6D9C4"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_6C6540AAEC904D4F9DAF40E58A59E745"
+            {
+            "SourcePath" = "8:..\\gameboyx\\font\\Inter_LICENSE.txt"
+            "TargetName" = "8:Inter_LICENSE.txt"
+            "Tag" = "8:"
+            "Folder" = "8:_B11A37FD22104D6299A0F32C0ADDBD32"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -680,6 +732,17 @@
                     "Condition" = "8:"
                     "Transitive" = "11:FALSE"
                     "Property" = "8:_57BFF93EF82F4B75B62E6A0F89B3DC89"
+                        "Folders"
+                        {
+                        }
+                    }
+                    "{9EF0B969-E518-4E46-987F-47570745A589}:_B11A37FD22104D6299A0F32C0ADDBD32"
+                    {
+                    "Name" = "8:font"
+                    "AlwaysCreate" = "11:FALSE"
+                    "Condition" = "8:"
+                    "Transitive" = "11:FALSE"
+                    "Property" = "8:_90709F2F11CF4A0FA8A24A65A3DD4CEF"
                         "Folders"
                         {
                         }

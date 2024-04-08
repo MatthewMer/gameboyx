@@ -58,6 +58,9 @@ inline const std::string ICON_FILE = "gameboyx.bmp";
 
 inline const std::string BOOT_FOLDER = "boot/";
 
+inline const std::string FONT_FOLDER = "font/";
+inline const std::string FONT_MAIN = "Inter.ttf";
+
 /* ***********************************************************************************************************
     GRAPHICS BACKEND
 *********************************************************************************************************** */

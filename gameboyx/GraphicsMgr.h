@@ -42,6 +42,8 @@ public:
 
 	virtual void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering) = 0;
 
+	ImFont* GetFont(const int& _index);
+
 protected:
 
 	explicit GraphicsMgr() = default;
@@ -73,6 +75,8 @@ protected:
 	int shadersCompiled;
 	int shadersTotal;
 	bool shaderCompilationFinished;
+
+	std::vector<ImFont*> fonts;
 
 private:
 	static GraphicsMgr* instance;

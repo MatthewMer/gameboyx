@@ -16,7 +16,7 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 
 ### Portable: ###
 * set configuration to `Release_portable` , set your target platform and start compilation
-* required files in `./x64/Release/` or `./Win32/Release/` are `gameboyx.exe` , `SDL2.dll` and the folders `control` and `icon` , the application will automatically create the remaining folder hierarchy on execution
+* required files in `./x64/Release/` or `./Win32/Release/` are `gameboyx.exe` , `SDL2.dll` and the folders `control` , `icon` , `font` and `boot` , the application will automatically create the remaining folder hierarchy on execution
 
 ### Installer: ###
 #### Option 1: ####

@@ -345,7 +345,25 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
-  <Target Name="CopyCustomContent" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
-    <Copy SourceFiles="..\submodules\SDL_GameControllerDB\gamecontrollerdb.txt" DestinationFolder="$(OutDir)\control" />
+  <Target Name="CopyControlDB" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
+    <Copy SourceFiles="..\submodules\SDL_GameControllerDB\gamecontrollerdb.txt" DestinationFolder="$(OutDir)control"/>
+  </Target>
+  <Target Name="CopyCGBboot" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
+    <Copy SourceFiles="$(ProjectDir)boot\cgb_boot.bin" DestinationFolder="$(OutDir)boot" />
+  </Target>
+  <Target Name="CopyDMGboot" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
+    <Copy SourceFiles="$(ProjectDir)boot\dmg_boot.bin" DestinationFolder="$(OutDir)boot" />
+  </Target>
+  <Target Name="CopyFont" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
+    <Copy SourceFiles="$(ProjectDir)font\Inter.ttf" DestinationFolder="$(OutDir)font" />
+  </Target>
+  <Target Name="CopyFontLic" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
+    <Copy SourceFiles="$(ProjectDir)font\Inter_LICENSE.txt" DestinationFolder="$(OutDir)font" />
+  </Target>
+  <Target Name="CopyIcoBMP" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
+    <Copy SourceFiles="$(ProjectDir)icon\gameboyx.bmp" DestinationFolder="$(OutDir)icon" />
+  </Target>
+  <Target Name="CopyIcoICO" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
+    <Copy SourceFiles="$(ProjectDir)icon\gameboyx.ico" DestinationFolder="$(OutDir)icon" />
   </Target>
 </Project>

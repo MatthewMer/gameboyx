@@ -245,3 +245,7 @@ void HardwareMgr::SetMouseAlwaysVisible(const bool& _visible) {
 		controlMgr->SetMouseVisible(true);
 	}
 }
+
+ImFont* HardwareMgr::GetFont(const int& _index) {
+	return graphicsMgr->GetFont(_index);
+}

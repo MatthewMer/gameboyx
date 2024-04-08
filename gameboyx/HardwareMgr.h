@@ -52,6 +52,8 @@ public:
 
 	static void SetMouseAlwaysVisible(const bool& _visible);
 
+	static ImFont* GetFont(const int& _index);
+
 private:
 	HardwareMgr() = default;
 	~HardwareMgr() {

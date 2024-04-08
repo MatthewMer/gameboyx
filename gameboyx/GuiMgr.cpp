@@ -74,6 +74,9 @@ GuiMgr::GuiMgr() {
     ReloadGamesGuiCtx();
 
     HardwareMgr::SetMouseAlwaysVisible(true);
+
+    mainFont = HardwareMgr::GetFont(0);
+    IM_ASSERT(mainFont != nullptr);
 }
 
 GuiMgr::~GuiMgr() {
@@ -144,6 +147,7 @@ void GuiMgr::ProcessGUI() {
         }
     }
 
+    ImGui::PushFont(mainFont);
     if (showInstrDebugger) { ShowDebugInstructions(); }
     if (showWinAbout) { ShowWindowAbout(); }
     if (showHardwareInfo) { ShowHardwareInfo(); }
@@ -156,6 +160,7 @@ void GuiMgr::ProcessGUI() {
     if (showGraphicsSettings) { ShowGraphicsSettings(); }
     if (showAudioSettings) { ShowAudioSettings(); }
     if (showMainMenuBar) { ShowMainMenuBar(); }
+    ImGui::PopFont();
 
     sdlScrollUp = false;
     sdlScrollDown = false;

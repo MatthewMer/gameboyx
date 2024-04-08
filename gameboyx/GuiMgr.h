@@ -239,6 +239,8 @@ private:
 	const ImGuiStyle& GUI_STYLE = ImGui::GetStyle();
 	const ImGuiIO& GUI_IO = ImGui::GetIO();
 	const ImVec4& HIGHLIGHT_COLOR = GUI_STYLE.Colors[ImGuiCol_TabActive];
+	ImFont* mainFont;
+
 
 	void DebugCallback(const int& _pc, const int& _bank);
 	alignas(64) std::atomic<bool> nextInstruction = false;

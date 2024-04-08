@@ -45,6 +45,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_1B2E2AA73D734514B4C104DD72BC9F5E"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_1C9B2D2E79574D83ADE9723D4C9D116F"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -119,6 +125,12 @@
         {
         "MsmKey" = "8:_C908C12095B2A84A8882812FB5CA3D30"
         "OwnerKey" = "8:_EEFD6A6E12D64C44BA5B585E9C908D89"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_E3104E01E2804F0A8CFAD1E2FD64F6D1"
+        "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -335,6 +347,26 @@
             "Register" = "3:1"
             "Exclude" = "11:TRUE"
             "IsDependency" = "11:TRUE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_1B2E2AA73D734514B4C104DD72BC9F5E"
+            {
+            "SourcePath" = "8:..\\gameboyx\\font\\Inter.ttf"
+            "TargetName" = "8:Inter.ttf"
+            "Tag" = "8:"
+            "Folder" = "8:_3F71A1E3CD154BC481D90C1007D7ABF6"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_1C9B2D2E79574D83ADE9723D4C9D116F"
@@ -597,6 +629,26 @@
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_E3104E01E2804F0A8CFAD1E2FD64F6D1"
+            {
+            "SourcePath" = "8:..\\gameboyx\\font\\Inter_LICENSE.txt"
+            "TargetName" = "8:Inter_LICENSE.txt"
+            "Tag" = "8:"
+            "Folder" = "8:_3F71A1E3CD154BC481D90C1007D7ABF6"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_E7ED473388A07163782C8370D43546EE"
             {
             "SourcePath" = "8:SDL2.dll"
@@ -801,6 +853,17 @@
                     "Condition" = "8:"
                     "Transitive" = "11:FALSE"
                     "Property" = "8:_2D0F5EBC277441AF8CDD36EC7419B2B1"
+                        "Folders"
+                        {
+                        }
+                    }
+                    "{9EF0B969-E518-4E46-987F-47570745A589}:_3F71A1E3CD154BC481D90C1007D7ABF6"
+                    {
+                    "Name" = "8:font"
+                    "AlwaysCreate" = "11:FALSE"
+                    "Condition" = "8:"
+                    "Transitive" = "11:FALSE"
+                    "Property" = "8:_68CA695813C54C9FA6D6A3E9BDF62E4B"
                         "Folders"
                         {
                         }
