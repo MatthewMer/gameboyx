@@ -355,10 +355,7 @@
     <Copy SourceFiles="$(ProjectDir)boot\dmg_boot.bin" DestinationFolder="$(OutDir)boot" />
   </Target>
   <Target Name="CopyFont" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
-    <Copy SourceFiles="$(ProjectDir)font\Inter.ttf" DestinationFolder="$(OutDir)font" />
-  </Target>
-  <Target Name="CopyFontLic" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
-    <Copy SourceFiles="$(ProjectDir)font\Inter_LICENSE.txt" DestinationFolder="$(OutDir)font" />
+    <Copy SourceFiles="$(ProjectDir)font\LTSuperiorMono-Medium.otf" DestinationFolder="$(OutDir)font" />
   </Target>
   <Target Name="CopyIcoBMP" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
     <Copy SourceFiles="$(ProjectDir)icon\gameboyx.bmp" DestinationFolder="$(OutDir)icon" />

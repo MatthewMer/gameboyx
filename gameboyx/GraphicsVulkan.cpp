@@ -1164,7 +1164,7 @@ bool GraphicsVulkan::InitImgui() {
 		if (fonts.size() == 0) { fonts.emplace_back(); }
 
 		io.Fonts->AddFontDefault();
-		fonts[0] = io.Fonts->AddFontFromFileTTF(font, 15.f, NULL, io.Fonts->GetGlyphRangesDefault());
+		fonts[0] = io.Fonts->AddFontFromFileTTF(font, 13.f, NULL, io.Fonts->GetGlyphRangesDefault());
 		IM_ASSERT(fonts[0] != nullptr);
 
 		io.Fonts->Build();

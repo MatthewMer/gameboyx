@@ -186,17 +186,16 @@ void HardwareMgr::ProcessTimedEvents() {
 		if (controlMgr->CheckMouseMove(x, y)) {
 			if (!visible) {
 				controlMgr->SetMouseVisible(true);
+				currentMouseMove = 0;
 				visible = true;
 			}
 		} else {
-			if (currentMouseMove < HWMGR_SECOND) {
+			if (visible && currentMouseMove < HWMGR_SECOND) {
 				currentMouseMove += time_diff;
-			} else {
-				if (visible) {
-					controlMgr->SetMouseVisible(false);
-					currentMouseMove = 0;
-					visible = false;
-				}
+			} else if (visible) {
+				controlMgr->SetMouseVisible(false);
+				currentMouseMove = 0;
+				visible = false;
 			}
 		}
 	}
