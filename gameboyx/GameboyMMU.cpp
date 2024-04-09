@@ -131,8 +131,8 @@ GameboyMMU::GameboyMMU(BaseCartridge* _cartridge){
 	auto file_name = split_string(_cartridge->fileName, ".");
 	saveFile = SAVE_FOLDER;
 
-	int j = file_name.size() - 1;
-	for (int i = 0; i < j; i++) {
+	size_t j = file_name.size() - 1;
+	for (size_t i = 0; i < j; i++) {
 		saveFile += file_name[i];
 		if (i < j - 1) { saveFile += "."; }
 	}

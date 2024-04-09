@@ -101,13 +101,9 @@ void HardwareMgr::ShutdownHardware() {
 }
 
 void HardwareMgr::NextFrame() {
-	u32 win_min = SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED;
-
-	if (!win_min) {
-		graphicsMgr->NextFrameImGui();
-		ImGui_ImplSDL2_NewFrame();
-		ImGui::NewFrame();
-	}
+	graphicsMgr->NextFrameImGui();
+	ImGui_ImplSDL2_NewFrame();
+	ImGui::NewFrame();
 }
 
 void HardwareMgr::RenderFrame() {
@@ -202,14 +198,20 @@ void HardwareMgr::ProcessTimedEvents() {
 }
 
 bool HardwareMgr::CheckFrame() {
-	if (graphicsSettings.fpsUnlimited) {
-		return true;
+	u32 win_min = SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED;
+
+	if (win_min) {
+		return false;
 	} else {
-		if (nextFrame) {
-			nextFrame = false;
+		if (graphicsSettings.fpsUnlimited) {
 			return true;
 		} else {
-			return false;
+			if (nextFrame) {
+				nextFrame = false;
+				return true;
+			} else {
+				return false;
+			}
 		}
 	}
 }
