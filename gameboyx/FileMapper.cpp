@@ -28,7 +28,7 @@ FileMapper::FileMapper(const char* _path, const size_t& _size) {
 		FILE_ATTRIBUTE_NORMAL,
 		NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
-		LOG_ERROR("[FS] create file handle "), std::format("{:d}", GetLastError());
+		LOG_ERROR("[FS] create file handle ", std::format("{:d}", GetLastError()));
 
 	hMapping = CreateFileMapping(
 		hFile,											// file handle
@@ -38,7 +38,7 @@ FileMapper::FileMapper(const char* _path, const size_t& _size) {
 		0,												// ...
 		nullptr);										// don't share
 	if (hMapping == NULL)
-		LOG_ERROR("[FS] create file mapping "), std::format("{:d}", GetLastError());
+		LOG_ERROR("[FS] create file mapping ", std::format("{:d}", GetLastError()));
 
 	lpMapAddress = MapViewOfFile(
 		hMapping,
@@ -49,9 +49,10 @@ FileMapper::FileMapper(const char* _path, const size_t& _size) {
 	);
 
 	if (lpMapAddress == NULL) {
-		LOG_ERROR("[FS] create map view "), std::format("{:d}", GetLastError());
+		LOG_ERROR("[FS] create map view ", std::format("{:d}", GetLastError()));
 	}
 #else
+	// UNIX version here ...
 #endif
 }
 
@@ -69,10 +70,13 @@ LPVOID
 #else
 #endif
 FileMapper::GetMappedFile() {
+#ifdef _WIN32
 	if (lpMapAddress != NULL) {
 		return lpMapAddress;
 	} else {
 		LOG_ERROR("[FS] map view is null");
 		return nullptr;
 	}
+#else
+#endif
 }

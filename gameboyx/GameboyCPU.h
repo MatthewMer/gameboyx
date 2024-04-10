@@ -52,7 +52,7 @@ struct registers {
 	CLASSES FOR INSTRUCTION IN/OUTPUT POINTERS
 *********************************************************************************************************** */
 enum cgb_data_types {
-	NO_DATA,
+	NO_DATA_TYPE,
 	BC,
 	BC_ref,
 	DE,

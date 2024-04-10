@@ -11,7 +11,7 @@
 #include "BaseMEM.h"
 #include "gameboy_defines.h"
 #include "defs.h"
-//#include "FileMapper.h"
+#include "FileMapper.h"
 #include <atomic>
 #include <mutex>
 #include <vector>
