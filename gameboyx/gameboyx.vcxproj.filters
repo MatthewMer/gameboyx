@@ -144,6 +144,9 @@
     <ClCompile Include="include\simple_logger.cpp">
       <Filter>Source Files\misc</Filter>
     </ClCompile>
+    <ClCompile Include="FileMapper.cpp">
+      <Filter>Source Files\misc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="general_config.h">
@@ -243,6 +246,9 @@
       <Filter>Header Files\misc</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
+      <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="FileMapper.h">
       <Filter>Header Files\misc</Filter>
     </ClInclude>
   </ItemGroup>

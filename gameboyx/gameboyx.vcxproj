@@ -260,6 +260,7 @@
     <ClCompile Include="BaseCartridge.cpp" />
     <ClCompile Include="BaseMEM.cpp" />
     <ClCompile Include="ControlMgr.cpp" />
+    <ClCompile Include="FileMapper.cpp" />
     <ClCompile Include="GameboyCartridge.cpp" />
     <ClCompile Include="BaseCTRL.cpp" />
     <ClCompile Include="GameboyCTRL.cpp" />
@@ -291,6 +292,7 @@
     <ClInclude Include="AudioSDL.h" />
     <ClInclude Include="BaseCartridge.h" />
     <ClInclude Include="ControlMgr.h" />
+    <ClInclude Include="FileMapper.h" />
     <ClInclude Include="GameboyCartridge.h" />
     <ClInclude Include="BaseCTRL.h" />
     <ClInclude Include="GameboyCTRL.h" />
@@ -346,7 +348,7 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <Target Name="CopyControlDB" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
-    <Copy SourceFiles="..\submodules\SDL_GameControllerDB\gamecontrollerdb.txt" DestinationFolder="$(OutDir)control"/>
+    <Copy SourceFiles="..\submodules\SDL_GameControllerDB\gamecontrollerdb.txt" DestinationFolder="$(OutDir)control" />
   </Target>
   <Target Name="CopyCGBboot" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
     <Copy SourceFiles="$(ProjectDir)boot\cgb_boot.bin" DestinationFolder="$(OutDir)boot" />
