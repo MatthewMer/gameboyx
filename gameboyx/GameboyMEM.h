@@ -11,7 +11,6 @@
 #include "BaseMEM.h"
 #include "gameboy_defines.h"
 #include "defs.h"
-#include "FileMapper.h"
 #include <atomic>
 #include <mutex>
 #include <vector>
@@ -341,8 +340,6 @@ public:
 	void RequestInterrupts(const u8& _isr_flags) override;
 	u8& GetIO(const u16& _addr);
 	void SetIO(const u16& _addr, const u8& _data);
-	void CopyDataToRAM(const std::vector<char>& _data);
-	void CopyDataFromRAM(std::vector<char>& _data);
 
 	std::vector<u8>* GetProgramData(const int& _bank) const override;
 
@@ -351,24 +348,28 @@ public:
 
 	void GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) override;
 
-	const std::vector<u8>* GetBank(const MEM_TYPE& _type, const int& _bank);
+	const u8* GetBank(const MEM_TYPE& _type, const int& _bank);
 
 	// actual memory
 	std::vector<u8> ROM_0;
 	std::vector<std::vector<u8>> ROM_N;
-	std::vector<std::vector<u8>> RAM_N;
+	std::vector<u8*> RAM_N;
 	std::vector<u8> WRAM_0;
 	std::vector<std::vector<u8>> WRAM_N;
 	std::vector<u8> HRAM;
 	std::vector<u8> IO;
 
+	FileMapper mapper;
+	std::string saveFile = "";
+
 private:
 	// constructor
 	explicit GameboyMEM(BaseCartridge* _cartridge) {
-		InitMemory(_cartridge);
 		machine_ctx.battery_buffered = _cartridge->batteryBuffered;
 		machine_ctx.ram_present = _cartridge->ramPresent;
 		machine_ctx.timer_present = _cartridge->timerPresent;
+
+		InitMemory(_cartridge);
 
 		if (machine_ctx.isCgb) {
 			graphics_ctx.dmg_bgp_color_palette[0] = CGB_DMG_COLOR_WHITE;
@@ -391,18 +392,24 @@ private:
 		}
 	};
 	// destructor
-	~GameboyMEM() override = default;
+	~GameboyMEM() override {
+		if (!machine_ctx.battery_buffered && machine_ctx.ram_present) {
+			for (auto& n : RAM_N) {
+				delete[] n;
+			}
+		}
+	}
 
 	// members
 	void InitMemory(BaseCartridge* _cartridge) override;
 	void InitMemoryState() override;
-	void FillMemoryDebugTable(TableSection<memory_entry>& _table_section, std::vector<u8>* _bank_data, const int& _offset) override;
+	void FillMemoryDebugTable(TableSection<memory_entry>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) override;
 
 	bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;
 	bool CopyRom(const std::vector<u8>& _vec_rom) override;
 	void ProcessTAC();
 
-	void AllocateMemory() override;
+	void AllocateMemory(BaseCartridge* _cartridge) override;
 
 	// controller
 	void SetControlValues(const u8& _data);

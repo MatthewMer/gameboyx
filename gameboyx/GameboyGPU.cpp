@@ -712,22 +712,22 @@ void GameboyGPU::VRAMDMANextBlock() {
 
 			switch (graphicsCtx->vram_dma_mem) {
 			case ROM0:
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(ROM0, 0))[source_addr], 0x10);
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(ROM0, 0)[source_addr], 0x10);
 				break;
 			case ROMn:
 				bank = machineCtx->rom_bank_selected;
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(ROMn, bank))[source_addr], 0x10);
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(ROMn, bank)[source_addr], 0x10);
 				break;
 			case RAMn:
 				bank = machineCtx->ram_bank_selected;
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(RAMn, bank))[source_addr], 0x10);
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(RAMn, bank)[source_addr], 0x10);
 				break;
 			case WRAM0:
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(WRAM0, 0))[source_addr], 0x10);
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(WRAM0, 0)[source_addr], 0x10);
 				break;
 			case WRAMn:
 				bank = machineCtx->wram_bank_selected;
-				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &(*memInstance->GetBank(WRAMn, bank))[source_addr], 0x10);
+				memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(WRAMn, bank)[source_addr], 0x10);
 				break;
 			}
 
@@ -763,22 +763,22 @@ void GameboyGPU::OAMDMANextBlock() {
 
 			switch (graphicsCtx->oam_dma_mem) {
 			case ROM0:
-				graphicsCtx->OAM[counter] = (*memInstance->GetBank(ROM0, 0))[source_addr];
+				graphicsCtx->OAM[counter] = memInstance->GetBank(ROM0, 0)[source_addr];
 				break;
 			case ROMn:
 				bank = machineCtx->rom_bank_selected;
-				graphicsCtx->OAM[counter] = (*memInstance->GetBank(ROMn, bank))[source_addr];
+				graphicsCtx->OAM[counter] = memInstance->GetBank(ROMn, bank)[source_addr];
 				break;
 			case RAMn:
 				bank = machineCtx->ram_bank_selected;
-				graphicsCtx->OAM[counter] = (*memInstance->GetBank(RAMn, bank))[source_addr];
+				graphicsCtx->OAM[counter] = memInstance->GetBank(RAMn, bank)[source_addr];
 				break;
 			case WRAM0:
-				graphicsCtx->OAM[counter] = (*memInstance->GetBank(WRAM0, 0))[source_addr];
+				graphicsCtx->OAM[counter] = memInstance->GetBank(WRAM0, 0)[source_addr];
 				break;
 			case WRAMn:
 				bank = machineCtx->wram_bank_selected;
-				graphicsCtx->OAM[counter] = (*memInstance->GetBank(WRAMn, bank))[source_addr];
+				graphicsCtx->OAM[counter] = memInstance->GetBank(WRAMn, bank)[source_addr];
 				break;
 			}
 

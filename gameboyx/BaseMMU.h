@@ -52,14 +52,10 @@ public:
 protected:
 	// constructor
 	BaseMMU() = default;
-	virtual ~BaseMMU() {
-		if (saveThread.joinable()) {
-			saveThread.join();
-		}
-	}
+	virtual ~BaseMMU() = default;
 
-	virtual void ReadSave() = 0;
-	virtual void WriteSave() = 0;
+	//virtual void ReadSave() = 0;
+	//virtual void WriteSave() = 0;
 
 	static BaseMMU* instance;
 

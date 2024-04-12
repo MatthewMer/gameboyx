@@ -11,6 +11,7 @@
 #include "BaseCartridge.h"
 #include "GuiTable.h"
 #include "defs.h"
+#include "FileMapper.h"
 
 class BaseMEM
 {
@@ -32,9 +33,9 @@ protected:
 	virtual void InitMemoryState() = 0;
 	virtual bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) = 0;
 	virtual bool CopyRom(const std::vector<u8>& _vec_rom) = 0;
-	virtual void FillMemoryDebugTable(TableSection<memory_entry>& _table_section, std::vector<u8>* _bank_data, const int& _offset) = 0;
+	virtual void FillMemoryDebugTable(TableSection<memory_entry>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) = 0;
 
-	virtual void AllocateMemory() = 0;
+	virtual void AllocateMemory(BaseCartridge* _cartridge) = 0;
 
 	virtual void RequestInterrupts(const u8& isr_flags) = 0;
 

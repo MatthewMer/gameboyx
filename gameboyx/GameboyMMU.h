@@ -39,6 +39,7 @@ protected:
 
 	std::string saveFile = "";
 
+	/*
 	void ReadSave() override {
 		if (check_file_exists(saveFile)) {
 			auto data = std::vector<char>();
@@ -53,7 +54,9 @@ protected:
 			LOG_INFO("[emu] no save file found");
 		}
 	}
+	*/
 
+	/*
 	void WriteSave() override {
 		if (saveFinished.load()) {
 			if (saveThread.joinable()) {
@@ -71,6 +74,7 @@ protected:
 		mem_instance->CopyDataFromRAM(saveData);
 		saveTimePrev = steady_clock::now();
 	}
+	*/
 };
 
 /* ***********************************************************************************************************
@@ -88,12 +92,6 @@ public:
 	void Write16Bit(const u16& _data, const u16& _addr) override;
 	u8 Read8Bit(const u16& _addr) override;
 	//u16 Read16Bit(const u16& _addr) override;
-
-	// access machine states
-	//int GetCurrentSpeed() const override;
-	//u8 GetInterruptEnable() const override;
-	//u8 GetInterruptRequests() const override;
-	//void ResetInterruptRequest(const u8& _isr_flags) override;
 
 private:
 	// constructor
@@ -119,12 +117,6 @@ public:
 	void Write16Bit(const u16& _data, const u16& _addr) override;
 	u8 Read8Bit(const u16& _addr) override;
 	//u16 Read16Bit(const u16& _addr) override;
-
-	// access machine states
-	//int GetCurrentSpeed() const override;
-	//u8 GetInterruptEnable() const override;
-	//u8 GetInterruptRequests() const override;
-	//void ResetInterruptRequest(const u8& _isr_flags) override;
 
 private:
 	// constructor
@@ -158,12 +150,6 @@ public:
 	u8 Read8Bit(const u16& _addr) override;
 	//u16 Read16Bit(const u16& _addr) override;
 
-	// access machine states
-	//int GetCurrentSpeed() const override;
-	//u8 GetInterruptEnable() const override;
-	//u8 GetInterruptRequests() const override;
-	//void ResetInterruptRequest(const u8& _isr_flags) override;
-
 private:
 	// constructor
 	explicit MmuSM83_MBC3(BaseCartridge* _cartridge);
@@ -195,12 +181,6 @@ public:
 	void Write16Bit(const u16& _data, const u16& _addr) override;
 	u8 Read8Bit(const u16& _addr) override;
 	//u16 Read16Bit(const u16& _addr) override;
-
-	// access machine states
-	//int GetCurrentSpeed() const override;
-	//u8 GetInterruptEnable() const override;
-	//u8 GetInterruptRequests() const override;
-	//void ResetInterruptRequest(const u8& _isr_flags) override;
 
 private:
 	// constructor

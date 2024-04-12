@@ -127,20 +127,6 @@ GameboyMMU* GameboyMMU::getInstance(BaseCartridge* _cartridge) {
 GameboyMMU::GameboyMMU(BaseCartridge* _cartridge){
 	mem_instance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
 	machine_ctx = mem_instance->GetMachineContext();
-
-	auto file_name = split_string(_cartridge->fileName, ".");
-	saveFile = SAVE_FOLDER;
-
-	size_t j = file_name.size() - 1;
-	for (size_t i = 0; i < j; i++) {
-		saveFile += file_name[i];
-		if (i < j - 1) { saveFile += "."; }
-	}
-	saveFile += SAVE_EXT;
-
-	if (machine_ctx->battery_buffered && machine_ctx->ram_present) {
-		ReadSave();
-	}
 }
 
 /* ***********************************************************************************************************
@@ -341,7 +327,7 @@ void MmuSM83_MBC1::Write8Bit(const u8& _data, const u16& _addr) {
 			ramEnable = (_data & MBC1_RAM_ENABLE_MASK) == MBC1_RAM_ENABLE_BITS;
 
 			if (!ramEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
-				WriteSave();
+				//WriteSave();
 			}
 			
 		}
@@ -525,7 +511,7 @@ void MmuSM83_MBC3::Write8Bit(const u8& _data, const u16& _addr) {
 
 			timerRamEnable = (_data & MBC3_RAM_ENABLE_MASK) == MBC3_RAM_ENABLE_BITS;
 			if (was_enabled && !timerRamEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
-				WriteSave();
+				//WriteSave();
 				was_enabled = false;
 			} else {
 				was_enabled = true;
@@ -748,7 +734,7 @@ void MmuSM83_MBC5::Write8Bit(const u8& _data, const u16& _addr) {
 			ramEnable = (_data & MBC5_RAM_ENABLE_MASK) == MBC5_RAM_ENABLE;
 
 			if (!ramEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
-				WriteSave();
+				//WriteSave();
 			}
 
 		}

@@ -9,8 +9,40 @@
 using namespace std;
 namespace fs = filesystem;
 
+
 FileMapper::FileMapper(const char* _path, const size_t& _size) {
 #ifdef _WIN32
+	MapFile(_path, _size);
+#else
+	// UNIX version here ...
+#endif
+}
+
+
+FileMapper::~FileMapper() {
+#ifdef _WIN32
+	UnmapFile();
+#else
+#endif
+}
+
+#ifdef _WIN32
+LPVOID FileMapper::GetMappedFile() {
+	if (lpMapAddress != NULL) {
+		return lpMapAddress;
+	} else {
+		LOG_ERROR("[FS] map view is null");
+		return nullptr;
+	}
+}
+
+LPVOID FileMapper::GetMappedFile(const char* _path, const size_t& _size) {
+	UnmapFile();
+
+	return MapFile(_path, _size);
+}
+
+LPVOID FileMapper::MapFile(const char* _path, const size_t& _size) {
 	if (!fs::exists(_path)) {
 		std::vector<char> zero(_size, 0x00);
 		std::ofstream os(_path, std::ios::binary | std::ios::out);
@@ -51,31 +83,19 @@ FileMapper::FileMapper(const char* _path, const size_t& _size) {
 	if (lpMapAddress == NULL) {
 		LOG_ERROR("[FS] create map view ", std::format("{:d}", GetLastError()));
 	}
-#else
-	// UNIX version here ...
-#endif
+
+	return lpMapAddress;
 }
 
-FileMapper::~FileMapper() {
-#ifdef _WIN32
-	UnmapViewOfFile(lpMapAddress);
-	CloseHandle(hMapping);
-	CloseHandle(hFile);
 #else
 #endif
-}
 
-#ifdef _WIN32
-LPVOID
-#else
-#endif
-FileMapper::GetMappedFile() {
+void FileMapper::UnmapFile() {
 #ifdef _WIN32
 	if (lpMapAddress != NULL) {
-		return lpMapAddress;
-	} else {
-		LOG_ERROR("[FS] map view is null");
-		return nullptr;
+		UnmapViewOfFile(lpMapAddress);
+		CloseHandle(hMapping);
+		CloseHandle(hFile);
 	}
 #else
 #endif

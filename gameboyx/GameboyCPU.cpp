@@ -3822,7 +3822,9 @@ void GameboyCPU::GetInstrDebugTableTmp(Table<instr_entry>& _table) {
         DecodeBankContent(bank_table, &graphics_ctx->VRAM_N[bank_num], VRAM_N_OFFSET, bank_num, "VRAM");
     } else if (Regs.PC >= RAM_N_OFFSET && Regs.PC < WRAM_0_OFFSET) {
         bank_num = machine_ctx->ram_bank_selected;
-        DecodeBankContent(bank_table, &mem_instance->RAM_N[bank_num], RAM_N_OFFSET, bank_num, "RAM");
+        std::vector<u8> ram = std::vector<u8>(RAM_N_SIZE);
+        memcpy(ram.data(), mem_instance->RAM_N[bank_num], RAM_N_SIZE);
+        DecodeBankContent(bank_table, &ram, RAM_N_OFFSET, bank_num, "RAM");
     } else if (Regs.PC >= WRAM_0_OFFSET && Regs.PC < WRAM_N_OFFSET) {
         bank_num = 0;
         DecodeBankContent(bank_table, &mem_instance->WRAM_0, WRAM_0_OFFSET, bank_num, "WRAM");

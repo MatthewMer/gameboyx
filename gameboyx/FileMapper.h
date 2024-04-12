@@ -9,19 +9,24 @@
 class FileMapper {
 public:
 	FileMapper(const char* _path, const size_t& _size);
+	FileMapper() {};
 	~FileMapper();
 
 #ifdef _WIN32
-	LPVOID
+	LPVOID GetMappedFile();
+	LPVOID GetMappedFile(const char* _path, const size_t& _size);
 #else
 #endif
-	GetMappedFile();
 
 private:
 #ifdef _WIN32
-	HANDLE hFile;
-	HANDLE hMapping;
-	LPVOID lpMapAddress;
+	HANDLE hFile = nullptr;
+	HANDLE hMapping = nullptr;
+	LPVOID lpMapAddress = nullptr;
+
+	LPVOID MapFile(const char* _path, const size_t& _size);
 #else
 #endif
+
+	void UnmapFile();
 };

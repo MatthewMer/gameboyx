@@ -7,22 +7,6 @@
 
 using namespace std;
 
-void save_thread(BaseMMU* _obj, std::string _file) {
-	bool saving = true;
-	u32 time_delta = 0;
-
-	while (saving) {
-		time_delta = _obj->GetSaveTimeDiff();
-
-		if (time_delta > 500000) {
-			saving = false;
-		}
-	}
-
-	auto data = _obj->GetSaveData();
-	write_data(data, _file, true);
-}
-
 /* ***********************************************************************************************************
 	MMU BASE CLASS
 *********************************************************************************************************** */
