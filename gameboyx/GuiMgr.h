@@ -24,7 +24,8 @@ enum windowID {
 	DEBUG_INSTR,
 	DEBUG_MEM,
 	HW_INFO,
-	ABOUT
+	ABOUT,
+	DEBUG_GRAPH
 };
 
 class GuiMgr {
@@ -79,6 +80,9 @@ private:
 	bool showGraphicsInfo = false;
 	bool showGraphicsSettings = false;
 	bool showAudioSettings = false;
+	bool showGraphicsDebugger = false;
+
+	bool showAny = false;
 
 	// flow control values
 	bool gameRunning = false;
@@ -97,14 +101,16 @@ private:
 		{DEBUG_INSTR, false},
 		{DEBUG_MEM, false},
 		{HW_INFO, false},
-		{ABOUT, false}
+		{ABOUT, false},
+		{DEBUG_GRAPH, false}
 	};
 	std::unordered_map<windowID, bool> windowsHovered = {
 		{GAME_SELECT, false},
 		{DEBUG_INSTR, false},
 		{DEBUG_MEM, false},
 		{HW_INFO, false},
-		{ABOUT, false}
+		{ABOUT, false},
+		{DEBUG_GRAPH, false}
 	};
 	void CheckWindow(const windowID& _id);
 	template <class T>
@@ -180,6 +186,8 @@ private:
 	int samplingRateMax = 0;
 	int samplingRate = 0;
 
+	std::vector<std::tuple<int, std::string, bool>> debugGraphicsSettings;
+
 	void ResetGUI();
 
 	// gui functions
@@ -194,6 +202,7 @@ private:
 	void ShowGraphicsOverlay();
 	void ShowGraphicsSettings();
 	void ShowAudioSettings();
+	void ShowDebugGraphics();
 
 	// main menur bar elements
 	void ShowEmulationSpeeds();
@@ -205,6 +214,8 @@ private:
 	void ShowDebugInstrMiscData(const char* _title, const int& _col_num, const std::vector<float>& _columns, const std::vector<reg_entry>& _data);
 
 	void ShowDebugMemoryTab(Table<memory_entry>& _table);
+
+	void ShowDebugGraphicsSelects();
 
 	// actions
 	void ActionGameStart();

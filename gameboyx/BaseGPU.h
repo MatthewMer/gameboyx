@@ -35,6 +35,9 @@ public:
 	virtual int GetTicksPerFrame(const float& _clock) const = 0;
 	int GetFrameCount();
 
+	virtual std::vector<std::tuple<int, std::string, bool>> GetGraphicsDebugSettings() = 0;
+	virtual void SetGraphicsDebugSetting(const bool& _val, const int& _id) = 0;
+
 protected:
 	// constructor
 	BaseGPU() = default;
@@ -44,6 +47,8 @@ protected:
 	int tickCounter = 0;
 
 	std::vector<u8> imageData;
+
+	std::vector<std::atomic<bool>*> graphicsDebugSettings;
 
 private:
 	static BaseGPU* instance;

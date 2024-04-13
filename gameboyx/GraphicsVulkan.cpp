@@ -281,7 +281,6 @@ bool GraphicsVulkan::StartGraphics(bool& _present_mode_fifo, bool& _triple_buffe
 
 	bindPipelines = &GraphicsVulkan::BindPipelinesDummy;
 	updateFunction = &GraphicsVulkan::UpdateDummy;
-	updateFunctionSubmit = &GraphicsVulkan::UpdateDummy;
 
 	_present_mode_fifo = (presentMode == VK_PRESENT_MODE_FIFO_KHR ? true : false);
 	_triple_buffering = (minImageCount == 3 ? true : false);
@@ -378,11 +377,15 @@ bool GraphicsVulkan::Init2dGraphicsBackend() {
 		return false;
 	}
 
+	tex2dData.cmdbufSubmitSignals.clear();
+	tex2dData.cmdbufSubmitSignals.emplace_back(&tex2dData.cmdbuf_0_submitted);
+	tex2dData.cmdbufSubmitSignals.emplace_back(&tex2dData.cmdbuf_1_submitted);
+	tex2dData.cmdbufSubmitSignals.emplace_back(&tex2dData.cmdbuf_2_submitted);
+
 	RecalcTex2dScaleMatrix();
 
 	bindPipelines = &GraphicsVulkan::BindPipelines2d;
 	updateFunction = &GraphicsVulkan::UpdateTex2d;
-	updateFunctionSubmit = &GraphicsVulkan::UpdateTex2dSubmit;
 
 	submitRunning.store(true);
 	queueSubmitThread = thread([this]() -> void { QueueSubmit(); });
@@ -426,7 +429,6 @@ void GraphicsVulkan::Destroy2dGraphicsBackend() {
 	}
 	tex2dData.update_fence.clear();
 
-	updateFunctionSubmit = &GraphicsVulkan::UpdateDummy;
 	updateFunction = &GraphicsVulkan::UpdateDummy;
 	bindPipelines = &GraphicsVulkan::BindPipelinesDummy;
 
@@ -536,7 +538,21 @@ void GraphicsVulkan::RenderFrame() {
 
 void GraphicsVulkan::QueueSubmit() {
 	while (submitRunning.load()) {
-		(this->*updateFunctionSubmit)();
+		unique_lock<mutex> lock_submit(mutSubmit);
+		for (auto& n : queueSubmitData) {
+			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+			submitInfo.commandBufferCount = 1;
+			submitInfo.pCommandBuffers = get<0>(n);
+
+			std::unique_lock<mutex> lock_queue(mutQueue);
+			if (vkQueueSubmit(queue, 1, &submitInfo, *get<1>(n)) != VK_SUCCESS) {
+				LOG_ERROR("[vulkan] queue submit texture2d update");
+			}
+			lock_queue.unlock();
+			get<2>(n)->store(true);
+		}
+		queueSubmitData.clear();
+		lock_submit.unlock();
 	}
 }
 
@@ -578,142 +594,86 @@ void GraphicsVulkan::UpdateGpuData() {
 
 void GraphicsVulkan::UpdateTex2d() {
 	int& update_index = tex2dData.update_index;
+	std::atomic<bool>* signal = tex2dData.cmdbufSubmitSignals[update_index];
 
-	switch (update_index) {
-	case 0:
-		if (tex2dData.submit_cmdbuffer_0.load()) { return; }
-		break;
-	case 1:
-		if (tex2dData.submit_cmdbuffer_1.load()) { return; }
-		break;
-	case 2:
-		if (tex2dData.submit_cmdbuffer_2.load()) { return; }
-		break;
-	}
-
-	VkResult result = vkWaitForFences(device, 1, &tex2dData.update_fence[update_index], VK_TRUE, 0);
-	switch (result) {
-	case VK_TIMEOUT:
-		return;
-		break;
-	case VK_SUCCESS:
-		break;
-	default:
-		LOG_ERROR("[vulkan] wait for texture2d update fence");
-		return;
-		break;
-	}
-
-	if (vkResetFences(device, 1, &tex2dData.update_fence[update_index]) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] reset texture2d update fence");
-	}
-
-	memcpy(tex2dData.mapped_image_data[update_index], virtGraphicsInfo.image_data->data(), virtGraphicsInfo.image_data->size());
-
-	if (vkResetCommandPool(device, tex2dData.command_pool[update_index], 0) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] reset texture2d command pool");
-	}
-
-	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	if (vkBeginCommandBuffer(tex2dData.command_buffer[update_index], &beginInfo) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] begin command buffer texture2d update");
-	}
-
-	// synchronize texture upload to shader stages -> shader stage TRANSFER with corresponding access mask for TRANSFER (L2 Cache) 
-	// to make sure the copy is not interfering with the fragment shader read and image is in proper layout and memory location for update
-	{
-		VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imageBarrier.image = tex2dData.image.image;
-		imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		imageBarrier.subresourceRange.levelCount = 1;
-		imageBarrier.subresourceRange.layerCount = 1;
-		imageBarrier.srcAccessMask = VK_ACCESS_NONE;
-		imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		vkCmdPipelineBarrier(tex2dData.command_buffer[update_index], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-	}
-
-	VkBufferImageCopy region = {};
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.layerCount = 1;
-	region.imageExtent = { virtGraphicsInfo.lcd_width, virtGraphicsInfo.lcd_height, 1 };
-	vkCmdCopyBufferToImage(tex2dData.command_buffer[update_index], tex2dData.staging_buffer[update_index].buffer, tex2dData.image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-	{
-		VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-		imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imageBarrier.image = tex2dData.image.image;
-		imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		imageBarrier.subresourceRange.levelCount = 1;
-		imageBarrier.subresourceRange.layerCount = 1;
-		imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		vkCmdPipelineBarrier(tex2dData.command_buffer[update_index], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-	}
-
-	if (vkEndCommandBuffer(tex2dData.command_buffer[update_index]) != VK_SUCCESS) {
-		LOG_ERROR("[vulkan] end command buffer texture2d update");
-	}
-
-	switch (update_index) {
-	case 0:
-		tex2dData.submit_cmdbuffer_0.store(true);
-		break;
-	case 1:
-		tex2dData.submit_cmdbuffer_1.store(true);
-		break;
-	case 2:
-		tex2dData.submit_cmdbuffer_2.store(true);
-		break;
-	}
-	++update_index %= virtGraphicsInfo.buffering;
-}
-
-void GraphicsVulkan::UpdateTex2dSubmit() {
-	// in case (for whatever reason) both commandbuffers are ready for submission, submit them both to allow main thread to automatically catch up
-	// this should actually not happen because main thread signals virtual hardware when it is ready for the next frame
-	if (tex2dData.submit_cmdbuffer_0.load()) {
-		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &tex2dData.command_buffer[0];
-
-		std::unique_lock<mutex> lock_queue(mutQueue);
-		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[0]) != VK_SUCCESS) {
-			LOG_ERROR("[vulkan] queue submit texture2d update");
+	if (signal->load()) {
+		VkResult result = vkWaitForFences(device, 1, &tex2dData.update_fence[update_index], VK_TRUE, 0);
+		switch (result) {
+		case VK_TIMEOUT:
+			return;
+			break;
+		case VK_SUCCESS:
+			break;
+		default:
+			LOG_ERROR("[vulkan] wait for texture2d update fence");
+			return;
+			break;
 		}
-		lock_queue.unlock();
-		tex2dData.submit_cmdbuffer_0.store(false);
-	}
-	if (tex2dData.submit_cmdbuffer_1.load()) {
-		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &tex2dData.command_buffer[1];
 
-		std::unique_lock<mutex> lock_queue(mutQueue);
-		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[1]) != VK_SUCCESS) {
-			LOG_ERROR("[vulkan] queue submit texture2d update");
+		if (vkResetFences(device, 1, &tex2dData.update_fence[update_index]) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] reset texture2d update fence");
 		}
-		lock_queue.unlock();
-		tex2dData.submit_cmdbuffer_1.store(false);
-	}
-	if (tex2dData.submit_cmdbuffer_2.load()) {
-		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &tex2dData.command_buffer[2];
 
-		std::unique_lock<mutex> lock_queue(mutQueue);
-		if (vkQueueSubmit(queue, 1, &submitInfo, tex2dData.update_fence[2]) != VK_SUCCESS) {
-			LOG_ERROR("[vulkan] queue submit texture2d update");
+		memcpy(tex2dData.mapped_image_data[update_index], virtGraphicsInfo.image_data->data(), virtGraphicsInfo.image_data->size());
+
+		if (vkResetCommandPool(device, tex2dData.command_pool[update_index], 0) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] reset texture2d command pool");
 		}
-		lock_queue.unlock();
-		tex2dData.submit_cmdbuffer_2.store(false);
+
+		VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		if (vkBeginCommandBuffer(tex2dData.command_buffer[update_index], &beginInfo) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] begin command buffer texture2d update");
+		}
+
+		// synchronize texture upload to shader stages -> shader stage TRANSFER with corresponding access mask for TRANSFER (L2 Cache) 
+		// to make sure the copy is not interfering with the fragment shader read and image is in proper layout and memory location for update
+		{
+			VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imageBarrier.image = tex2dData.image.image;
+			imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBarrier.subresourceRange.levelCount = 1;
+			imageBarrier.subresourceRange.layerCount = 1;
+			imageBarrier.srcAccessMask = VK_ACCESS_NONE;
+			imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			vkCmdPipelineBarrier(tex2dData.command_buffer[update_index], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+		}
+
+		VkBufferImageCopy region = {};
+		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.layerCount = 1;
+		region.imageExtent = { virtGraphicsInfo.lcd_width, virtGraphicsInfo.lcd_height, 1 };
+		vkCmdCopyBufferToImage(tex2dData.command_buffer[update_index], tex2dData.staging_buffer[update_index].buffer, tex2dData.image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+		{
+			VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imageBarrier.image = tex2dData.image.image;
+			imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBarrier.subresourceRange.levelCount = 1;
+			imageBarrier.subresourceRange.layerCount = 1;
+			imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			vkCmdPipelineBarrier(tex2dData.command_buffer[update_index], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+		}
+
+		if (vkEndCommandBuffer(tex2dData.command_buffer[update_index]) != VK_SUCCESS) {
+			LOG_ERROR("[vulkan] end command buffer texture2d update");
+		}
+
+		signal->store(false);
+
+		unique_lock<mutex> lock_submit(mutSubmit);
+		queueSubmitData.emplace_back(&tex2dData.command_buffer[update_index], &tex2dData.update_fence[update_index], signal);
+
+		++update_index %= virtGraphicsInfo.buffering;
 	}
 }
 

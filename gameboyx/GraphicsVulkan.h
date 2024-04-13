@@ -22,6 +22,7 @@
 #include <vector>
 #include <thread>
 #include <mutex>
+#include <atomic>
 
 #ifndef GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -61,9 +62,10 @@ struct tex2d_data {
 	std::vector<vulkan_buffer> staging_buffer = std::vector<vulkan_buffer>();
 
 	int update_index = 0;
-	alignas(64) std::atomic<bool> submit_cmdbuffer_0 = false;
-	alignas(64) std::atomic<bool> submit_cmdbuffer_1 = false;
-	alignas(64) std::atomic<bool> submit_cmdbuffer_2 = false;
+	alignas(64) std::atomic<bool> cmdbuf_0_submitted = true;
+	alignas(64) std::atomic<bool> cmdbuf_1_submitted = true;
+	alignas(64) std::atomic<bool> cmdbuf_2_submitted = true;
+	std::vector<std::atomic<bool>*> cmdbufSubmitSignals = std::vector<std::atomic<bool>*>();
 
 	std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>();
 	std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>();
@@ -182,8 +184,10 @@ private:
 	// render functions
 	typedef void (GraphicsVulkan::* update_function)();
 	update_function updateFunction = nullptr;
-	update_function updateFunctionSubmit = nullptr;
 	std::mutex mutQueue;
+
+	std::vector<std::tuple<VkCommandBuffer*, VkFence*, std::atomic<bool>*>> queueSubmitData = std::vector<std::tuple<VkCommandBuffer*, VkFence*, std::atomic<bool>*>>();
+	std::mutex mutSubmit;
 
 	void UpdateDummy();
 
@@ -226,7 +230,6 @@ private:
 	// render target 2d texture
 	tex2d_data tex2dData = {};
 
-	void UpdateTex2dSubmit();
 	void UpdateTex2d() override;
 	void RecalcTex2dScaleMatrix() override;
 

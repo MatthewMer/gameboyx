@@ -278,3 +278,11 @@ void VHardwareMgr::GetMemoryDebugTables(std::vector<Table<memory_entry>>& _table
     //unique_lock<mutex> lock_hardware(mutHardware);
     memory_instance->GetMemoryDebugTables(_tables);
 }
+
+void VHardwareMgr::GetGraphicsDebugSettings(std::vector<std::tuple<int, std::string, bool>>& _settings) {
+    _settings = graphics_instance->GetGraphicsDebugSettings();
+}
+
+void VHardwareMgr::SetGraphicsDebugSetting(const bool& _val, const int& _id) {
+    graphics_instance->SetGraphicsDebugSetting(_val, _id);
+}

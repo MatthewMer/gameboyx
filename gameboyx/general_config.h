@@ -204,6 +204,8 @@ inline const std::vector<float> GRAPH_SETTINGS_COLUMNS = {
     1.f
 };
 
+inline const ImVec2 graph_debug_win_size(600.f, 0.f);
+
 inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Color" };
 
 #define BG_CHANNEL_COL .1f

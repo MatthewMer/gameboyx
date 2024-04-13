@@ -73,8 +73,6 @@ GuiMgr::GuiMgr() {
     // read games from config
     ReloadGamesGuiCtx();
 
-    HardwareMgr::SetMouseAlwaysVisible(true);
-
     mainFont = HardwareMgr::GetFont(0);
     IM_ASSERT(mainFont != nullptr);
 }
@@ -147,20 +145,28 @@ void GuiMgr::ProcessGUI() {
         }
     }
 
+    bool show_any = false;
+
     ImGui::PushFont(mainFont);
-    if (showInstrDebugger) { ShowDebugInstructions(); }
-    if (showWinAbout) { ShowWindowAbout(); }
-    if (showHardwareInfo) { ShowHardwareInfo(); }
-    if (showMemoryInspector) { ShowDebugMemoryInspector(); }
-    if (showImGuiDebug) { ImGui::ShowDebugLogWindow(&showImGuiDebug); }
-    if (showGraphicsInfo) { ShowGraphicsInfo(); }
-    if (showGraphicsOverlay) { ShowGraphicsOverlay(); }
-    if (!gameRunning) { ShowGameSelect(); }
-    if (showNewGameDialog) { ShowNewGameDialog(); }
-    if (showGraphicsSettings) { ShowGraphicsSettings(); }
-    if (showAudioSettings) { ShowAudioSettings(); }
-    if (showMainMenuBar) { ShowMainMenuBar(); }
+    if (showInstrDebugger)      { ShowDebugInstructions();                      show_any = true; }
+    if (showWinAbout)           { ShowWindowAbout();                            show_any = true; }
+    if (showHardwareInfo)       { ShowHardwareInfo();                           show_any = true; }
+    if (showMemoryInspector)    { ShowDebugMemoryInspector();                   show_any = true; }
+    if (showImGuiDebug)         { ImGui::ShowDebugLogWindow(&showImGuiDebug);   show_any = true; }
+    if (showGraphicsInfo)       { ShowGraphicsInfo();                           show_any = true; }
+    if (showGraphicsOverlay)    { ShowGraphicsOverlay(); }
+    if (!gameRunning)           { ShowGameSelect();                             show_any = true; }
+    if (showNewGameDialog)      { ShowNewGameDialog(); }
+    if (showGraphicsSettings)   { ShowGraphicsSettings(); }
+    if (showAudioSettings)      { ShowAudioSettings();                          show_any = true; }
+    if (showMainMenuBar)        { ShowMainMenuBar();                            show_any = true; }
+    if (showGraphicsDebugger)   { ShowDebugGraphics();                          show_any = true; }
     ImGui::PopFont();
+
+    if (show_any != showAny) {
+        showAny = show_any;
+        HardwareMgr::SetMouseAlwaysVisible(showAny);
+    }
 
     sdlScrollUp = false;
     sdlScrollDown = false;
@@ -214,6 +220,7 @@ void GuiMgr::ShowMainMenuBar() {
         if (ImGui::BeginMenu("Debug")) {
             ImGui::MenuItem("Hardware Info", nullptr, &showHardwareInfo);
             ImGui::MenuItem("Instruction Debugger", nullptr, &showInstrDebugger);
+            ImGui::MenuItem("Graphics Debugger", nullptr, &showGraphicsDebugger);
             ImGui::MenuItem("Memory Inspector", nullptr, &showMemoryInspector);
             ImGui::MenuItem("ImGui Debug", nullptr, &showImGuiDebug);
             ImGui::EndMenu();
@@ -288,8 +295,8 @@ void GuiMgr::ShowDebugInstrButtonsHead() {
     }
 
     ImGui::SameLine();
+    bool auto_run = autoRun;
     ImGui::Checkbox("Auto run", &autoRun);
-    static bool auto_run = autoRun;
     if (auto_run != autoRun) {
         auto_run = autoRun;
         autoRunInstructions.store(auto_run);
@@ -910,6 +917,30 @@ void GuiMgr::ShowAudioSettings() {
     }
 }
 
+void GuiMgr::ShowDebugGraphics() {
+    ImGui::SetNextWindowSize(graph_debug_win_size);
+
+    if (ImGui::Begin("Graphics Debugger", &showInstrDebugger, WIN_CHILD_FLAGS)) {
+        CheckWindow(DEBUG_GRAPH);
+
+        ShowDebugGraphicsSelects();
+        ImGui::End();
+    }
+}
+
+void GuiMgr::ShowDebugGraphicsSelects() {
+    if (gameRunning) {
+        for (auto& n : debugGraphicsSettings) {
+            bool& set = get<2>(n);
+            bool was_set = set;
+            ImGui::Checkbox(get<1>(n).c_str(), &set);
+            if (was_set != set) {
+                vhwmgr->SetGraphicsDebugSetting(set, get<0>(n));
+            }
+        }
+    }
+}
+
 /* ***********************************************************************************************************
     ACTIONS TO READ/WRITE/PROCESS DATA ETC.
 *********************************************************************************************************** */
@@ -917,7 +948,6 @@ void GuiMgr::ActionGameStart() {
     if (!gameRunning) {
         StartGame(false);
         showMainMenuBar = false;
-        HardwareMgr::SetMouseAlwaysVisible(false);
     }
     requestGameStart = false;
 }
@@ -928,7 +958,6 @@ void GuiMgr::ActionGameStop() {
         gameRunning = false;
         showMainMenuBar = true;
         ResetGUI();
-        HardwareMgr::SetMouseAlwaysVisible(true);
     }
     requestGameStop = false;
 }
@@ -1165,6 +1194,8 @@ void GuiMgr::StartGame(const bool& _restart) {
         } else {
             vhwmgr->GetInstrDebugTable(debugInstrTable);
             vhwmgr->GetMemoryDebugTables(debugMemoryTables);
+
+            vhwmgr->GetGraphicsDebugSettings(debugGraphicsSettings);
 
             if (vhwmgr->StartHardware() == 0x00) {
                 gameRunning = true;

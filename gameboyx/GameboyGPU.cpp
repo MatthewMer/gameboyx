@@ -23,6 +23,28 @@ int GameboyGPU::GetTicksPerFrame(const float& _clock) const {
 	return (int)(_clock / DISPLAY_FREQUENCY);
 }
 
+std::vector<std::tuple<int, std::string, bool>> GameboyGPU::GetGraphicsDebugSettings() {
+	graphicsDebugSettings.clear();
+	graphicsDebugSettings.emplace_back(&presentObjPrio0);
+	graphicsDebugSettings.emplace_back(&presentObjPrio1);
+	graphicsDebugSettings.emplace_back(&presentBackground);
+	graphicsDebugSettings.emplace_back(&presentWindow);
+
+	std::vector<std::tuple<int, std::string, bool>> settings;
+	settings.emplace_back(0, "Objects Priority 0", graphicsDebugSettings[0]->load());
+	settings.emplace_back(1, "Objects Priority 1", graphicsDebugSettings[1]->load());
+	settings.emplace_back(2, "Background", graphicsDebugSettings[2]->load());
+	settings.emplace_back(3, "Window", graphicsDebugSettings[3]->load());
+
+	return settings;
+}
+
+void GameboyGPU::SetGraphicsDebugSetting(const bool& _val, const int& _id) {
+	if (_id < graphicsDebugSettings.size()) {
+		graphicsDebugSettings[_id]->store(_val);
+	}
+}
+
 void GameboyGPU::ProcessGPU(const int& _ticks) {
 	OAMDMANextBlock();
 
@@ -50,6 +72,8 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 				statSignal = false;
 
 				if (tickCounter >= PPU_DOTS_MODE_3_MIN + PPU_DOTS_MODE_2) {
+					int offset_y = ly * PPU_SCREEN_X * TEX2D_CHANNELS;
+					memset(&imageData[offset_y], 0, PPU_SCREEN_X * TEX2D_CHANNELS);
 					(this->*DrawScanline)(ly);
 					EnterMode0();
 				}
@@ -79,6 +103,11 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 					if (ly == LCD_SCANLINES_TOTAL) {
 						ly = 0x00;
 						EnterMode2();
+
+						presentObjPrio0Set = presentObjPrio0.load();
+						presentObjPrio1Set = presentObjPrio1.load();
+						presentBackgroundSet = presentBackground.load();
+						presentWindowSet = presentWindow.load();
 					}
 				}
 				break;
@@ -110,8 +139,8 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 #define SET_MODE(stat, mode) stat = (stat & PPU_STAT_WRITEABLE_BITS) | mode 
 
 void GameboyGPU::EnterMode2() {
-	memset(objNoPrio, false, PPU_SCREEN_X);
-	memset(bgwinPrio, false, PPU_SCREEN_X);
+	std::fill(objNoPrio.begin(), objNoPrio.end(), false);
+	std::fill(bgwinPrio.begin(), bgwinPrio.end(), false);
 
 	SetMode(PPU_MODE_2);
 
@@ -152,18 +181,18 @@ void GameboyGPU::SetMode(const int& _mode) {
 
 void GameboyGPU::DrawScanlineDMG(const u8& _ly) {
 	if (graphicsCtx->obj_enable) {
-		DrawObjectsDMG(_ly, OAMPrio0, numOAMPrio0, true);
+		if (presentObjPrio0Set) { DrawObjectsDMG(_ly, OAMPrio0, numOAMPrio0, true); }
 	}
 
 	if (graphicsCtx->bg_win_enable) {
-		DrawBackgroundDMG(_ly);
+		if (presentBackgroundSet) { DrawBackgroundDMG(_ly); }
 		if (graphicsCtx->win_enable) {
-			DrawWindowDMG(_ly);
+			if (presentWindowSet) { DrawWindowDMG(_ly); }
 		}
 	}
 
 	if (graphicsCtx->obj_enable) {
-		DrawObjectsDMG(_ly, OAMPrio1, numOAMPrio1, false);
+		if (presentObjPrio1Set) { DrawObjectsDMG(_ly, OAMPrio1, numOAMPrio1, false); }
 	}
 }
 
@@ -369,17 +398,17 @@ void GameboyGPU::DrawTileBGWINDMG(const int& _x, const int& _y, const u32* _colo
 
 void GameboyGPU::DrawScanlineCGB(const u8& _ly) {
 	if (graphicsCtx->obj_enable) {
-		DrawObjectsCGB(_ly, OAMPrio0, numOAMPrio0, true);
+		if (presentObjPrio0Set) { DrawObjectsCGB(_ly, OAMPrio0, numOAMPrio0, true); }
 	}
 
-	DrawBackgroundCGB(_ly);
+	if (presentBackgroundSet) { DrawBackgroundCGB(_ly); }
 
 	if (graphicsCtx->win_enable) {
-		DrawWindowCGB(_ly);
+		if (presentWindowSet) { DrawWindowCGB(_ly); }
 	}
 
 	if (graphicsCtx->obj_enable) {
-		DrawObjectsCGB(_ly, OAMPrio1, numOAMPrio1, false);
+		if (presentObjPrio1Set) { DrawObjectsCGB(_ly, OAMPrio1, numOAMPrio1, false); }
 	}
 }
 
@@ -476,7 +505,7 @@ void GameboyGPU::DrawWindowCGB(const u8& _ly) {
 
 			palette_index = tile_attr & BG_ATTR_PALETTE_CGB;
 			bank = (tile_attr & BG_ATTR_VRAM_BANK_CGB ? 1 : 0);
-			x_flip = (tile_attr & BG_ATTR_FLIP_HORIZONTAL ? true : false);		// TODO !!!
+			x_flip = (tile_attr & BG_ATTR_FLIP_HORIZONTAL ? true : false);
 			y_flip = (tile_attr & BG_ATTR_FLIP_VERTICAL ? true : false);
 			prio = (tile_attr & BG_ATTR_OAM_PRIORITY ? true : false);
 

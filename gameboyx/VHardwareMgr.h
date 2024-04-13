@@ -69,6 +69,9 @@ public:
     void GetHardwareInfo(std::vector<data_entry>& _hardware_info);
     void GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables);
 
+    void GetGraphicsDebugSettings(std::vector<std::tuple<int, std::string, bool>>& _settings);
+    void SetGraphicsDebugSetting(const bool& _val, const int& _id);
+
 private:
     VHardwareMgr() = default;
     ~VHardwareMgr();

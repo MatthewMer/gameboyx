@@ -11,6 +11,7 @@
 #include "GameboyMEM.h"
 #include "HardwareMgr.h"
 #include "GameboyCPU.h"
+#include <atomic>
 
 class GameboyGPU : protected BaseGPU {
 public:
@@ -23,6 +24,9 @@ public:
 	void OAMDMANextBlock();
 
 	void SetMode(const int& _mode);
+
+	std::vector<std::tuple<int, std::string, bool>> GetGraphicsDebugSettings() override;
+	void SetGraphicsDebugSetting(const bool& _val, const int& _id) override;
 
 private:
 	// constructor
@@ -92,10 +96,10 @@ private:
 
 	int OAMPrio0[10];
 	int numOAMPrio0 = 0;
-	bool objNoPrio[PPU_SCREEN_X];
+	std::vector<bool> objNoPrio = std::vector<bool>(PPU_SCREEN_X, false);
 	int OAMPrio1[10];
 	int numOAMPrio1 = 0;
-	bool bgwinPrio[PPU_SCREEN_X];
+	std::vector<bool> bgwinPrio = std::vector<bool>(PPU_SCREEN_X, false);
 
 	int oamOffset = 0;
 
@@ -115,4 +119,14 @@ private:
 	int mode3Dots;
 
 	GameboyCPU* coreInstance;
+
+	alignas(64) std::atomic<bool> presentObjPrio0 = true;
+	alignas(64) std::atomic<bool> presentObjPrio1 = true;
+	alignas(64) std::atomic<bool> presentBackground = true;
+	alignas(64) std::atomic<bool> presentWindow = true;
+
+	bool presentObjPrio0Set = true;
+	bool presentObjPrio1Set = true;
+	bool presentBackgroundSet = true;
+	bool presentWindowSet = true;
 };
