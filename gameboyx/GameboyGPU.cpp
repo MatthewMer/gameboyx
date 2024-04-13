@@ -525,7 +525,7 @@ void GameboyGPU::DrawTileBGWINCGB(const int& _x, const int& _y, const u32* _colo
 						color_mask >>= 8;
 					}
 
-					if (_prio) { bgwinPrio[x] = true; }
+					if (_prio && color_index != 0) { bgwinPrio[x] = true; }
 				}
 
 
@@ -558,7 +558,7 @@ void GameboyGPU::DrawTileBGWINCGB(const int& _x, const int& _y, const u32* _colo
 						color_mask >>= 8;
 					}
 
-					if (_prio) { bgwinPrio[x] = true; }
+					if (_prio && color_index != 0) { bgwinPrio[x] = true; }
 				}
 			}
 
