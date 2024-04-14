@@ -365,4 +365,7 @@
   <Target Name="CopyIcoICO" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
     <Copy SourceFiles="$(ProjectDir)icon\gameboyx.ico" DestinationFolder="$(OutDir)icon" />
   </Target>
+  <Target Name="CopyCursor" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release_portable' ">
+    <Copy SourceFiles="$(ProjectDir)cursor\cursor.bmp" DestinationFolder="$(OutDir)cursor" />
+  </Target>
 </Project>

@@ -73,7 +73,7 @@ void GameboyGPU::ProcessGPU(const int& _ticks) {
 
 				if (tickCounter >= PPU_DOTS_MODE_3_MIN + PPU_DOTS_MODE_2) {
 					int offset_y = ly * PPU_SCREEN_X * TEX2D_CHANNELS;
-					memset(&imageData[offset_y], 0, PPU_SCREEN_X * TEX2D_CHANNELS);
+					memset(&imageData[offset_y], 0xFF, PPU_SCREEN_X * TEX2D_CHANNELS);
 					(this->*DrawScanline)(ly);
 					EnterMode0();
 				}

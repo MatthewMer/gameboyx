@@ -10,13 +10,18 @@
 #include "SDL.h"
 #include "imgui_impl_sdl2.h"
 
+enum gamepad_data {
+	GP_DEVICE_INDEX,
+	GP_DEVICE_NAME,
+	GP_GUID,
+	GP_USED
+};
+
 struct controller_data{
 	bool has_controller = false;
 
 	SDL_JoystickID instance_id = 0;
 	SDL_GameController* gamepad = nullptr;
-	char* mapping = nullptr;
-	SDL_JoystickGUID guid = {};
 };
 
 class ControlMgr {
@@ -38,6 +43,11 @@ public:
 	Sint32 GetScroll();
 	bool CheckMouseMove(int& _x, int& _y);
 	void SetMouseVisible(const bool& _visible);
+
+	bool GetMouseVisible();
+
+	void SetPlayerController(const int& _player, const int& _instance_id);
+	void UnsetPlayerController(const int& _player);
 
 protected:
 	// constructor
@@ -67,4 +77,7 @@ private:
 	std::array<controller_data, 1> connectedGamepads;
 
 	std::map<SDL_JoystickID, std::tuple<int, std::string, SDL_JoystickGUID, bool>> availableGamepads;
+
+	SDL_Cursor* cursor = nullptr;
+	
 };

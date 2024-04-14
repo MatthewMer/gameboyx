@@ -61,6 +61,9 @@ inline const std::string BOOT_FOLDER = "boot/";
 inline const std::string FONT_FOLDER = "font/";
 inline const std::string FONT_MAIN = "LTSuperiorMono-Medium.otf";
 
+inline const std::string CURSOR_FOLDER = "cursor/";
+inline const std::string CURSOR_MAIN = "cursor.bmp";
+
 /* ***********************************************************************************************************
     GRAPHICS BACKEND
 *********************************************************************************************************** */

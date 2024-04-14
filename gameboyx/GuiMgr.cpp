@@ -920,7 +920,7 @@ void GuiMgr::ShowAudioSettings() {
 void GuiMgr::ShowDebugGraphics() {
     ImGui::SetNextWindowSize(graph_debug_win_size);
 
-    if (ImGui::Begin("Graphics Debugger", &showInstrDebugger, WIN_CHILD_FLAGS)) {
+    if (ImGui::Begin("Graphics Debugger", &showGraphicsDebugger, WIN_CHILD_FLAGS)) {
         CheckWindow(DEBUG_GRAPH);
 
         ShowDebugGraphicsSelects();
