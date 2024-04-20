@@ -232,14 +232,14 @@ void VHardwareMgr::GetCurrentPCandBank(int& _pc, int& _bank) {
     core_instance->GetCurrentPCandBank(_pc, _bank);
 }
    
-void VHardwareMgr::EventKeyDown(SDL_Keycode& _key) {
+void VHardwareMgr::EventButtonDown(const int& _player, SDL_GameControllerButton& _key) {
     unique_lock<mutex> lock_hardware(mutHardware);
-    control_instance->SetKey(_key);
+    control_instance->SetKey(_player, _key);
 }
 
-void VHardwareMgr::EventKeyUp(SDL_Keycode& _key) {
+void VHardwareMgr::EventButtonUp(const int& _player, SDL_GameControllerButton& _key) {
     unique_lock<mutex> lock_hardware(mutHardware);
-    control_instance->ResetKey(_key);
+    control_instance->ResetKey(_player, _key);
 }
 
 void VHardwareMgr::SetDebugEnabled(const bool& _debug_enabled) {
@@ -285,4 +285,8 @@ void VHardwareMgr::GetGraphicsDebugSettings(std::vector<std::tuple<int, std::str
 
 void VHardwareMgr::SetGraphicsDebugSetting(const bool& _val, const int& _id) {
     graphics_instance->SetGraphicsDebugSetting(_val, _id);
+}
+
+int VHardwareMgr::GetPlayerCount() const {
+    return core_instance->GetPlayerCount();
 }

@@ -75,6 +75,18 @@ GuiMgr::GuiMgr() {
 
     mainFont = HardwareMgr::GetFont(0);
     IM_ASSERT(mainFont != nullptr);
+
+    // TODO: clean up, move to separate function with possibility to change mapping in GUI
+    keyboardMapping = std::unordered_map<SDL_Keycode, SDL_GameControllerButton>();
+
+    keyboardMapping[SDLK_g] = SDL_CONTROLLER_BUTTON_START;
+    keyboardMapping[SDLK_r] = SDL_CONTROLLER_BUTTON_BACK;
+    keyboardMapping[SDLK_d] = SDL_CONTROLLER_BUTTON_B;
+    keyboardMapping[SDLK_f] = SDL_CONTROLLER_BUTTON_A;
+    keyboardMapping[SDLK_DOWN] = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    keyboardMapping[SDLK_UP] = SDL_CONTROLLER_BUTTON_DPAD_UP;
+    keyboardMapping[SDLK_LEFT] = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
+    keyboardMapping[SDLK_RIGHT] = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
 }
 
 GuiMgr::~GuiMgr() {
@@ -97,21 +109,39 @@ void GuiMgr::ProcessInput() {
     }
 
     // keys
-    auto& inputs = HardwareMgr::GetKeys();
-
+    auto& inputs = HardwareMgr::GetKeyQueue();
     while (!inputs.empty()) {
-        pair<SDL_Keycode, SDL_EventType>& input = inputs.front();
+        pair<SDL_Keycode, bool>& input = inputs.front();
 
         switch (input.second) {
-        case SDL_KEYDOWN:
-            EventKeyDown(input.first);
+        case true:
+            EventKeyDown(0, input.first);
             break;
-        case SDL_KEYUP:
-            EventKeyUp(input.first);
+        case false:
+            EventKeyUp(0, input.first);
             break;
         }
 
         inputs.pop();
+    }
+
+    // gamepads
+    auto& buttons = HardwareMgr::GetButtonQueue();
+    while (!buttons.empty()) {
+        if (gameRunning) {
+            tuple<int, SDL_GameControllerButton, bool>& button = buttons.front();
+
+            switch (get<2>(button)) {
+            case true:
+                vhwmgr->EventButtonDown(get<0>(button), get<1>(button));
+                break;
+            case false:
+                vhwmgr->EventButtonUp(get<0>(button), get<1>(button));
+                break;
+            }
+        }
+
+        buttons.pop();
     }
 
     windowActive = false;
@@ -1295,7 +1325,7 @@ void GuiMgr::ResetGUI() {
 /* ***********************************************************************************************************
     IMGUIGAMEBOYX SDL FUNCTIONS
 *********************************************************************************************************** */
-void GuiMgr::EventKeyDown(SDL_Keycode& _key) {
+void GuiMgr::EventKeyDown(const int& _player, SDL_Keycode& _key) {
     if (gameRunning) {
         switch (_key) {
         case SDLK_F3:
@@ -1305,7 +1335,9 @@ void GuiMgr::EventKeyDown(SDL_Keycode& _key) {
             sdlkShiftDown = true;
             break;
         default:
-            vhwmgr->EventKeyDown(_key);
+            if (keyboardMapping.find(_key) != keyboardMapping.end()) {
+                vhwmgr->EventButtonDown(_player, keyboardMapping[_key]);
+            }
             break;
         }
     } else {
@@ -1333,7 +1365,7 @@ void GuiMgr::EventKeyDown(SDL_Keycode& _key) {
     }
 }
 
-void GuiMgr::EventKeyUp(SDL_Keycode& _key) {
+void GuiMgr::EventKeyUp(const int& _player, SDL_Keycode& _key) {
     if (gameRunning) {
         switch (_key) {
         case SDLK_F10:
@@ -1355,7 +1387,9 @@ void GuiMgr::EventKeyUp(SDL_Keycode& _key) {
             ActionGameStop();
             break;
         default:
-            vhwmgr->EventKeyUp(_key);
+            if (keyboardMapping.find(_key) != keyboardMapping.end()) {
+                vhwmgr->EventButtonUp(_player, keyboardMapping[_key]);
+            }
             break;
         }
     } else {

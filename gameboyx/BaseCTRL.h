@@ -15,17 +15,13 @@ public:
 	BaseCTRL& operator=(BaseCTRL&&) = delete;
 
 	// public members
-	virtual bool SetKey(const SDL_Keycode& _key) = 0;
-	virtual bool ResetKey(const SDL_Keycode& _key) = 0;
+	virtual bool SetKey(const int& _player, const SDL_GameControllerButton& _key) = 0;
+	virtual bool ResetKey(const int& _player, const SDL_GameControllerButton& _key) = 0;
 
 protected:
 	// constructor
 	BaseCTRL() = default;
 	virtual ~BaseCTRL() {}
-
-	virtual void InitKeyMap() = 0;
-
-	std::unordered_map<SDL_Keycode, int> keyMap = std::unordered_map<SDL_Keycode, int>();
 
 private:
 	static BaseCTRL* instance;

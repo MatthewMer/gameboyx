@@ -49,6 +49,8 @@ public:
 
 	virtual void SetInstances() = 0;
 
+	virtual int GetPlayerCount() const = 0;
+
 	int GetClockCycles();
 
 protected:

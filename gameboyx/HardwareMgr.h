@@ -48,7 +48,8 @@ public:
 
 	static bool CheckFrame();
 
-	static std::queue<std::pair<SDL_Keycode, SDL_EventType>>& GetKeys();
+	static std::queue<std::pair<SDL_Keycode, bool>>& GetKeyQueue();
+	static std::queue<std::tuple<int, SDL_GameControllerButton, bool>>& GetButtonQueue();
 
 	static void SetMouseAlwaysVisible(const bool& _visible);
 

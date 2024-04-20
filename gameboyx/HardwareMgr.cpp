@@ -114,8 +114,12 @@ void HardwareMgr::ProcessEvents(bool& _running) {
 	controlMgr->ProcessEvents(_running, window);
 }
 
-std::queue<std::pair<SDL_Keycode, SDL_EventType>>& HardwareMgr::GetKeys() {
-	return controlMgr->GetKeys();
+std::queue<std::pair<SDL_Keycode, bool>>& HardwareMgr::GetKeyQueue() {
+	return controlMgr->GetKeyQueue();
+}
+
+std::queue<std::tuple<int, SDL_GameControllerButton, bool>>& HardwareMgr::GetButtonQueue() {
+	return controlMgr->GetButtonQueue();
 }
 
 Sint32 HardwareMgr::GetScroll() {

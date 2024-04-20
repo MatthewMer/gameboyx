@@ -120,6 +120,8 @@ public:
 
 	void TickTimers();
 
+	int GetPlayerCount() const override;
+
 private:
 	// constructor
 	explicit GameboyCPU(BaseCartridge* _cartridge);

@@ -1,131 +1,102 @@
 #include "GameboyCTRL.h"
 #include "gameboy_defines.h"
 
-enum key_codes {
-	START,
-	SELECT,
-	B,
-	A,
-	DOWN,
-	UP,
-	LEFT,
-	RIGHT
-};
-
-void GameboyCTRL::InitKeyMap() {
-	keyMap = std::unordered_map<SDL_Keycode, int>();
-
-	keyMap[SDLK_g] = START;
-	keyMap[SDLK_r] = SELECT;
-	keyMap[SDLK_d] = B;
-	keyMap[SDLK_f] = A;
-	keyMap[SDLK_DOWN] = DOWN;
-	keyMap[SDLK_UP] = UP;
-	keyMap[SDLK_LEFT] = LEFT;
-	keyMap[SDLK_RIGHT] = RIGHT;
-}
-
-bool GameboyCTRL::SetKey(const SDL_Keycode& _key) {
-	
-	if (keyMap.find(_key) != keyMap.end()) {
-
+bool GameboyCTRL::SetKey(const int& _player, const SDL_GameControllerButton& _key) {
 		// set bool in case cpu writes to joyp register and requires current states to set the right bits
 		// and directly set the corresponding bit and request interrupt in case of a high to low transition
-		switch (keyMap.at(_key)) {
-		case START:
+		switch (_key) {
+		case SDL_CONTROLLER_BUTTON_START:
 			controlCtx->start_pressed = true;
 			memInstance->SetButton(JOYP_START_DOWN, true);
 			break;
-		case SELECT:
+		case SDL_CONTROLLER_BUTTON_BACK:
 			controlCtx->select_pressed = true;
 			memInstance->SetButton(JOYP_SELECT_UP, true);
 			break;
-		case B:
+		case SDL_CONTROLLER_BUTTON_B:
 			controlCtx->b_pressed = true;
 			memInstance->SetButton(JOYP_B_LEFT, true);
 			break;
-		case A:
+		case SDL_CONTROLLER_BUTTON_A:
 			controlCtx->a_pressed = true;
 			memInstance->SetButton(JOYP_A_RIGHT, true);
 			break;
-		case DOWN:
+		case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
 			controlCtx->down_pressed = true;
 			memInstance->SetButton(JOYP_START_DOWN, false);
 			break;
-		case UP:
+		case SDL_CONTROLLER_BUTTON_DPAD_UP:
 			controlCtx->up_pressed = true;
 			memInstance->SetButton(JOYP_SELECT_UP, false);
 			break;
-		case LEFT:
+		case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
 			controlCtx->left_pressed = true;
 			memInstance->SetButton(JOYP_B_LEFT, false);
 			break;
-		case RIGHT:
+		case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
 			controlCtx->right_pressed = true;
 			memInstance->SetButton(JOYP_A_RIGHT, false);
 			break;
+		default:
+			return false;
+			break;
 		}
 		return true;
-	} else {
-		return false;
-	}
 }
 
-bool GameboyCTRL::ResetKey(const SDL_Keycode& _key) {
-	if (keyMap.find(_key) != keyMap.end()) {
-
-		switch (keyMap.at(_key)) {
-		case START:
-			if (controlCtx->start_pressed) {
-				controlCtx->start_pressed = false;
-				memInstance->UnsetButton(JOYP_START_DOWN, true);
-			}
-			break;
-		case SELECT:
-			if (controlCtx->select_pressed) {
-				controlCtx->select_pressed = false;
-				memInstance->UnsetButton(JOYP_SELECT_UP, true);
-			}
-			break;
-		case B:
-			if (controlCtx->b_pressed) {
-				controlCtx->b_pressed = false;
-				memInstance->UnsetButton(JOYP_B_LEFT, true);
-			}
-			break;
-		case A:
-			if (controlCtx->a_pressed) {
-				controlCtx->a_pressed = false;
-				memInstance->UnsetButton(JOYP_A_RIGHT, true);
-			}
-			break;
-		case DOWN:
-			if (controlCtx->down_pressed) {
-				controlCtx->down_pressed = false;
-				memInstance->UnsetButton(JOYP_START_DOWN, false);
-			}
-			break;
-		case UP:
-			if (controlCtx->up_pressed) {
-				controlCtx->up_pressed = false;
-				memInstance->UnsetButton(JOYP_SELECT_UP, false);
-			}
-			break;
-		case LEFT:
-			if (controlCtx->left_pressed) {
-				controlCtx->left_pressed = false;
-				memInstance->UnsetButton(JOYP_B_LEFT, false);
-			}
-			break;
-		case RIGHT:
-			if (controlCtx->right_pressed) {
-				controlCtx->right_pressed = false;
-				memInstance->UnsetButton(JOYP_A_RIGHT, false);
-			}
-			break;
+bool GameboyCTRL::ResetKey(const int& _player, const SDL_GameControllerButton& _key) {
+	switch (_key) {
+	case SDL_CONTROLLER_BUTTON_START:
+		if (controlCtx->start_pressed) {
+			controlCtx->start_pressed = false;
+			memInstance->UnsetButton(JOYP_START_DOWN, true);
 		}
-		return true;
-	} else {
+		break;
+	case SDL_CONTROLLER_BUTTON_BACK:
+		if (controlCtx->select_pressed) {
+			controlCtx->select_pressed = false;
+			memInstance->UnsetButton(JOYP_SELECT_UP, true);
+		}
+		break;
+	case SDL_CONTROLLER_BUTTON_B:
+		if (controlCtx->b_pressed) {
+			controlCtx->b_pressed = false;
+			memInstance->UnsetButton(JOYP_B_LEFT, true);
+		}
+		break;
+	case SDL_CONTROLLER_BUTTON_A:
+		if (controlCtx->a_pressed) {
+			controlCtx->a_pressed = false;
+			memInstance->UnsetButton(JOYP_A_RIGHT, true);
+		}
+		break;
+	case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+		if (controlCtx->down_pressed) {
+			controlCtx->down_pressed = false;
+			memInstance->UnsetButton(JOYP_START_DOWN, false);
+		}
+		break;
+	case SDL_CONTROLLER_BUTTON_DPAD_UP:
+		if (controlCtx->up_pressed) {
+			controlCtx->up_pressed = false;
+			memInstance->UnsetButton(JOYP_SELECT_UP, false);
+		}
+		break;
+	case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+		if (controlCtx->left_pressed) {
+			controlCtx->left_pressed = false;
+			memInstance->UnsetButton(JOYP_B_LEFT, false);
+		}
+		break;
+	case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+		if (controlCtx->right_pressed) {
+			controlCtx->right_pressed = false;
+			memInstance->UnsetButton(JOYP_A_RIGHT, false);
+		}
+		break;
+	default:
 		return false;
+		break;
 	}
+	return true;
 }

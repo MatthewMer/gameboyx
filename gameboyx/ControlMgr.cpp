@@ -54,27 +54,25 @@ void ControlMgr::ProcessEvents(bool& _running, SDL_Window* _window) {
 
 	while (SDL_PollEvent(&event)) {
 		ImGui_ImplSDL2_ProcessEvent(&event);
-		if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(_window))
+		if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(_window)) {
 			_running = false;
+			return;
+		}
 
 		switch (event.type) {
 		case SDL_QUIT:
 			_running = false;
 			break;
-		case SDL_KEYDOWN:
-			keyMap.push(std::pair(event.key.keysym.sym, SDL_KEYDOWN));
+		case SDL_CONTROLLERBUTTONUP:
+		case SDL_CONTROLLERBUTTONDOWN:
+			EnqueueControllerInput(event);
 			break;
+		case SDL_KEYDOWN:
 		case SDL_KEYUP:
-			keyMap.push(std::pair(event.key.keysym.sym, SDL_KEYUP));
+			EnqueueKeyboardInput(event);
 			break;
 		case SDL_MOUSEWHEEL:
 			mouseScroll = event.wheel.y;
-			break;
-		case SDL_CONTROLLERBUTTONUP:
-			
-			break;
-		case SDL_CONTROLLERBUTTONDOWN:
-
 			break;
 		case SDL_CONTROLLERDEVICEADDED:
 			OnGamepadConnect(event.cdevice);
@@ -88,14 +86,32 @@ void ControlMgr::ProcessEvents(bool& _running, SDL_Window* _window) {
 	}
 }
 
+void ControlMgr::EnqueueKeyboardInput(const SDL_Event& _event) {
+	keyQueue.push(std::pair(_event.key.keysym.sym, (SDL_EventType)_event.key.type == SDL_KEYDOWN ? true : false));
+}
+
+void ControlMgr::EnqueueControllerInput(const SDL_Event& _event) {
+	for (int i = 0; const auto & n : connectedGamepads) {
+		if (_event.cbutton.which == n.instance_id) {
+			//LOG_WARN(std::format("{:d}; {:d}; {:d}", i, _event.cbutton.button, _event.cbutton.state));
+			buttonQueue.push(std::tuple(i, (SDL_GameControllerButton)_event.cbutton.button, _event.cbutton.state == SDL_PRESSED ? true : false));
+			break;
+		}
+	}
+}
+
 Sint32 ControlMgr::GetScroll() {
 	Sint32 scroll = mouseScroll;
 	mouseScroll = 0;
 	return scroll;
 }
 
-std::queue<std::pair<SDL_Keycode, SDL_EventType>>& ControlMgr::GetKeys() {
-	return keyMap;
+std::queue<std::pair<SDL_Keycode, bool>>& ControlMgr::GetKeyQueue() {
+	return keyQueue;
+}
+
+std::queue<std::tuple<int, SDL_GameControllerButton, bool>>& ControlMgr::GetButtonQueue() {
+	return buttonQueue;
 }
 
 bool ControlMgr::CheckMouseMove(int& _x, int& _y) {

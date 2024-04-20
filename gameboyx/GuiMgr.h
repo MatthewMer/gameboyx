@@ -45,8 +45,8 @@ public:
 	void ProcessGUI();
 
 	// sdl functions
-	void EventKeyDown(SDL_Keycode& _key);
-	void EventKeyUp(SDL_Keycode& _key);
+	void EventKeyDown(const int& _player, SDL_Keycode& _key);
+	void EventKeyUp(const int& _player, SDL_Keycode& _key);
 	void EventMouseWheel(const Sint32& _wheel_y);
 
 private:
@@ -187,6 +187,8 @@ private:
 	int samplingRate = 0;
 
 	std::vector<std::tuple<int, std::string, bool>> debugGraphicsSettings;
+
+	std::unordered_map<SDL_Keycode, SDL_GameControllerButton> keyboardMapping = std::unordered_map<SDL_Keycode, SDL_GameControllerButton>();
 
 	void ResetGUI();
 

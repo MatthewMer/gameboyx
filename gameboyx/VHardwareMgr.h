@@ -53,8 +53,8 @@ public:
 	void ProcessHardware();
 
 	// SDL
-    void EventKeyDown(SDL_Keycode& _key);
-    void EventKeyUp(SDL_Keycode& _key);
+    void EventButtonDown(const int& _player, SDL_GameControllerButton& _key);
+    void EventButtonUp(const int& _player, SDL_GameControllerButton& _key);
 
 	void SetDebugEnabled(const bool& _debug_enabled);
 	void SetProceedExecution(const bool& _proceed_execution);
@@ -71,6 +71,7 @@ public:
 
     void GetGraphicsDebugSettings(std::vector<std::tuple<int, std::string, bool>>& _settings);
     void SetGraphicsDebugSetting(const bool& _val, const int& _id);
+    int GetPlayerCount() const;
 
 private:
     VHardwareMgr() = default;

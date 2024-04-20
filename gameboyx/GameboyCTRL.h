@@ -7,21 +7,17 @@ public:
 	friend class BaseCTRL;
 
 	// members
-	bool SetKey(const SDL_Keycode& _key) override;
-	bool ResetKey(const SDL_Keycode& _key) override;
+	bool SetKey(const int& _player, const SDL_GameControllerButton& _key) override;
+	bool ResetKey(const int & _player, const SDL_GameControllerButton& _key) override;
 
 private:
 	// constructor
 	GameboyCTRL(BaseCartridge* _cartridge) : BaseCTRL() {
 		memInstance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
 		controlCtx = memInstance->GetControlContext();
-
-		InitKeyMap();
 	}
 	// destructor
 	~GameboyCTRL() override = default;
-
-	void InitKeyMap() override;
 
 	// memory access
 	GameboyMEM* memInstance;

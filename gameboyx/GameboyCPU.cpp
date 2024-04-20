@@ -89,6 +89,10 @@ void GameboyCPU::GetCurrentPCandBank(int& _pc, int& _bank) const {
     }
 }
 
+int GameboyCPU::GetPlayerCount() const {
+    return GB_PLAYER_COUNT;
+}
+
 /* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
