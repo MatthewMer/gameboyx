@@ -53,8 +53,8 @@ public:
 	void ProcessHardware();
 
 	// SDL
-    void EventButtonDown(const int& _player, SDL_GameControllerButton& _key);
-    void EventButtonUp(const int& _player, SDL_GameControllerButton& _key);
+    void EventButtonDown(const int& _player, const SDL_GameControllerButton& _key);
+    void EventButtonUp(const int& _player, const SDL_GameControllerButton& _key);
 
 	void SetDebugEnabled(const bool& _debug_enabled);
 	void SetProceedExecution(const bool& _proceed_execution);

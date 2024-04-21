@@ -48,6 +48,8 @@ public:
 	void EventKeyDown(const int& _player, SDL_Keycode& _key);
 	void EventKeyUp(const int& _player, SDL_Keycode& _key);
 	void EventMouseWheel(const Sint32& _wheel_y);
+	void EventButtonDown(const int& _player, const SDL_GameControllerButton& _button);
+	void EventButtonUp(const int& _player, const SDL_GameControllerButton& _button);
 
 private:
 	// constructor

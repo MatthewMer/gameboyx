@@ -232,12 +232,12 @@ void VHardwareMgr::GetCurrentPCandBank(int& _pc, int& _bank) {
     core_instance->GetCurrentPCandBank(_pc, _bank);
 }
    
-void VHardwareMgr::EventButtonDown(const int& _player, SDL_GameControllerButton& _key) {
+void VHardwareMgr::EventButtonDown(const int& _player, const SDL_GameControllerButton& _key) {
     unique_lock<mutex> lock_hardware(mutHardware);
     control_instance->SetKey(_player, _key);
 }
 
-void VHardwareMgr::EventButtonUp(const int& _player, SDL_GameControllerButton& _key) {
+void VHardwareMgr::EventButtonUp(const int& _player, const SDL_GameControllerButton& _key) {
     unique_lock<mutex> lock_hardware(mutHardware);
     control_instance->ResetKey(_player, _key);
 }

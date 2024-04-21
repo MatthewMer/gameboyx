@@ -128,17 +128,15 @@ void GuiMgr::ProcessInput() {
     // gamepads
     auto& buttons = HardwareMgr::GetButtonQueue();
     while (!buttons.empty()) {
-        if (gameRunning) {
-            tuple<int, SDL_GameControllerButton, bool>& button = buttons.front();
+        tuple<int, SDL_GameControllerButton, bool>& button = buttons.front();
 
-            switch (get<2>(button)) {
-            case true:
-                vhwmgr->EventButtonDown(get<0>(button), get<1>(button));
-                break;
-            case false:
-                vhwmgr->EventButtonUp(get<0>(button), get<1>(button));
-                break;
-            }
+        switch (get<2>(button)) {
+        case true:
+            EventButtonDown(get<0>(button), get<1>(button));
+            break;
+        case false:
+            EventButtonUp(get<0>(button), get<1>(button));
+            break;
         }
 
         buttons.pop();
@@ -1429,6 +1427,44 @@ void GuiMgr::EventMouseWheel(const Sint32& _wheel_y) {
     } else if (_wheel_y < 0) {
         sdlScrollDown = true;
         sdlScrollUp = false;
+    }
+}
+
+void GuiMgr::EventButtonDown(const int& _player, const SDL_GameControllerButton& _button) {
+    if (gameRunning) {
+        switch (_button) {
+        default:
+            vhwmgr->EventButtonDown(_player, _button);
+            break;
+        }
+    } else {
+        switch (_button) {
+        case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+            ActionGameSelectDown();
+            break;
+        case SDL_CONTROLLER_BUTTON_DPAD_UP:
+            ActionGameSelectUp();
+            break;
+        }
+    }
+}
+
+void GuiMgr::EventButtonUp(const int& _player, const SDL_GameControllerButton& _button) {
+    if (gameRunning) {
+        switch (_button) {
+        case SDL_CONTROLLER_BUTTON_BACK:
+            ActionGameStop();
+            break;
+        default:
+            vhwmgr->EventButtonUp(_player, _button);
+            break;
+        }
+    } else {
+        switch (_button) {
+        case SDL_CONTROLLER_BUTTON_A:
+            ActionGameStart();
+            break;
+        }
     }
 }
 

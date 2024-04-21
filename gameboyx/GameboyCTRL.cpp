@@ -5,11 +5,11 @@ bool GameboyCTRL::SetKey(const int& _player, const SDL_GameControllerButton& _ke
 		// set bool in case cpu writes to joyp register and requires current states to set the right bits
 		// and directly set the corresponding bit and request interrupt in case of a high to low transition
 		switch (_key) {
-		case SDL_CONTROLLER_BUTTON_START:
+		case SDL_CONTROLLER_BUTTON_X:
 			controlCtx->start_pressed = true;
 			memInstance->SetButton(JOYP_START_DOWN, true);
 			break;
-		case SDL_CONTROLLER_BUTTON_BACK:
+		case SDL_CONTROLLER_BUTTON_Y:
 			controlCtx->select_pressed = true;
 			memInstance->SetButton(JOYP_SELECT_UP, true);
 			break;
@@ -46,13 +46,13 @@ bool GameboyCTRL::SetKey(const int& _player, const SDL_GameControllerButton& _ke
 
 bool GameboyCTRL::ResetKey(const int& _player, const SDL_GameControllerButton& _key) {
 	switch (_key) {
-	case SDL_CONTROLLER_BUTTON_START:
+	case SDL_CONTROLLER_BUTTON_X:
 		if (controlCtx->start_pressed) {
 			controlCtx->start_pressed = false;
 			memInstance->UnsetButton(JOYP_START_DOWN, true);
 		}
 		break;
-	case SDL_CONTROLLER_BUTTON_BACK:
+	case SDL_CONTROLLER_BUTTON_Y:
 		if (controlCtx->select_pressed) {
 			controlCtx->select_pressed = false;
 			memInstance->UnsetButton(JOYP_SELECT_UP, true);
