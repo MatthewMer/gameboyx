@@ -710,7 +710,7 @@ bool GraphicsVulkan::InitVulkanInstance(std::vector<const char*>& _sdl_extension
 	vk_app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	vk_app_info.pApplicationName = APP_TITLE.c_str();
 	vk_app_info.applicationVersion = VK_MAKE_VERSION(GBX_VERSION_MAJOR, GBX_VERSION_MINOR, GBX_VERSION_PATCH);
-	vk_app_info.apiVersion = VK_API_VERSION_1_3;
+	vk_app_info.apiVersion = VK_API_VERSION_1_0;
 
 	VkInstanceCreateInfo vk_create_info = {};
 	vk_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -842,6 +842,8 @@ bool GraphicsVulkan::InitLogicalDevice(std::vector<const char*>& _device_extensi
 }
 
 void GraphicsVulkan::SetGPUInfo() {
+	std::string name = std::string(physicalDeviceProperties.deviceName);
+
 	u16 vendor_id = physicalDeviceProperties.vendorID & 0xFFFF;
 	if (VENDOR_IDS.find(vendor_id) != VENDOR_IDS.end()) {
 		vendor = VENDOR_IDS.at(vendor_id);
