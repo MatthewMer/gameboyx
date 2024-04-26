@@ -79,8 +79,8 @@ GuiMgr::GuiMgr() {
     // TODO: clean up, move to separate function with possibility to change mapping in GUI
     keyboardMapping = std::unordered_map<SDL_Keycode, SDL_GameControllerButton>();
 
-    keyboardMapping[SDLK_g] = SDL_CONTROLLER_BUTTON_START;
-    keyboardMapping[SDLK_r] = SDL_CONTROLLER_BUTTON_BACK;
+    keyboardMapping[SDLK_g] = SDL_CONTROLLER_BUTTON_X;
+    keyboardMapping[SDLK_r] = SDL_CONTROLLER_BUTTON_Y;
     keyboardMapping[SDLK_d] = SDL_CONTROLLER_BUTTON_B;
     keyboardMapping[SDLK_f] = SDL_CONTROLLER_BUTTON_A;
     keyboardMapping[SDLK_DOWN] = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
