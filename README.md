@@ -70,8 +70,6 @@ Note: in the installer version folders for roms, configs, etc. are located in `%
 
 * Tetris (ROM)
 
-* Zelda - Oracle of Ages/Seasons (MBC5) (currently a bit buggy)
-
 * Super Mario Bros. Deluxe (MBC5)
 
 ### Blargg's Test Roms ###
@@ -80,7 +78,7 @@ Note: in the installer version folders for roms, configs, etc. are located in `%
 
 ![Blargg's Instruction Tests](./img/blarggs_instruction_tests.png)
 
-* Instruction Timing
+* Instruction Timing (Currently fails as soon as PPU is is taken into account during timer processing)
 
 ![Blargg's Instruction Timing](./img/blarggs_instruction_timing.png)
 
