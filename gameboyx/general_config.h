@@ -207,6 +207,13 @@ inline const std::vector<float> GRAPH_SETTINGS_COLUMNS = {
     1.f
 };
 
+inline const ImVec2 network_settings_win_size(400.f, 0.f);
+inline const ImGuiInputTextFlags INPUT_IP_FLAGS = ImGuiInputTextFlags_AutoSelectAll;
+#define IP_ADDR_MIN 0
+#define IP_ADDR_MAX 255
+#define PORT_MIN 1024
+#define PORT_MAX 65535
+
 inline const ImVec2 graph_debug_win_size(600.f, 0.f);
 
 inline const std::vector<std::string> GAMES_CONSOLES = { "Gameboy", "Gameboy Color" };

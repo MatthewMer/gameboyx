@@ -19,13 +19,17 @@
 #include "GuiTable.h"
 #include "VHardwareMgr.h"
 
+// TODO: needs to be redone
 enum windowID {
 	GAME_SELECT,
 	DEBUG_INSTR,
 	DEBUG_MEM,
 	HW_INFO,
 	ABOUT,
-	DEBUG_GRAPH
+	DEBUG_GRAPH,
+	GRAPGHICS_SETTINGS,
+	NETWORK_SETTINGS,
+	AUDIO_SETTINGS
 };
 
 class GuiMgr {
@@ -83,6 +87,7 @@ private:
 	bool showGraphicsSettings = false;
 	bool showAudioSettings = false;
 	bool showGraphicsDebugger = false;
+	bool showNetworkSettings = false;
 
 	bool showAny = false;
 
@@ -188,6 +193,9 @@ private:
 	int samplingRateMax = 0;
 	int samplingRate = 0;
 
+	std::array<int, 4> ipv4Address = { 127, 0, 0, 1 };
+	int port = 9800;
+
 	std::vector<std::tuple<int, std::string, bool>> debugGraphicsSettings;
 
 	std::unordered_map<SDL_Keycode, SDL_GameControllerButton> keyboardMapping = std::unordered_map<SDL_Keycode, SDL_GameControllerButton>();
@@ -207,6 +215,7 @@ private:
 	void ShowGraphicsSettings();
 	void ShowAudioSettings();
 	void ShowDebugGraphics();
+	void ShowNetworkSettings();
 
 	// main menur bar elements
 	void ShowEmulationSpeeds();

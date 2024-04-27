@@ -189,6 +189,7 @@ void GuiMgr::ProcessGUI() {
     if (showAudioSettings)      { ShowAudioSettings();                          show_any = true; }
     if (showMainMenuBar)        { ShowMainMenuBar();                            show_any = true; }
     if (showGraphicsDebugger)   { ShowDebugGraphics();                          show_any = true; }
+    if (showNetworkSettings)    { ShowNetworkSettings();                        show_any = true; }
     ImGui::PopFont();
 
     if (show_any != showAny) {
@@ -238,6 +239,8 @@ void GuiMgr::ShowMainMenuBar() {
                 ImGui::MenuItem("General", nullptr, &showAudioSettings);
                 ImGui::EndMenu();
             }
+            // network
+            ImGui::MenuItem("Network", nullptr, &showNetworkSettings);
             // basic
             ImGui::MenuItem("Show menu bar", nullptr, &showMainMenuBar);
             if (!gameRunning && !showMainMenuBar) {
@@ -966,6 +969,104 @@ void GuiMgr::ShowDebugGraphicsSelects() {
                 vhwmgr->SetGraphicsDebugSetting(set, get<0>(n));
             }
         }
+    }
+}
+
+void GuiMgr::ShowNetworkSettings() {
+    ImGui::SetNextWindowSize(network_settings_win_size);
+
+    if (ImGui::Begin("Network Settings", &showNetworkSettings, WIN_CHILD_FLAGS)) {
+        if (ImGui::BeginTable("network settings", 2, TABLE_FLAGS_NO_BORDER_OUTER_H)) {
+
+            for (int i = 0; i < 2; i++) {
+                ImGui::TableSetupColumn("", TABLE_COLUMN_FLAGS_NO_HEADER);
+            }
+
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("IP address");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("sets remote IPv4 address (server)");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+
+            ImGui::PushItemWidth(35);
+            for (int i = 0; auto & n : ipv4Address) {
+                std::string id = "##ip" + std::to_string(i);
+                if (i != 0) { ImGui::SameLine(); }
+                if (ImGui::InputInt(id.c_str(), &n, 0, 0, INPUT_IP_FLAGS)) {
+                    if (n < IP_ADDR_MIN) { n = IP_ADDR_MIN; }
+                    if (n > IP_ADDR_MAX) { n = IP_ADDR_MAX; }
+                }
+                i++;
+            }
+            ImGui::PopItemWidth();
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Port");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("sets remote port (server)");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+            if (ImGui::InputInt("port", &port, 0, 0, INPUT_IP_FLAGS)) {
+                if (port < PORT_MIN) { port = PORT_MIN; }
+                if (port > PORT_MAX) { port = PORT_MAX; }
+            }
+
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            bool open = HardwareMgr::CheckNetwork();
+            if (open) {
+                ImGui::TextColored(IMGUI_GREEN_COL, "socket open");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("current socket state");
+                        ImGui::EndTooltip();
+                    }
+                }
+
+                ImGui::TableNextColumn();
+                if (ImGui::Button("Close")) {
+                    HardwareMgr::CloseNetwork();
+                }
+            } else {
+                ImGui::TextColored(IMGUI_RED_COL, "socket closed");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("current socket state");
+                        ImGui::EndTooltip();
+                    }
+                }
+
+                ImGui::TableNextColumn();
+                if (ImGui::Button("Open")) {
+                    std::string ip = "";
+                    for (auto it = ipv4Address.begin(); it < ipv4Address.end(); it++) {
+                        if (it != ipv4Address.begin()) { ip += "."; }
+                        ip += std::to_string(*it);
+                    }
+
+                    network_settings nw_settings = {};
+                    nw_settings.ipv4_address = ip;
+                    nw_settings.port = port;
+
+                    HardwareMgr::OpenNetwork(nw_settings);
+                }
+            }
+
+            ImGui::PopStyleVar();
+            ImGui::EndTable();
+        }
+        ImGui::End();
     }
 }
 

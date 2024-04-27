@@ -5,11 +5,13 @@ u32 HardwareMgr::errors = 0x00000000;
 GraphicsMgr* HardwareMgr::graphicsMgr = nullptr;
 AudioMgr* HardwareMgr::audioMgr = nullptr;
 ControlMgr* HardwareMgr::controlMgr = nullptr;
+NetworkMgr* HardwareMgr::networkMgr = nullptr;
 SDL_Window* HardwareMgr::window = nullptr;
 
 graphics_settings HardwareMgr::graphicsSettings = {};
 audio_settings HardwareMgr::audioSettings = {};
 control_settings HardwareMgr::controlSettings = {};
+network_settings HardwareMgr::networkSettings = {};
 
 u32 HardwareMgr::timePerFrame = 0;
 u32 HardwareMgr::currentTimePerFrame = 0;
@@ -31,9 +33,9 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settin
 		return errors;
 	}
 
-	audioSettings = std::move(_audio_settings);
-	graphicsSettings = std::move(_graphics_settings);
-	controlSettings = std::move(_control_settings);
+	audioSettings = _audio_settings;
+	graphicsSettings = _graphics_settings;
+	controlSettings = _control_settings;
 
 	SetFramerateTarget(graphicsSettings.framerateTarget, graphicsSettings.fpsUnlimited);
 
@@ -83,6 +85,9 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settin
 	} else {
 		return false;
 	}
+
+	networkMgr = NetworkMgr::getInstance();
+	if (networkMgr == nullptr) { return false; }
 
 	return true;
 }
@@ -248,4 +253,18 @@ void HardwareMgr::SetMouseAlwaysVisible(const bool& _visible) {
 
 ImFont* HardwareMgr::GetFont(const int& _index) {
 	return graphicsMgr->GetFont(_index);
+}
+
+void HardwareMgr::OpenNetwork(network_settings& _network_settings) {
+	networkSettings = _network_settings;
+
+	networkMgr->InitSocket(networkSettings);
+}
+
+bool HardwareMgr::CheckNetwork() {
+	return networkMgr->CheckSocket();
+}
+
+void HardwareMgr::CloseNetwork() {
+	networkMgr->ShutdownSocket();
 }

@@ -11,6 +11,7 @@ using namespace std::chrono;
 #include "logger.h"
 #include "HardwareStructs.h"
 #include "ControlMgr.h"
+#include "NetworkMgr.h"
 
 #define HWMGR_ERR_ALREADY_RUNNING		0x00000001
 
@@ -55,6 +56,10 @@ public:
 
 	static ImFont* GetFont(const int& _index);
 
+	static void OpenNetwork(network_settings& _network_settings);
+	static bool CheckNetwork();
+	static void CloseNetwork();
+
 private:
 	HardwareMgr() = default;
 	~HardwareMgr() {
@@ -68,11 +73,13 @@ private:
 	static GraphicsMgr* graphicsMgr;
 	static AudioMgr* audioMgr;
 	static ControlMgr* controlMgr;
+	static NetworkMgr* networkMgr;
 	static SDL_Window* window;
 
 	static graphics_settings graphicsSettings;
 	static audio_settings audioSettings;
 	static control_settings controlSettings;
+	static network_settings networkSettings;
 
 	static HardwareMgr* instance;
 	static u32 errors;

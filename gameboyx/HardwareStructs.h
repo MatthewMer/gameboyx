@@ -53,3 +53,8 @@ struct audio_settings {
 struct control_settings {
 	bool mouse_always_visible = false;
 };
+
+struct network_settings {
+	std::string ipv4_address;
+	int port;
+};

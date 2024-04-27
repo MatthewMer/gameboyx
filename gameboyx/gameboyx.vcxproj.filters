@@ -61,6 +61,12 @@
     <Filter Include="Source Files\misc">
       <UniqueIdentifier>{38e1f00f-002d-4014-b9f5-0513610e406c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\backend\network">
+      <UniqueIdentifier>{fa11a236-8b7a-4ae0-8c61-96e27b4d183a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\backend\network">
+      <UniqueIdentifier>{b89d74d3-af67-45d6-93f0-6da56c7d7e8a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -146,6 +152,9 @@
     </ClCompile>
     <ClCompile Include="FileMapper.cpp">
       <Filter>Source Files\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkMgr.cpp">
+      <Filter>Source Files\backend\network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -250,6 +259,9 @@
     </ClInclude>
     <ClInclude Include="FileMapper.h">
       <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkMgr.h">
+      <Filter>Header Files\backend\network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
