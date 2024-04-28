@@ -1016,7 +1016,7 @@ void GuiMgr::ShowNetworkSettings() {
                 }
             }
             ImGui::TableNextColumn();
-            if (ImGui::InputInt("port", &port, 0, 0, INPUT_IP_FLAGS)) {
+            if (ImGui::InputInt("##port", &port, 0, 0, INPUT_IP_FLAGS)) {
                 if (port < PORT_MIN) { port = PORT_MIN; }
                 if (port > PORT_MAX) { port = PORT_MAX; }
             }
