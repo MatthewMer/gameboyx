@@ -23,3 +23,6 @@
 [submodule "submodules/SDL_GameControllerDB"]
 	path = submodules/SDL_GameControllerDB
 	url = https://github.com/mdqinc/SDL_GameControllerDB.git
+[submodule "submodules/asio"]
+	path = submodules/asio
+	url = https://github.com/chriskohlhoff/asio.git
