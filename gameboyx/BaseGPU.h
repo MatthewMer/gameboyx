@@ -33,7 +33,8 @@ public:
 	virtual void ProcessGPU(const int& _ticks) = 0;
 	virtual int GetDelayTime() const = 0;
 	virtual int GetTicksPerFrame(const float& _clock) const = 0;
-	int GetFrameCount();
+	int GetFrameCount() const;
+	void ResetFrameCount();
 
 	virtual std::vector<std::tuple<int, std::string, bool>> GetGraphicsDebugSettings() = 0;
 	virtual void SetGraphicsDebugSetting(const bool& _val, const int& _id) = 0;

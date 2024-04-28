@@ -88,6 +88,7 @@ private:
 	bool showAudioSettings = false;
 	bool showGraphicsDebugger = false;
 	bool showNetworkSettings = false;
+	bool showCallstack = false;
 
 	bool showAny = false;
 
@@ -200,6 +201,10 @@ private:
 
 	std::unordered_map<SDL_Keycode, SDL_GameControllerButton> keyboardMapping = std::unordered_map<SDL_Keycode, SDL_GameControllerButton>();
 
+	std::map<int, std::string> memoryTypes;
+
+	std::vector<callstack_data> callstack;
+
 	void ResetGUI();
 
 	// gui functions
@@ -216,6 +221,7 @@ private:
 	void ShowAudioSettings();
 	void ShowDebugGraphics();
 	void ShowNetworkSettings();
+	void ShowCallstack();
 
 	// main menur bar elements
 	void ShowEmulationSpeeds();
@@ -266,7 +272,7 @@ private:
 	ImFont* mainFont;
 
 
-	void DebugCallback(const int& _pc, const int& _bank);
+	void DebugCallback(debug_data& _data);
 	alignas(64) std::atomic<bool> nextInstruction = false;
 	alignas(64) std::atomic<bool> autoRunInstructions = false;
 	std::mutex mutDebugInstr;

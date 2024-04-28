@@ -16,6 +16,7 @@
 #include "general_config.h"
 #include "VHardwareStructs.h"
 
+#include <functional>
 #include <SDL.h>
 #include <thread>
 #include <mutex>
@@ -36,8 +37,7 @@ struct emulation_settings {
 #define VHWMGR_ERR_HW_NOT_INIT      0x20
 
 class BaseCartridge;
-class GuiMgr;
-typedef void (GuiMgr::* debug_callback)(const int&, const int&);
+//class GuiMgr;
 
 class VHardwareMgr
 {
@@ -45,7 +45,7 @@ public:
 	static VHardwareMgr* getInstance();
 	static void resetInstance();
 
-    u8 InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset, GuiMgr* _guimgr, debug_callback _callback);
+    u8 InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback);
     u8 StartHardware();
     void ShutdownHardware();
 
@@ -60,8 +60,7 @@ public:
 	void SetProceedExecution(const bool& _proceed_execution);
 	void SetEmulationSpeed(const int& _emulation_speed);
 	
-	void GetFpsAndClock(int& _fps, float& _clock);
-    void GetCurrentPCandBank(int& _pc, int& _bank);
+    void GetFpsAndClock(int& _fps, float& _clock);
 
     void GetInstrDebugTable(Table<instr_entry>& _table);
     void GetInstrDebugTableTmp(Table<instr_entry>& _table);
@@ -72,6 +71,7 @@ public:
     void GetGraphicsDebugSettings(std::vector<std::tuple<int, std::string, bool>>& _settings);
     void SetGraphicsDebugSetting(const bool& _val, const int& _id);
     int GetPlayerCount() const;
+    void GetMemoryTypes(std::map<int, std::string>& _map) const;
 
 private:
     VHardwareMgr() = default;
@@ -119,10 +119,11 @@ private:
     alignas(64) std::atomic<bool> autoRun;
     alignas(64) std::atomic<int> emulationSpeed;
 
-    void CheckFpsAndClock();
+    bool CheckFpsAndClock();
     void InitMembers(emulation_settings& _settings);
 
-    GuiMgr* guimgr;
-    debug_callback dbgCallback;
+    //GuiMgr* guimgr;
+    std::function<void(debug_data&)> dbgCallback;
+    debug_data dbgData;
 };
 

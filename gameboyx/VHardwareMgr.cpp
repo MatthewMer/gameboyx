@@ -34,7 +34,7 @@ VHardwareMgr::~VHardwareMgr() {
 /* ***********************************************************************************************************
     RUN HARDWARE
 *********************************************************************************************************** */
-u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset, GuiMgr* _guimgr, debug_callback _callback) {
+u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback) {
     errors = 0x00;
     initialized = false;
 
@@ -68,8 +68,10 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settin
 
                 InitMembers(_emu_settings);
 
-                guimgr = _guimgr;
                 dbgCallback = _callback;
+                dbgData = {};
+                core_instance->UpdateDebugData(&dbgData);
+                dbgCallback(dbgData);
 
                 LOG_INFO("[emu] hardware for ", cart_instance->title, " initialized");
                 initialized = true;
@@ -147,13 +149,11 @@ void VHardwareMgr::ShutdownHardware() {
 
 void VHardwareMgr::ProcessHardware() {
     unique_lock<mutex> lock_hardware(mutHardware, defer_lock);
-    int bank;
-    int pc;
 
     while (running.load()) {
         if (debugEnable.load()) {
-            core_instance->GetCurrentPCandBank(pc, bank);
-            (guimgr->*dbgCallback)(pc, bank);
+            core_instance->UpdateDebugData(&dbgData);
+            dbgCallback(dbgData);
 
             if (proceedExecution.load()) {
                 lock_hardware.lock();
@@ -189,23 +189,24 @@ void VHardwareMgr::InitMembers(emulation_settings& _settings) {
     emulationSpeed.store(_settings.emulation_speed);
 }
 
-void VHardwareMgr::CheckFpsAndClock() {
+bool VHardwareMgr::CheckFpsAndClock() {
     timeSecondCur = high_resolution_clock::now();
     accumulatedTime += (u32)duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
-    clockCount += core_instance->GetClockCycles();
-    frameCount += graphics_instance->GetFrameCount();
-
     if (accumulatedTime > 999999) {
+        clockCount = core_instance->GetClockCycles();
+        frameCount = graphics_instance->GetFrameCount();
+
         currentFrequency.store((float)clockCount / accumulatedTime);
         currentFramerate.store((float)frameCount / (accumulatedTime / (float)pow(10, 6)));
 
-        clockCount = 0;
-        frameCount = 0;
-
         accumulatedTime = 0;
+        core_instance->ResetClockCycles();
+        graphics_instance->ResetFrameCount();
+        return true;
     }
+    return false;
 }
 
 void VHardwareMgr::Delay() {
@@ -225,11 +226,6 @@ void VHardwareMgr::GetFpsAndClock(int& _fps, float& _clock) {
     //unique_lock<mutex> lock_hardware(mutHardware);
     _clock = currentFrequency.load();
     _fps = (int)currentFramerate.load();
-}
-
-void VHardwareMgr::GetCurrentPCandBank(int& _pc, int& _bank) {
-    unique_lock<mutex> lock_hardware(mutHardware);
-    core_instance->GetCurrentPCandBank(_pc, _bank);
 }
    
 void VHardwareMgr::EventButtonDown(const int& _player, const SDL_GameControllerButton& _key) {
@@ -289,4 +285,8 @@ void VHardwareMgr::SetGraphicsDebugSetting(const bool& _val, const int& _id) {
 
 int VHardwareMgr::GetPlayerCount() const {
     return core_instance->GetPlayerCount();
+}
+
+void VHardwareMgr::GetMemoryTypes(std::map<int, std::string>& _map) const {
+    core_instance->GetMemoryTypes(_map);
 }

@@ -15,6 +15,8 @@
 #include "BaseCartridge.h"
 #include "defs.h"
 #include "GuiTable.h"
+#include "VHardwareStructs.h"
+#include <map>
 
 class BaseCPU
 {
@@ -37,7 +39,7 @@ public:
 
 	virtual void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const = 0;
 	virtual void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const = 0;
-	virtual void GetCurrentPCandBank(int& _pc, int& _bank) const = 0;
+	virtual void UpdateDebugData(debug_data* _data) const = 0;
 
 	virtual void GetInstrDebugTable(Table<instr_entry>& _table) = 0;
 	virtual void GetInstrDebugTableTmp(Table<instr_entry>& _table) = 0;
@@ -51,7 +53,10 @@ public:
 
 	virtual int GetPlayerCount() const = 0;
 
-	int GetClockCycles();
+	int GetClockCycles() const;
+	void ResetClockCycles();
+
+	virtual void GetMemoryTypes(std::map<int, std::string>& _map) const = 0;
 
 protected:
 	// constructor
@@ -64,12 +69,11 @@ protected:
 	BaseGPU* graphics_instance = nullptr;
 	BaseAPU* sound_instance = nullptr;
 
-	// members
-	int machineCycleClockCounter = 0;				// counter
-
 	int currentTicks = 0;
 	int ticksPerFrame = 0;
 	int tickCounter = 0;
+
+	std::vector<callstack_data> callstack;
 
 	virtual void ExecuteInstruction() = 0;
 	virtual bool CheckInterrupts() = 0;

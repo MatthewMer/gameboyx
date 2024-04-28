@@ -32,8 +32,10 @@ void BaseGPU::resetInstance() {
 	}
 }
 
-int BaseGPU::GetFrameCount() {
-	int frames = frameCounter;
+int BaseGPU::GetFrameCount() const {
+	return frameCounter;
+}
+
+void BaseGPU::ResetFrameCount() {
 	frameCounter = 0;
-	return frames;
 }

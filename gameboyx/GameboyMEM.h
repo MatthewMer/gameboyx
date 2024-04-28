@@ -15,14 +15,6 @@
 #include <mutex>
 #include <vector>
 
-enum MEM_TYPE {
-	ROM0 = 0,
-	ROMn = 1,
-	RAMn = 2,
-	WRAM0 = 3,
-	WRAMn = 4
-};
-
 struct machine_context {
 	bool battery_buffered = false;
 	bool ram_present = false;
@@ -142,12 +134,12 @@ struct graphics_context {
 	bool vram_dma = false;
 	u16 vram_dma_src_addr = 0;
 	u16 vram_dma_dst_addr = 0;
-	MEM_TYPE vram_dma_mem = ROM0;
+	MEM_TYPE vram_dma_mem = MEM_TYPE::ROM0;
 	bool vram_dma_ppu_en = false;
 
 	bool oam_dma = false;
 	u16 oam_dma_src_addr = 0;
-	MEM_TYPE oam_dma_mem = ROM0;
+	MEM_TYPE oam_dma_mem = MEM_TYPE::ROM0;
 	int oam_dma_counter = 0;
 };
 

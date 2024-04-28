@@ -190,6 +190,7 @@ void GuiMgr::ProcessGUI() {
     if (showMainMenuBar)        { ShowMainMenuBar();                            show_any = true; }
     if (showGraphicsDebugger)   { ShowDebugGraphics();                          show_any = true; }
     if (showNetworkSettings)    { ShowNetworkSettings();                        show_any = true; }
+    if (showCallstack)          { ShowCallstack();                              show_any = true; }
     ImGui::PopFont();
 
     if (show_any != showAny) {
@@ -324,7 +325,10 @@ void GuiMgr::ShowDebugInstrButtonsHead() {
         ImGui::Button("Reset");
         ImGui::EndDisabled();
     }
-
+    /*
+    ImGui::SameLine();
+    if (ImGui::Button("Callstack")) { showCallstack = !showCallstack; }
+    */
     ImGui::SameLine();
     bool auto_run = autoRun;
     ImGui::Checkbox("Auto run", &autoRun);
@@ -413,6 +417,15 @@ void GuiMgr::ShowDebugInstrTable() {
         }
     }
     ImGui::EndTable();
+}
+
+void GuiMgr::ShowCallstack() {
+    ImGui::SetNextWindowSize(debug_instr_win_size);
+
+    if (ImGui::Begin("Callstack", &showCallstack, WIN_CHILD_FLAGS)) {
+
+        ImGui::End();
+    }
 }
 
 void GuiMgr::ShowDebugInstrSelect() {
@@ -1024,8 +1037,13 @@ void GuiMgr::ShowNetworkSettings() {
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
+            ImGui::TableNextColumn();
             bool open = HardwareMgr::CheckNetwork();
             if (open) {
+                if (ImGui::Button("Close")) {
+                    HardwareMgr::CloseNetwork();
+                }
+                ImGui::SameLine();
                 ImGui::TextColored(IMGUI_GREEN_COL, "socket open");
                 if (ImGui::IsItemHovered()) {
                     if (ImGui::BeginTooltip()) {
@@ -1033,21 +1051,7 @@ void GuiMgr::ShowNetworkSettings() {
                         ImGui::EndTooltip();
                     }
                 }
-
-                ImGui::TableNextColumn();
-                if (ImGui::Button("Close")) {
-                    HardwareMgr::CloseNetwork();
-                }
             } else {
-                ImGui::TextColored(IMGUI_RED_COL, "socket closed");
-                if (ImGui::IsItemHovered()) {
-                    if (ImGui::BeginTooltip()) {
-                        ImGui::Text("current socket state");
-                        ImGui::EndTooltip();
-                    }
-                }
-
-                ImGui::TableNextColumn();
                 if (ImGui::Button("Open")) {
                     std::string ip = "";
                     for (auto it = ipv4Address.begin(); it < ipv4Address.end(); it++) {
@@ -1060,6 +1064,14 @@ void GuiMgr::ShowNetworkSettings() {
                     nw_settings.port = port;
 
                     HardwareMgr::OpenNetwork(nw_settings);
+                }
+                ImGui::SameLine();
+                ImGui::TextColored(IMGUI_RED_COL, "socket closed");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("current socket state");
+                        ImGui::EndTooltip();
+                    }
                 }
             }
 
@@ -1318,13 +1330,17 @@ void GuiMgr::StartGame(const bool& _restart) {
         emu_settings.debug_enabled = showInstrDebugger;
         emu_settings.emulation_speed = currentSpeed;
 
-        if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings, emu_settings, _restart, this, &GuiMgr::DebugCallback) != 0x00) {
+        if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings, emu_settings, _restart, 
+            [this](debug_data& _data) { this->DebugCallback(_data); }) != 0x00)
+        {
             gameRunning = false;
         } else {
             vhwmgr->GetInstrDebugTable(debugInstrTable);
             vhwmgr->GetMemoryDebugTables(debugMemoryTables);
 
             vhwmgr->GetGraphicsDebugSettings(debugGraphicsSettings);
+
+            vhwmgr->GetMemoryTypes(memoryTypes);
 
             if (vhwmgr->StartHardware() == 0x00) {
                 gameRunning = true;
@@ -1572,16 +1588,20 @@ void GuiMgr::EventButtonUp(const int& _player, const SDL_GameControllerButton& _
 /* ***********************************************************************************************************
     CALLBACKS
 *********************************************************************************************************** */
-void GuiMgr::DebugCallback(const int& _pc, const int& _bank) {
+void GuiMgr::DebugCallback(debug_data& _data) {
+    // instruction debugger 
     unique_lock<mutex> lock_debug_instr(mutDebugInstr);
+
+    int pc = _data.pc;
+    int bank = _data.bank;
 
     int current_bank = currentBank.load();
     int current_pc = currentPc.load();
 
-    if (_pc != current_pc || _bank != current_bank) {
+    if (pc != current_pc || bank != current_bank) {
         bool pc_set_to_ram = pcSetToRam.load();
 
-        if (pc_set_to_ram != (_bank < 0)) {
+        if (pc_set_to_ram != (bank < 0)) {
             pc_set_to_ram = !pc_set_to_ram;
 
             if (pc_set_to_ram) {
@@ -1589,8 +1609,8 @@ void GuiMgr::DebugCallback(const int& _pc, const int& _bank) {
             }
         }
 
-        currentPc.store(_pc);
-        currentBank.store(_bank);
+        currentPc.store(pc);
+        currentBank.store(bank);
         pcSetToRam.store(pc_set_to_ram);
 
         debugInstrAutoscroll.store(true);
@@ -1599,7 +1619,7 @@ void GuiMgr::DebugCallback(const int& _pc, const int& _bank) {
     if (autoRunInstructions.load()) {
         unique_lock<mutex> lock_debug_breakpoints(mutDebugBreakpoints);
         auto& breakpoint_list = (pcSetToRam.load() ? breakpointsAddrTmp : breakpointsAddr);
-        if (!(find(breakpoint_list.begin(), breakpoint_list.end(), std::pair(_bank, _pc)) != breakpoint_list.end())) {
+        if (!(find(breakpoint_list.begin(), breakpoint_list.end(), std::pair(bank, pc)) != breakpoint_list.end())) {
             vhwmgr->SetProceedExecution(true);
         }
     }
@@ -1607,4 +1627,7 @@ void GuiMgr::DebugCallback(const int& _pc, const int& _bank) {
         vhwmgr->SetProceedExecution(true);
         nextInstruction.store(false);
     }
+    
+
+
 }

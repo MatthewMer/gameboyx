@@ -579,19 +579,19 @@ void GameboyMEM::SetIO(const u16& _addr, const u8& _data) {
 
 const u8* GameboyMEM::GetBank(const MEM_TYPE& _type, const int& _bank) {
     switch (_type) {
-    case ROM0:
+    case MEM_TYPE::ROM0:
         return ROM_0.data();
         break;
-    case ROMn:
+    case MEM_TYPE::ROMn:
         return ROM_N[_bank].data();
         break;
-    case RAMn:
+    case MEM_TYPE::RAMn:
         return RAM_N[_bank];
         break;
-    case WRAM0:
+    case MEM_TYPE::WRAM0:
         return WRAM_0.data();
         break;
-    case WRAMn:
+    case MEM_TYPE::WRAMn:
         return WRAM_N[_bank].data();
         break;
     default:
@@ -630,25 +630,25 @@ void GameboyMEM::VRAM_DMA(const u8& _data) {
 
             if (source_addr < ROM_N_OFFSET) {
                 graphics_ctx.vram_dma_src_addr = source_addr;
-                graphics_ctx.vram_dma_mem = ROM0;
+                graphics_ctx.vram_dma_mem = MEM_TYPE::ROM0;
             } else if (source_addr < VRAM_N_OFFSET) {
                 graphics_ctx.vram_dma_src_addr = source_addr - ROM_N_OFFSET;
-                graphics_ctx.vram_dma_mem = ROMn;
+                graphics_ctx.vram_dma_mem = MEM_TYPE::ROMn;
             } else if (source_addr < RAM_N_OFFSET) {
                 LOG_ERROR("[emu] HDMA source address ", std::format("{:04x}", source_addr), " undefined copy");
                 return;
             } else if (source_addr < WRAM_0_OFFSET) {
                 graphics_ctx.vram_dma_src_addr = source_addr - RAM_N_OFFSET;
-                graphics_ctx.vram_dma_mem = RAMn;
+                graphics_ctx.vram_dma_mem = MEM_TYPE::RAMn;
             } else if (source_addr < WRAM_N_OFFSET) {
                 graphics_ctx.vram_dma_src_addr = source_addr - WRAM_0_OFFSET;
-                graphics_ctx.vram_dma_mem = WRAM0;
+                graphics_ctx.vram_dma_mem = MEM_TYPE::WRAM0;
             } else if (source_addr < MIRROR_WRAM_OFFSET) {
                 graphics_ctx.vram_dma_src_addr = source_addr - WRAM_N_OFFSET;
-                graphics_ctx.vram_dma_mem = WRAMn;
+                graphics_ctx.vram_dma_mem = MEM_TYPE::WRAMn;
             } else {
                 graphics_ctx.vram_dma_src_addr = source_addr - (RAM_N_OFFSET + 0x4000);
-                graphics_ctx.vram_dma_mem = RAMn;
+                graphics_ctx.vram_dma_mem = MEM_TYPE::RAMn;
             }
 
             graphics_ctx.vram_dma_dst_addr = dest_addr;
@@ -702,22 +702,22 @@ void GameboyMEM::OAM_DMA(const u8& _data) {
 
     if (source_addr < ROM_N_OFFSET) {
         graphics_ctx.oam_dma_src_addr = source_addr;
-        graphics_ctx.oam_dma_mem = ROM0;
+        graphics_ctx.oam_dma_mem = MEM_TYPE::ROM0;
     } else if (source_addr < VRAM_N_OFFSET) {
         graphics_ctx.oam_dma_src_addr = source_addr - ROM_N_OFFSET;
-        graphics_ctx.oam_dma_mem = ROMn;
+        graphics_ctx.oam_dma_mem = MEM_TYPE::ROMn;
     } else if (source_addr < RAM_N_OFFSET) {
         LOG_ERROR("[emu] OAM DMA source address ", std::format("{:04x}", source_addr), " undefined copy");
         return;
     } else if (source_addr < WRAM_0_OFFSET) {
         graphics_ctx.oam_dma_src_addr = source_addr - RAM_N_OFFSET;
-        graphics_ctx.oam_dma_mem = RAMn;
+        graphics_ctx.oam_dma_mem = MEM_TYPE::RAMn;
     } else if (source_addr < WRAM_N_OFFSET) {
         graphics_ctx.oam_dma_src_addr = source_addr - WRAM_0_OFFSET;
-        graphics_ctx.oam_dma_mem = WRAM0;
+        graphics_ctx.oam_dma_mem = MEM_TYPE::WRAM0;
     } else if (source_addr < MIRROR_WRAM_OFFSET) {
         graphics_ctx.oam_dma_src_addr = source_addr - WRAM_N_OFFSET;
-        graphics_ctx.oam_dma_mem = WRAMn;
+        graphics_ctx.oam_dma_mem = MEM_TYPE::WRAMn;
     } else {
         LOG_ERROR("[emu] OAM DMA source address not implemented / allowed");
         return;

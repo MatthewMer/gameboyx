@@ -74,15 +74,15 @@ enum cgb_data_types {
 	E,
 	H,
 	L,
-	IE,
-	IF,
 	d8,
 	d16,
 	a8,
 	a8_ref,
 	a16,
 	a16_ref,
-	r8
+	r8,
+	IEreg,
+	IFreg
 };
 
 enum cgb_flag_types {
@@ -111,7 +111,7 @@ public:
 
 	void GetHardwareInfo(std::vector<data_entry>& _hardware_info) const override;
 	void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const override;
-	void GetCurrentPCandBank(int& _pc, int& _bank) const override;
+	void UpdateDebugData(debug_data* _data) const override;
 
 	void GetInstrDebugTable(Table<instr_entry>& _table) override;
 	void GetInstrDebugTableTmp(Table<instr_entry>& _table) override;
@@ -121,6 +121,8 @@ public:
 	void TickTimers();
 
 	int GetPlayerCount() const override;
+
+	void GetMemoryTypes(std::map<int, std::string>& _map) const override;
 
 private:
 	// constructor
@@ -192,6 +194,12 @@ private:
 	// CB instructions
 	std::vector<instr_tuple> instrMapCB;
 	void setupLookupTableCB();
+
+	void AddToCallstack(const u16& _dest);
+	void RemoveFromCallstack();
+	int callCount = 0;
+	int returnCount = 0;
+	u16 stackpointerLastCall = 0x00;
 
 	// basic instruction set *****
 	void NoInstruction();

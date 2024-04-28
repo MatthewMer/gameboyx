@@ -494,3 +494,17 @@ inline const std::string CGB_BOOT_ROM = "cgb_boot.bin";
 #define RAM_BANK_MASK_4                 0x03
 #define RAM_BANK_MASK_8                 0x07
 #define RAM_BANK_MASK_16                0x0F
+
+
+enum MEM_TYPE : int {
+    ROM0 = 0,
+    ROMn = 1,
+    VRAM = 2,
+    RAMn = 3,
+    WRAM0 = 4,
+    WRAMn = 5,
+    OAM = 6,
+    IO = 7,
+    HRAM = 8,
+    IE = 9
+};

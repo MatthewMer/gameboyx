@@ -53,8 +53,8 @@ const unordered_map<cgb_data_types, string> REGISTER_NAMES{
     {L, "L"},
     {SP, "SP"},
     {PC, "PC"},
-    {IE, "IE"},
-    {IF, "IF"}
+    {IEreg, "IE"},
+    {IFreg, "IF"}
 };
 
 const unordered_map<cgb_data_types, string> DATA_NAMES{
@@ -75,25 +75,6 @@ const unordered_map<cgb_data_types, string> DATA_NAMES{
 };
 
 /* ***********************************************************************************************************
-    ACCESS CPU STATUS
-*********************************************************************************************************** */
-void GameboyCPU::GetCurrentPCandBank(int& _pc, int& _bank) const {
-    _pc = (int)Regs.PC;
-
-    if (_pc < ROM_N_OFFSET) {
-        _bank = 0;
-    } else if (_pc < VRAM_N_OFFSET) {
-        _bank = machine_ctx->rom_bank_selected + 1;
-    } else {
-        _bank = -1;
-    }
-}
-
-int GameboyCPU::GetPlayerCount() const {
-    return GB_PLAYER_COUNT;
-}
-
-/* ***********************************************************************************************************
     CONSTRUCTOR
 *********************************************************************************************************** */
 GameboyCPU::GameboyCPU(BaseCartridge* _cartridge) : BaseCPU(_cartridge) {
@@ -106,6 +87,8 @@ GameboyCPU::GameboyCPU(BaseCartridge* _cartridge) : BaseCPU(_cartridge) {
 
     setupLookupTable();
     setupLookupTableCB();
+
+
 }
 
 void GameboyCPU::SetInstances() {
@@ -236,9 +219,13 @@ bool GameboyCPU::CheckInterrupts() {
             isr_requested &= ~IRQ_TIMER;
             return true;
         }
-        /*if (machine_ctx->IF & IRQ_SERIAL) {
-            // not implemented
-        }*/
+        if ((isr_requested & IRQ_SERIAL) && (machine_ctx->IE & IRQ_SERIAL)) {
+            ime = false;
+
+            isr_push(ISR_SERIAL_HANDLER_ADDR);
+            isr_requested &= ~IRQ_SERIAL;
+            return true;
+        }
         else if ((isr_requested & IRQ_JOYPAD) && (machine_ctx->IE & IRQ_JOYPAD)) {
             ime = false;
 
@@ -1206,7 +1193,7 @@ void GameboyCPU::LDSPHL() {
     TickTimers();
 }
 
-// push PC to Stack
+// push to Stack
 void GameboyCPU::PUSH() {
     switch (opcode) {
     case 0xc5:
@@ -1238,11 +1225,13 @@ void GameboyCPU::isr_push(const u16& _isr_handler) {
     TickTimers();
     TickTimers();
 
+    //AddToCallstack(_isr_handler);
+
     stack_push(Regs.PC);
     Regs.PC = _isr_handler;
 }
 
-// pop PC from Stack
+// pop from Stack
 void GameboyCPU::POP() {
     switch (opcode) {
     case 0xc1:
@@ -1991,6 +1980,8 @@ void GameboyCPU::RST() {
 }
 
 void GameboyCPU::call() {
+    //AddToCallstack(data);
+
     stack_push(Regs.PC);
     Regs.PC = data;
 }
@@ -2044,6 +2035,8 @@ void GameboyCPU::RETI() {
 void GameboyCPU::ret() {
     Regs.PC = stack_pop();
     TickTimers();
+
+    //RemoveFromCallstack();
 }
 
 /* ***********************************************************************************************************
@@ -3560,9 +3553,146 @@ void GameboyCPU::SET7() {
     }
 }
 
+void GameboyCPU::AddToCallstack(const u16& _dest) {
+    callstack_data cs_data = {};
+    cs_data.src_addr = Regs.PC;
+    cs_data.dest_addr = data;
+
+    bool not_found = false;
+
+    switch (Regs.PC & 0xF000) {
+    case 0x0000:
+    case 0x1000:
+    case 0x2000:
+    case 0x3000:
+        cs_data.src_mem_type = 0;
+        cs_data.src_bank = 0;
+        break;
+    case 0x4000:
+    case 0x5000:
+    case 0x6000:
+    case 0x7000:
+        cs_data.src_mem_type = 0;
+        cs_data.src_bank = machine_ctx->rom_bank_selected + 1;
+        break;
+    case 0xA000:
+    case 0xB000:
+        cs_data.src_mem_type = 2;
+        cs_data.src_bank = machine_ctx->ram_bank_selected;
+        break;
+    case 0xC000:
+        cs_data.src_mem_type = 3;
+        cs_data.src_bank = 0;
+        break;
+    case 0xD000:
+        cs_data.src_mem_type = 3;
+        cs_data.src_bank = machine_ctx->wram_bank_selected + 1;
+        break;
+    case 0xF000:
+        if (((Regs.PC & 0xFF80) == 0xFF80) && Regs.PC != 0xFFFF) {
+            cs_data.src_mem_type = 4;
+            cs_data.src_bank = 0;
+        } else {
+            not_found = true;
+        }
+        break;
+    default:
+        not_found = true;
+        break;
+    }
+
+    if (not_found) {
+        LOG_ERROR("[emu] source memory type not implemented for callstack: ", std::format("{:04x}", Regs.PC));
+        return;
+    }
+
+    not_found = false;
+
+    switch (_dest & 0xF000) {
+    case 0x0000:
+    case 0x1000:
+    case 0x2000:
+    case 0x3000:
+        cs_data.dest_mem_type = 0;
+        cs_data.dest_bank = 0;
+        break;
+    case 0x4000:
+    case 0x5000:
+    case 0x6000:
+    case 0x7000:
+        cs_data.dest_mem_type = 0;
+        cs_data.dest_bank = machine_ctx->rom_bank_selected + 1;
+        break;
+    case 0xA000:
+    case 0xB000:
+        cs_data.dest_mem_type = 2;
+        cs_data.dest_bank = machine_ctx->ram_bank_selected;
+        break;
+    case 0xC000:
+        cs_data.dest_mem_type = 3;
+        cs_data.dest_bank = 0;
+        break;
+    case 0xD000:
+        cs_data.dest_mem_type = 3;
+        cs_data.dest_bank = machine_ctx->wram_bank_selected + 1;
+        break;
+    case 0xF000:
+        if (((_dest & 0xFF80) == 0xFF80) && _dest != 0xFFFF) {
+            cs_data.dest_mem_type = 4;
+            cs_data.dest_bank = 0;
+        } else {
+            not_found = true;
+        }
+        break;
+    default:
+        not_found = true;
+        break;
+    }
+
+    if (not_found) {
+        LOG_ERROR("[emu] destination memory type not implemented for callstack: ", std::format("{:04x}", _dest));
+        return;
+    }
+
+    callstack.emplace_back(cs_data);
+    stackpointerLastCall = Regs.SP;
+    callCount++;
+
+    //callCount -= returnCount;
+    //returnCount = 0;
+
+    LOG_WARN(callstack.size(), ": ", callCount, ", ", returnCount);
+}
+
+void GameboyCPU::RemoveFromCallstack() {
+    if (stackpointerLastCall == Regs.SP) {
+        callstack.pop_back();
+    }
+    returnCount++;
+    LOG_WARN(callstack.size(), ": ", callCount, ", ", returnCount);
+}
+
 /* ***********************************************************************************************************
-    ACCESS HARDWARE STATUS
+    ACCESS HARDWARE INFO
 *********************************************************************************************************** */
+void GameboyCPU::UpdateDebugData(debug_data* _data) const {
+    _data->pc = (int)Regs.PC;
+
+    if (_data->pc < ROM_N_OFFSET) {
+        _data->bank = 0;
+    } else if (_data->pc < VRAM_N_OFFSET) {
+        _data->bank = machine_ctx->rom_bank_selected + 1;
+    } else {
+        _data->bank = -1;
+    }
+
+    _data->callstack = callstack;
+}
+
+int GameboyCPU::GetPlayerCount() const {
+    return GB_PLAYER_COUNT;
+}
+
 // get current hardware status (currently mapped memory banks, etc.)
 void GameboyCPU::GetHardwareInfo(std::vector<data_entry>& _hardware_info) const {
     _hardware_info.clear();
@@ -3585,8 +3715,8 @@ void GameboyCPU::GetInstrDebugFlags(std::vector<reg_entry>& _register_values, st
     _register_values.emplace_back(REGISTER_NAMES.at(HL), format("{:04x}", Regs.HL));
     _register_values.emplace_back(REGISTER_NAMES.at(SP), format("{:04x}", Regs.SP));
     _register_values.emplace_back(REGISTER_NAMES.at(PC), format("{:04x}", Regs.PC));
-    _register_values.emplace_back(REGISTER_NAMES.at(IE), format("{:02x}", machine_ctx->IE));
-    _register_values.emplace_back(REGISTER_NAMES.at(IF), format("{:02x}", mem_instance->GetIO(IF_ADDR)));
+    _register_values.emplace_back(REGISTER_NAMES.at(IEreg), format("{:02x}", machine_ctx->IE));
+    _register_values.emplace_back(REGISTER_NAMES.at(IFreg), format("{:02x}", mem_instance->GetIO(IF_ADDR)));
 
     _flag_values.clear();
     _flag_values.emplace_back(FLAG_NAMES.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
@@ -3613,6 +3743,18 @@ void GameboyCPU::GetInstrDebugFlags(std::vector<reg_entry>& _register_values, st
     _misc_values.emplace_back("WX", format("{:03d} (dec)", mem_instance->GetIO(WX_ADDR)));
     _misc_values.emplace_back("WY", format("{:03d} (dec)", mem_instance->GetIO(WY_ADDR)));
     _misc_values.emplace_back("Mode", format("{:1d} (dec)", graphics_ctx->mode));
+}
+
+void GameboyCPU::GetMemoryTypes(std::map<int, std::string>& _map) const {
+    _map.clear();
+    _map[MEM_TYPE::ROM0] = "ROM";
+    _map[MEM_TYPE::RAMn] = "RAM";
+    _map[MEM_TYPE::VRAM] = "VRAM";
+    _map[MEM_TYPE::WRAM0] = "WRAM";
+    _map[MEM_TYPE::OAM] = "OAM";
+    _map[MEM_TYPE::IO] = "IO";
+    _map[MEM_TYPE::HRAM] = "HRAM";
+    _map[MEM_TYPE::IE] = "IE";
 }
 
 /* ***********************************************************************************************************

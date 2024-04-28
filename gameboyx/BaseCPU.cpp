@@ -34,8 +34,10 @@ BaseCPU* BaseCPU::getInstance() {
 	return instance;
 }
 
-int BaseCPU::GetClockCycles() {
-	int result = tickCounter;
+int BaseCPU::GetClockCycles() const {
+	return tickCounter;
+}
+
+void BaseCPU::ResetClockCycles() {
 	tickCounter = 0;
-	return result;
 }
