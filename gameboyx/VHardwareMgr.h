@@ -23,6 +23,7 @@
 #include <queue>
 #include <chrono>
 using namespace std::chrono;
+using namespace std::chrono_literals;
 
 struct emulation_settings {
     bool debug_enabled = false;
@@ -88,11 +89,7 @@ private:
     BaseCartridge* cart_instance;
 
     // execution time (e.g. 60FPS -> 1/60th of a second)
-    u32 timePerFrame;
-    u32 currentTimePerFrame;
-    steady_clock::time_point timeFramePrev;
-    steady_clock::time_point timeFrameCur;
-
+    std::chrono::milliseconds timePerFrame;
     void Delay();
 
     int frameCount = 0;
@@ -101,6 +98,8 @@ private:
     // timestamps for core virtualFrequency and virtualFramerate calculation
     steady_clock::time_point timeSecondPrev;
     steady_clock::time_point timeSecondCur;
+    steady_clock::time_point timePointPrev;
+    steady_clock::time_point timePointCur;
     u32 accumulatedTime = 0;
     u32 accumulatedTimeTmp = 0;
 
@@ -112,6 +111,9 @@ private:
 
     std::thread hardwareThread;
     std::mutex mutHardware;
+
+    std::mutex mutTimeDelta;
+    std::condition_variable  notifyTimeDelta;
 
     alignas(64) std::atomic<bool> running;
     alignas(64) std::atomic<bool> debugEnable;

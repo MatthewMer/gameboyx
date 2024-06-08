@@ -64,7 +64,7 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, emulation_settings& _em
                 memory_instance = BaseMEM::getInstance();
 
                 // returns the time per frame in ns
-                timePerFrame = graphics_instance->GetDelayTime();
+                timePerFrame = std::chrono::milliseconds(graphics_instance->GetDelayTime());
 
                 InitMembers(_emu_settings);
 
@@ -176,10 +176,10 @@ void VHardwareMgr::ProcessHardware() {
 }
 
 void VHardwareMgr::InitMembers(emulation_settings& _settings) {
-    timeFramePrev = high_resolution_clock::now();
-    timeFrameCur = high_resolution_clock::now();
     timeSecondPrev = high_resolution_clock::now();
     timeSecondCur = high_resolution_clock::now();
+    timePointPrev = high_resolution_clock::now();
+    timePointCur = high_resolution_clock::now();
 
     running.store(true);
     debugEnable.store(_settings.debug_enabled);
@@ -207,13 +207,13 @@ bool VHardwareMgr::CheckFpsAndClock() {
 }
 
 void VHardwareMgr::Delay() {
-    while (currentTimePerFrame < timePerFrame) {
-        timeFrameCur = high_resolution_clock::now();
-        currentTimePerFrame = (u32)duration_cast<microseconds>(timeFrameCur - timeFramePrev).count();
-    }
+    timePointCur = high_resolution_clock::now();
+    std::chrono::milliseconds c_time_diff = duration_cast<milliseconds>(timePointCur - timePointPrev);
 
-    timeFramePrev = timeFrameCur;
-    currentTimePerFrame = 0;
+    std::unique_lock<mutex> lock_timedelta(mutTimeDelta);
+    notifyTimeDelta.wait_for(lock_timedelta, timePerFrame - c_time_diff);
+
+    timePointPrev = high_resolution_clock::now();
 }
 
 /* ***********************************************************************************************************

@@ -13,15 +13,16 @@ audio_settings HardwareMgr::audioSettings = {};
 control_settings HardwareMgr::controlSettings = {};
 network_settings HardwareMgr::networkSettings = {};
 
-u32 HardwareMgr::timePerFrame = 0;
-u32 HardwareMgr::currentTimePerFrame = 0;
+std::chrono::microseconds HardwareMgr::timePerFrame = std::chrono::microseconds();
+std::mutex HardwareMgr::mutTimeDelta = std::mutex();
+std::condition_variable  HardwareMgr::notifyTimeDelta = std::condition_variable();
 steady_clock::time_point HardwareMgr::timePointCur = high_resolution_clock::now();
 steady_clock::time_point HardwareMgr::timePointPrev = high_resolution_clock::now();
-bool HardwareMgr::nextFrame = false;
+bool HardwareMgr::fpsLimit = false;
 
 u32 HardwareMgr::currentMouseMove = 0;
 
-#define HWMGR_SECOND	999999999
+#define HWMGR_SECOND	999999
 
 u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings, control_settings& _control_settings) {
 	errors = 0;
@@ -164,24 +165,28 @@ void HardwareMgr::SetFramerateTarget(const int& _target, const bool& _unlimited)
 	graphicsSettings.framerateTarget = _target;
 
 	if (graphicsSettings.framerateTarget > 0) {
-		timePerFrame = (u32)((1.f / graphicsSettings.framerateTarget) * pow(10, 9));
+		timePerFrame = std::chrono::microseconds((u32)(((1.f * pow(10, 6)) / graphicsSettings.framerateTarget)));
+		fpsLimit = true;
 	}
 	else {
-		timePerFrame = 0;
+		timePerFrame = std::chrono::microseconds(0);
+		fpsLimit = false;
 	}
 }
 
 void HardwareMgr::ProcessTimedEvents() {
-	timePointCur = high_resolution_clock::now();
-	u32 time_diff = (u32)duration_cast<nanoseconds>(timePointCur - timePointPrev).count();
-	timePointPrev = timePointCur;
+	steady_clock::time_point cur = high_resolution_clock::now();
+	u32 time_diff = (u32)duration_cast<milliseconds>(cur - timePointCur).count();
 
+	timePointCur = cur;
+	std::chrono::milliseconds c_time_diff = duration_cast<milliseconds>(timePointCur - timePointPrev);
 	// framerate
-	currentTimePerFrame += time_diff;
-	if (currentTimePerFrame > timePerFrame) {
-		currentTimePerFrame = 0;
-		nextFrame = true;
+	if (fpsLimit) {
+		std::unique_lock<std::mutex> lock_timedelta(mutTimeDelta);
+		notifyTimeDelta.wait_for(lock_timedelta, timePerFrame - c_time_diff);
 	}
+	timePointPrev = high_resolution_clock::now();
+
 
 	// process mouse
 	if (!controlSettings.mouse_always_visible) {
@@ -205,16 +210,7 @@ bool HardwareMgr::CheckFrame() {
 	if (win_min) {
 		return false;
 	} else {
-		if (graphicsSettings.fpsUnlimited) {
-			return true;
-		} else {
-			if (nextFrame) {
-				nextFrame = false;
-				return true;
-			} else {
-				return false;
-			}
-		}
+		return true;
 	}
 }
 

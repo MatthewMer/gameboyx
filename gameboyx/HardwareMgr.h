@@ -8,6 +8,7 @@ using namespace std::chrono;
 #include "AudioMgr.h"
 #include <imgui.h>
 #include <SDL.h>
+#include <mutex>
 #include "logger.h"
 #include "HardwareStructs.h"
 #include "ControlMgr.h"
@@ -47,8 +48,6 @@ public:
 
 	static void ProcessTimedEvents();
 
-	static bool CheckFrame();
-
 	static std::queue<std::pair<SDL_Keycode, bool>>& GetKeyQueue();
 	static std::queue<std::tuple<int, SDL_GameControllerButton, bool>>& GetButtonQueue();
 
@@ -59,6 +58,8 @@ public:
 	static void OpenNetwork(network_settings& _network_settings);
 	static bool CheckNetwork();
 	static void CloseNetwork();
+
+	static bool CheckFrame();
 
 private:
 	HardwareMgr() = default;
@@ -85,8 +86,10 @@ private:
 	static u32 errors;
 
 	// for framerate target
-	static u32 timePerFrame;
-	static u32 currentTimePerFrame;
+	static std::mutex mutTimeDelta;
+	static std::condition_variable  notifyTimeDelta;
+	static std::chrono::microseconds timePerFrame;
+	static bool fpsLimit;
 	static steady_clock::time_point timePointCur;
 	static steady_clock::time_point timePointPrev;
 
