@@ -21,7 +21,7 @@ void samples_mono(float* _dest, const float& _sample, const float& _angle);
 void AudioSDL::InitAudio(audio_settings& _audio_settings, const bool& _reinit) {
 	bool _reinit_backend = virtAudioInfo.audio_running.load();
 
-	if (_reinit) { 
+	if (_reinit) {
 		if (_reinit_backend) {
 			DestroyAudioBackend();
 		}
@@ -41,7 +41,7 @@ void AudioSDL::InitAudio(audio_settings& _audio_settings, const bool& _reinit) {
 			buff_size = (Uint16)val.second;
 		}
 	}
-	
+
 	want.freq = _audio_settings.sampling_rate;
 	want.format = AUDIO_F32;
 	want.channels = (u8)audioInfo.channels;
@@ -98,6 +98,7 @@ bool AudioSDL::InitAudioBackend(virtual_audio_information& _virt_audio_info) {
 
 void AudioSDL::DestroyAudioBackend() {
 	virtAudioInfo.audio_running.store(false);
+	audioSamples.notifyBufferUpdate.notify_one();
 	if (audioThread.joinable()) {
 		audioThread.join();
 	}
@@ -129,6 +130,8 @@ void audio_callback(void* _user_data, u8* _device_buffer, int _length) {
 	SDL_memcpy(_device_buffer + reg_1_size, reg_2, reg_2_size);
 
 	samples->read_cursor = ((b_read_cursor + _length) % samples->buffer_size) / sizeof(float);
+
+	samples->notifyBufferUpdate.notify_one();
 }
 
 void audio_thread(audio_information* _audio_info, virtual_audio_information* _virt_audio_info, audio_samples* _samples) {
@@ -153,9 +156,9 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 		}
 
 		float step = (float)((360.f - (2 * a)) / (_virt_audio_info->channels - 1));
-		
+
 		for (int i = 0; i < _virt_audio_info->channels; i++) {
-		virt_angles.push_back(a * (float)(M_PI / 180.f));
+			virt_angles.push_back(a * (float)(M_PI / 180.f));
 			a += step;
 		}
 	}
@@ -182,7 +185,8 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 	}
 
 	while (_virt_audio_info->audio_running.load()) {
-
+		std::unique_lock<mutex> lock_buffer(_samples->mutBufferUpdate);
+		_samples->notifyBufferUpdate.wait(lock_buffer);
 
 		SDL_LockAudioDevice(*device);
 		int reg_1_size, reg_2_size;
@@ -234,9 +238,8 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 				buffer += channels;
 			}
 		}
-		SDL_UnlockAudioDevice(*device);
-
 		_samples->write_cursor = (_samples->write_cursor + reg_1_size + reg_2_size) % (int)_samples->buffer.size();
+		SDL_UnlockAudioDevice(*device);
 	}
 }
 

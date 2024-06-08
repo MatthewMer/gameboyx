@@ -5,12 +5,12 @@
 
 BaseGPU* BaseGPU::instance = nullptr;
 
-BaseGPU* BaseGPU::getInstance(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings) {
+BaseGPU* BaseGPU::getInstance(BaseCartridge* _cartridge) {
 	if (instance == nullptr) {
 		switch (_cartridge->console) {
 		case GB:
 		case GBC:
-			instance = new GameboyGPU(_cartridge, _virt_graphics_settings);
+			instance = new GameboyGPU(_cartridge);
 			break;
 		}
 	}

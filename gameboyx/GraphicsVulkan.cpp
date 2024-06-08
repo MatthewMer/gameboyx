@@ -315,7 +315,7 @@ void GraphicsVulkan::SetSwapchainSettings(bool& _present_mode_fifo, bool& _tripl
 }
 
 bool GraphicsVulkan::Init2dGraphicsBackend() {
-	for (int i = 0; i < virtGraphicsInfo.buffering; i++) {
+	for (int i = 0; i < FRAMES_IN_FLIGHT_2D; i++) {
 		VkCommandPoolCreateInfo cmd_pool_info = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 		cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 		cmd_pool_info.queueFamilyIndex = familyIndex;
@@ -357,7 +357,7 @@ bool GraphicsVulkan::Init2dGraphicsBackend() {
 	VkFenceCreateInfo fence_info = {};
 	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	for (int i = 0; i < virtGraphicsInfo.buffering; i++) {
+	for (int i = 0; i < FRAMES_IN_FLIGHT_2D; i++) {
 		tex2dData.update_fence.emplace_back();
 		if (vkCreateFence(device, &fence_info, nullptr, &tex2dData.update_fence[i]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] create tex2dUpdateFence");
@@ -376,11 +376,6 @@ bool GraphicsVulkan::Init2dGraphicsBackend() {
 		LOG_ERROR("[vulkan] init shader for 2d texture output");
 		return false;
 	}
-
-	tex2dData.cmdbufSubmitSignals.clear();
-	tex2dData.cmdbufSubmitSignals.emplace_back(&tex2dData.cmdbuf_0_submitted);
-	tex2dData.cmdbufSubmitSignals.emplace_back(&tex2dData.cmdbuf_1_submitted);
-	tex2dData.cmdbufSubmitSignals.emplace_back(&tex2dData.cmdbuf_2_submitted);
 
 	RecalcTex2dScaleMatrix();
 
@@ -402,6 +397,7 @@ bool GraphicsVulkan::Init2dGraphicsBackend() {
 
 void GraphicsVulkan::Destroy2dGraphicsBackend() {
 	submitRunning.store(false);
+	queueNotify.notify_one();
 	if (queueSubmitThread.joinable()) {
 		queueSubmitThread.join();
 	}
@@ -530,7 +526,6 @@ void GraphicsVulkan::RenderFrame() {
 				LOG_ERROR("[vulkan] present result");
 			}
 		}
-		lock_queue.unlock();
 	}
 
 	++frame_index %= FRAMES_IN_FLIGHT;
@@ -539,6 +534,8 @@ void GraphicsVulkan::RenderFrame() {
 void GraphicsVulkan::QueueSubmit() {
 	while (submitRunning.load()) {
 		unique_lock<mutex> lock_submit(mutSubmit);
+		queueNotify.wait(lock_submit);
+
 		for (auto& n : queueSubmitData) {
 			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 			submitInfo.commandBufferCount = 1;
@@ -548,11 +545,9 @@ void GraphicsVulkan::QueueSubmit() {
 			if (vkQueueSubmit(queue, 1, &submitInfo, *get<1>(n)) != VK_SUCCESS) {
 				LOG_ERROR("[vulkan] queue submit texture2d update");
 			}
-			lock_queue.unlock();
 			get<2>(n)->store(true);
 		}
 		queueSubmitData.clear();
-		lock_submit.unlock();
 	}
 }
 
@@ -669,11 +664,11 @@ void GraphicsVulkan::UpdateTex2d() {
 		}
 
 		signal->store(false);
-
 		unique_lock<mutex> lock_submit(mutSubmit);
 		queueSubmitData.emplace_back(&tex2dData.command_buffer[update_index], &tex2dData.update_fence[update_index], signal);
+		queueNotify.notify_one();
 
-		++update_index %= virtGraphicsInfo.buffering;
+		++update_index %= FRAMES_IN_FLIGHT_2D;
 	}
 }
 
@@ -1606,7 +1601,7 @@ bool GraphicsVulkan::InitTex2dDescriptorSets() {
 bool GraphicsVulkan::InitTex2dBuffers() {
 	// staging buffer for texture upload
 	tex2dData.size = virtGraphicsInfo.lcd_width * virtGraphicsInfo.lcd_height * TEX2D_CHANNELS;
-	for (int i = 0; i < virtGraphicsInfo.buffering; i++) {
+	for (int i = 0; i < FRAMES_IN_FLIGHT_2D; i++) {
 		tex2dData.staging_buffer.emplace_back();
 		if (!InitBuffer(tex2dData.staging_buffer[i], tex2dData.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
 			LOG_ERROR("[vulkan] create staging buffer for main texture");
@@ -1620,7 +1615,7 @@ bool GraphicsVulkan::InitTex2dBuffers() {
 		return false;
 	}
 
-	tex2dData.mapped_image_data = std::vector<void*>(virtGraphicsInfo.buffering);
+	tex2dData.mapped_image_data = std::vector<void*>(FRAMES_IN_FLIGHT_2D);
 	for (int i = 0; auto & n : tex2dData.staging_buffer) {
 		if (vkMapMemory(device, n.memory, 0, tex2dData.size, 0, &tex2dData.mapped_image_data[i]) != VK_SUCCESS) {
 			LOG_ERROR("[vulkan] map image memory");

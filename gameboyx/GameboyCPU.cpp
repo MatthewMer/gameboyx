@@ -3553,125 +3553,6 @@ void GameboyCPU::SET7() {
     }
 }
 
-void GameboyCPU::AddToCallstack(const u16& _dest) {
-    callstack_data cs_data = {};
-    cs_data.src_addr = Regs.PC;
-    cs_data.dest_addr = data;
-
-    bool not_found = false;
-
-    switch (Regs.PC & 0xF000) {
-    case 0x0000:
-    case 0x1000:
-    case 0x2000:
-    case 0x3000:
-        cs_data.src_mem_type = 0;
-        cs_data.src_bank = 0;
-        break;
-    case 0x4000:
-    case 0x5000:
-    case 0x6000:
-    case 0x7000:
-        cs_data.src_mem_type = 0;
-        cs_data.src_bank = machine_ctx->rom_bank_selected + 1;
-        break;
-    case 0xA000:
-    case 0xB000:
-        cs_data.src_mem_type = 2;
-        cs_data.src_bank = machine_ctx->ram_bank_selected;
-        break;
-    case 0xC000:
-        cs_data.src_mem_type = 3;
-        cs_data.src_bank = 0;
-        break;
-    case 0xD000:
-        cs_data.src_mem_type = 3;
-        cs_data.src_bank = machine_ctx->wram_bank_selected + 1;
-        break;
-    case 0xF000:
-        if (((Regs.PC & 0xFF80) == 0xFF80) && Regs.PC != 0xFFFF) {
-            cs_data.src_mem_type = 4;
-            cs_data.src_bank = 0;
-        } else {
-            not_found = true;
-        }
-        break;
-    default:
-        not_found = true;
-        break;
-    }
-
-    if (not_found) {
-        LOG_ERROR("[emu] source memory type not implemented for callstack: ", std::format("{:04x}", Regs.PC));
-        return;
-    }
-
-    not_found = false;
-
-    switch (_dest & 0xF000) {
-    case 0x0000:
-    case 0x1000:
-    case 0x2000:
-    case 0x3000:
-        cs_data.dest_mem_type = 0;
-        cs_data.dest_bank = 0;
-        break;
-    case 0x4000:
-    case 0x5000:
-    case 0x6000:
-    case 0x7000:
-        cs_data.dest_mem_type = 0;
-        cs_data.dest_bank = machine_ctx->rom_bank_selected + 1;
-        break;
-    case 0xA000:
-    case 0xB000:
-        cs_data.dest_mem_type = 2;
-        cs_data.dest_bank = machine_ctx->ram_bank_selected;
-        break;
-    case 0xC000:
-        cs_data.dest_mem_type = 3;
-        cs_data.dest_bank = 0;
-        break;
-    case 0xD000:
-        cs_data.dest_mem_type = 3;
-        cs_data.dest_bank = machine_ctx->wram_bank_selected + 1;
-        break;
-    case 0xF000:
-        if (((_dest & 0xFF80) == 0xFF80) && _dest != 0xFFFF) {
-            cs_data.dest_mem_type = 4;
-            cs_data.dest_bank = 0;
-        } else {
-            not_found = true;
-        }
-        break;
-    default:
-        not_found = true;
-        break;
-    }
-
-    if (not_found) {
-        LOG_ERROR("[emu] destination memory type not implemented for callstack: ", std::format("{:04x}", _dest));
-        return;
-    }
-
-    callstack.emplace_back(cs_data);
-    stackpointerLastCall = Regs.SP;
-    callCount++;
-
-    //callCount -= returnCount;
-    //returnCount = 0;
-
-    LOG_WARN(callstack.size(), ": ", callCount, ", ", returnCount);
-}
-
-void GameboyCPU::RemoveFromCallstack() {
-    if (stackpointerLastCall == Regs.SP) {
-        callstack.pop_back();
-    }
-    returnCount++;
-    LOG_WARN(callstack.size(), ": ", callCount, ", ", returnCount);
-}
-
 /* ***********************************************************************************************************
     ACCESS HARDWARE INFO
 *********************************************************************************************************** */
@@ -3758,7 +3639,7 @@ void GameboyCPU::GetMemoryTypes(std::map<int, std::string>& _map) const {
 }
 
 /* ***********************************************************************************************************
-    PREPARE DEBUG DATA (DISASSEMBLED INSTRUCTIONS)
+    PREPARE DEBUG DATA
 *********************************************************************************************************** */
 void GameboyCPU::DecodeBankContent(TableSection<instr_entry>& _program_buffer, vector<u8>* _bank_data, const int& _offset, const int& _bank_num, const string& _bank_name) {
     u16 data = 0;
@@ -3985,4 +3866,123 @@ void GameboyCPU::GetInstrDebugTableTmp(Table<instr_entry>& _table) {
     }
 
     _table.AddTableSectionDisposable(bank_table);
+}
+
+void GameboyCPU::AddToCallstack(const u16& _dest) {
+    callstack_data cs_data = {};
+    cs_data.src_addr = Regs.PC;
+    cs_data.dest_addr = data;
+
+    bool not_found = false;
+
+    switch (Regs.PC & 0xF000) {
+    case 0x0000:
+    case 0x1000:
+    case 0x2000:
+    case 0x3000:
+        cs_data.src_mem_type = 0;
+        cs_data.src_bank = 0;
+        break;
+    case 0x4000:
+    case 0x5000:
+    case 0x6000:
+    case 0x7000:
+        cs_data.src_mem_type = 0;
+        cs_data.src_bank = machine_ctx->rom_bank_selected + 1;
+        break;
+    case 0xA000:
+    case 0xB000:
+        cs_data.src_mem_type = 2;
+        cs_data.src_bank = machine_ctx->ram_bank_selected;
+        break;
+    case 0xC000:
+        cs_data.src_mem_type = 3;
+        cs_data.src_bank = 0;
+        break;
+    case 0xD000:
+        cs_data.src_mem_type = 3;
+        cs_data.src_bank = machine_ctx->wram_bank_selected + 1;
+        break;
+    case 0xF000:
+        if (((Regs.PC & 0xFF80) == 0xFF80) && Regs.PC != 0xFFFF) {
+            cs_data.src_mem_type = 4;
+            cs_data.src_bank = 0;
+        } else {
+            not_found = true;
+        }
+        break;
+    default:
+        not_found = true;
+        break;
+    }
+
+    if (not_found) {
+        LOG_ERROR("[emu] source memory type not implemented for callstack: ", std::format("{:04x}", Regs.PC));
+        return;
+    }
+
+    not_found = false;
+
+    switch (_dest & 0xF000) {
+    case 0x0000:
+    case 0x1000:
+    case 0x2000:
+    case 0x3000:
+        cs_data.dest_mem_type = 0;
+        cs_data.dest_bank = 0;
+        break;
+    case 0x4000:
+    case 0x5000:
+    case 0x6000:
+    case 0x7000:
+        cs_data.dest_mem_type = 0;
+        cs_data.dest_bank = machine_ctx->rom_bank_selected + 1;
+        break;
+    case 0xA000:
+    case 0xB000:
+        cs_data.dest_mem_type = 2;
+        cs_data.dest_bank = machine_ctx->ram_bank_selected;
+        break;
+    case 0xC000:
+        cs_data.dest_mem_type = 3;
+        cs_data.dest_bank = 0;
+        break;
+    case 0xD000:
+        cs_data.dest_mem_type = 3;
+        cs_data.dest_bank = machine_ctx->wram_bank_selected + 1;
+        break;
+    case 0xF000:
+        if (((_dest & 0xFF80) == 0xFF80) && _dest != 0xFFFF) {
+            cs_data.dest_mem_type = 4;
+            cs_data.dest_bank = 0;
+        } else {
+            not_found = true;
+        }
+        break;
+    default:
+        not_found = true;
+        break;
+    }
+
+    if (not_found) {
+        LOG_ERROR("[emu] destination memory type not implemented for callstack: ", std::format("{:04x}", _dest));
+        return;
+    }
+
+    callstack.emplace_back(cs_data);
+    stackpointerLastCall = Regs.SP;
+    callCount++;
+
+    //callCount -= returnCount;
+    //returnCount = 0;
+
+    LOG_WARN(callstack.size(), ": ", callCount, ", ", returnCount);
+}
+
+void GameboyCPU::RemoveFromCallstack() {
+    if (stackpointerLastCall == Regs.SP) {
+        callstack.pop_back();
+    }
+    returnCount++;
+    LOG_WARN(callstack.size(), ": ", callCount, ", ", returnCount);
 }

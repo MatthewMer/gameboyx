@@ -30,7 +30,8 @@
 #include "gtc/matrix_transform.hpp"
 #endif
 
-#define FRAMES_IN_FLIGHT	2
+#define FRAMES_IN_FLIGHT		2
+#define FRAMES_IN_FLIGHT_2D		2
 
 struct VulkanPipelineBufferInfo {
 	std::vector<VkVertexInputAttributeDescription> attrDesc;
@@ -64,8 +65,7 @@ struct tex2d_data {
 	int update_index = 0;
 	alignas(64) std::atomic<bool> cmdbuf_0_submitted = true;
 	alignas(64) std::atomic<bool> cmdbuf_1_submitted = true;
-	alignas(64) std::atomic<bool> cmdbuf_2_submitted = true;
-	std::vector<std::atomic<bool>*> cmdbufSubmitSignals = std::vector<std::atomic<bool>*>();
+	std::vector<std::atomic<bool>*> cmdbufSubmitSignals = std::vector<std::atomic<bool>*>({&cmdbuf_0_submitted, &cmdbuf_1_submitted});
 
 	std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>();
 	std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>();
@@ -188,6 +188,7 @@ private:
 
 	std::vector<std::tuple<VkCommandBuffer*, VkFence*, std::atomic<bool>*>> queueSubmitData = std::vector<std::tuple<VkCommandBuffer*, VkFence*, std::atomic<bool>*>>();
 	std::mutex mutSubmit;
+	std::condition_variable queueNotify;
 
 	void UpdateDummy();
 

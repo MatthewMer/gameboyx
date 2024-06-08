@@ -19,7 +19,7 @@ class BaseGPU
 {
 public:
 	// get/reset instance
-	static BaseGPU* getInstance(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings);
+	static BaseGPU* getInstance(BaseCartridge* _cartridge);
 	static BaseGPU* getInstance();
 	static void resetInstance();
 

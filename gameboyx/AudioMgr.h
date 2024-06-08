@@ -3,6 +3,7 @@
 #include "HardwareStructs.h"
 #include "general_config.h"
 #include <thread>
+#include <mutex>
 
 class BaseAPU;
 
@@ -50,6 +51,9 @@ struct audio_samples {
 
 	int read_cursor = 0;
 	int write_cursor = 0;
+
+	std::condition_variable notifyBufferUpdate;
+	std::mutex mutBufferUpdate;
 };
 
 struct audio_information {

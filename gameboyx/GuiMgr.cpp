@@ -858,6 +858,7 @@ void GuiMgr::ShowGraphicsSettings() {
             ImGui::EndTable();
         }
 
+        /*
         // emulation ******************************************
         ImGui::Separator();
         ImGui::TextColored(HIGHLIGHT_COLOR, "Emulation");
@@ -882,7 +883,8 @@ void GuiMgr::ShowGraphicsSettings() {
 
             ImGui::PopStyleVar();
             ImGui::EndTable();
-        }
+            
+        }*/
         ImGui::End();
     }
 }
@@ -1323,14 +1325,13 @@ void GuiMgr::ActionSetSamplingRate() {
 void GuiMgr::StartGame(const bool& _restart) {
     if (games.size() > 0) {
         // gather settings
-        virtual_graphics_settings graphics_settings = {};
-        graphics_settings.buffering = tripleBufferingEmu ? V_TRIPPLE_BUFFERING : V_DOUBLE_BUFFERING;
+        //virtual_graphics_settings graphics_settings = {};
 
         emulation_settings emu_settings = {};
         emu_settings.debug_enabled = showInstrDebugger;
         emu_settings.emulation_speed = currentSpeed;
 
-        if (vhwmgr->InitHardware(games[gameSelectedIndex], graphics_settings, emu_settings, _restart, 
+        if (vhwmgr->InitHardware(games[gameSelectedIndex], emu_settings, _restart, 
             [this](debug_data& _data) { this->DebugCallback(_data); }) != 0x00)
         {
             gameRunning = false;

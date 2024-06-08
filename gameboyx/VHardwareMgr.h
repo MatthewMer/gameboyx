@@ -45,7 +45,7 @@ public:
 	static VHardwareMgr* getInstance();
 	static void resetInstance();
 
-    u8 InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback);
+    u8 InitHardware(BaseCartridge* _cartridge, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback);
     u8 StartHardware();
     void ShutdownHardware();
 

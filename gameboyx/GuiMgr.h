@@ -187,8 +187,6 @@ private:
 	bool tripleBuffering = false;
 	bool vsync = false;
 
-	bool tripleBufferingEmu = false;
-
 	bool showAudioMenu = false;
 	float volume = .5f;
 	int samplingRateMax = 0;

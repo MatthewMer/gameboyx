@@ -34,7 +34,7 @@ VHardwareMgr::~VHardwareMgr() {
 /* ***********************************************************************************************************
     RUN HARDWARE
 *********************************************************************************************************** */
-u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settings& _virt_graphics_settings, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback) {
+u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback) {
     errors = 0x00;
     initialized = false;
 
@@ -49,7 +49,7 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, virtual_graphics_settin
             cart_instance = _cartridge;
 
             core_instance = BaseCPU::getInstance(cart_instance);
-            graphics_instance = BaseGPU::getInstance(cart_instance, _virt_graphics_settings);
+            graphics_instance = BaseGPU::getInstance(cart_instance);
             sound_instance = BaseAPU::getInstance(cart_instance);
             control_instance = BaseCTRL::getInstance(cart_instance);
 
@@ -180,9 +180,6 @@ void VHardwareMgr::InitMembers(emulation_settings& _settings) {
     timeFrameCur = high_resolution_clock::now();
     timeSecondPrev = high_resolution_clock::now();
     timeSecondCur = high_resolution_clock::now();
-
-    timeFramePrev = high_resolution_clock::now();
-    timeFrameCur = high_resolution_clock::now();
 
     running.store(true);
     debugEnable.store(_settings.debug_enabled);
