@@ -307,7 +307,7 @@ void GameboyAPU::ch4TickLengthTimer() {
 * 3. rear left
 * 4. front left
 */
-void GameboyAPU::SampleAPU(std::vector<complex>& _data, const int& _samples, const int& _sampling_rate) {
+void GameboyAPU::SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples, const int& _sampling_rate) {
 	bool right = soundCtx->outRightEnabled.load();
 	bool left = soundCtx->outLeftEnabled.load();
 	bool vol_right = soundCtx->masterVolumeRight.load();
@@ -380,10 +380,6 @@ void GameboyAPU::SampleAPU(std::vector<complex>& _data, const int& _samples, con
 	unique_lock<mutex> lock_lfsr_buffer(mutLFSR, std::defer_lock);
 
 	for (int i = 0; i < _samples; i++) {
-		for (int n = 0; n < 4; n++) {
-			_data.emplace_back();
-		}
-
 		float sample_0 = .0f;	// front-left
 		float sample_1 = .0f;	// front-right
 		float sample_2 = .0f;	// rear-left
@@ -462,9 +458,9 @@ void GameboyAPU::SampleAPU(std::vector<complex>& _data, const int& _samples, con
 			lock_lfsr_buffer.unlock();
 		}
 
-		_data[i * virtualChannels].real = sample_1 * vol_right * .05f;		// front-right
-		_data[i * virtualChannels + 1].real = sample_3 * vol_right * .05f;	// rear-right
-		_data[i * virtualChannels + 2].real = sample_2 * vol_left * .05f;	// rear-left
-		_data[i * virtualChannels + 3].real = sample_0 * vol_left * .05f;	// front-left
+		_data[0][i].real = sample_1 * vol_right * .05f;		// front-right
+		_data[1][i].real = sample_3 * vol_right * .05f;		// rear-right
+		_data[2][i].real = sample_2 * vol_left * .05f;		// rear-left
+		_data[3][i].real = sample_0 * vol_left * .05f;		// front-left
 	}
 }

@@ -12,7 +12,7 @@ public:
 
 	// members
 	void ProcessAPU(const int& _ticks) override;
-	void SampleAPU(std::vector<complex>& _data, const int& _samples, const int& _sampling_rate) override;
+	void SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples, const int& _sampling_rate) override;
 
 private:
 	// constructor

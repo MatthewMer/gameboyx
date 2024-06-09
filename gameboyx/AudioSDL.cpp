@@ -145,7 +145,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 	const int virt_channels = _virt_audio_info->channels;
 
 	// filled with samples per period of virtual channels
-	std::vector<complex> virt_samples = std::vector<complex>();
+	std::vector<std::vector<complex>> virt_samples = std::vector<std::vector<complex>>(virt_channels);
 
 	std::vector<float> virt_angles;
 	{
@@ -189,6 +189,9 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 		std::unique_lock<mutex> lock_buffer(_samples->mutBufferUpdate);
 		_samples->notifyBufferUpdate.wait(lock_buffer);
 
+		float volume = _audio_info->master_volume.load();
+		float lfe = _audio_info->lfe.load();
+
 		SDL_LockAudioDevice(*device);
 		int reg_1_size, reg_2_size;
 		if (_samples->read_cursor <= _samples->write_cursor) {
@@ -203,15 +206,23 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 			// get samples from APU
 			int reg_1_samples = reg_1_size / channels;
 			int reg_2_samples = reg_2_size / channels;
-			virt_samples.clear();
-
-			sound_instance->SampleAPU(virt_samples, reg_1_samples + reg_2_samples, _audio_info->sampling_rate);
 
 			// TODO: use FFT and other stuff for different effects
+			u32 size = reg_1_samples + reg_2_samples;
+			//while (size) { if (size == 1) {/* size is power of 2 */} size >>= 1; }
+			int exp = (int)std::ceil(log2(size));
+			size_t buf_size = (size_t)pow(2, exp);
 
-			// transfer samples into ringbuffer // for now just feed the real part back into the output
-			float volume = _audio_info->master_volume.load();
-			float lfe = _audio_info->lfe.load();
+			for (auto& n : virt_samples) { 
+				n.assign(buf_size, {});				// resize to power of two and reset imaginary part
+			}
+			sound_instance->SampleAPU(virt_samples, size, _audio_info->sampling_rate);
+
+			/*
+			for (auto& n : virt_samples) {
+				fft(n.data(), buf_size);
+			}
+			*/
 
 			float* buffer = _samples->buffer.data() + _samples->write_cursor;
 			for (int i = 0; i < reg_1_samples; i++) {
@@ -219,7 +230,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 					buffer[j] = .0f;
 				}
 				for (int j = 0; j < virt_channels; j++) {
-					(*speaker_fn)(buffer, virt_samples[i * virt_channels + j].real, virt_angles[j], volume, lfe);
+					(*speaker_fn)(buffer, virt_samples[j][i].real, virt_angles[j], volume, lfe);
 				}
 
 				buffer += channels;
@@ -231,7 +242,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 					buffer[j] = .0f;
 				}
 				for (int j = 0; j < virt_channels; j++) {
-					(*speaker_fn)(buffer, virt_samples[i * virt_channels + j].real, virt_angles[j], volume, lfe);
+					(*speaker_fn)(buffer, virt_samples[j][i].real, virt_angles[j], volume, lfe);
 				}
 
 				buffer += channels;
@@ -262,7 +273,7 @@ void samples_7_1_surround(float* _dest, const float& _sample, const float& _angl
 	_dest[6] += calc_sample(s, _angle, SOUND_7_1_ANGLES[6]);	// centre-left
 	_dest[7] += calc_sample(s, _angle, SOUND_7_1_ANGLES[7]);	// centre-right
 
-	_dest[3] += ((_dest[0] + _dest[1] + _dest[2] + _dest[4] + _dest[5] + _dest[6] + _dest[7]) / 3) * _lfe;
+	_dest[3] += s * _lfe;
 }
 
 void samples_5_1_surround(float* _dest, const float& _sample, const float& _angle, const float& _vol, const float& _lfe) {
@@ -273,7 +284,7 @@ void samples_5_1_surround(float* _dest, const float& _sample, const float& _angl
 	_dest[4] += calc_sample(s, _angle, SOUND_5_1_ANGLES[4]);
 	_dest[5] += calc_sample(s, _angle, SOUND_5_1_ANGLES[5]);
 
-	_dest[3] += ((_dest[0] + _dest[1] + _dest[2] + _dest[4] + _dest[5]) / 2) * _lfe;
+	_dest[3] += s * _lfe;
 }
 
 void samples_stereo(float* _dest, const float& _sample, const float& _angle, const float& _vol, const float& _lfe) {

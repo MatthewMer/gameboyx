@@ -29,7 +29,7 @@ void AudioMgr::SetMasterVolume(const float& _volume) {
 }
 
 void AudioMgr::SetLfe(const float& _lfe) {
-	audioInfo.lfe.store(_lfe * 2);
+	audioInfo.lfe.store(_lfe * 4);
 }
 
 /* 
