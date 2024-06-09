@@ -180,7 +180,8 @@ void HardwareMgr::ProcessTimedEvents() {
 	// framerate
 	if (timePerFrame >= c_time_diff) {
 		// std::unique_lock with std::condition_variable().wait_for() actually useless here but
-		// for whatever reason it consumes less ressources than std::this_thread::sleep_for()
+		// for whatever reason it consumes less ressources than std::this_thread::sleep_for().
+		// wait_for() actually halts the thread, whereas sleep_for() most presumably just loops
 		std::unique_lock lock_fps(mutTimeDelta);
 		notifyTimeDelta.wait_for(lock_fps, duration_cast<milliseconds>(timePerFrame - c_time_diff));
 		//std::this_thread::sleep_for(duration_cast<milliseconds>(timePerFrame - c_time_diff));
