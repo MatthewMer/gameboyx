@@ -88,7 +88,7 @@ private:
 	// for framerate target
 	static std::mutex mutTimeDelta;
 	static std::condition_variable  notifyTimeDelta;
-	static std::chrono::microseconds timePerFrame;
+	static std::chrono::milliseconds timePerFrame;
 	static steady_clock::time_point timePointCur;
 	static steady_clock::time_point timePointPrev;
 

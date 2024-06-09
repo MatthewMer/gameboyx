@@ -13,7 +13,7 @@ audio_settings HardwareMgr::audioSettings = {};
 control_settings HardwareMgr::controlSettings = {};
 network_settings HardwareMgr::networkSettings = {};
 
-std::chrono::microseconds HardwareMgr::timePerFrame = std::chrono::microseconds();
+std::chrono::milliseconds HardwareMgr::timePerFrame = std::chrono::milliseconds();
 std::mutex HardwareMgr::mutTimeDelta = std::mutex();
 std::condition_variable  HardwareMgr::notifyTimeDelta = std::condition_variable();
 steady_clock::time_point HardwareMgr::timePointCur = high_resolution_clock::now();
@@ -172,21 +172,21 @@ void HardwareMgr::SetFramerateTarget(const int& _target, const bool& _unlimited)
 }
 
 void HardwareMgr::ProcessTimedEvents() {
-	steady_clock::time_point cur = high_resolution_clock::now();
+	steady_clock::time_point cur = steady_clock::now();
 	u32 time_diff = (u32)duration_cast<milliseconds>(cur - timePointCur).count();
 
 	timePointCur = cur;
 	std::chrono::milliseconds c_time_diff = duration_cast<milliseconds>(timePointCur - timePointPrev);
 	// framerate
-	if (timePerFrame >= c_time_diff) {
-		// std::unique_lock with std::condition_variable().wait_for() actually useless here but
-		// for whatever reason it consumes less ressources than std::this_thread::sleep_for().
-		// wait_for() actually halts the thread, whereas sleep_for() most presumably just loops
+	if (timePerFrame > c_time_diff) {
+		// std::unique_lock with std::condition_variable().wait_for() actually useless here but for
+		// whatever reason it consumes slightly less ressources than std::this_thread::sleep_for()
 		std::unique_lock lock_fps(mutTimeDelta);
 		notifyTimeDelta.wait_for(lock_fps, duration_cast<milliseconds>(timePerFrame - c_time_diff));
-		//std::this_thread::sleep_for(duration_cast<milliseconds>(timePerFrame - c_time_diff));
+		//std::this_thread::sleep_for(duration_cast<microseconds>(timePerFrame - c_time_diff));
 	}
-	timePointPrev = high_resolution_clock::now();
+	
+	timePointPrev = steady_clock::now();
 
 
 	// process mouse
