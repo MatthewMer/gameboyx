@@ -89,11 +89,8 @@ private:
 	static std::mutex mutTimeDelta;
 	static std::condition_variable  notifyTimeDelta;
 	static std::chrono::microseconds timePerFrame;
-	static bool fpsLimit;
 	static steady_clock::time_point timePointCur;
 	static steady_clock::time_point timePointPrev;
-
-	static bool nextFrame;
 
 	// control
 	static u32 currentMouseMove;

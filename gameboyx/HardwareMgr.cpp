@@ -18,11 +18,10 @@ std::mutex HardwareMgr::mutTimeDelta = std::mutex();
 std::condition_variable  HardwareMgr::notifyTimeDelta = std::condition_variable();
 steady_clock::time_point HardwareMgr::timePointCur = high_resolution_clock::now();
 steady_clock::time_point HardwareMgr::timePointPrev = high_resolution_clock::now();
-bool HardwareMgr::fpsLimit = false;
 
 u32 HardwareMgr::currentMouseMove = 0;
 
-#define HWMGR_SECOND	999999
+#define HWMGR_SECOND	999
 
 u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings, control_settings& _control_settings) {
 	errors = 0;
@@ -165,12 +164,10 @@ void HardwareMgr::SetFramerateTarget(const int& _target, const bool& _unlimited)
 	graphicsSettings.framerateTarget = _target;
 
 	if (graphicsSettings.framerateTarget > 0) {
-		timePerFrame = std::chrono::microseconds((u32)(((1.f * pow(10, 6)) / graphicsSettings.framerateTarget)));
-		fpsLimit = true;
+		timePerFrame = std::chrono::milliseconds((u32)(((1.f * pow(10, 3)) / graphicsSettings.framerateTarget)));
 	}
 	else {
-		timePerFrame = std::chrono::microseconds(0);
-		fpsLimit = false;
+		timePerFrame = std::chrono::milliseconds(0);
 	}
 }
 
@@ -181,9 +178,12 @@ void HardwareMgr::ProcessTimedEvents() {
 	timePointCur = cur;
 	std::chrono::milliseconds c_time_diff = duration_cast<milliseconds>(timePointCur - timePointPrev);
 	// framerate
-	if (fpsLimit) {
-		std::unique_lock<std::mutex> lock_timedelta(mutTimeDelta);
-		notifyTimeDelta.wait_for(lock_timedelta, timePerFrame - c_time_diff);
+	if (timePerFrame >= c_time_diff) {
+		// std::unique_lock with std::condition_variable().wait_for() actually useless here but
+		// for whatever reason it consumes less ressources than std::this_thread::sleep_for()
+		std::unique_lock lock_fps(mutTimeDelta);
+		notifyTimeDelta.wait_for(lock_fps, duration_cast<milliseconds>(timePerFrame - c_time_diff));
+		//std::this_thread::sleep_for(duration_cast<milliseconds>(timePerFrame - c_time_diff));
 	}
 	timePointPrev = high_resolution_clock::now();
 
