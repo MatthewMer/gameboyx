@@ -189,6 +189,7 @@ private:
 
 	bool showAudioMenu = false;
 	float volume = .5f;
+	float lfe = .5f;
 	int samplingRateMax = 0;
 	int samplingRate = 0;
 
@@ -253,6 +254,7 @@ private:
 	void ActionSetFramerateTarget();
 	void ActionSetSwapchainSettings();
 	void ActionSetMasterVolume();
+	void ActionSetLfe();
 	void ActionSetSamplingRate();
 	void ActionAutoExecution();
 

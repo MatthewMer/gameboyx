@@ -43,6 +43,7 @@ public:
 	static void SetSamplingRate(int& _sampling_rate);
 
 	static void SetMasterVolume(const float& _volume);
+	static void SetLfe(const float& _lfe);
 
 	static void GetAudioSettings(audio_settings& _audio_settings);
 

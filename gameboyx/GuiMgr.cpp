@@ -54,6 +54,7 @@ GuiMgr::GuiMgr() {
     samplingRate = aud_settings.sampling_rate;
     samplingRateMax = aud_settings.sampling_rate_max;
     volume = aud_settings.master_volume;
+    lfe = aud_settings.lfe;
 
     vhwmgr = VHardwareMgr::getInstance();
 
@@ -919,6 +920,21 @@ void GuiMgr::ShowAudioSettings() {
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Low frequency");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("sets amplitude multiplier of low frequency channel");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+
+            if (ImGui::SliderFloat("##lfe", &lfe, APP_MIN_VOLUME, APP_MAX_VOLUME)) {
+                ActionSetLfe();
+            }
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
             ImGui::TextUnformatted("Sampling rate");
             if (ImGui::IsItemHovered()) {
                 if (ImGui::BeginTooltip()) {
@@ -1314,6 +1330,10 @@ void GuiMgr::ActionSetSwapchainSettings() {
 
 void GuiMgr::ActionSetMasterVolume() {
     HardwareMgr::SetMasterVolume(volume);
+}
+
+void GuiMgr::ActionSetLfe() {
+    HardwareMgr::SetLfe(lfe);
 }
 
 void GuiMgr::ActionSetSamplingRate() {

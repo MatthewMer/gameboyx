@@ -66,6 +66,7 @@ struct audio_information {
 	void* device = nullptr;
 
 	alignas(64) std::atomic<float> master_volume = 1.f;
+	alignas(64) std::atomic<float> lfe = 1.f;
 };
 
 class AudioMgr {
@@ -82,6 +83,7 @@ public:
 	void SetSamplingRate(audio_settings& _audio_settings);
 
 	void SetMasterVolume(const float& _volume);
+	void SetLfe(const float& _lfe);
 
 	// clone/assign protection
 	AudioMgr(AudioMgr const&) = delete;

@@ -235,6 +235,11 @@ void HardwareMgr::SetMasterVolume(const float& _volume) {
 	audioMgr->SetMasterVolume(_volume);
 }
 
+void HardwareMgr::SetLfe(const float& _lfe) {
+	audioSettings.lfe = _lfe;
+	audioMgr->SetLfe(_lfe);
+}
+
 void HardwareMgr::GetAudioSettings(audio_settings& _audio_settings) {
 	_audio_settings = audioSettings;
 }
