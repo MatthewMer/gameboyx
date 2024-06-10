@@ -219,16 +219,24 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 			u32 size = reg_1_samples + reg_2_samples;
 			//while (size) { if (size == 1) {/* size is power of 2 */} size >>= 1; }
 			int exp = (int)std::ceil(log2(size));
-			size_t buf_size = (size_t)pow(2, exp);
+			int buf_size = (int)pow(2, exp);
 
 			for (auto& n : virt_samples) { 
 				n.assign(buf_size, {});				// resize to power of two and reset imaginary part
 			}
-			sound_instance->SampleAPU(virt_samples, size, _audio_info->sampling_rate);
+			sound_instance->SampleAPU(virt_samples, size, sampling_rate);
 
 			/*
-			for (auto& n : virt_samples) {
-				fft(n.data(), buf_size);
+			for (auto& samples : virt_samples) {
+				fft(samples.data(), buf_size);
+
+				LOG_WARN("-------------");
+				for (int i = 0; const auto & m : samples) {
+					LOG_INFO(i, ". frequency: ", (float)sampling_rate * i / buf_size);
+					LOG_INFO(i, ". magnitude: ", sqrt(pow(m.real, 2) + pow(m.imaginary, 2)));
+					LOG_INFO(i, ". phase: ", atan2(m.imaginary, m.real) * 180.f / M_PI);
+					i++;
+				}
 			}
 			*/
 

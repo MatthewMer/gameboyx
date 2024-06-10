@@ -68,7 +68,7 @@ void fft(complex* _samples, const int& _N) {
 	complex* o = new complex[_N / 2];
 	for (int n = 0; n < _N / 2; n++) {
 		e[n] = _samples[n * 2];
-		o[n + 1] = _samples[n * 2 + 1];
+		o[n] = _samples[n * 2 + 1];
 	}
 
 	// recursively call fft for all stages (with orders power of 2)
@@ -78,9 +78,7 @@ void fft(complex* _samples, const int& _N) {
 	// twiddel factors ( e^(-i*2*pi*k/N) , where k = index and N = order
 	// used for shifting the signal
 	for (int k = 0; k < _N / 2; k++) {
-		// step through phase shifts
 		float ang = (float)(2 * M_PI * k / _N);
-		// shift phase and perform butterfly operation to calculate results
 		complex p = e[k];
 		complex q = complex(cos(ang), -sin(ang)) * o[k];
 		_samples[k] = p + q;

@@ -21,18 +21,24 @@ struct complex {
 		this->imaginary = imaginary;
 	}
 
-	complex operator+(complex& _right) {
-		return complex(real + _right.real, imaginary + _right.imaginary);
+	complex operator+(const complex& _right) {
+		return complex(
+			real + _right.real, 
+			imaginary + _right.imaginary
+		);
 	}
 
-	complex operator-(complex& _right) {
-		return complex(real - _right.real, imaginary - _right.imaginary);
+	complex operator-(const complex& _right) {
+		return complex(
+			real - _right.real, 
+			imaginary - _right.imaginary
+		);
 	}
 
-	complex operator*(complex& _right) {
+	complex operator*(const complex& _right) {
 		return complex(
 			real * _right.real - imaginary * _right.imaginary,
-			real * _right.imaginary + _right.real * imaginary);
+			real * _right.imaginary + imaginary * _right.real);
 	}
 
 	complex operator/(complex& _right) {
