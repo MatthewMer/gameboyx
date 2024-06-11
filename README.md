@@ -14,6 +14,9 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 * in the cloned repository open gameboyx.sln with Visual Studio 2022
 * you can either build an installer or create a portable executable, as described in the following section
 
+### Precompiled: ###
+* download the precompiled binaries from the releases section
+
 ### Portable: ###
 * set configuration to `Release_portable` , set your target platform and start compilation
 * required files in `./x64/Release/` or `./Win32/Release/` are `gameboyx.exe` , `SDL2.dll` and the folders `control` , `icon` , `font` and `boot` , the application will automatically create the remaining folder hierarchy on execution
@@ -30,6 +33,30 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 (the resulting installer executable and msi package are found in `./gameboyx_win_x64/Release` or `./gameboyx_win_x86/Release` , depending on the selected platform)
 
 Note: in the installer version folders for roms, configs, etc. are located in `%APPDATA%/<username>/GameboyX/`
+
+### Feature state ###
+
+- [x] Emulation at ~95%, many games are playable
+
+- [x] 7.1 Surround sound and sampling rate up to 96kHz with reverb
+
+- [x] Instruction debugger
+      
+- [x] Register state observer
+
+- [x] Hardware state observer
+      
+- [ ] Graphics debugger
+
+- [ ] Audio debugger
+
+- [ ] Audio effects
+
+- [ ] Custom shaders (GLSL for Vulkan)
+
+- [x] Controller support
+
+- [ ] Call stack (sort of)
 
 ### Control/Shortcuts ###
 
