@@ -89,7 +89,7 @@ private:
     BaseCartridge* cart_instance;
 
     // execution time (e.g. 60FPS -> 1/60th of a second)
-    std::chrono::milliseconds timePerFrame;
+    std::chrono::microseconds timePerFrame;
     void Delay();
 
     int frameCount = 0;

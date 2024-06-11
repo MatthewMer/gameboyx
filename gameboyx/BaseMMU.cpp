@@ -39,12 +39,6 @@ void BaseMMU::resetInstance() {
 	}
 }
 
-u32 BaseMMU::GetSaveTimeDiff() {
-	unique_lock<mutex> lock_save_time(mutSave);
-	steady_clock::time_point save_time_cur = high_resolution_clock::now();
-	return (u32)duration_cast<microseconds>(save_time_cur - saveTimePrev).count();
-}
-
 vector<char> BaseMMU::GetSaveData() {
 	saveFinished.store(true);
 	return saveData;

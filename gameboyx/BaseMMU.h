@@ -23,9 +23,6 @@
 #include <chrono>
 using namespace std::chrono;
 
-class BaseMMU;
-void save_thread(BaseMMU* _obj, std::string _file);
-
 class BaseMMU
 {
 public:
@@ -46,7 +43,6 @@ public:
 	virtual u8 Read8Bit(const u16& _addr) = 0;
 	//virtual u16 Read16Bit(const u16& _addr) = 0;
 
-	u32 GetSaveTimeDiff();
 	std::vector<char> GetSaveData();
 
 protected:

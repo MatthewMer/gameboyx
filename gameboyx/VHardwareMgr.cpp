@@ -64,7 +64,7 @@ u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, emulation_settings& _em
                 memory_instance = BaseMEM::getInstance();
 
                 // returns the time per frame in ns
-                timePerFrame = std::chrono::milliseconds(graphics_instance->GetDelayTime());
+                timePerFrame = std::chrono::microseconds(graphics_instance->GetDelayTime());
 
                 InitMembers(_emu_settings);
 
@@ -176,18 +176,19 @@ void VHardwareMgr::ProcessHardware() {
 }
 
 void VHardwareMgr::InitMembers(emulation_settings& _settings) {
-    timeSecondPrev = high_resolution_clock::now();
-    timeSecondCur = high_resolution_clock::now();
-    timePointPrev = high_resolution_clock::now();
-    timePointCur = high_resolution_clock::now();
+    timeSecondPrev = steady_clock::now();
+    timeSecondCur = steady_clock::now();
+    timePointPrev = steady_clock::now();
+    timePointCur = steady_clock::now();
 
     running.store(true);
     debugEnable.store(_settings.debug_enabled);
     emulationSpeed.store(_settings.emulation_speed);
 }
 
+// TODO: revise this section
 bool VHardwareMgr::CheckFpsAndClock() {
-    timeSecondCur = high_resolution_clock::now();
+    timeSecondCur = steady_clock::now();
     accumulatedTime += (u32)duration_cast<microseconds>(timeSecondCur - timeSecondPrev).count();
     timeSecondPrev = timeSecondCur;
 
@@ -207,13 +208,13 @@ bool VHardwareMgr::CheckFpsAndClock() {
 }
 
 void VHardwareMgr::Delay() {
-    timePointCur = high_resolution_clock::now();
-    std::chrono::milliseconds c_time_diff = duration_cast<milliseconds>(timePointCur - timePointPrev);
+    timePointCur = steady_clock::now();
+    std::chrono::microseconds c_time_diff = duration_cast<microseconds>(timePointCur - timePointPrev);
 
     std::unique_lock<mutex> lock_timedelta(mutTimeDelta);
     notifyTimeDelta.wait_for(lock_timedelta, timePerFrame - c_time_diff);
 
-    timePointPrev = high_resolution_clock::now();
+    timePointPrev = steady_clock::now();
 }
 
 /* ***********************************************************************************************************

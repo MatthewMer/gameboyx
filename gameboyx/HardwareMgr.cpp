@@ -16,8 +16,8 @@ network_settings HardwareMgr::networkSettings = {};
 std::chrono::milliseconds HardwareMgr::timePerFrame = std::chrono::milliseconds();
 std::mutex HardwareMgr::mutTimeDelta = std::mutex();
 std::condition_variable  HardwareMgr::notifyTimeDelta = std::condition_variable();
-steady_clock::time_point HardwareMgr::timePointCur = high_resolution_clock::now();
-steady_clock::time_point HardwareMgr::timePointPrev = high_resolution_clock::now();
+steady_clock::time_point HardwareMgr::timePointCur = steady_clock::now();
+steady_clock::time_point HardwareMgr::timePointPrev = steady_clock::now();
 
 u32 HardwareMgr::currentMouseMove = 0;
 
