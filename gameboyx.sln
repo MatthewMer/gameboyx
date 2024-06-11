@@ -35,8 +35,8 @@ Global
 		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Debug|x86.Build.0 = Debug|Win32
 		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Release_installer|x64.ActiveCfg = Release_installer|x64
 		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Release_installer|x64.Build.0 = Release_installer|x64
-		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Release_installer|x86.ActiveCfg = Release_portable|Win32
-		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Release_installer|x86.Build.0 = Release_portable|Win32
+		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Release_installer|x86.ActiveCfg = Release_installer|Win32
+		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Release_installer|x86.Build.0 = Release_installer|Win32
 		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Release_portable|x64.ActiveCfg = Release_portable|x64
 		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Release_portable|x64.Build.0 = Release_portable|x64
 		{3FE4ACE0-5AC0-4FDE-8177-956836A9A78F}.Release_portable|x86.ActiveCfg = Release_portable|Win32

@@ -128,7 +128,7 @@
     <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\SDL\include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\imgui\backends;$(SolutionDir)submodules\Vulkan-Headers\include;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(SolutionDir)submodules\shaderc\libshaderc\include;$(SolutionDir)submodules\glm\glm;$(IncludePath);$(SolutionDir)submodules\SDL_image\include;$(SolutionDir)submodules\asio\asio\include</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib32;$(SolutionDir)gameboyx\lib32;$(SolutionDir)$(Platform)\Release;$(LibraryPath)</LibraryPath>
     <LinkIncremental />
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\Release\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

@@ -79,7 +79,7 @@ inline const std::string CURSOR_MAIN = "cursor.bmp";
 inline const u16 ID_NVIDIA = 0x10DE;
 inline const u16 ID_AMD = 0x1002;
 
-inline const std::unordered_map<u32, std::string> VENDOR_IDS = {
+inline const std::unordered_map<u16, std::string> VENDOR_IDS = {
     {0x1002, "AMD"},
     {0x10DE, "NVIDIA"},
     {0x1043, "ASUS"},
@@ -123,8 +123,8 @@ inline const std::unordered_map<u32, std::string> VENDOR_IDS = {
 *********************************************************************************************************** */
 //#define _DEBUG_GBX
 
-#define GBX_RELEASE					"PRE-ALPHA"
-#define GBX_VERSION_MAJOR			0
+#define GBX_RELEASE					"BETA"
+#define GBX_VERSION_MAJOR			1
 #define GBX_VERSION_MINOR			0
 #define GBX_VERSION_PATCH           0
 #define GBX_AUTHOR					"MatthewMer"
