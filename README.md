@@ -6,6 +6,13 @@ This is a Gameboy (Color) emulator utilising [ImGui](https://github.com/ocornut/
 
 ### How do I get set up? ###
 
+### Precompiled: ###
+* download the precompiled binaries from the releases section
+
+alternatively you can build the application from source as described in the following sections
+
+### Build from source: ###
+
 * install latest [Vulkan SDK](https://vulkan.lunarg.com/) (Requires a GPU with at least Vulkan 1.0 support)
 * clone repository with following command (to clone the required submodules):
 ```
@@ -13,9 +20,6 @@ git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
 ```
 * in the cloned repository open gameboyx.sln with Visual Studio 2022
 * you can either build an installer or create a portable executable, as described in the following section
-
-### Precompiled: ###
-* download the precompiled binaries from the releases section
 
 ### Portable: ###
 * set configuration to `Release_portable` , set your target platform and start compilation
