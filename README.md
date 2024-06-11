@@ -6,7 +6,7 @@ This is a Gameboy (Color) emulator utilising [ImGui](https://github.com/ocornut/
 
 ### How do I get set up? ###
 
-* install latest [Vulkan SDK](https://vulkan.lunarg.com/)
+* install latest [Vulkan SDK](https://vulkan.lunarg.com/) (Requires a GPU with at least Vulkan 1.0 support)
 * clone repository with following command (to clone the required submodules):
 ```
 git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
@@ -45,6 +45,8 @@ Note: in the installer version folders for roms, configs, etc. are located in `%
 - [x] Register state observer
 
 - [x] Hardware state observer
+
+- [x] Memory observer
       
 - [ ] Graphics debugger
 
@@ -57,6 +59,8 @@ Note: in the installer version folders for roms, configs, etc. are located in `%
 - [x] Controller support
 
 - [ ] Call stack (sort of)
+
+- [ ] Networking capabilites
 
 ### Control/Shortcuts ###
 
