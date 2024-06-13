@@ -21,33 +21,62 @@ struct complex {
 		this->imaginary = imaginary;
 	}
 
-	complex operator+(const complex& _right) {
-		return complex(
-			real + _right.real, 
-			imaginary + _right.imaginary
-		);
+	complex& operator+=(const complex& rhs) {
+		real += rhs.real;
+		imaginary += rhs.imaginary;
+		return *this;
 	}
 
-	complex operator-(const complex& _right) {
-		return complex(
-			real - _right.real, 
-			imaginary - _right.imaginary
-		);
+	complex& operator-=(const complex& rhs) {
+		real -= rhs.real;
+		imaginary -= rhs.imaginary;
+		return *this;
 	}
 
-	complex operator*(const complex& _right) {
-		return complex(
-			real * _right.real - imaginary * _right.imaginary,
-			real * _right.imaginary + imaginary * _right.real);
+	complex& operator*=(const complex& rhs) {
+		real = real * rhs.real - imaginary * rhs.imaginary;
+		imaginary = real * rhs.imaginary + imaginary * rhs.real;
+		return *this;
 	}
 
-	complex operator/(complex& _right) {
+	complex& operator/=(const complex& rhs) {
+		float divisor = (float)(pow(rhs.real, 2) + pow(rhs.imaginary, 2));
+		real = (real * rhs.real + imaginary * rhs.imaginary) / divisor;
+		imaginary = (imaginary * rhs.real - real * rhs.imaginary) / divisor;
+		return *this;
+	}
+
+	complex operator!() const { 
 		return complex(
-			((real * _right.real) + (imaginary * _right.imaginary)) / ((_right.real * _right.real) + (_right.imaginary * _right.imaginary)),
-			((_right.real * imaginary) - (real * _right.imaginary)) / ((_right.real * _right.real) + (_right.imaginary * _right.imaginary))
+			real,
+			-imaginary
 		);
 	}
 };
+
+inline complex operator+(const complex& lhs, const complex& rhs) {
+	complex res = lhs;
+	res += rhs;
+	return res;
+}
+
+inline complex operator-(const complex& lhs, const complex& rhs) {
+	complex res = lhs;
+	res -= rhs;
+	return res;
+}
+
+inline complex operator*(const complex& lhs, const complex& rhs) {
+	complex res = lhs;
+	res *= rhs;
+	return res;
+}
+
+inline complex operator/(const complex& lhs, const complex& rhs) {
+	complex res = lhs;
+	res /= rhs;
+	return res;
+}
 
 void fft(complex* _samples, const int& _N);
 

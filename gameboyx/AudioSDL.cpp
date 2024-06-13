@@ -143,7 +143,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 
 	const int channels = _audio_info->channels;
 	const int sampling_rate = _audio_info->sampling_rate;
-	const int buffer_size = _samples->buffer_size / channels;
+	const int buffer_size = _samples->buffer.size() / channels;
 
 	const int virt_channels = _virt_audio_info->channels;
 
@@ -237,8 +237,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 					LOG_INFO(i, ". phase: ", atan2(m.imaginary, m.real) * 180.f / M_PI);			// regular atan just gives angle in range +/-90° -> atan2(y,x); y=imaginary, x=real in the complex plane which gives us the shift in rad of the plotted sinusoid (e^(-i*2*PI*f*t)=e^(-i*2PI*f*t+2PI) -> sinusoid sifted by 360°)
 					i++;
 				}
-			}
-			*/
+			}*/
 
 			float* delay_buf = delay_buffer.data();
 
@@ -295,7 +294,7 @@ float calc_sample(const float& _sample, const float& _sample_angle, const float&
 	return tanh(D * _sample) * exp(a * .5f * cos(_sample_angle - _speaker_angle) - .5f);
 }
 
-// TODO: low frequency missing, probably use a low pass filter on all samples and combine and increase amplitude and output on low frequency channel
+// TODO: low frequency missing, probably use a low pass filter on all samples and combine and increase amplitude for output on low frequency channel
 void samples_7_1_surround(float* _buffer, const int& _size, const int& _offset, const float& _sample, const float& _angle, const float& _vol, const float& _lfe, const float& _delay_sample) {
 	float s = (_sample + _delay_sample) *_vol;
 
