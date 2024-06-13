@@ -55,6 +55,8 @@ GuiMgr::GuiMgr() {
     samplingRateMax = aud_settings.sampling_rate_max;
     volume = aud_settings.master_volume;
     lfe = aud_settings.lfe;
+    delay = aud_settings.delay;
+    decay = aud_settings.decay;
 
     vhwmgr = VHardwareMgr::getInstance();
 
@@ -935,6 +937,36 @@ void GuiMgr::ShowAudioSettings() {
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Delay");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("sets delay for reverb (how long it takes until an echo occurs)");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+
+            if (ImGui::SliderFloat("##delay", &delay, .0f, .5f)) {
+                ActionSetReverb();
+            }
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Decay");
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("sets decay factor for reverb (how much audio echoes)");
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::TableNextColumn();
+
+            if (ImGui::SliderFloat("##decay", &decay, .0f, .5f)) {
+                ActionSetReverb();
+            }
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
             ImGui::TextUnformatted("Sampling rate");
             if (ImGui::IsItemHovered()) {
                 if (ImGui::BeginTooltip()) {
@@ -1340,6 +1372,9 @@ void GuiMgr::ActionSetSamplingRate() {
     HardwareMgr::SetSamplingRate(samplingRate);
 }
 
+void GuiMgr::ActionSetReverb() {
+    HardwareMgr::SetReverb(delay, decay);
+}
 
 
 void GuiMgr::StartGame(const bool& _restart) {

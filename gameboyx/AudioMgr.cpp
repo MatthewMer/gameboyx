@@ -32,6 +32,12 @@ void AudioMgr::SetLfe(const float& _lfe) {
 	audioInfo.lfe.store(_lfe * 4);
 }
 
+void AudioMgr::SetReverb(const float& _delay, const float& _decay) {
+	audioInfo.decay.store(_decay);
+	audioInfo.delay.store(_delay);
+	audioInfo.reload_reverb.store(true);
+}
+
 /* 
 FFT algorithm -> transform signal from time domain into frequency domain (application of fourier analysis)
 	FT: X(f) = integral(t=-infinity,infinity) x(t) * e^(-i*2*pi*f*t) dt, where x(t) is the signal and e^(-i*2*pi*f*t) the complex exponential (polar form: e^(j*phi),

@@ -192,6 +192,8 @@ private:
 	float lfe = .5f;
 	int samplingRateMax = 0;
 	int samplingRate = 0;
+	float delay = 0;
+	float decay = 0;
 
 	std::array<int, 4> ipv4Address = { 127, 0, 0, 1 };
 	int port = 9800;
@@ -256,6 +258,7 @@ private:
 	void ActionSetMasterVolume();
 	void ActionSetLfe();
 	void ActionSetSamplingRate();
+	void ActionSetReverb();
 	void ActionAutoExecution();
 
 	// helpers

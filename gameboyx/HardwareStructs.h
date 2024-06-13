@@ -44,7 +44,8 @@ struct audio_settings {
 	int sampling_rate = 0;
 	float master_volume = 0;
 	float lfe = 0;
-
+	float delay = 0;
+	float decay = 0;
 	int sampling_rate_max = 0;
 };
 

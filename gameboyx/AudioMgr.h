@@ -4,6 +4,7 @@
 #include "general_config.h"
 #include <thread>
 #include <mutex>
+#include <algorithm>
 
 class BaseAPU;
 
@@ -19,6 +20,11 @@ struct complex {
 	complex(float real, float imaginary) {
 		this->real = real;
 		this->imaginary = imaginary;
+	}
+
+	complex& operator=(complex rhs) {
+		std::swap(*this, rhs);
+		return *this;
 	}
 
 	complex& operator+=(const complex& rhs) {
@@ -102,6 +108,10 @@ struct audio_information {
 
 	alignas(64) std::atomic<float> master_volume = 1.f;
 	alignas(64) std::atomic<float> lfe = 1.f;
+
+	alignas(64) std::atomic<float> delay = .02f;
+	alignas(64) std::atomic<float> decay = .1f;
+	alignas(64) std::atomic<bool> reload_reverb = false;
 };
 
 class AudioMgr {
@@ -119,6 +129,7 @@ public:
 
 	void SetMasterVolume(const float& _volume);
 	void SetLfe(const float& _lfe);
+	void SetReverb(const float& _delay, const float& _decay);
 
 	// clone/assign protection
 	AudioMgr(AudioMgr const&) = delete;

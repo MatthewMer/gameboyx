@@ -79,6 +79,7 @@ u8 HardwareMgr::InitHardware(graphics_settings& _graphics_settings, audio_settin
 		return false;
 	}
 
+	// control
 	controlMgr = ControlMgr::getInstance();
 	if(controlMgr != nullptr){
 		controlMgr->InitControl(controlSettings);
@@ -238,6 +239,12 @@ void HardwareMgr::SetMasterVolume(const float& _volume) {
 void HardwareMgr::SetLfe(const float& _lfe) {
 	audioSettings.lfe = _lfe;
 	audioMgr->SetLfe(_lfe);
+}
+
+void HardwareMgr::SetReverb(const float& _delay, const float& _decay) {
+	audioSettings.decay = _decay;
+	audioSettings.delay = _delay;
+	audioMgr->SetReverb(_delay, _decay);
 }
 
 void HardwareMgr::GetAudioSettings(audio_settings& _audio_settings) {
