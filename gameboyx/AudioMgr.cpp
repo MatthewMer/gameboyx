@@ -92,3 +92,8 @@ void fft(complex* _samples, const int& _N) {
 	delete[] e;
 	delete[] o;
 }
+
+// necessary, as it is impossible to assure that the sampled signal consits of exactly n periods, where n is an integer
+void window(complex* _samples, const int& _N) {
+
+}

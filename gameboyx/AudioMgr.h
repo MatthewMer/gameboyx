@@ -85,6 +85,7 @@ inline complex operator/(const complex& lhs, const complex& rhs) {
 }
 
 void fft(complex* _samples, const int& _N);
+void window(complex* _samples, const int& _N);
 
 struct audio_samples {
 	std::vector<float> buffer;
