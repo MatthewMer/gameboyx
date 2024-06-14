@@ -231,14 +231,10 @@ void HardwareMgr::SetSamplingRate(int& _sampling_rate) {
 	_sampling_rate = audioSettings.sampling_rate;
 }
 
-void HardwareMgr::SetMasterVolume(const float& _volume) {
+void HardwareMgr::SetVolume(const float& _volume, const float& _lfe) {
 	audioSettings.master_volume = _volume;
-	audioMgr->SetMasterVolume(_volume);
-}
-
-void HardwareMgr::SetLfe(const float& _lfe) {
-	audioSettings.lfe = _lfe;
-	audioMgr->SetLfe(_lfe);
+	audioSettings.lfe = _volume;
+	audioMgr->SetVolume(_volume, _lfe);
 }
 
 void HardwareMgr::SetReverb(const float& _delay, const float& _decay) {

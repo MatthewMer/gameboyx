@@ -24,12 +24,10 @@ void AudioMgr::SetSamplingRate(audio_settings& _audio_settings) {
 	InitAudio(_audio_settings, true);
 }
 
-void AudioMgr::SetMasterVolume(const float& _volume) {
+void AudioMgr::SetVolume(const float& _volume, const float& _lfe) {
 	audioInfo.master_volume.store(_volume);
-}
-
-void AudioMgr::SetLfe(const float& _lfe) {
-	audioInfo.lfe.store(_lfe * 4);
+	audioInfo.lfe.store(_lfe);
+	audioInfo.volume_changed.store(true);
 }
 
 void AudioMgr::SetReverb(const float& _delay, const float& _decay) {

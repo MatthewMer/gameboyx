@@ -128,8 +128,7 @@ public:
 
 	void SetSamplingRate(audio_settings& _audio_settings);
 
-	void SetMasterVolume(const float& _volume);
-	void SetLfe(const float& _lfe);
+	void SetVolume(const float& _volume, const float& _lfe);
 	void SetReverb(const float& _delay, const float& _decay);
 
 	// clone/assign protection

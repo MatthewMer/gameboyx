@@ -255,8 +255,7 @@ private:
 	void ActionGamesSelectAll();
 	void ActionSetFramerateTarget();
 	void ActionSetSwapchainSettings();
-	void ActionSetMasterVolume();
-	void ActionSetLfe();
+	void ActionSetVolume();
 	void ActionSetSamplingRate();
 	void ActionSetReverb();
 	void ActionAutoExecution();
