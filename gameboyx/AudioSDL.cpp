@@ -138,13 +138,35 @@ void audio_callback(void* _user_data, u8* _device_buffer, int _length) {
 
 struct delay_buffer {
 	std::vector<std::vector<float>> buffer;
+	int cursor = 0;
+
+	glm::vec2 left = glm::vec2(-M_DISTANCE_EARS / 2, 0);
+	glm::vec2 right = glm::vec2(M_DISTANCE_EARS / 2, 0);
+
+	int sampling_rate;
 
 	delay_buffer() = delete;
-	delay_buffer(const int& _sampling_rate, const int& _num_buffers) {
+	delay_buffer(const int& _sampling_rate, const int& _num_buffers) : sampling_rate(_sampling_rate) {
 		buffer.assign(_num_buffers, {});
 		for (auto& n : buffer) {
 			n.assign((size_t)((M_DISTANCE_EARS / M_SPEED_OF_SOUND) * _sampling_rate), .0f);
 		}
+	}
+
+	void insert(const float& _sample, const float& _angle, const float& _distance) {
+		glm::vec2 e = glm::vec2(0, 1);
+		glm::mat2x2 rot = glm::mat2x2(
+			cos(_angle), sin(_angle),
+			-sin(_angle), cos(_angle)
+		);
+
+		glm::vec2 pos = (rot * e) * _distance;
+		float diff = abs(glm::length(pos + left) - glm::length(pos + right));
+
+		int offset = (diff / M_SPEED_OF_SOUND) * sampling_rate;
+
+		// insert samples delayed with respect to direction into buffer and take samples for output from there instead 
+		// to take slight time differences between left and right ear into account which brain uses to determine direction
 	}
 };
 
@@ -171,6 +193,23 @@ struct reverb_buffer {
 		++cursor %= buffer.size();
 		return buffer[cursor];
 	}
+};
+
+// convolution in time domain corresponds to multiplication in frequency domain: as the convolution cancels out frequencies in the time domain that are not present (or have a very small magnitude) in the resulting signal, this logically is the same result as multiplying the frequencies in the frequency domain
+struct fir_filter {
+	std::vector<complex> buffer;
+
+	float f_cutoff;
+	int sampling_rate;
+
+	fir_filter(const float& _f_cutoff, const int& _sampling_rate) : f_cutoff(_f_cutoff), sampling_rate(_sampling_rate) {
+		buffer.assign(_sampling_rate / 2, {});
+
+	}
+};
+
+struct iir_filter {
+
 };
 
 struct speakers {
@@ -226,8 +265,8 @@ struct speakers {
 		for (int i = 0; i < _samples.size(); i++) {
 			// for now we just transform the signal into the frequency domain and transform it right back into the time domain and output the result 
 			fft_buffer[i].assign(_samples[i].begin(), _samples[i].end());
-			fft_cooley_tukey(fft_buffer[i].data(), fft_buffer[i].size());
-			ifft_cooley_tukey(fft_buffer[i].data(), fft_buffer[i].size());
+			fft_cooley_tukey(fft_buffer[i].data(), (int)fft_buffer[i].size());
+			ifft_cooley_tukey(fft_buffer[i].data(), (int)fft_buffer[i].size());
 
 			/*
 			LOG_WARN("-----------------------");

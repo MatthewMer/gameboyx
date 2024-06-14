@@ -3,6 +3,8 @@
 #include "AudioOpenAL.h"
 #include "AudioSDL.h"
 
+#include <iostream>
+
 AudioMgr* AudioMgr::instance = nullptr;
 
 AudioMgr* AudioMgr::getInstance() {
@@ -128,7 +130,7 @@ void ifft_cooley_tukey(complex* _samples, const int& _N) {
 	delete[] o;
 }
 
-const float alpha = 1.f;
+const float alpha = .5f;
 
 // necessary, as it is impossible to assure that the sampled signal consists of exactly n periods (where n is an integer) and is continuous (doesn't matter in our application)
 // could come in handy for something like a N64 where audio files (sort of) are played
