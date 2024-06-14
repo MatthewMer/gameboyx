@@ -108,6 +108,7 @@ struct audio_information {
 
 	alignas(64) std::atomic<float> master_volume = 1.f;
 	alignas(64) std::atomic<float> lfe = 1.f;
+	alignas(64) std::atomic<bool> volume_changed = false;
 
 	alignas(64) std::atomic<float> delay = .02f;
 	alignas(64) std::atomic<float> decay = .1f;

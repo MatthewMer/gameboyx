@@ -6,19 +6,12 @@
 
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <glm.hpp>
 
 using namespace std;
 
 void audio_callback(void* userdata, u8* _device_buffer, int _length);
 void audio_thread(audio_information* _audio_info, virtual_audio_information* _virt_audio_info, audio_samples* _samples);
-
-typedef void (*speaker_function)(float*, const int&, const float&, const float&, const float&, const float&, const float&);
-void samples_7_1_surround(float* _buffer, const int& _offset, const float& _sample, const float& _angle, const float& _vol, const float& _lfe, const float& _delay_sample);
-void samples_5_1_surround(float* _buffer, const int& _offset, const float& _sample, const float& _angle, const float& _vol, const float& _lfe, const float& _delay_sample);
-void samples_stereo(float* _buffer, const int& _offset, const float& _sample, const float& _angle, const float& _vol, const float& _lfe, const float& _delay_sample);
-void samples_mono(float* _buffer, const int& _offset, const float& _sample, const float& _angle, const float& _vol, const float& _lfe, const float& _delay_sample);
-
-float reverb(float* _buffer, const int& _size, int& _cursor, const float& _decay, const float& _sample);
 
 void AudioSDL::InitAudio(audio_settings& _audio_settings, const bool& _reinit) {
 	bool _reinit_backend = virtAudioInfo.audio_running.load();
@@ -140,6 +133,162 @@ void audio_callback(void* _user_data, u8* _device_buffer, int _length) {
 	samples->notifyBufferUpdate.notify_one();
 }
 
+struct delay_buffer {
+	std::vector<std::vector<float>> buffer;
+
+	delay_buffer() = delete;
+	delay_buffer(const int& _sampling_rate, const int& _num_buffers) {
+		buffer.assign(_num_buffers, {});
+		for (auto& n : buffer) {
+			n.assign((size_t)((M_DISTANCE_EARS / M_SPEED_OF_SOUND) * _sampling_rate), .0f);
+		}
+	}
+};
+
+struct reverb_buffer {
+	std::vector<float> buffer;
+	float decay = .0f;
+	int cursor = 0;
+
+	reverb_buffer() = delete;
+	reverb_buffer(const int& _delay, const float& _decay) : decay(_decay) {
+		if (_delay > 0) {
+			buffer.assign(_delay, .0f);
+		} else {
+			buffer.assign(1, .0f);
+		}
+	}
+
+	float next(const float& _sample) {
+		buffer[cursor] += _sample;
+		buffer[cursor] *= decay;
+		++cursor %= buffer.size();
+		return buffer[cursor];
+	}
+};
+
+struct speakers {
+	typedef void (speakers::*speaker_function)(float*, const float&, const float&, const float&);
+	speaker_function func;
+
+	reverb_buffer r_buffer;
+	delay_buffer d_buffer;
+
+	float reverb_next = .0f;
+	float reverb_cur = .0f;
+	bool bNext = true;
+
+	float volume = .0f;
+	float lfe = .0f;
+
+	speakers() = delete;
+	speakers(const int& _channels, const int& _sampling_rate, const int& _delay, const float& _decay, const float& _volume, const float& _lfe) : r_buffer(_delay, _decay), d_buffer(_sampling_rate, _channels) {
+		switch (_channels) {
+		case SOUND_7_1:
+			func = &speakers::samples_7_1_surround;
+			break;
+		case SOUND_5_1:
+			func = &speakers::samples_5_1_surround;
+			break;
+		case SOUND_STEREO:
+			func = &speakers::samples_stereo;
+			break;
+		case SOUND_MONO:
+			func = &speakers::samples_mono;
+			break;
+		default:
+			func = nullptr;
+			LOG_ERROR("[SDL] speaker configuration currently not supported");
+			break;
+		}
+
+		volume = _volume;
+		lfe = _lfe;
+	}
+
+	void output(float* _buffer, const float& _sample, const float& _angle) {
+		reverb_next += _sample;
+		(this->*func)(_buffer, (_sample + reverb_cur) * volume, _angle, lfe);
+	}
+
+	void next() {
+		reverb_cur = r_buffer.next(reverb_next);
+		reverb_next = .0f;
+		bNext = true;
+	}
+
+	void reset_reverb(const int& _delay, const float& _decay) {
+		r_buffer = reverb_buffer(_delay, _decay);
+	}
+
+	void set_volume(const float& _volume, const float& _lfe) {
+		volume = _volume;
+		lfe = _lfe;
+	}
+
+	const float x = .5f;
+	const float D = 1.2f;		// gain
+	const float a = 2.f;
+
+	// using angles in rad
+	float calc_sample(const float& _sample, const float& _sample_angle, const float& _speaker_angle) {
+		return tanh(D * _sample) * exp(a * .5f * cos(_sample_angle - _speaker_angle) - .5f);
+	}
+
+	// TODO: low frequency missing, probably use a low pass filter on all samples and combine and increase amplitude for output on low frequency channel
+	void samples_7_1_surround(float* _buffer, const float& _sample, const float& _angle, const float& _lfe) {
+		if (bNext) {
+			for (int i = 0; i < 8; i++) { _buffer[i] = .0f; }
+			bNext = false;
+		}
+
+		_buffer[0] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[0]);	// front-left
+		_buffer[1] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[1]);	// front-right
+		_buffer[2] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[2]);	// centre
+		_buffer[4] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[4]);	// rear-left
+		_buffer[5] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[5]);	// rear-right
+		_buffer[6] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[6]);	// centre-left
+		_buffer[7] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[7]);	// centre-right
+
+		_buffer[3] += _sample * _lfe;
+	}
+
+	void samples_5_1_surround(float* _buffer, const float& _sample, const float& _angle, const float& _lfe) {
+		if (bNext) {
+			for (int i = 0; i < 6; i++) { _buffer[i] = .0f; }
+			bNext = false;
+		}
+
+		_buffer[0] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[0]);
+		_buffer[1] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[1]);
+		_buffer[2] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[2]);
+		_buffer[4] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[4]);
+		_buffer[5] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[5]);
+
+		_buffer[3] += _sample * _lfe;
+	}
+
+	void samples_stereo(float* _buffer, const float& _sample, const float& _angle, const float& _lfe) {
+		if (bNext) {
+			for (int i = 0; i < 2; i++) { _buffer[i] = .0f; }
+			bNext = false;
+		}
+
+		_buffer[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[0]);
+		_buffer[1] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[1]);
+	}
+
+	void samples_mono(float* _buffer, const float& _sample, const float& _angle, const float& _lfe) {
+		if (bNext) {
+			_buffer[0] = .0f;
+			bNext = false;
+		}
+
+		_buffer[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[0]);
+		_buffer[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[1]);
+	}
+};
+
 void audio_thread(audio_information* _audio_info, virtual_audio_information* _virt_audio_info, audio_samples* _samples) {
 	SDL_AudioDeviceID* device = (SDL_AudioDeviceID*)_audio_info->device;
 	BaseAPU* sound_instance = _virt_audio_info->sound_instance;
@@ -149,10 +298,14 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 
 	const int virt_channels = _virt_audio_info->channels;
 
-	int delay = (int)(_audio_info->delay.load() * sampling_rate);
-	float decay = _audio_info->decay.load();
-	int delay_cursor = 0;
-	std::vector<float> delay_buffer = std::vector<float>(delay, .0f);
+	speakers sp = speakers(
+		channels, 
+		sampling_rate, 
+		(int)(_audio_info->delay.load() * sampling_rate), 
+		_audio_info->decay.load(), 
+		_audio_info->master_volume.load(),
+		_audio_info->lfe.load()
+	);
 
 	// filled with samples per period of virtual channels
 	std::vector<std::vector<complex>> virt_samples = std::vector<std::vector<complex>>(virt_channels);
@@ -174,39 +327,20 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 		}
 	}
 
-	speaker_function speaker_fn;
-	switch (_audio_info->channels) {
-	case SOUND_7_1:
-		speaker_fn = &samples_7_1_surround;
-		break;
-	case SOUND_5_1:
-		speaker_fn = &samples_5_1_surround;
-		break;
-	case SOUND_STEREO:
-		speaker_fn = &samples_stereo;
-		break;
-	case SOUND_MONO:
-		speaker_fn = &samples_mono;
-		break;
-	default:
-		LOG_ERROR("[SDL] speaker configuration currently not supported");
-		_virt_audio_info->audio_running.store(false);
-		return;
-		break;
-	}
+	
+	
 
 	while (_virt_audio_info->audio_running.load()) {
 		std::unique_lock<mutex> lock_buffer(_samples->mutBufferUpdate);
 		_samples->notifyBufferUpdate.wait(lock_buffer);
 
-		float volume = _audio_info->master_volume.load();
-		float lfe = _audio_info->lfe.load();
+		if (_audio_info->volume_changed.load()) {
+			sp.set_volume(_audio_info->master_volume.load(), _audio_info->lfe.load());
+			_audio_info->volume_changed.store(false);
+		}
 
 		if (_audio_info->reload_reverb.load()) {
-			delay = (int)(_audio_info->delay.load() * sampling_rate);
-			decay = _audio_info->decay.load();
-			delay_cursor = 0;
-			delay_buffer.assign(delay, .0f);
+			sp.reset_reverb((int)(_audio_info->delay.load() * sampling_rate), _audio_info->decay.load());
 			_audio_info->reload_reverb.store(false);
 		}
 
@@ -251,43 +385,23 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 				}
 			}*/
 
-			float* delay_buf = delay_buffer.data();
-
 			float* buffer = _samples->buffer.data();
 			int offset = _samples->write_cursor;
 			for (int i = 0; i < reg_1_samples; i++) {
-				for (int j = 0; j < channels; j++) {
-					buffer[offset + j] = .0f;
-				}
-
-				float delay_next = .0f;
 				for (int j = 0; j < virt_channels; j++) {
-					delay_next += virt_samples[j][i].real;
+					sp.output(buffer + offset, virt_samples[j][i].real, virt_angles[j]);
 				}
-
-				float delay_cur = reverb(delay_buf, delay, delay_cursor, decay, delay_next);
-				for (int j = 0; j < virt_channels; j++) {
-					(*speaker_fn)(buffer, offset, virt_samples[j][i].real, virt_angles[j], volume, lfe, delay_cur);
-				}
+				sp.next();
 
 				offset += channels;
 			}
 
 			offset = 0;
 			for (int i = 0; i < reg_2_samples; i++) {
-				for (int j = 0; j < channels; j++) {
-					buffer[offset + j] = .0f;
-				}
-
-				float delay_next = .0f;
 				for (int j = 0; j < virt_channels; j++) {
-					delay_next += virt_samples[j][reg_1_samples + i].real;
+					sp.output(buffer + offset, virt_samples[j][reg_1_samples + i].real, virt_angles[j]);
 				}
-
-				float delay_cur = reverb(delay_buf, delay, delay_cursor, decay, delay_next);
-				for (int j = 0; j < virt_channels; j++) {
-					(*speaker_fn)(buffer, offset, virt_samples[j][reg_1_samples + i].real, virt_angles[j], volume, lfe, delay_cur);
-				}
+				sp.next();
 
 				offset += channels;
 			}
@@ -295,61 +409,4 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 		_samples->write_cursor = (_samples->write_cursor + reg_1_size + reg_2_size) % (int)_samples->buffer.size();
 		SDL_UnlockAudioDevice(*device);
 	}
-}
-
-const float x = .5f;
-const float D = 1.2f;		// gain
-const float a = 2.f;
-
-// using angles in rad
-float calc_sample(const float& _sample, const float& _sample_angle, const float& _speaker_angle) {
-	return tanh(D * _sample) * exp(a * .5f * cos(_sample_angle - _speaker_angle) - .5f);
-}
-
-// TODO: low frequency missing, probably use a low pass filter on all samples and combine and increase amplitude for output on low frequency channel
-void samples_7_1_surround(float* _buffer, const int& _offset, const float& _sample, const float& _angle, const float& _vol, const float& _lfe, const float& _delay_sample) {
-	float s = (_sample + _delay_sample) *_vol;
-
-	_buffer[_offset] += calc_sample(s, _angle, SOUND_7_1_ANGLES[0]);	// front-left
-	_buffer[_offset + 1] += calc_sample(s, _angle, SOUND_7_1_ANGLES[1]);	// front-right
-	_buffer[_offset + 2] += calc_sample(s, _angle, SOUND_7_1_ANGLES[2]);	// centre
-	_buffer[_offset + 4] += calc_sample(s, _angle, SOUND_7_1_ANGLES[4]);	// rear-left
-	_buffer[_offset + 5] += calc_sample(s, _angle, SOUND_7_1_ANGLES[5]);	// rear-right
-	_buffer[_offset + 6] += calc_sample(s, _angle, SOUND_7_1_ANGLES[6]);	// centre-left
-	_buffer[_offset + 7] += calc_sample(s, _angle, SOUND_7_1_ANGLES[7]);	// centre-right
-
-	_buffer[_offset + 3] += s * _lfe;
-}
-
-void samples_5_1_surround(float* _buffer, const int& _offset, const float& _sample, const float& _angle, const float& _vol, const float& _lfe, const float& _delay_sample) {
-	float s = (_sample + _delay_sample) * _vol;
-
-	_buffer[_offset] += calc_sample(s, _angle, SOUND_5_1_ANGLES[0]);
-	_buffer[_offset + 1] += calc_sample(s, _angle, SOUND_5_1_ANGLES[1]);
-	_buffer[_offset + 2] += calc_sample(s, _angle, SOUND_5_1_ANGLES[2]);
-	_buffer[_offset + 4] += calc_sample(s, _angle, SOUND_5_1_ANGLES[4]);
-	_buffer[_offset + 5] += calc_sample(s, _angle, SOUND_5_1_ANGLES[5]);
-
-	_buffer[_offset + 3] += s * _lfe;
-}
-
-void samples_stereo(float* _buffer, const int& _offset, const float& _sample, const float& _angle, const float& _vol, const float& _lfe, const float& _delay_sample) {
-	float s = (_sample + _delay_sample) * _vol;
-
-	_buffer[_offset] += calc_sample(s, _angle, SOUND_STEREO_ANGLES[0]);
-	_buffer[_offset + 1] += calc_sample(s, _angle, SOUND_STEREO_ANGLES[1]);
-}
-
-void samples_mono(float* _buffer, const int& _offset, const float& _sample, const float& _angle, const float& _vol, const float& _lfe, const float& _delay_sample) {
-	float s = (_sample + _delay_sample) * _vol;
-
-	_buffer[_offset] = calc_sample(s, _angle, SOUND_STEREO_ANGLES[0]);
-	_buffer[_offset + 1] += calc_sample(s, _angle, SOUND_STEREO_ANGLES[1]);
-}
-
-float reverb(float* _buffer, const int& _size, int& _cursor, const float& _decay, const float& _sample) {
-	_buffer[_cursor] += _sample;
-	_buffer[_cursor] *= _decay;
-	++_cursor %= _size;
-	return _buffer[_cursor];
 }

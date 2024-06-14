@@ -121,6 +121,9 @@ inline const std::unordered_map<u16, std::string> VENDOR_IDS = {
 #define APP_REVERB_DECAY_DEFAULT    .1f
 #define APP_REVERB_DELAY_DEFAULT    .02f
 
+#define M_SPEED_OF_SOUND            343.2f  // m/s
+#define M_DISTANCE_EARS             0.2f    // m
+
 /* ***********************************************************************************************************
     IMGUI EMULATOR
 *********************************************************************************************************** */
