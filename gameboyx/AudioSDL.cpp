@@ -154,13 +154,8 @@ struct delay_buffer {
 	}
 
 	void insert(const float& _sample, const float& _angle, const float& _distance) {
-		glm::vec2 e = glm::vec2(0, 1);
-		glm::mat2x2 rot = glm::mat2x2(
-			cos(_angle), sin(_angle),
-			-sin(_angle), cos(_angle)
-		);
-
-		glm::vec2 pos = (rot * e) * _distance;
+		glm::vec2 e = glm::vec2(sin(_angle), cos(_angle));
+		glm::vec2 pos = e * _distance;
 		float diff = abs(glm::length(pos + left) - glm::length(pos + right));
 
 		int offset = (diff / M_SPEED_OF_SOUND) * sampling_rate;
