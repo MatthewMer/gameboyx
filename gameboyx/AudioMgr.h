@@ -89,8 +89,8 @@ inline complex operator/(const complex& lhs, const complex& rhs) {
 	return res;
 }
 
-void fft(complex* _samples, const int& _N);
-void window(complex* _samples, const int& _N);
+void fft_cooley_tukey(complex* _samples, const int& _N);
+void window_tukey(complex* _samples, const int& _N);
 
 struct audio_samples {
 	std::vector<float> buffer;

@@ -61,7 +61,7 @@ FFT algorithm -> transform signal from time domain into frequency domain (applic
 // FFT based on Cooley-Tukey
 // returns DFT (size of N) with the phases, magnitudes and frequencies in cartesian form (e.g. 3.5+2.6i)
 // example in pseudo code: https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
-void fft(complex* _samples, const int& _N) {
+void fft_cooley_tukey(complex* _samples, const int& _N) {
 	// only one sample
 	if (_N == 1) {
 		return;
@@ -76,8 +76,8 @@ void fft(complex* _samples, const int& _N) {
 	}
 
 	// recursively call fft for all stages (with orders power of 2)
-	fft(e, _N / 2);
-	fft(o, _N / 2);
+	fft_cooley_tukey(e, _N / 2);
+	fft_cooley_tukey(o, _N / 2);
 
 	// twiddel factors ( e^(-i*2*pi*k/N) , where k = index and N = order
 	// used for shifting the signal
@@ -93,7 +93,18 @@ void fft(complex* _samples, const int& _N) {
 	delete[] o;
 }
 
-// necessary, as it is impossible to assure that the sampled signal consists of exactly n periods, where n is an integer
-void window(complex* _samples, const int& _N) {
+const float alpha = 1.f;
 
+// necessary, as it is impossible to assure that the sampled signal consists of exactly n periods, where n is an integer
+void window_tukey(complex* _samples, const int& _N) {
+	int N = _N - 1;
+	int t_low = (int)(((alpha * N) / 2) + .5f);				// + .5f for rounding
+	int t_high = (int)((N - (alpha * N) / 2) + .5f);
+
+	for (int n = 0; n < t_low; n++) {
+		_samples[n].real *= .5f - .5f * (float)cos(2 * M_PI * n / (alpha * N));
+	}
+	for (int n = t_high + 1; n < _N; n++) {
+		_samples[n].real *= .5f - .5f * (float)cos(2 * M_PI * (N - n) / (alpha * N));
+	}
 }
