@@ -90,6 +90,7 @@ inline complex operator/(const complex& lhs, const complex& rhs) {
 }
 
 void fft_cooley_tukey(complex* _samples, const int& _N);
+void ifft_cooley_tukey(complex* _samples, const int& _N);
 void window_tukey(complex* _samples, const int& _N);
 
 struct audio_samples {

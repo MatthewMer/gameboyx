@@ -224,7 +224,19 @@ struct speakers {
 	void output(const int& _offset, const int& _sample_count, const std::vector<std::vector<complex>>& _samples, const std::vector<float>& _angles) {
 		fft_buffer.assign(_samples.size(), {});
 		for (int i = 0; i < _samples.size(); i++) {
+			// for now we just transform the signal into the frequency domain and transform it right back into the time domain and output the result 
 			fft_buffer[i].assign(_samples[i].begin(), _samples[i].end());
+			fft_cooley_tukey(fft_buffer[i].data(), fft_buffer[i].size());
+			ifft_cooley_tukey(fft_buffer[i].data(), fft_buffer[i].size());
+
+			/*
+			LOG_WARN("-----------------------");
+			for (int j = 0; j < fft_buffer[i].size() / 2; j++) {
+				LOG_INFO(j, ". frequency: ", (float)sampling_rate * j / fft_buffer[i].size());
+				LOG_INFO(j, ". magnitude: ", sqrt(pow(fft_buffer[i][j].real, 2) + pow(fft_buffer[i][j].imaginary, 2)));
+				LOG_INFO(j, ". phase: ", atan2(fft_buffer[i][j].imaginary, fft_buffer[i][j].real) * 180.f / M_PI);
+			}
+			*/
 		}
 
 		int o = _offset;
@@ -232,7 +244,7 @@ struct speakers {
 			float reverb = r_buffer.next();
 
 			for (int j = 0; j < (int)_angles.size(); j++) {
-				float sample = _samples[j][i].real;
+				float sample = fft_buffer[j][i].real;
 				(this->*func)(buffer + o, (sample + reverb) * volume, _angles[j], lfe);
 				r_buffer.add(sample);
 			}

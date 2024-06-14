@@ -93,9 +93,45 @@ void fft_cooley_tukey(complex* _samples, const int& _N) {
 	delete[] o;
 }
 
+// inverse FFT: convert samples from frequency domain back to time domain (signal)
+// Formulas can be found here: https://www.dsprelated.com/showarticle/800.php
+// x[n] = 1/N * sum(m=0 to N-1) (X[m]*(cos(2*PI*m*n/N)+i*sin(2*PI*m*n/N)))		-> discarded normalization factor 1/N
+void ifft_cooley_tukey(complex* _samples, const int& _N) {
+	// only one sample
+	if (_N == 1) {
+		return;
+	}
+
+	// split in 2 arrays, one for all elements where n is odd and one where n is even
+	complex* e = new complex[_N / 2];
+	complex* o = new complex[_N / 2];
+	for (int n = 0; n < _N / 2; n++) {
+		e[n] = _samples[n * 2];
+		o[n] = _samples[n * 2 + 1];
+	}
+
+	// recursively call fft for all stages (with orders power of 2)
+	ifft_cooley_tukey(e, _N / 2);
+	ifft_cooley_tukey(o, _N / 2);
+
+	// twiddel factors ( e^(-i*2*pi*k/N) , where k = index and N = order
+	// used for shifting the signal
+	for (int k = 0; k < _N / 2; k++) {
+		float ang = (float)(2 * M_PI * k / _N);
+		complex p = e[k];
+		complex q = complex(cos(ang), sin(ang)) * o[k];
+		_samples[k] = p + q;
+		_samples[k + _N / 2] = p - q;
+	}
+
+	delete[] e;
+	delete[] o;
+}
+
 const float alpha = 1.f;
 
-// necessary, as it is impossible to assure that the sampled signal consists of exactly n periods, where n is an integer
+// necessary, as it is impossible to assure that the sampled signal consists of exactly n periods (where n is an integer) and is continuous (doesn't matter in our application)
+// could come in handy for something like a N64 where audio files (sort of) are played
 void window_tukey(complex* _samples, const int& _N) {
 	int N = _N - 1;
 	int t_low = (int)(((alpha * N) / 2) + .5f);				// + .5f for rounding
