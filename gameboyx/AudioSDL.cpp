@@ -218,12 +218,13 @@ struct speakers {
 		channels = _channels;
 		buffer = _buffer;
 		buffer_size = _buffer_size;
+		fft_buffer = std::vector<std::vector<complex>>();
 	}
 
 	void output(const int& _offset, const int& _sample_count, const std::vector<std::vector<complex>>& _samples, const std::vector<float>& _angles) {
-		for (const auto& n : _samples) {
-			fft_buffer.assign(n.begin(), n.end());
-
+		fft_buffer.assign(_samples.size(), {});
+		for (int i = 0; i < _samples.size(); i++) {
+			fft_buffer[i].assign(_samples[i].begin(), _samples[i].end());
 		}
 
 		int o = _offset;

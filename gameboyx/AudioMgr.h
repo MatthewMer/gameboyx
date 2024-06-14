@@ -8,6 +8,8 @@
 
 class BaseAPU;
 
+using std::swap;
+
 struct complex {
 	float real;
 	float imaginary;
@@ -22,8 +24,11 @@ struct complex {
 		this->imaginary = imaginary;
 	}
 
-	complex& operator=(complex rhs) {
-		std::swap(*this, rhs);
+	complex(const complex& other) : real(other.real), imaginary(other.imaginary) {}
+
+	complex& operator=(const complex& rhs) {
+		complex tmp(rhs);
+		std::swap(*this, tmp);
 		return *this;
 	}
 
