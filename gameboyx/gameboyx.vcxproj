@@ -253,6 +253,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="audio_helpers.cpp" />
     <ClCompile Include="AudioSDL.cpp">
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MultiThreadedDebugDLL</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebugDLL</RuntimeLibrary>
@@ -290,6 +291,7 @@
     <ClCompile Include="GraphicsVulkan.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="audio_helpers.h" />
     <ClInclude Include="AudioSDL.h" />
     <ClInclude Include="BaseCartridge.h" />
     <ClInclude Include="ControlMgr.h" />

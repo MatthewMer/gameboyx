@@ -156,6 +156,9 @@
     <ClCompile Include="NetworkMgr.cpp">
       <Filter>Source Files\backend\network</Filter>
     </ClCompile>
+    <ClCompile Include="audio_helpers.cpp">
+      <Filter>Source Files\backend\audio</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="general_config.h">
@@ -262,6 +265,9 @@
     </ClInclude>
     <ClInclude Include="NetworkMgr.h">
       <Filter>Header Files\backend\network</Filter>
+    </ClInclude>
+    <ClInclude Include="audio_helpers.h">
+      <Filter>Header Files\backend\audio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

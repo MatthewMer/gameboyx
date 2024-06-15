@@ -3,6 +3,7 @@
 #include "AudioMgr.h"
 #include "BaseCartridge.h"
 #include "HardwareMgr.h"
+#include "audio_helpers.h"
 
 class BaseAPU {
 public:

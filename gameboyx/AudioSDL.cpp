@@ -3,6 +3,7 @@
 #include "AudioMgr.h"
 #include "BaseAPU.h"
 #include "logger.h"
+#include "audio_helpers.h"
 
 #define _USE_MATH_DEFINES
 #include <cmath>
@@ -160,7 +161,7 @@ struct delay_buffer {
 		glm::vec2 pos = e * _distance;
 		float diff = abs(glm::length(pos + left) - glm::length(pos + right));
 
-		int offset = (diff / M_SPEED_OF_SOUND) * sampling_rate;
+		int offset = (int)((diff / M_SPEED_OF_SOUND) * sampling_rate);
 
 		// insert samples delayed with respect to direction into buffer and take samples for output from there instead 
 		// to take slight time differences between left and right ear into account which brain uses to determine direction
