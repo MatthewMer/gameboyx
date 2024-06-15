@@ -145,8 +145,10 @@ struct delay_buffer {
 
 	int sampling_rate;
 
+	fir_filter low_pass;
+
 	delay_buffer() = delete;
-	delay_buffer(const int& _sampling_rate, const int& _num_buffers) : sampling_rate(_sampling_rate) {
+	delay_buffer(const int& _sampling_rate, const int& _num_buffers) : sampling_rate(_sampling_rate), low_pass(_sampling_rate, 200, 100) {
 		buffer.assign(_num_buffers, {});
 		for (auto& n : buffer) {
 			n.assign((size_t)((M_DISTANCE_EARS / M_SPEED_OF_SOUND) * _sampling_rate), .0f);
@@ -188,23 +190,6 @@ struct reverb_buffer {
 		++cursor %= buffer.size();
 		return buffer[cursor];
 	}
-};
-
-// convolution in time domain corresponds to multiplication in frequency domain: as the convolution cancels out frequencies in the time domain that are not present (or have a very small magnitude) in the resulting signal, this logically is the same result as multiplying the frequencies in the frequency domain
-struct fir_filter {
-	std::vector<complex> buffer;
-
-	float f_cutoff;
-	int sampling_rate;
-
-	fir_filter(const float& _f_cutoff, const int& _sampling_rate) : f_cutoff(_f_cutoff), sampling_rate(_sampling_rate) {
-		buffer.assign(_sampling_rate / 2, {});
-
-	}
-};
-
-struct iir_filter {
-
 };
 
 struct speakers {

@@ -146,3 +146,30 @@ void window_tukey(complex* _samples, const int& _N) {
 		_samples[n].real *= .5f - .5f * (float)cos(2 * M_PI * (N - n) / (alpha * N));
 	}
 }
+
+void window_hamming(complex* _samples, const int& _N) {
+	int N = _N - 1;
+	for (int i = 0; i < _N; i++) {
+		_samples[i].real *= 0.54f - 0.46f * cos(2 * M_PI * i / N);
+	}
+}
+
+void window_blackman(complex* _samples, const int& _N) {
+	int N = _N - 1;
+	for (int i = 0; i < _N; i++) {
+		_samples[i].real *= 0.42f - 0.5f * cos(2 * M_PI * i / N) * 0.08 * cos(4 * M_PI * i / N);
+	}
+}
+
+// produces a window-sinc filter kernel for a given cutoff frequency and transition bandwidth
+// _cutoff < _sampling_rate / 2 && _cutoff > 0
+// _transition < _sampling_rate / 2 && _cutoff > 0
+void fn_window_sinc(complex* _samples, const int& _N, const int& _sampling_rate, const int& _cutoff, const int& _transition) {
+	float fc = _cutoff / _sampling_rate;
+	float BW = _transition / _sampling_rate;
+	float M = 4 / BW;
+	for (int i = 0; i < M; i++) {
+		_samples[i].real = (sin(2 * M_PI * fc * (i - (M / 2))) / (i - (M / 2)));
+	}
+	window_blackman(_samples, M);
+}
