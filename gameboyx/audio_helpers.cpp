@@ -128,7 +128,7 @@ void window_blackman(std::vector<complex>& _samples) {
 // produces a window-sinc filter kernel for a given cutoff frequency and transition bandwidth
 // _cutoff < _sampling_rate / 2 && _cutoff > 0
 // _transition < _sampling_rate / 2 && _transition > 0
-// -> https://www.desmos.com/calculator/l83lt9lnlb?lang=de
+// -> https://www.desmos.com/calculator/sc6otxqdul?lang=de
 // resources for the interested ones: 
 // https://ccrma.stanford.edu/~jos/sasp/Ideal_Lowpass_Filter.html
 // https://ccrma.stanford.edu/~jos/filters/Frequency_Response_I.html
