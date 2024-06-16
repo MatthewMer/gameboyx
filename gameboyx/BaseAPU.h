@@ -20,7 +20,7 @@ public:
 
 	// public members
 	virtual void ProcessAPU(const int& _ticks) = 0;
-	virtual void SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples, const int& _sampling_rate) = 0;
+	virtual void SampleAPU(std::vector<std::vector<std::complex<float>>>& _data, const int& _samples, const int& _sampling_rate) = 0;
 
 protected:
 	// constructor

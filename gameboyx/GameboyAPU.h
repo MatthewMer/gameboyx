@@ -12,7 +12,7 @@ public:
 
 	// members
 	void ProcessAPU(const int& _ticks) override;
-	void SampleAPU(std::vector<std::vector<complex>>& _data, const int& _samples, const int& _sampling_rate) override;
+	void SampleAPU(std::vector<std::vector<std::complex<float>>>& _data, const int& _samples, const int& _sampling_rate) override;
 
 private:
 	// constructor
@@ -24,7 +24,9 @@ private:
 
 		virtual_audio_information virt_audio_info = {};
 		virt_audio_info.channels = virtualChannels;
-		virt_audio_info.sound_instance = this;
+		virt_audio_info.apu_callback = [this](std::vector<std::vector<std::complex<float>>>& _samples, const int& _num, const int& _sampling_rate) {
+				this->SampleAPU(_samples, _num, _sampling_rate); 
+			};
 		HardwareMgr::InitAudioBackend(virt_audio_info);
 	}
 	// destructor

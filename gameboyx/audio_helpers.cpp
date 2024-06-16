@@ -29,7 +29,7 @@ FFT algorithm -> transform signal from time domain into frequency domain (applic
 // FFT based on Cooley-Tukey
 // returns DFT (size of N) with the phases, magnitudes and frequencies in cartesian form (e.g. 3.5+2.6i)
 // example in pseudo code: https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
-void fft_cooley_tukey(std::vector<complex>& _samples) {
+void fft_cooley_tukey(std::vector<std::complex<float>>& _samples) {
 	// only one sample
 	if (_samples.size() == 1) {
 		return;
@@ -37,8 +37,8 @@ void fft_cooley_tukey(std::vector<complex>& _samples) {
 
 	// split in 2 arrays, one for all elements where n is odd and one where n is even
 	int N = (int)_samples.size();
-	std::vector<complex> e = std::vector<complex>(N / 2);
-	std::vector<complex> o = std::vector<complex>(N / 2);
+	std::vector<std::complex<float>> e = std::vector<std::complex<float>>(N / 2);
+	std::vector<std::complex<float>> o = std::vector<std::complex<float>>(N / 2);
 	for (int n = 0; n < N / 2; n++) {
 		e[n] = _samples[n * 2];
 		o[n] = _samples[n * 2 + 1];
@@ -52,8 +52,8 @@ void fft_cooley_tukey(std::vector<complex>& _samples) {
 	// used for shifting the signal
 	for (int k = 0; k < N / 2; k++) {
 		float ang = (float)(2 * M_PI * k / N);
-		complex p = e[k];
-		complex q = complex(cos(ang), -sin(ang)) * o[k];
+		std::complex<float> p = e[k];
+		std::complex<float> q = std::polar(1.f, (float)(-2.f * M_PI * (float)k / N)) * o[k];
 		_samples[k] = p + q;
 		_samples[k + N / 2] = p - q;
 	}
@@ -62,7 +62,7 @@ void fft_cooley_tukey(std::vector<complex>& _samples) {
 // inverse FFT: convert samples from frequency domain back to time domain (signal)
 // Formulas can be found here: https://www.dsprelated.com/showarticle/800.php
 // x[n] = 1/N * sum(m=0 to N-1) (X[m]*(cos(2*PI*m*n/N)+i*sin(2*PI*m*n/N)))		-> discarded normalization factor 1/N
-void ifft_cooley_tukey(std::vector<complex>& _samples) {
+void ifft_cooley_tukey(std::vector<std::complex<float>>& _samples) {
 	// only one sample
 	if (_samples.size() == 1) {
 		return;
@@ -70,8 +70,8 @@ void ifft_cooley_tukey(std::vector<complex>& _samples) {
 
 	// split in 2 arrays, one for all elements where n is odd and one where n is even
 	int N = (int)_samples.size();
-	std::vector<complex> e = std::vector<complex>(N / 2);
-	std::vector<complex> o = std::vector<complex>(N / 2);
+	std::vector<std::complex<float>> e = std::vector<std::complex<float>>(N / 2);
+	std::vector<std::complex<float>> o = std::vector<std::complex<float>>(N / 2);
 	for (int n = 0; n < N / 2; n++) {
 		e[n] = _samples[n * 2];
 		o[n] = _samples[n * 2 + 1];
@@ -85,8 +85,8 @@ void ifft_cooley_tukey(std::vector<complex>& _samples) {
 	// used for shifting the signal
 	for (int k = 0; k < N / 2; k++) {
 		float ang = (float)(2 * M_PI * k / N);
-		complex p = e[k];
-		complex q = complex(cos(ang), sin(ang)) * o[k];
+		std::complex<float> p = e[k];
+		std::complex<float> q = std::polar(1.f, (float)(2.f * M_PI * (float)k / N)) * o[k];
 		_samples[k] = p + q;
 		_samples[k + N / 2] = p - q;
 	}
@@ -98,63 +98,71 @@ const float alpha = .5f;
 // could come in handy for something like a N64 where audio files (sort of) are played
 // resources:
 // https://en.wikipedia.org/wiki/Window_function
-void window_tukey(std::vector<complex>& _samples) {
+void window_tukey(std::vector<std::complex<float>>& _samples) {
 	int N = (int)_samples.size() - 1;
 	int t_low = (int)(((alpha * N) / 2) + .5f);				// + .5f for rounding
 	int t_high = (int)((N - (alpha * N) / 2) + .5f);
 
 	for (int n = 0; n < t_low; n++) {
-		_samples[n].real *= .5f - .5f * (float)cos(2 * M_PI * n / (alpha * N));
+		_samples[n] *= .5f - .5f * (float)cos(2 * M_PI * n / (alpha * N));
 	}
 	for (int n = t_high + 1; n < _samples.size(); n++) {
-		_samples[n].real *= .5f - .5f * (float)cos(2 * M_PI * (N - n) / (alpha * N));
+		_samples[n] *= .5f - .5f * (float)cos(2 * M_PI * (N - n) / (alpha * N));
 	}
 }
 
-void window_hamming(std::vector<complex>& _samples) {
+void window_hamming(std::vector<std::complex<float>>& _samples) {
 	int N = (int)_samples.size() - 1;
 	for (int i = 0; i < _samples.size(); i++) {
-		_samples[i].real *= (float)(0.54f - 0.46f * cos(2 * M_PI * i / N));
+		_samples[i] *= (float)(0.54f - 0.46f * cos(2 * M_PI * i / N));
 	}
 }
 
-void window_blackman(std::vector<complex>& _samples) {
+void window_blackman(std::vector<std::complex<float>>& _samples) {
 	int N = (int)_samples.size() - 1;
 	for (int n = 0; n < _samples.size(); n++) {
-		_samples[n].real *= (float)(0.42f - 0.5f * cos(2.f * M_PI * n / N) + 0.08f * cos(4.f * M_PI * n / N));
+		_samples[n] *= (float)(0.42f - 0.5f * cos(2.f * M_PI * n / N) + 0.08f * cos(4.f * M_PI * n / N));
 	}
 }
 
 // produces a window-sinc filter kernel for a given cutoff frequency and transition bandwidth
-// _cutoff < _sampling_rate / 2 && _cutoff > 0
-// _transition < _sampling_rate / 2 && _transition > 0
-// -> https://www.desmos.com/calculator/sc6otxqdul?lang=de
-// resources for the interested ones: 
-// https://ccrma.stanford.edu/~jos/sasp/Ideal_Lowpass_Filter.html
-// https://ccrma.stanford.edu/~jos/filters/Frequency_Response_I.html
-// https://ccrma.stanford.edu/~jos/sasp/Example_1_Low_Pass_Filtering.html
-// http://doctord.webhop.net/Courses/textbooks/Smith_DSP/dsp_book_Ch16.pdf
-// https://fiiir.com/
-void fn_window_sinc(std::vector<complex>& _impulse_response, const int& _sampling_rate, const int& _cutoff, const int& _transition) {
-	float fc = (float)_cutoff / _sampling_rate;
-	float BW = (float)_transition / _sampling_rate;
-	int N = (int)(4 / BW);
+	// _cutoff < _sampling_rate / 2 && _cutoff > 0
+	// _transition < _sampling_rate / 2 && _transition > 0
+	// -> https://www.desmos.com/calculator/sc6otxqdul?lang=de
+	// resources for the interested ones: 
+	// https://ccrma.stanford.edu/~jos/sasp/Ideal_Lowpass_Filter.html
+	// https://ccrma.stanford.edu/~jos/filters/Frequency_Response_I.html
+	// https://ccrma.stanford.edu/~jos/sasp/Example_1_Low_Pass_Filtering.html
+	// http://doctord.webhop.net/Courses/textbooks/Smith_DSP/dsp_book_Ch16.pdf
+	// https://fiiir.com/
+void fn_window_sinc(std::vector<std::complex<float>>& _impulse_response, const int& _sampling_rate, const int& _f_cutoff, const int& _f_transtion, const bool& _high_pass) {
+	float fc = (_high_pass ? ((_sampling_rate / 2) - (float)_f_cutoff) / _sampling_rate : (float)_f_cutoff / _sampling_rate);
+	float BW = (float)_f_transtion / _sampling_rate;
+	int N = (int)std::ceil(4 / BW);
 	if (!(N % 2)) { N++; }
 	_impulse_response.assign(N, {});
 
-	float sum = .0f;
 	for (int n = 0; n < N; n++) {
 		if (n == ((N - 1) / 2)) {
-			_impulse_response[n].real = (float)(2 * M_PI * fc);
+			_impulse_response[n].real(2 * fc);		// lim x->0 2 * fc * sinc(2*fc*x) = 2 * fc (* 1)
 		} else {
-			_impulse_response[n].real = (float)(sin(2 * M_PI * fc * (n - ((N - 1) / 2))) / (M_PI * (n - ((N - 1) / 2))));
+			_impulse_response[n].real((float)(sin(2 * M_PI * fc * (n - ((N - 1) / 2))) / (M_PI * (n - ((N - 1) / 2)))));
 		}
-		sum += _impulse_response[n].real;
-	}
-
-	for (int n = 0; n < N; n++) {
-		_impulse_response[n].real /= sum;
 	}
 
 	window_hamming(_impulse_response);
+
+	float sum = .0f;
+	for (const auto& n : _impulse_response) {
+		sum += n.real();
+	}
+	for (auto& n : _impulse_response) {
+		n /= sum;
+	}
+
+	if (_high_pass) {
+		for (int i = 0; auto & n : _impulse_response) {
+			n *= (float)(i % 2 ? -1 : 1);
+		}
+	}
 }

@@ -3,8 +3,8 @@
 #include "defs.h"
 #include <vector>
 #include <atomic>
-
-class BaseAPU;
+#include <functional>
+#include <complex>
 
 struct virtual_graphics_information {
 	// drawing mode
@@ -21,13 +21,13 @@ struct virtual_graphics_information {
 struct virtual_audio_information {
 	int channels = 0;
 	alignas(64) std::atomic<bool> audio_running = false;
-	BaseAPU* sound_instance = nullptr;
+	std::function<void(std::vector<std::vector<std::complex<float>>>&, const int&, const int&)> apu_callback;
 
 	constexpr virtual_audio_information& operator=(virtual_audio_information& _right) noexcept {
 		if (this != &_right) {
 			channels = _right.channels;
 			audio_running.store(_right.audio_running.load());
-			sound_instance = _right.sound_instance;
+			apu_callback = _right.apu_callback;
 		}
 		return *this;
 	}

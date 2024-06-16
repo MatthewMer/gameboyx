@@ -124,7 +124,6 @@ private:
     bool CheckFpsAndClock();
     void InitMembers(emulation_settings& _settings);
 
-    //GuiMgr* guimgr;
     std::function<void(debug_data&)> dbgCallback;
     debug_data dbgData;
 };

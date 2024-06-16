@@ -4,7 +4,7 @@
 #include "general_config.h"
 #include <thread>
 #include <mutex>
-
+#include <complex>
 
 struct audio_samples {
 	std::vector<float> buffer;
@@ -23,6 +23,8 @@ struct audio_information {
 
 	int channels = 0;
 	int sampling_rate = 0;
+
+	int buff_size = 0;
 
 	void* device = nullptr;
 
