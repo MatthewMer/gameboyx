@@ -146,14 +146,16 @@ struct delay_buffer {
 
 	int sampling_rate;
 
-	fir_filter low_pass;
-
 	delay_buffer() = delete;
-	delay_buffer(const int& _sampling_rate, const int& _num_buffers) : sampling_rate(_sampling_rate), low_pass(_sampling_rate, 200, 100) {
+	delay_buffer(const int& _sampling_rate, const int& _num_buffers) : sampling_rate(_sampling_rate) {
 		buffer.assign(_num_buffers, {});
 		for (auto& n : buffer) {
 			n.assign((size_t)((M_DISTANCE_EARS / M_SPEED_OF_SOUND) * _sampling_rate), .0f);
 		}
+	}
+
+	void filter(std::vector<std::vector<complex>> _samples) {
+
 	}
 
 	void insert(const float& _sample, const float& _angle, const float& _distance) {
@@ -194,14 +196,14 @@ struct reverb_buffer {
 };
 
 struct speakers {
-	typedef void (speakers::*speaker_function)(float*, const float&, const float&, const float&);
+	typedef void (speakers::*speaker_function)(float*, const float&, const float&, const float&, const float&);
 	speaker_function func;
 
 	reverb_buffer r_buffer;
 	delay_buffer d_buffer;
 
 	float volume = .0f;
-	float lfe = .0f;
+	float lfe_amp = .0f;
 
 	int sampling_rate;
 	int channels;
@@ -209,10 +211,11 @@ struct speakers {
 	float* buffer;
 	int buffer_size;
 
-	std::vector<std::vector<complex>> fft_buffer;
+	std::vector<std::vector<complex>> lfe_buffer;
+	fir_filter low_pass;
 
 	speakers() = delete;
-	speakers(const int& _channels, const int& _sampling_rate, float* _buffer, const int& _buffer_size, const int& _delay, const float& _decay, const float& _volume, const float& _lfe) : r_buffer(_delay, _decay), d_buffer(_sampling_rate, _channels) {
+	speakers(const int& _channels, const int& _sampling_rate, float* _buffer, const int& _buffer_size, const int& _delay, const float& _decay, const float& _volume, const float& _lfe) : r_buffer(_delay, _decay), d_buffer(_sampling_rate, _channels), low_pass(_sampling_rate, 200, 100) {
 		switch (_channels) {
 		case SOUND_7_1:
 			func = &speakers::samples_7_1_surround;
@@ -233,21 +236,24 @@ struct speakers {
 		}
 
 		volume = _volume;
-		lfe = _lfe;
+		lfe_amp = _lfe;
 		sampling_rate = _sampling_rate;
 		channels = _channels;
 		buffer = _buffer;
 		buffer_size = _buffer_size;
-		fft_buffer = std::vector<std::vector<complex>>();
+		lfe_buffer = std::vector<std::vector<complex>>();
 	}
 
 	void output(const int& _offset, const int& _sample_count, const std::vector<std::vector<complex>>& _samples, const std::vector<float>& _angles) {
-		fft_buffer.assign(_samples.size(), {});
+		lfe_buffer.assign(_samples.size(), {});
 		for (int i = 0; i < _samples.size(); i++) {
 			// for now we just transform the signal into the frequency domain and transform it right back into the time domain and output the result 
-			fft_buffer[i].assign(_samples[i].begin(), _samples[i].end());
-			fft_cooley_tukey(fft_buffer[i].data(), (int)fft_buffer[i].size());
-			ifft_cooley_tukey(fft_buffer[i].data(), (int)fft_buffer[i].size());
+			lfe_buffer[i].assign(_samples[i].begin(), _samples[i].end());
+			//fft_cooley_tukey(fft_buffer[i]);
+			
+			//ifft_cooley_tukey(fft_buffer[i]);
+
+			low_pass.apply(lfe_buffer[i]);
 
 			/*
 			LOG_WARN("-----------------------");
@@ -264,8 +270,12 @@ struct speakers {
 			float reverb = r_buffer.next();
 
 			for (int j = 0; j < (int)_angles.size(); j++) {
-				float sample = fft_buffer[j][i].real;
-				(this->*func)(buffer + o, (sample + reverb) * volume, _angles[j], lfe);
+				float sample = _samples[j][i].real;
+				float lfe = .0f;
+				for (const auto& n : lfe_buffer) {
+					lfe += n[i].real;
+				}
+				(this->*func)(buffer + o, (sample + reverb) * volume, _angles[j], lfe, lfe_amp);
 				r_buffer.add(sample);
 			}
 			(o += channels) %= buffer_size;
@@ -278,7 +288,7 @@ struct speakers {
 
 	void set_volume(const float& _volume, const float& _lfe) {
 		volume = _volume;
-		lfe = _lfe;
+		lfe_amp = _lfe;
 	}
 
 	const float x = .5f;
@@ -286,12 +296,13 @@ struct speakers {
 	const float a = 2.f;
 
 	// using angles in rad
+	// -> https://www.desmos.com/calculator/vpkgagyrhz?lang=de
 	float calc_sample(const float& _sample, const float& _sample_angle, const float& _speaker_angle) {
 		return tanh(D * _sample) * exp(a * .5f * cos(_sample_angle - _speaker_angle) - .5f);
 	}
 
 	// TODO: low frequency missing, probably use a low pass filter on all samples and combine and increase amplitude for output on low frequency channel
-	void samples_7_1_surround(float* _buffer, const float& _sample, const float& _angle, const float& _lfe) {
+	void samples_7_1_surround(float* _buffer, const float& _sample, const float& _angle, const float& _lfe, const float& _lfe_amp) {
 		_buffer[0] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[0]);	// front-left
 		_buffer[1] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[1]);	// front-right
 		_buffer[2] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[2]);	// centre
@@ -300,27 +311,27 @@ struct speakers {
 		_buffer[6] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[6]);	// centre-left
 		_buffer[7] += calc_sample(_sample, _angle, SOUND_7_1_ANGLES[7]);	// centre-right
 
-		_buffer[3] += _sample * _lfe;
+		_buffer[3] += _lfe_amp * _lfe;
 	}
 
-	void samples_5_1_surround(float* _buffer, const float& _sample, const float& _angle, const float& _lfe) {
+	void samples_5_1_surround(float* _buffer, const float& _sample, const float& _angle, const float& _lfe, const float& _lfe_amp) {
 		_buffer[0] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[0]);
 		_buffer[1] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[1]);
 		_buffer[2] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[2]);
 		_buffer[4] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[4]);
 		_buffer[5] += calc_sample(_sample, _angle, SOUND_5_1_ANGLES[5]);
 
-		_buffer[3] += _sample * _lfe;
+		_buffer[3] += _lfe_amp * _lfe;
 	}
 
-	void samples_stereo(float* _buffer, const float& _sample, const float& _angle, const float& _lfe) {
-		_buffer[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[0]);
-		_buffer[1] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[1]);
+	void samples_stereo(float* _buffer, const float& _sample, const float& _angle, const float& _lfe, const float& _lfe_amp) {
+		_buffer[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[0]) + (_lfe_amp * _lfe);
+		_buffer[1] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[1]) + (_lfe_amp * _lfe);
 	}
 
-	void samples_mono(float* _buffer, const float& _sample, const float& _angle, const float& _lfe) {
-		_buffer[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[0]);
-		_buffer[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[1]);
+	void samples_mono(float* _buffer, const float& _sample, const float& _angle, const float& _lfe, const float& _lfe_amp) {
+		_buffer[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[0]) + (_lfe_amp * _lfe);
+		_buffer[0] += calc_sample(_sample, _angle, SOUND_STEREO_ANGLES[1]) + (_lfe_amp * _lfe);
 	}
 };
 
@@ -400,8 +411,7 @@ void audio_thread(audio_information* _audio_info, virtual_audio_information* _vi
 			int size = reg_1_samples + reg_2_samples;
 			int buf_size = size;
 			if ((size & (size - 1)) == 0) {
-				int exp = (int)std::ceil(log2(size));
-				buf_size = (int)pow(2, exp);
+				buf_size = (int)to_power_of_two(buf_size);
 			}
 
 			for (auto& n : virt_samples) { 

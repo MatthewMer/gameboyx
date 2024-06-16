@@ -4,8 +4,11 @@
 #include <cmath>
 #include <algorithm>
 #include <vector>
+#include "logger.h"
 
 using std::swap;
+
+size_t to_power_of_two(const size_t& _in);
 
 struct complex {
 	float real;
@@ -22,6 +25,19 @@ struct complex {
 	}
 
 	complex(const complex& other) : real(other.real), imaginary(other.imaginary) {}
+
+	float magnitude() {
+		return (float)sqrt(pow(real, 2) + pow(imaginary, 2));
+	}
+
+	// the phase offset in rad
+	float phase() {
+		return atan2(imaginary, real);
+	}
+
+	float frequency(const int& _sampling_rate, const int& _index, const int& _size) {
+		return (float)_sampling_rate * _index / _size;
+	}
 
 	complex& operator=(const complex& rhs) {
 		complex tmp(rhs);
@@ -86,24 +102,39 @@ inline complex operator/(const complex& lhs, const complex& rhs) {
 	return res;
 }
 
-void fft_cooley_tukey(complex* _samples, const int& _N);
-void ifft_cooley_tukey(complex* _samples, const int& _N);
-void window_tukey(complex* _samples, const int& _N);
-void window_hamming(complex* _samples, const int& _N);
-void window_blackman(complex* _samples, const int& _N);
-void fn_window_sinc(complex* _samples, const int& _N, const int& _sampling_rate, const int& _cutoff, const int& _transition);
+void fft_cooley_tukey(std::vector<complex>& _samples);
+void ifft_cooley_tukey(std::vector<complex>& _samples);
+void window_tukey(std::vector<complex>& _samples);
+void window_hamming(std::vector<complex>& _samples);
+void window_blackman(std::vector<complex>& _samples);
+void fn_window_sinc(std::vector<complex>& _samples, const int& _sampling_rate, const int& _cutoff, const int& _transition);
 
 // convolution in time domain corresponds to multiplication in frequency domain: as the convolution cancels out frequencies in the time domain that are not present (or have a very small magnitude) in the resulting signal, this logically is the same result as multiplying the frequencies in the frequency domain
 struct fir_filter {
-	std::vector<complex> buffer;
+	std::vector<complex> impulse_response;
 
 	int f_transition;
 	int f_cutoff;
 	int sampling_rate;
 
 	fir_filter(const int& _sampling_rate, const int& _f_cutoff, const int& _f_transition) : sampling_rate(_sampling_rate), f_cutoff(_f_cutoff), f_transition(_f_transition) {
-		buffer.assign(_sampling_rate / 2, {});
-		fn_window_sinc(buffer.data(), (int)buffer.size(), _sampling_rate, _f_cutoff, _f_transition);
+		fn_window_sinc(impulse_response, _sampling_rate, _f_cutoff, _f_transition);
+	}
+
+	void apply(std::vector<complex>& _samples) {
+		size_t size = to_power_of_two(impulse_response.size() + _samples.size() - 1);
+		std::vector<complex> tmp = std::vector<complex>(impulse_response);
+		tmp.resize(size);
+		_samples.resize(size);
+
+		fft_cooley_tukey(tmp);
+		fft_cooley_tukey(_samples);
+
+		for (int i = 0; i < _samples.size(); i++) {
+			_samples[i] = _samples[i] * tmp[i];
+		}
+
+		ifft_cooley_tukey(_samples);
 	}
 };
 

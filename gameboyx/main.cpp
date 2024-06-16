@@ -49,7 +49,7 @@ int main(int, char**)
 
     audio_settings s_audio_settings = {};
     s_audio_settings.master_volume = .5f;
-    s_audio_settings.lfe = .5f;
+    s_audio_settings.lfe = 1.f;
     s_audio_settings.sampling_rate = sampling_rate_max;
     s_audio_settings.delay = APP_REVERB_DELAY_DEFAULT;
     s_audio_settings.decay = APP_REVERB_DECAY_DEFAULT;

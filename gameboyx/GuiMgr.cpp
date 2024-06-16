@@ -931,7 +931,7 @@ void GuiMgr::ShowAudioSettings() {
             }
             ImGui::TableNextColumn();
 
-            if (ImGui::SliderFloat("##lfe", &lfe, APP_MIN_VOLUME, APP_MAX_VOLUME)) {
+            if (ImGui::SliderFloat("##lfe", &lfe, APP_MIN_LFE, APP_MAX_LFE)) {
                 ActionSetVolume();
             }
             ImGui::TableNextRow();
@@ -1361,7 +1361,7 @@ void GuiMgr::ActionSetSwapchainSettings() {
 }
 
 void GuiMgr::ActionSetVolume() {
-    HardwareMgr::SetVolume(volume, lfe * 4);
+    HardwareMgr::SetVolume(volume, lfe);
 }
 
 void GuiMgr::ActionSetSamplingRate() {

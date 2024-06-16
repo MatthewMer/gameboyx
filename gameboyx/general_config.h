@@ -118,6 +118,9 @@ inline const std::unordered_map<u16, std::string> VENDOR_IDS = {
 #define APP_MAX_VOLUME              1.f
 #define APP_MIN_VOLUME              .0f
 
+#define APP_MAX_LFE                 5.f
+#define APP_MIN_LFE                 .0f
+
 #define APP_REVERB_DECAY_DEFAULT    .1f
 #define APP_REVERB_DELAY_DEFAULT    .02f
 
