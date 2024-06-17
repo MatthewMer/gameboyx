@@ -41,6 +41,13 @@ int main(int, char**)
     s_graphics_settings.fpsUnlimited = false;
     s_graphics_settings.presentModeFifo = false;
     s_graphics_settings.tripleBuffering = false;
+    s_graphics_settings.app_title = Config::APP_TITLE;
+    s_graphics_settings.font = Config::FONT_FOLDER + Config::FONT_MAIN;
+    s_graphics_settings.icon = Config::ICON_FOLDER + Config::ICON_FILE;
+    s_graphics_settings.win_height = Config::GUI_WIN_HEIGHT;
+    s_graphics_settings.win_height_min = Config::GUI_WIN_HEIGHT_MIN;
+    s_graphics_settings.win_width = Config::GUI_WIN_WIDTH;
+    s_graphics_settings.win_height_min = Config::GUI_WIN_WIDTH_MIN;
 
     int sampling_rate_max = 0;
     for (const auto& [key, val] : Backend::Audio::SAMPLING_RATES) {
@@ -51,8 +58,8 @@ int main(int, char**)
     s_audio_settings.master_volume = .5f;
     s_audio_settings.lfe = 1.f;
     s_audio_settings.sampling_rate = sampling_rate_max;
-    s_audio_settings.delay = APP_REVERB_DELAY_DEFAULT;
-    s_audio_settings.decay = APP_REVERB_DECAY_DEFAULT;
+    s_audio_settings.delay = Config::APP_REVERB_DELAY_DEFAULT;
+    s_audio_settings.decay = Config::APP_REVERB_DECAY_DEFAULT;
 
     Backend::control_settings s_control_settings = {};
     s_control_settings.mouse_always_visible = false;

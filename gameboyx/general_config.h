@@ -66,36 +66,36 @@ namespace Config {
     /* ***********************************************************************************************************
         GRAPHICS
     *********************************************************************************************************** */
-#define APP_MAX_FRAMERATE           500
-#define APP_MIN_FRAMERATE           30
+    inline const u32 APP_MAX_FRAMERATE = 500;
+    inline const u32  APP_MIN_FRAMERATE = 30;
 
     /* ***********************************************************************************************************
         AUDIO
     *********************************************************************************************************** */
-#define APP_MAX_VOLUME              1.f
-#define APP_MIN_VOLUME              .0f
+    inline const float APP_MAX_VOLUME = 1.f;
+    inline const float APP_MIN_VOLUME = .0f;
 
-#define APP_MAX_LFE                 5.f
-#define APP_MIN_LFE                 .0f
+    inline const float APP_MAX_LFE = 5.f;
+    inline const float APP_MIN_LFE = .0f;
 
-#define APP_REVERB_DECAY_DEFAULT    .1f
-#define APP_REVERB_DELAY_DEFAULT    .02f
+    inline const float APP_REVERB_DECAY_DEFAULT = .1f;
+    inline const float APP_REVERB_DELAY_DEFAULT = .02f;
 
     /* ***********************************************************************************************************
         IMGUI EMULATOR
     *********************************************************************************************************** */
     //#define _DEBUG_GBX
 
-#define GBX_RELEASE					"BETA"
-#define GBX_VERSION_MAJOR			1
-#define GBX_VERSION_MINOR			0
-#define GBX_VERSION_PATCH           0
-#define GBX_AUTHOR					"MatthewMer"
+    inline const std::string  GBX_RELEASE = "BETA";
+    inline const u32  GBX_VERSION_MAJOR = 1;
+    inline const u32  GBX_VERSION_MINOR = 0;
+    inline const u32  GBX_VERSION_PATCH = 0;
+    inline const std::string  GBX_AUTHOR = "MatthewMer";
 
-#define GUI_WIN_WIDTH               1280
-#define GUI_WIN_HEIGHT              720
-#define GUI_WIN_WIDTH_MIN           720
-#define GUI_WIN_HEIGHT_MIN          480
+    inline const u32 GUI_WIN_WIDTH = 1280;
+    inline const u32 GUI_WIN_HEIGHT = 720;
+    inline const u32 GUI_WIN_WIDTH_MIN = 720;
+    inline const u32 GUI_WIN_HEIGHT_MIN = 480;
 
     inline const std::string APP_TITLE = "GameboyX";
 
