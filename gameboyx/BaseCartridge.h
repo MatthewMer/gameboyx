@@ -24,7 +24,7 @@ namespace Emulation {
 	public:
 		static bool check_ext(const std::string& _file_path);
 		static BaseCartridge* new_game(const std::string& _file_path);
-		static BaseCartridge* existing_game(const std::string& _title, const std::string& _file_name, const std::string& _file_path, const Config::console_ids& _id, const std::string& _version);
+		static BaseCartridge* existing_game(const std::string& _title, const std::string& _file_name, const std::string& _file_path, const Emulation::console_ids& _id, const std::string& _version);
 
 		bool CopyToRomFolder();
 		virtual bool ReadRom() = 0;
@@ -33,7 +33,7 @@ namespace Emulation {
 		std::vector<u8>& GetRomVector();
 
 		std::string title;
-		Config::console_ids console;
+		Emulation::console_ids console;
 		std::string version;
 		std::string fileName;
 		std::string filePath;
@@ -52,7 +52,7 @@ namespace Emulation {
 
 	protected:
 		// constructor
-		explicit BaseCartridge(const Config::console_ids& _id, const std::string& _file) : console(_id) {
+		explicit BaseCartridge(const Emulation::console_ids& _id, const std::string& _file) : console(_id) {
 			std::string file;
 
 			auto file_split = Helpers::split_string(_file, "\\");

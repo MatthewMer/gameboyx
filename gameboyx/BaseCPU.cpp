@@ -11,8 +11,8 @@ namespace Emulation {
 	BaseCPU* BaseCPU::getInstance(BaseCartridge* _cartridge) {
 		if (instance == nullptr) {
 			switch (_cartridge->console) {
-			case Config::GB:
-			case Config::GBC:
+			case GB:
+			case GBC:
 				instance = new Gameboy::GameboyCPU(_cartridge);
 				break;
 			}

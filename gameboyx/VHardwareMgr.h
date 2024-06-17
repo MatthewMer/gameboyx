@@ -16,7 +16,7 @@
 #include "BaseCartridge.h"
 #include "defs.h"
 #include "general_config.h"
-#include "VHardwareStructs.h"
+#include "VHardwareTypes.h"
 
 #include <functional>
 #include <thread>

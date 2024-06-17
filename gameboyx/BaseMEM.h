@@ -13,7 +13,7 @@
 #include "BaseCartridge.h"
 #include "GuiTable.h"
 #include "defs.h"
-#include "VHardwareStructs.h"
+#include "VHardwareTypes.h"
 
 namespace Emulation {
 	class BaseMEM {

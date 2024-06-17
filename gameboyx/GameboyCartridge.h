@@ -26,7 +26,7 @@ namespace Emulation {
 		public:
 			friend class BaseCartridge;
 			// constructor
-			explicit GameboyCartridge(const Config::console_ids& _id, const std::string& _file) : BaseCartridge(_id, _file) {};
+			explicit GameboyCartridge(const Emulation::console_ids& _id, const std::string& _file) : BaseCartridge(_id, _file) {};
 			// destructor
 			~GameboyCartridge() = default;
 

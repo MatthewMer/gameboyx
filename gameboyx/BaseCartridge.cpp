@@ -9,12 +9,12 @@
 #include "data_io.h"
 #include "general_config.h"
 #include "helper_functions.h"
+#include "VHardwareTypes.h"
 
 using namespace std;
 
 namespace Emulation {
 	bool BaseCartridge::CopyToRomFolder() {
-		Backend::FileIO::check_and_create_rom_folder();
 		string rom_path = Config::ROM_FOLDER + fileName;
 
 		if (Backend::FileIO::check_file_exists(rom_path)) {
@@ -55,8 +55,8 @@ namespace Emulation {
 		}
 
 		string ext = Helpers::split_string(_file_path, ".").back();
-		Config::console_ids id = Config::CONSOLE_NONE;
-		for (const auto& [key, value] : Config::FILE_EXTS) {
+		console_ids id = CONSOLE_NONE;
+		for (const auto& [key, value] : FILE_EXTS) {
 			if (ext.compare(value.second) == 0) {
 				id = key;
 			}
@@ -65,12 +65,12 @@ namespace Emulation {
 		return new Gameboy::GameboyCartridge(id, _file_path);
 	}
 
-	BaseCartridge* BaseCartridge::existing_game(const std::string& _title, const std::string& _file_name, const std::string& _file_path, const Config::console_ids& _id, const std::string& _version) {
+	BaseCartridge* BaseCartridge::existing_game(const std::string& _title, const std::string& _file_name, const std::string& _file_path, const console_ids& _id, const std::string& _version) {
 		BaseCartridge* cartridge;
 
 		switch (_id) {
-		case Config::GB:
-		case Config::GBC:
+		case GB:
+		case GBC:
 			cartridge = new Gameboy::GameboyCartridge(_id, _file_path + _file_name);
 			cartridge->title = _title;
 			cartridge->version = _version;
@@ -86,7 +86,7 @@ namespace Emulation {
 	bool BaseCartridge::check_ext(const std::string& _file_path) {
 		string ext = Helpers::split_string(_file_path, ".").back();
 
-		for (const auto& [key, value] : Config::FILE_EXTS) {
+		for (const auto& [key, value] : FILE_EXTS) {
 			if (value.second.compare(ext) == 0) {
 				return true;
 			}

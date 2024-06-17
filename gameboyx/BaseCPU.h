@@ -17,7 +17,7 @@
 #include "BaseCartridge.h"
 #include "defs.h"
 #include "GuiTable.h"
-#include "VHardwareStructs.h"
+#include "VHardwareTypes.h"
 #include <map>
 
 namespace Emulation {

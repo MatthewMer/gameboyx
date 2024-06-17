@@ -19,7 +19,7 @@
 #include "helper_functions.h"
 #include "GuiTable.h"
 #include "VHardwareMgr.h"
-#include "VHardwareStructs.h"
+#include "VHardwareTypes.h"
 
 namespace GUI {
 	// TODO: needs to be redone

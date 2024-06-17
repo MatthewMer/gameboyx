@@ -9,8 +9,8 @@ namespace Emulation {
 	BaseAPU* BaseAPU::getInstance(BaseCartridge* _cartridge) {
 		if (instance == nullptr) {
 			switch (_cartridge->console) {
-			case Config::GB:
-			case Config::GBC:
+			case GB:
+			case GBC:
 				instance = new Gameboy::GameboyAPU(_cartridge);
 				break;
 			}
