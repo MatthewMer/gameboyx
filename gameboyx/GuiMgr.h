@@ -7,7 +7,8 @@
 *	as well as processes parts of the user input (keyboard/mouse)
 */
 
-#include <SDL.h>
+#include "HardwareMgr.h"
+
 #include <imgui.h>
 #include <vector>
 #include <array>
@@ -282,4 +283,17 @@ namespace GUI {
 		std::mutex mutDebugInstr;
 		std::mutex mutDebugBreakpoints;
 	};
+
+	namespace IO {
+		bool read_games_from_config(std::vector<Emulation::BaseCartridge*>& _games);
+		bool write_games_to_config(const std::vector<Emulation::BaseCartridge*>& _games, const bool& _rewrite);
+		bool delete_games_from_config(std::vector<Emulation::BaseCartridge*>& _games);
+
+		void check_and_create_config_folders();
+		void check_and_create_config_files();
+		void check_and_create_log_folders();
+		void check_and_create_shader_folders();
+		void check_and_create_save_folders();
+		void check_and_create_rom_folder();
+	}
 }

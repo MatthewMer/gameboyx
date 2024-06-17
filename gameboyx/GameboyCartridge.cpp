@@ -3,7 +3,6 @@
 #include "general_config.h"
 #include "gameboy_defines.h"
 #include "logger.h"
-#include "data_io.h"
 #include "helper_functions.h"
 
 #include <fstream>

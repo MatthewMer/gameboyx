@@ -1,5 +1,7 @@
 #pragma once
 
+#include "HardwareMgr.h"
+
 #include <string>
 #include <memory>
 

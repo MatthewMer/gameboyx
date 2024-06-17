@@ -6,8 +6,6 @@
 
 #include <format>
 
-#include "vulkan/vulkan.h"
-
 using namespace std;
 
 // VK_FORMAT_R8G8B8A8_UNORM, gray scales

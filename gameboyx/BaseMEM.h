@@ -8,10 +8,11 @@
 *	and expose the entire interals of the memory. This way CPU and MMU can interact with it much more efficiently.
 */
 
+#include "HardwareMgr.h"
+
 #include "BaseCartridge.h"
 #include "GuiTable.h"
 #include "defs.h"
-#include "FileMapper.h"
 #include "VHardwareStructs.h"
 
 namespace Emulation {

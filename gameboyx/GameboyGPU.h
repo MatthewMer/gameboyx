@@ -9,7 +9,6 @@
 
 #include "BaseGPU.h"
 #include "GameboyMEM.h"
-#include "HardwareMgr.h"
 #include "GameboyCPU.h"
 #include <atomic>
 

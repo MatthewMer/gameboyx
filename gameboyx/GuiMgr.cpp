@@ -5,11 +5,11 @@
 *********************************************************************************************************** */
 #include "GameboyCartridge.h"
 #include "imgui.h"
-#include "data_io.h"
 #include "nfd.h"
 #include "logger.h"
 #include "helper_functions.h"
 #include "general_config.h"
+#include "HardwareMgr.h"
 #include <format>
 #include <cmath>
 #include <queue>
@@ -17,11 +17,6 @@
 using namespace std;
 
 namespace GUI {
-    /* ***********************************************************************************************************
-        PROTOTYPES
-    *********************************************************************************************************** */
-    static void create_fs_hierarchy();
-
     /* ***********************************************************************************************************
         IMGUIGAMEBOYX FUNCTIONS
     *********************************************************************************************************** */
@@ -621,18 +616,18 @@ namespace GUI {
     }
 
     void GuiMgr::ShowNewGameDialog() {
-        Backend::FileIO::check_and_create_config_folders();
+        IO::check_and_create_config_folders();
 
         string current_path = Backend::FileIO::get_current_path();
         string s_path_rom_folder = Config::ROM_FOLDER;
 
         auto filter_items = std::vector<nfdfilteritem_t>();
-        for (const auto& [key, value] : Config::FILE_EXTS) {
+        for (const auto& [key, value] : Emulation::FILE_EXTS) {
             filter_items.emplace_back(value.first.c_str(), value.second.c_str());
         }
 
         nfdchar_t* out_path = nullptr;
-        const auto result = NFD_OpenDialog(&out_path, filter_items.data(), (nfdfiltersize_t)Config::FILE_EXTS.size(), s_path_rom_folder.c_str());
+        const auto result = NFD_OpenDialog(&out_path, filter_items.data(), (nfdfiltersize_t)Emulation::FILE_EXTS.size(), s_path_rom_folder.c_str());
 
         if (result == NFD_OKAY) {
             if (out_path != nullptr) {
@@ -677,7 +672,7 @@ namespace GUI {
                     // TODO: icon
                     ImGui::TableNextColumn();
 
-                    ImGui::Selectable(Config::FILE_EXTS.at(game->console).first.c_str(), gamesSelected[i].value, Config::SEL_FLAGS);
+                    ImGui::Selectable(Emulation::FILE_EXTS.at(game->console).first.c_str(), gamesSelected[i].value, Config::SEL_FLAGS);
                     if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
                         ActionGamesSelect(i);
                     }
@@ -979,7 +974,7 @@ namespace GUI {
 
                 static const char* current_item = nullptr;
                 if (current_item == nullptr) {
-                    for (const auto& [key, val] : Config::SAMPLING_RATES) {
+                    for (const auto& [key, val] : Backend::Audio::SAMPLING_RATES) {
                         if (samplingRate == val.first) {
                             current_item = key;
                         }
@@ -987,7 +982,7 @@ namespace GUI {
                 }
 
                 if (ImGui::BeginCombo("##samplingrate", current_item)) {
-                    for (const auto& [key, val] : Config::SAMPLING_RATES) {
+                    for (const auto& [key, val] : Backend::Audio::SAMPLING_RATES) {
                         if (val.first <= samplingRateMax) {
                             const char* item = key;
                             bool selected = current_item == item;
@@ -1266,7 +1261,7 @@ namespace GUI {
             return false;
         }
 
-        if (cartridge->console == Config::CONSOLE_NONE) {
+        if (cartridge->console == Emulation::CONSOLE_NONE) {
             LOG_ERROR("[emu] Console type not recognized");
             delete cartridge;
             showNewGameDialog = false;
@@ -1283,7 +1278,7 @@ namespace GUI {
         cartridge->CopyToRomFolder();
         cartridge->ClearRom();
 
-        if (!Backend::FileIO::write_games_to_config({ cartridge }, false)) {
+        if (!IO::write_games_to_config({ cartridge }, false)) {
             showNewGameDialog = false;
             LOG_ERROR("[emu] couldn't write new game to config");
             delete cartridge;
@@ -1302,7 +1297,7 @@ namespace GUI {
         }
 
         if (games_to_delete.size() > 0) {
-            Backend::FileIO::delete_games_from_config(games_to_delete);
+            IO::delete_games_from_config(games_to_delete);
             ReloadGamesGuiCtx();
         }
 
@@ -1455,7 +1450,7 @@ namespace GUI {
             games.erase(games.begin() + i);
         }
 
-        Backend::FileIO::read_games_from_config(games);
+        IO::read_games_from_config(games);
 
         gamesSelected.clear();
         for (const auto& n : games) {
@@ -1679,6 +1674,173 @@ namespace GUI {
         if (nextInstruction.load()) {
             vhwmgr->SetProceedExecution(true);
             nextInstruction.store(false);
+        }
+    }
+
+    namespace IO {
+        void games_from_string(vector<Emulation::BaseCartridge*>& _games, const vector<string>& _config_games);
+        void games_to_string(const vector<Emulation::BaseCartridge*>& _games, vector<string>& _config_games);
+
+        void check_and_create_config_folders() {
+            Backend::FileIO::check_and_create_path(Config::CONFIG_FOLDER);
+        }
+
+        void check_and_create_config_files() {
+            Backend::FileIO::check_and_create_file(Config::CONFIG_FOLDER + Config::GAMES_CONFIG_FILE);
+        }
+
+        void check_and_create_log_folders() {
+            Backend::FileIO::check_and_create_path(Config::LOG_FOLDER);
+        }
+
+        void check_and_create_shader_folders() {
+            Backend::FileIO::check_and_create_path(Config::SHADER_FOLDER);
+            Backend::FileIO::check_and_create_path(Config::SPIR_V_FOLDER);
+        }
+
+        void check_and_create_save_folders() {
+            Backend::FileIO::check_and_create_path(Config::SAVE_FOLDER);
+        }
+
+        void check_and_create_rom_folder() {
+            Backend::FileIO::check_and_create_path(Config::ROM_FOLDER);
+        }
+
+        const unordered_map<Emulation::info_types, std::string> INFO_TYPES_MAP = {
+            { Emulation::TITLE, "title" },
+            { Emulation::CONSOLE,"console" },
+            { Emulation::FILE_NAME,"file_name" },
+            { Emulation::FILE_PATH,"file_path" },
+            { Emulation::GAME_VER,"game_ver" }
+        };
+
+        void games_from_string(vector<Emulation::BaseCartridge*>& _games, const vector<string>& _config_games) {
+            string line;
+            _games.clear();
+
+            string title = "";
+            string file_name = "";
+            string file_path = "";
+            string console = "";
+            string version = "";
+            Emulation::console_ids id = Emulation::CONSOLE_NONE;
+
+            bool entries_found = false;
+
+            for (int i = 0; i < (int)_config_games.size(); i++) {
+                if (_config_games[i].compare("") == 0) { continue; }
+                line = Helpers::trim(_config_games[i]);
+
+                // find start of entry
+                if (line.find("[") == 0 && line.find("]") == line.length() - 1) {
+                    if (entries_found) {
+                        _games.emplace_back(Emulation::BaseCartridge::existing_game(title, file_name, file_path, id, version));
+                        title = file_name = file_path = version = "";
+                        id = Emulation::CONSOLE_NONE;
+                    }
+                    entries_found = true;
+
+                    title = Helpers::split_string(Helpers::split_string(line, "[").back(), "]").front();
+                }
+                // filter entry parameters
+                else if (_config_games[i].compare("") != 0 && entries_found) {
+                    auto parameter = Helpers::split_string(line, "=");
+
+                    if ((int)parameter.size() != 2) {
+                        LOG_WARN("[emu] Error in line ", (i + 1));
+                        continue;
+                    }
+
+                    parameter[0] = Helpers::trim(parameter[0]);
+                    parameter[1] = Helpers::trim(parameter[1]);
+
+                    if (parameter.front().compare(INFO_TYPES_MAP.at(Emulation::CONSOLE)) == 0) {
+                        for (const auto& [key, value] : Emulation::FILE_EXTS) {
+                            if (value.second.compare(parameter.back()) == 0) {
+                                id = key;
+                            }
+                        }
+                    } else if (parameter.front().compare(INFO_TYPES_MAP.at(Emulation::FILE_NAME)) == 0) {
+                        file_name = parameter.back();
+                    } else if (parameter.front().compare(INFO_TYPES_MAP.at(Emulation::FILE_PATH)) == 0) {
+                        file_path = parameter.back();
+                    } else if (parameter.front().compare(INFO_TYPES_MAP.at(Emulation::GAME_VER)) == 0) {
+                        version = parameter.back();
+                    }
+                }
+            }
+
+            for (const auto& [key, value] : Emulation::FILE_EXTS) {
+                if (value.second.compare(console) == 0) {
+                    id = key;
+                }
+            }
+
+            auto cartridge = Emulation::BaseCartridge::existing_game(title, file_name, file_path, id, version);
+            if (cartridge != nullptr) {
+                _games.emplace_back(cartridge);
+            }
+
+            return;
+        }
+
+        void games_to_string(const vector<Emulation::BaseCartridge*>& _games, vector<string>& _config_games) {
+            _config_games.clear();
+            for (const auto& n : _games) {
+                _config_games.emplace_back("");
+                _config_games.emplace_back("[" + n->title + "]");
+                _config_games.emplace_back(INFO_TYPES_MAP.at(Emulation::FILE_NAME) + "=" + n->fileName);
+                _config_games.emplace_back(INFO_TYPES_MAP.at(Emulation::FILE_PATH) + "=" + n->filePath);
+                _config_games.emplace_back(INFO_TYPES_MAP.at(Emulation::CONSOLE) + "=" + Emulation::FILE_EXTS.at(n->console).second);
+                _config_games.emplace_back(INFO_TYPES_MAP.at(Emulation::GAME_VER) + "=" + n->version);
+            }
+        }
+
+        bool read_games_from_config(vector<Emulation::BaseCartridge*>& _games) {
+            if (auto config_games = vector<string>(); Backend::FileIO::read_data(config_games, Config::CONFIG_FOLDER + Config::GAMES_CONFIG_FILE)) {
+                games_from_string(_games, config_games);
+                return true;
+            }
+
+            return false;
+        }
+
+
+        bool write_games_to_config(const vector<Emulation::BaseCartridge*>& _games, const bool& _rewrite) {
+            auto config_games = vector<string>();
+            games_to_string(_games, config_games);
+
+            if (Backend::FileIO::write_data(config_games, Config::CONFIG_FOLDER + Config::GAMES_CONFIG_FILE, _rewrite)) {
+                if (!_rewrite) LOG_INFO("[emu] ", (int)_games.size(), " game(s) added to " + Config::CONFIG_FOLDER + Config::GAMES_CONFIG_FILE);
+                return true;
+            }
+
+            return false;
+        }
+
+        bool delete_games_from_config(vector<Emulation::BaseCartridge*>& _games) {
+            auto games = vector<Emulation::BaseCartridge*>();
+            if (!read_games_from_config(games)) {
+                LOG_ERROR("[emu] reading games from ", Config::CONFIG_FOLDER + Config::GAMES_CONFIG_FILE);
+                return false;
+            }
+
+            for (int i = (int)games.size() - 1; i >= 0; i--) {
+                for (const auto& m : _games) {
+                    if ((games[i]->filePath + games[i]->fileName).compare(m->filePath + m->fileName) == 0) {
+                        delete games[i];
+                        games.erase(games.begin() + i);
+                    }
+                }
+            }
+
+            if (!write_games_to_config(games, true)) {
+                return false;
+            }
+
+            LOG_INFO("[emu] ", (int)_games.size(), " game(s) removed from ", Config::CONFIG_FOLDER + Config::GAMES_CONFIG_FILE);
+
+            return true;
         }
     }
 }

@@ -49,4 +49,15 @@ namespace Emulation {
         MEM_ENTRY_REF
     };
     using memory_entry = std::tuple<std::string, int, u8*>;
+
+    enum console_ids {
+        CONSOLE_NONE,
+        GB,
+        GBC
+    };
+
+    inline const std::unordered_map<console_ids, std::pair<std::string, std::string>> FILE_EXTS = {
+        { GB, {"Gameboy", "gb"} },
+        { GBC, { "Gameboy Color", "gbc"} }
+    };
 }

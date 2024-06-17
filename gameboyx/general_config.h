@@ -7,8 +7,6 @@
 *   or overrall information that doesn't change and could be used multiple times without being directly tied to a specific source file
 */
 
-#include <SDL.h>
-
 #include "imgui.h"
 #include "defs.h"
 #include <vector>
@@ -66,48 +64,6 @@ namespace Config {
     inline const std::string CURSOR_MAIN = "cursor.bmp";
 
     /* ***********************************************************************************************************
-        GRAPHICS BACKEND
-    *********************************************************************************************************** */
-    // uncomment this define to output graphics backend error messages and to activate the debug callback
-#ifndef GRAPHICS_DEBUG
-//#define GRAPHICS_DEBUG
-#endif
-
-#ifdef GRAPHICS_DEBUG
-#define VK_VALIDATION "VK_LAYER_KHRONOS_validation"
-#endif
-
-    inline const u16 ID_NVIDIA = 0x10DE;
-    inline const u16 ID_AMD = 0x1002;
-
-    inline const std::unordered_map<u16, std::string> VENDOR_IDS = {
-        {0x1002, "AMD"},
-        {0x10DE, "NVIDIA"},
-        {0x1043, "ASUS"},
-        {0x196D, "Club 3D"},
-        {0x1092, "Diamond Multimedia"},
-        {0x18BC, "GeCube"},
-        {0x1458, "Gigabyte"},
-        {0x17AF, "HIS"},
-        {0x16F3, "Jetway"},
-        {0x1462, "MSI"},
-        {0x1DA2, "Sapphire"},
-        {0x148C, "PowerColor"},
-        {0x1545, "VisionTek"},
-        {0x1682, "XFX"},
-        {0x1025, "Acer"},
-        {0x106B, "Apple"},
-        {0x1028, "Dell"},
-        {0x107B, "Gateway"},
-        {0x103C, "HP"},
-        {0x17AA, "Lenovo"},
-        {0x104D, "Sony"},
-        {0x1179, "Toshiba"}
-    };
-
-#define TEX2D_CHANNELS			    4
-
-    /* ***********************************************************************************************************
         GRAPHICS
     *********************************************************************************************************** */
 #define APP_MAX_FRAMERATE           500
@@ -124,9 +80,6 @@ namespace Config {
 
 #define APP_REVERB_DECAY_DEFAULT    .1f
 #define APP_REVERB_DELAY_DEFAULT    .02f
-
-#define M_SPEED_OF_SOUND            343.2f  // m/s
-#define M_DISTANCE_EARS             0.2f    // m
 
     /* ***********************************************************************************************************
         IMGUI EMULATOR
@@ -145,17 +98,6 @@ namespace Config {
 #define GUI_WIN_HEIGHT_MIN          480
 
     inline const std::string APP_TITLE = "GameboyX";
-
-    enum console_ids {
-        CONSOLE_NONE,
-        GB,
-        GBC
-    };
-
-    inline const std::unordered_map<console_ids, std::pair<std::string, std::string>> FILE_EXTS = {
-        { GB, {"Gameboy", "gb"} },
-        { GBC, { "Gameboy Color", "gbc"} }
-    };
 
     inline const std::vector<std::pair<std::string, float>> GAMES_COLUMNS = {
         {"", 1 / 12.f},
@@ -303,45 +245,4 @@ namespace Config {
     inline const ImGuiInputTextFlags INPUT_INT_FLAGS = ImGuiInputTextFlags_EnterReturnsTrue;
 
     inline const ImGuiSelectableFlags SEL_FLAGS = ImGuiSelectableFlags_SpanAllColumns;
-
-    /* ***********************************************************************************************************
-        AUDIO
-    *********************************************************************************************************** */
-#define SOUND_MONO                  1
-#define SOUND_STEREO                2
-#define SOUND_5_1                   6
-#define SOUND_7_1                   8
-
-    inline const std::map<const char*, std::pair<int, int>> SAMPLING_RATES = {
-        {"22050 Hz", {22050, 512}},
-        {"44100 Hz", {44100, 512}},
-        {"48000 Hz", {48000, 512}},
-        {"88200 Hz", {88200, 1024}},
-        {"96000 Hz", {96000, 1024}}
-    };
-
-    inline const float SOUND_7_1_ANGLES[8] = {
-        337.5f * (float)(M_PI / 180.f),               // front-left
-        22.5f * (float)(M_PI / 180.f),                // front-right
-        .0f * (float)(M_PI / 180.f),                  // centre
-        .0f * (float)(M_PI / 180.f),                  // low frequency (not needed)
-        220.f * (float)(M_PI / 180.f),                // rear-left
-        140.f * (float)(M_PI / 180.f),                // rear-right
-        275.f * (float)(M_PI / 180.f),                // centre-left
-        85.f * (float)(M_PI / 180.f)                  // centre-right
-    };
-
-    inline const float SOUND_5_1_ANGLES[6] = {
-        337.5f * (float)(M_PI / 180.f),               // front-left
-        22.5f * (float)(M_PI / 180.f),                // front-right
-        .0f * (float)(M_PI / 180.f),                  // centre
-        .0f * (float)(M_PI / 180.f),                  // low frequency (not needed)
-        220.f * (float)(M_PI / 180.f),                // rear-left
-        140.f * (float)(M_PI / 180.f)                 // rear-right
-    };
-
-    inline const float SOUND_STEREO_ANGLES[2] = {
-        270.f * (float)(M_PI / 180.f),                // left
-        90.f * (float)(M_PI / 180.f)                  // right
-    };
 }

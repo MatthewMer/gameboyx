@@ -8,10 +8,11 @@
 *	specific internals.
 */
 
+#include "HardwareMgr.h"
+
 #include "GameboyCartridge.h"
 #include "BaseMEM.h"
 
-#include "data_io.h"
 #include "general_config.h"
 #include "helper_functions.h"
 

@@ -8,7 +8,8 @@
 *	specific internals.
 */
 
-#include "GraphicsMgr.h"
+#include "HardwareMgr.h"
+
 #include "BaseCartridge.h"
 #include "defs.h"
 #include "VHardwareStructs.h"

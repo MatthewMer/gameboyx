@@ -1,6 +1,9 @@
 #pragma once
-#include "SDL.h"
+#include "HardwareMgr.h"
+
 #include "BaseCartridge.h"
+
+#include <SDL.h>
 
 namespace Emulation {
 	class BaseCTRL {

@@ -7,6 +7,8 @@
 *	passed by the GUI object and passes it to the constructors of the hardware classes. 
 */
 
+#include "HardwareMgr.h"
+
 #include "BaseCPU.h"
 #include "BaseCTRL.h"
 #include "BaseAPU.h"
@@ -17,7 +19,6 @@
 #include "VHardwareStructs.h"
 
 #include <functional>
-#include <SDL.h>
 #include <thread>
 #include <mutex>
 #include <queue>

@@ -8,6 +8,8 @@
 *	specific internals.
 */
 
+#include "HardwareMgr.h"
+
 #include "GameboyCartridge.h"
 #include "BaseMMU.h"
 #include "BaseGPU.h"
