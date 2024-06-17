@@ -43,7 +43,7 @@ int main(int, char**)
     s_graphics_settings.tripleBuffering = false;
 
     int sampling_rate_max = 0;
-    for (const auto& [key, val] : Config::SAMPLING_RATES) {
+    for (const auto& [key, val] : Backend::Audio::SAMPLING_RATES) {
         if (val.first > sampling_rate_max) { sampling_rate_max = val.first; }
     }
 
@@ -89,10 +89,10 @@ int main(int, char**)
     MISC
 *********************************************************************************************************** */
 void create_fs_hierarchy() {
-    Backend::FileIO::check_and_create_config_folders();
-    Backend::FileIO::check_and_create_config_files();
-    Backend::FileIO::check_and_create_log_folders();
-    Backend::FileIO::check_and_create_shader_folders();
-    Backend::FileIO::check_and_create_save_folders();
-    Backend::FileIO::check_and_create_rom_folder();
+    GUI::IO::check_and_create_config_folders();
+    GUI::IO::check_and_create_config_files();
+    GUI::IO::check_and_create_log_folders();
+    GUI::IO::check_and_create_shader_folders();
+    GUI::IO::check_and_create_save_folders();
+    GUI::IO::check_and_create_rom_folder();
 }
