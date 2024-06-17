@@ -19,7 +19,9 @@ Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "gameboyx_win_x86", "gameboy
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HardwareBackend", "submodules\HardwareBackend\HardwareBackend\HardwareBackend.vcxproj", "{127B95A8-88BA-479E-91AA-C716F8FF656B}"
 	ProjectSection(ProjectDependencies) = postProject
+		{43A07674-191F-4B63-9D13-E5EC3953B0A2} = {43A07674-191F-4B63-9D13-E5EC3953B0A2}
 		{81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68} = {81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68}
+		{B8FFD07F-0E4F-475F-A400-9D0F95B996B9} = {B8FFD07F-0E4F-475F-A400-9D0F95B996B9}
 		{DA956FD3-E142-46F2-9DD5-C78BEBB56B7A} = {DA956FD3-E142-46F2-9DD5-C78BEBB56B7A}
 	EndProjectSection
 EndProject
@@ -28,6 +30,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SDL2main", "submodules\HardwareBackend\submodules\SDL\VisualC\SDLmain\SDLmain.vcxproj", "{DA956FD3-E142-46F2-9DD5-C78BEBB56B7A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imgui-lib", "submodules\HardwareBackend\imgui-lib\imgui-lib.vcxproj", "{43A07674-191F-4B63-9D13-E5EC3953B0A2}"
+	ProjectSection(ProjectDependencies) = postProject
+		{81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68} = {81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68}
+		{DA956FD3-E142-46F2-9DD5-C78BEBB56B7A} = {DA956FD3-E142-46F2-9DD5-C78BEBB56B7A}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
