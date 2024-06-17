@@ -1,6 +1,3 @@
-[submodule "submodules/imgui"]
-	path = submodules/imgui
-	url = https://github.com/ocornut/imgui.git
 [submodule "submodules/nativefiledialog-extended"]
 	path = submodules/nativefiledialog-extended
 	url = https://github.com/btzy/nativefiledialog-extended.git
