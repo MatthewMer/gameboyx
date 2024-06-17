@@ -155,14 +155,14 @@ namespace Emulation {
             bool is_cgb = vecRom[ROM_HEAD_CGBFLAG] & 0x80;
             bool is_sgb = vecRom[ROM_HEAD_SGBFLAG] == 0x03;
 
-            if (!((is_cgb && console == Config::GBC) || (!is_cgb && console == Config::GB))) {
+            if (!((is_cgb && console == GBC) || (!is_cgb && console == GB))) {
                 LOG_WARN("[emu] console type mismatch");
                 LOG_WARN("[emu] setting to type expected by header");
 
                 if (is_cgb) {
-                    console = Config::GBC;
+                    console = GBC;
                 } else {
-                    console = Config::GB;
+                    console = GB;
                 }
             }
 

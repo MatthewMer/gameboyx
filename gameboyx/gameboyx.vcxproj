@@ -104,20 +104,20 @@
     <LinkIncremental />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_portable|x64'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\HardwareBackend\submodules\imgui\;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib;$(SolutionDir)$(Platform)\Release;$(LibraryPath)</LibraryPath>
     <LinkIncremental>
     </LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform)\Release\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_installer|x64'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\HardwareBackend\submodules\imgui\;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib;$(SolutionDir)$(Platform)\Release;$(LibraryPath)</LibraryPath>
     <LinkIncremental />
     <OutDir>$(SolutionDir)$(Platform)\Release\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_portable|Win32'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\HardwareBackend\submodules\imgui\;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib32;$(SolutionDir)$(Platform)\Release;$(LibraryPath)</LibraryPath>
     <LinkIncremental>
     </LinkIncremental>
@@ -125,7 +125,7 @@
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_installer|Win32'">
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)submodules\HardwareBackend\submodules\imgui\;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib32;$(SolutionDir)$(Platform)\Release;$(LibraryPath)</LibraryPath>
     <LinkIncremental />
     <OutDir>$(SolutionDir)$(Platform)\Release\</OutDir>
@@ -164,14 +164,14 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\HardwareBackend\submodules\imgui\;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_combined.lib;OpenAL32.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;HardwareBackend.lib;imgui-lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -184,14 +184,14 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;GBX_INSTALLER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\HardwareBackend\submodules\imgui\;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_combined.lib;OpenAL32.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;HardwareBackend.lib;imgui-lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -221,14 +221,14 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\HardwareBackend\submodules\imgui\;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_combined.lib;OpenAL32.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;HardwareBackend.lib;imgui-lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -241,14 +241,14 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;GBX_INSTALLER</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)submodules\HardwareBackend\submodules\imgui\;$(SolutionDir)submodules\nativefiledialog-extended\src\include;$(IncludePath);$(SolutionDir)submodules\HardwareBackend\HardwareBackend\;$(SolutionDir)submodules\HardwareBackend\submodules\SDL\include\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_combined.lib;OpenAL32.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;HardwareBackend.lib;imgui-lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -300,9 +300,6 @@
     <ClInclude Include="VHardwareTypes.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\imgui-lib\imgui-lib.vcxproj">
-      <Project>{43a07674-191f-4b63-9d13-e5ec3953b0a2}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\nfdext-lib\nfdext-lib.vcxproj">
       <Project>{b8ffd07f-0e4f-475f-a400-9d0f95b996b9}</Project>
     </ProjectReference>

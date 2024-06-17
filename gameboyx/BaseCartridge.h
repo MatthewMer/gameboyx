@@ -9,6 +9,7 @@
 #include "defs.h"
 #include "helper_functions.h"
 #include "logger.h"
+#include "VHardwareTypes.h"
 
 namespace Emulation {
 	enum info_types {

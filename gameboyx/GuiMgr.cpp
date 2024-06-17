@@ -284,8 +284,8 @@ namespace GUI {
         if (ImGui::Begin("About", &showWinAbout, Config::WIN_CHILD_FLAGS)) {
             CheckWindow(ABOUT);
             ImGui::Text("GameboyX Emulator");
-            ImGui::Text("Version: %s %d.%d", GBX_RELEASE, GBX_VERSION_MAJOR, GBX_VERSION_MINOR, GBX_VERSION_PATCH);
-            ImGui::Text("Author: %s", GBX_AUTHOR);
+            ImGui::Text("Version: %s %d.%d", Config::GBX_RELEASE, Config::GBX_VERSION_MAJOR, Config::GBX_VERSION_MINOR, Config::GBX_VERSION_PATCH);
+            ImGui::Text("Author: %s", Config::GBX_AUTHOR);
             ImGui::Spacing();
             ImGui::End();
         }
@@ -796,7 +796,7 @@ namespace GUI {
                 }
                 ImGui::TableNextColumn();
 
-                if (ImGui::SliderInt("##fps", &framerateTarget, APP_MIN_FRAMERATE, APP_MAX_FRAMERATE)) {
+                if (ImGui::SliderInt("##fps", &framerateTarget, Config::APP_MIN_FRAMERATE, Config::APP_MAX_FRAMERATE)) {
                     ActionSetFramerateTarget();
                 }
                 if (fpsUnlimited) { ImGui::EndDisabled(); }
@@ -912,7 +912,7 @@ namespace GUI {
                 }
                 ImGui::TableNextColumn();
 
-                if (ImGui::SliderFloat("##volume", &volume, APP_MIN_VOLUME, APP_MAX_VOLUME)) {
+                if (ImGui::SliderFloat("##volume", &volume, Config::APP_MIN_VOLUME, Config::APP_MAX_VOLUME)) {
                     ActionSetVolume();
                 }
                 ImGui::TableNextRow();
@@ -927,7 +927,7 @@ namespace GUI {
                 }
                 ImGui::TableNextColumn();
 
-                if (ImGui::SliderFloat("##lfe", &lfe, APP_MIN_LFE, APP_MAX_LFE)) {
+                if (ImGui::SliderFloat("##lfe", &lfe, Config::APP_MIN_LFE, Config::APP_MAX_LFE)) {
                     ActionSetVolume();
                 }
                 ImGui::TableNextRow();
