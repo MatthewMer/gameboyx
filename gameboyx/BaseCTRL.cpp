@@ -3,24 +3,26 @@
 
 #include "logger.h"
 
-BaseCTRL* BaseCTRL::instance = nullptr;
+namespace Emulation {
+	BaseCTRL* BaseCTRL::instance = nullptr;
 
-BaseCTRL* BaseCTRL::getInstance(BaseCartridge* _cartridge) {
-	if (instance == nullptr) {
-		switch (_cartridge->console) {
-		case GB:
-		case GBC:
-			instance = new GameboyCTRL(_cartridge);
-			break;
+	BaseCTRL* BaseCTRL::getInstance(BaseCartridge* _cartridge) {
+		if (instance == nullptr) {
+			switch (_cartridge->console) {
+			case Config::GB:
+			case Config::GBC:
+				instance = new Gameboy::GameboyCTRL(_cartridge);
+				break;
+			}
 		}
+
+		return instance;
 	}
 
-	return instance;
-}
-
-void BaseCTRL::resetInstance() {
-	if (instance != nullptr) {
-		delete instance;
-		instance = nullptr;
+	void BaseCTRL::resetInstance() {
+		if (instance != nullptr) {
+			delete instance;
+			instance = nullptr;
+		}
 	}
 }

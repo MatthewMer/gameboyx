@@ -16,83 +16,85 @@ using namespace std::chrono;
 
 #define HWMGR_ERR_ALREADY_RUNNING		0x00000001
 
-class HardwareMgr {
-public:
-	static u8 InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings, control_settings& _control_settings);
-	static void ShutdownHardware();
-	static void NextFrame();
-	static void RenderFrame();
-	static void ProcessEvents(bool& _running);
-	static void ToggleFullscreen();
+namespace Backend {
+	class HardwareMgr {
+	public:
+		static u8 InitHardware(graphics_settings& _graphics_settings, audio_settings& _audio_settings, control_settings& _control_settings);
+		static void ShutdownHardware();
+		static void NextFrame();
+		static void RenderFrame();
+		static void ProcessEvents(bool& _running);
+		static void ToggleFullscreen();
 
-	static void InitGraphicsBackend(virtual_graphics_information& _virt_graphics_info);
-	static void InitAudioBackend(virtual_audio_information& _virt_audio_info);
-	static void DestroyGraphicsBackend();
-	static void DestroyAudioBackend();
+		static void InitGraphicsBackend(virtual_graphics_information& _virt_graphics_info);
+		static void InitAudioBackend(virtual_audio_information& _virt_audio_info);
+		static void DestroyGraphicsBackend();
+		static void DestroyAudioBackend();
 
-	static void UpdateGpuData();
+		static void UpdateGpuData();
 
-	static Sint32 GetScroll();
+		static Sint32 GetScroll();
 
-	static void GetGraphicsSettings(graphics_settings& _graphics_settings);
+		static void GetGraphicsSettings(graphics_settings& _graphics_settings);
 
-	static void SetFramerateTarget(const int& _target, const bool& _unlimited);
+		static void SetFramerateTarget(const int& _target, const bool& _unlimited);
 
-	static void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering);
+		static void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering);
 
-	static void SetSamplingRate(int& _sampling_rate);
+		static void SetSamplingRate(int& _sampling_rate);
 
-	static void SetVolume(const float& _volume, const float& _lfe);
-	static void SetReverb(const float& _delay, const float& _decay);
+		static void SetVolume(const float& _volume, const float& _lfe);
+		static void SetReverb(const float& _delay, const float& _decay);
 
-	static void GetAudioSettings(audio_settings& _audio_settings);
+		static void GetAudioSettings(audio_settings& _audio_settings);
 
-	static void ProcessTimedEvents();
+		static void ProcessTimedEvents();
 
-	static std::queue<std::pair<SDL_Keycode, bool>>& GetKeyQueue();
-	static std::queue<std::tuple<int, SDL_GameControllerButton, bool>>& GetButtonQueue();
+		static std::queue<std::pair<SDL_Keycode, bool>>& GetKeyQueue();
+		static std::queue<std::tuple<int, SDL_GameControllerButton, bool>>& GetButtonQueue();
 
-	static void SetMouseAlwaysVisible(const bool& _visible);
+		static void SetMouseAlwaysVisible(const bool& _visible);
 
-	static ImFont* GetFont(const int& _index);
+		static ImFont* GetFont(const int& _index);
 
-	static void OpenNetwork(network_settings& _network_settings);
-	static bool CheckNetwork();
-	static void CloseNetwork();
+		static void OpenNetwork(network_settings& _network_settings);
+		static bool CheckNetwork();
+		static void CloseNetwork();
 
-	static bool CheckFrame();
+		static bool CheckFrame();
 
-private:
-	HardwareMgr() = default;
-	~HardwareMgr() {
-		ShutdownHardware();
+	private:
+		HardwareMgr() = default;
+		~HardwareMgr() {
+			ShutdownHardware();
 
-		GraphicsMgr::resetInstance();
-		AudioMgr::resetInstance();
-		ControlMgr::resetInstance();
-	}
+			Backend::Graphics::GraphicsMgr::resetInstance();
+			Backend::Audio::AudioMgr::resetInstance();
+			Backend::Control::ControlMgr::resetInstance();
+		}
 
-	static GraphicsMgr* graphicsMgr;
-	static AudioMgr* audioMgr;
-	static ControlMgr* controlMgr;
-	static NetworkMgr* networkMgr;
-	static SDL_Window* window;
+		static Backend::Graphics::GraphicsMgr* graphicsMgr;
+		static Backend::Audio::AudioMgr* audioMgr;
+		static Backend::Control::ControlMgr* controlMgr;
+		static Backend::Network::NetworkMgr* networkMgr;
+		static SDL_Window* window;
 
-	static graphics_settings graphicsSettings;
-	static audio_settings audioSettings;
-	static control_settings controlSettings;
-	static network_settings networkSettings;
+		static graphics_settings graphicsSettings;
+		static audio_settings audioSettings;
+		static control_settings controlSettings;
+		static network_settings networkSettings;
 
-	static HardwareMgr* instance;
-	static u32 errors;
+		static HardwareMgr* instance;
+		static u32 errors;
 
-	// for framerate target
-	static std::mutex mutTimeDelta;
-	static std::condition_variable  notifyTimeDelta;
-	static std::chrono::milliseconds timePerFrame;
-	static steady_clock::time_point timePointCur;
-	static steady_clock::time_point timePointPrev;
+		// for framerate target
+		static std::mutex mutTimeDelta;
+		static std::condition_variable  notifyTimeDelta;
+		static std::chrono::milliseconds timePerFrame;
+		static steady_clock::time_point timePointCur;
+		static steady_clock::time_point timePointPrev;
 
-	// control
-	static u32 currentMouseMove;
-};
+		// control
+		static u32 currentMouseMove;
+	};
+}

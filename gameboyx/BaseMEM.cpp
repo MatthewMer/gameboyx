@@ -1,30 +1,32 @@
 #include "BaseMEM.h"
 #include "GameboyMEM.h"
 
-BaseMEM* BaseMEM::instance = nullptr;
+namespace Emulation {
+    BaseMEM* BaseMEM::instance = nullptr;
 
-BaseMEM* BaseMEM::getInstance(BaseCartridge* _cartridge) {
-    if (instance == nullptr) {
-        switch (_cartridge->console) {
-        case GB:
-        case GBC:
-            instance = new GameboyMEM(_cartridge);
-            break;
+    BaseMEM* BaseMEM::getInstance(BaseCartridge* _cartridge) {
+        if (instance == nullptr) {
+            switch (_cartridge->console) {
+            case Config::GB:
+            case Config::GBC:
+                instance = new Gameboy::GameboyMEM(_cartridge);
+                break;
+            }
         }
+        return instance;
     }
-    return instance;
-}
 
-BaseMEM* BaseMEM::getInstance() {
-    if (instance == nullptr) {
-        LOG_ERROR("[emu] MEM instance is nullptr");
+    BaseMEM* BaseMEM::getInstance() {
+        if (instance == nullptr) {
+            LOG_ERROR("[emu] MEM instance is nullptr");
+        }
+        return instance;
     }
-    return instance;
-}
 
-void BaseMEM::resetInstance() {
-    if (instance != nullptr) {
-        delete instance;
-        instance = nullptr;
+    void BaseMEM::resetInstance() {
+        if (instance != nullptr) {
+            delete instance;
+            instance = nullptr;
+        }
     }
 }

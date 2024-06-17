@@ -12,34 +12,36 @@
 #include "GuiTable.h"
 #include "defs.h"
 #include "FileMapper.h"
+#include "VHardwareStructs.h"
 
-class BaseMEM
-{
-public:
-	// get/reset instance
-	static BaseMEM* getInstance(BaseCartridge* _cartridge);
-	static BaseMEM* getInstance();
-	static void resetInstance();
+namespace Emulation {
+	class BaseMEM {
+	public:
+		// get/reset instance
+		static BaseMEM* getInstance(BaseCartridge* _cartridge);
+		static BaseMEM* getInstance();
+		static void resetInstance();
 
-	virtual void GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables) = 0;
-	
-protected:
-	// constructor
-	BaseMEM() = default;
-	virtual ~BaseMEM() {}
+		virtual void GetMemoryDebugTables(std::vector<GUI::GuiTable::Table<memory_entry>>& _tables) = 0;
 
-	// members
-	virtual void InitMemory(BaseCartridge* _cartridge) = 0;
-	virtual void InitMemoryState() = 0;
-	virtual bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) = 0;
-	virtual bool CopyRom(const std::vector<u8>& _vec_rom) = 0;
-	virtual void FillMemoryDebugTable(TableSection<memory_entry>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) = 0;
+	protected:
+		// constructor
+		BaseMEM() = default;
+		virtual ~BaseMEM() {}
 
-	virtual void AllocateMemory(BaseCartridge* _cartridge) = 0;
+		// members
+		virtual void InitMemory(BaseCartridge* _cartridge) = 0;
+		virtual void InitMemoryState() = 0;
+		virtual bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) = 0;
+		virtual bool CopyRom(const std::vector<u8>& _vec_rom) = 0;
+		virtual void FillMemoryDebugTable(GUI::GuiTable::TableSection<memory_entry>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) = 0;
 
-	virtual void RequestInterrupts(const u8& isr_flags) = 0;
+		virtual void AllocateMemory(BaseCartridge* _cartridge) = 0;
 
-	virtual std::vector<u8>* GetProgramData(const int& _bank) const = 0;
+		virtual void RequestInterrupts(const u8& isr_flags) = 0;
 
-	static BaseMEM* instance;
-};
+		virtual std::vector<u8>* GetProgramData(const int& _bank) const = 0;
+
+		static BaseMEM* instance;
+	};
+}

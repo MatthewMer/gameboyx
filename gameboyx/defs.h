@@ -33,29 +33,3 @@ struct Vec2 {
 struct Bool {
 	bool value = false;
 };
-
-
-enum {
-	DATA_NAME,
-	DATA_VAL
-};
-using data_entry = std::pair<std::string, std::string>;
-
-enum instr_entry_types {
-	INSTR_HEX,
-	INSTR_ASM
-};
-using instr_entry = std::pair<std::string, std::string>;
-
-enum reg_entry_types {
-	REG_NAME,
-	REG_DATA
-};
-using reg_entry = std::pair<std::string, std::string>;
-
-enum memory_data_types {
-	MEM_ENTRY_ADDR,
-	MEM_ENTRY_LEN,
-	MEM_ENTRY_REF
-};
-using memory_entry = std::tuple<std::string, int, u8*>;

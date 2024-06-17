@@ -25,10 +25,11 @@
 using namespace std::chrono;
 using namespace std::chrono_literals;
 
-struct emulation_settings {
-    bool debug_enabled = false;
-    int emulation_speed = 1;
-};
+namespace Emulation {
+    struct emulation_settings {
+        bool debug_enabled = false;
+        int emulation_speed = 1;
+    };
 
 #define VHWMGR_ERR_READ_ROM			0x01
 #define VHWMGR_ERR_INIT_THREAD		0x02
@@ -37,94 +38,93 @@ struct emulation_settings {
 #define VHWMGR_ERR_THREAD_RUNNING	0x10
 #define VHWMGR_ERR_HW_NOT_INIT      0x20
 
-class BaseCartridge;
-//class GuiMgr;
+    class BaseCartridge;
+    //class GuiMgr;
 
-class VHardwareMgr
-{
-public:
-	static VHardwareMgr* getInstance();
-	static void resetInstance();
+    class VHardwareMgr {
+    public:
+        static VHardwareMgr* getInstance();
+        static void resetInstance();
 
-    u8 InitHardware(BaseCartridge* _cartridge, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback);
-    u8 StartHardware();
-    void ShutdownHardware();
+        u8 InitHardware(BaseCartridge* _cartridge, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback);
+        u8 StartHardware();
+        void ShutdownHardware();
 
-	// members for running hardware
-	void ProcessHardware();
+        // members for running hardware
+        void ProcessHardware();
 
-	// SDL
-    void EventButtonDown(const int& _player, const SDL_GameControllerButton& _key);
-    void EventButtonUp(const int& _player, const SDL_GameControllerButton& _key);
+        // SDL
+        void EventButtonDown(const int& _player, const SDL_GameControllerButton& _key);
+        void EventButtonUp(const int& _player, const SDL_GameControllerButton& _key);
 
-	void SetDebugEnabled(const bool& _debug_enabled);
-	void SetProceedExecution(const bool& _proceed_execution);
-	void SetEmulationSpeed(const int& _emulation_speed);
-	
-    void GetFpsAndClock(int& _fps, float& _clock);
+        void SetDebugEnabled(const bool& _debug_enabled);
+        void SetProceedExecution(const bool& _proceed_execution);
+        void SetEmulationSpeed(const int& _emulation_speed);
 
-    void GetInstrDebugTable(Table<instr_entry>& _table);
-    void GetInstrDebugTableTmp(Table<instr_entry>& _table);
-    void GetInstrDebugFlags(std::vector<reg_entry>& _reg_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values);
-    void GetHardwareInfo(std::vector<data_entry>& _hardware_info);
-    void GetMemoryDebugTables(std::vector<Table<memory_entry>>& _tables);
+        void GetFpsAndClock(int& _fps, float& _clock);
 
-    void GetGraphicsDebugSettings(std::vector<std::tuple<int, std::string, bool>>& _settings);
-    void SetGraphicsDebugSetting(const bool& _val, const int& _id);
-    int GetPlayerCount() const;
-    void GetMemoryTypes(std::map<int, std::string>& _map) const;
+        void GetInstrDebugTable(GUI::GuiTable::Table<instr_entry>& _table);
+        void GetInstrDebugTableTmp(GUI::GuiTable::Table<instr_entry>& _table);
+        void GetInstrDebugFlags(std::vector<reg_entry>& _reg_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values);
+        void GetHardwareInfo(std::vector<data_entry>& _hardware_info);
+        void GetMemoryDebugTables(std::vector<GUI::GuiTable::Table<memory_entry>>& _tables);
 
-private:
-    VHardwareMgr() = default;
-    ~VHardwareMgr();
-	static VHardwareMgr* instance;
+        void GetGraphicsDebugSettings(std::vector<std::tuple<int, std::string, bool>>& _settings);
+        void SetGraphicsDebugSetting(const bool& _val, const int& _id);
+        int GetPlayerCount() const;
+        void GetMemoryTypes(std::map<int, std::string>& _map) const;
 
-    // hardware instances
-    BaseCPU* core_instance;
-    BaseMMU* mmu_instance;
-    BaseMEM* memory_instance;
-    BaseAPU* sound_instance;
-    BaseGPU* graphics_instance;
-    BaseCTRL* control_instance;
-    BaseCartridge* cart_instance;
+    private:
+        VHardwareMgr() = default;
+        ~VHardwareMgr();
+        static VHardwareMgr* instance;
 
-    // execution time (e.g. 60FPS -> 1/60th of a second)
-    std::chrono::microseconds timePerFrame;
-    void Delay();
+        // hardware instances
+        BaseCPU* core_instance;
+        BaseMMU* mmu_instance;
+        BaseMEM* memory_instance;
+        BaseAPU* sound_instance;
+        BaseGPU* graphics_instance;
+        BaseCTRL* control_instance;
+        BaseCartridge* cart_instance;
 
-    int frameCount = 0;
-    int clockCount = 0;
+        // execution time (e.g. 60FPS -> 1/60th of a second)
+        std::chrono::microseconds timePerFrame;
+        void Delay();
 
-    // timestamps for core virtualFrequency and virtualFramerate calculation
-    steady_clock::time_point timeSecondPrev;
-    steady_clock::time_point timeSecondCur;
-    steady_clock::time_point timePointPrev;
-    steady_clock::time_point timePointCur;
-    u32 accumulatedTime = 0;
-    u32 accumulatedTimeTmp = 0;
+        int frameCount = 0;
+        int clockCount = 0;
 
-    u8 errors;
-    bool initialized = false;
+        // timestamps for core virtualFrequency and virtualFramerate calculation
+        steady_clock::time_point timeSecondPrev;
+        steady_clock::time_point timeSecondCur;
+        steady_clock::time_point timePointPrev;
+        steady_clock::time_point timePointCur;
+        u32 accumulatedTime = 0;
+        u32 accumulatedTimeTmp = 0;
 
-    alignas(64) std::atomic<float> currentFrequency = 0;
-    alignas(64) std::atomic<float> currentFramerate = 0;
+        u8 errors;
+        bool initialized = false;
 
-    std::thread hardwareThread;
-    std::mutex mutHardware;
+        alignas(64) std::atomic<float> currentFrequency = 0;
+        alignas(64) std::atomic<float> currentFramerate = 0;
 
-    std::mutex mutTimeDelta;
-    std::condition_variable  notifyTimeDelta;
+        std::thread hardwareThread;
+        std::mutex mutHardware;
 
-    alignas(64) std::atomic<bool> running;
-    alignas(64) std::atomic<bool> debugEnable;
-    alignas(64) std::atomic<bool> proceedExecution;
-    alignas(64) std::atomic<bool> autoRun;
-    alignas(64) std::atomic<int> emulationSpeed;
+        std::mutex mutTimeDelta;
+        std::condition_variable  notifyTimeDelta;
 
-    bool CheckFpsAndClock();
-    void InitMembers(emulation_settings& _settings);
+        alignas(64) std::atomic<bool> running;
+        alignas(64) std::atomic<bool> debugEnable;
+        alignas(64) std::atomic<bool> proceedExecution;
+        alignas(64) std::atomic<bool> autoRun;
+        alignas(64) std::atomic<int> emulationSpeed;
 
-    std::function<void(debug_data&)> dbgCallback;
-    debug_data dbgData;
-};
+        bool CheckFpsAndClock();
+        void InitMembers(emulation_settings& _settings);
 
+        std::function<void(debug_data&)> dbgCallback;
+        debug_data dbgData;
+    };
+}

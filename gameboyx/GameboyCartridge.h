@@ -20,16 +20,20 @@
 /* ***********************************************************************************************************
 	CLASSES
 *********************************************************************************************************** */
-class GameboyCartridge : protected BaseCartridge {
-public:
-	friend class BaseCartridge;
-	// constructor
-	explicit GameboyCartridge(const console_ids& _id, const std::string& _file) : BaseCartridge(_id, _file) {};
-	// destructor
-	~GameboyCartridge() = default;
+namespace Emulation {
+	namespace Gameboy {
+		class GameboyCartridge : protected BaseCartridge {
+		public:
+			friend class BaseCartridge;
+			// constructor
+			explicit GameboyCartridge(const Config::console_ids& _id, const std::string& _file) : BaseCartridge(_id, _file) {};
+			// destructor
+			~GameboyCartridge() = default;
 
-	bool ReadRom() override;
+			bool ReadRom() override;
 
-private:
-	
-};
+		private:
+
+		};
+	}
+}

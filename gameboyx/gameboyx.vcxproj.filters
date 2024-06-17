@@ -67,6 +67,12 @@
     <Filter Include="Header Files\backend\network">
       <UniqueIdentifier>{b89d74d3-af67-45d6-93f0-6da56c7d7e8a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\backend\FileIO">
+      <UniqueIdentifier>{9061d0e4-d908-4462-a9be-392e0d2a15b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\backend\FileIO">
+      <UniqueIdentifier>{b1fd4b44-b810-4f64-af0d-617bc561f92e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -141,16 +147,10 @@
     <ClCompile Include="GameboyMMU.cpp">
       <Filter>Source Files\emulator\gameboy</Filter>
     </ClCompile>
-    <ClCompile Include="data_io.cpp">
-      <Filter>Source Files\misc</Filter>
-    </ClCompile>
     <ClCompile Include="helper_functions.cpp">
       <Filter>Source Files\misc</Filter>
     </ClCompile>
     <ClCompile Include="include\simple_logger.cpp">
-      <Filter>Source Files\misc</Filter>
-    </ClCompile>
-    <ClCompile Include="FileMapper.cpp">
       <Filter>Source Files\misc</Filter>
     </ClCompile>
     <ClCompile Include="NetworkMgr.cpp">
@@ -158,6 +158,12 @@
     </ClCompile>
     <ClCompile Include="audio_helpers.cpp">
       <Filter>Source Files\backend\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="FileMapper.cpp">
+      <Filter>Source Files\backend\FileIO</Filter>
+    </ClCompile>
+    <ClCompile Include="data_io.cpp">
+      <Filter>Source Files\backend\FileIO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -245,9 +251,6 @@
     <ClInclude Include="GameboyMMU.h">
       <Filter>Header Files\emulator\gameboy</Filter>
     </ClInclude>
-    <ClInclude Include="data_io.h">
-      <Filter>Header Files\misc</Filter>
-    </ClInclude>
     <ClInclude Include="defs.h">
       <Filter>Header Files\misc</Filter>
     </ClInclude>
@@ -260,14 +263,17 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files\misc</Filter>
     </ClInclude>
-    <ClInclude Include="FileMapper.h">
-      <Filter>Header Files\misc</Filter>
-    </ClInclude>
     <ClInclude Include="NetworkMgr.h">
       <Filter>Header Files\backend\network</Filter>
     </ClInclude>
     <ClInclude Include="audio_helpers.h">
       <Filter>Header Files\backend\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="FileMapper.h">
+      <Filter>Header Files\backend\FileIO</Filter>
+    </ClInclude>
+    <ClInclude Include="data_io.h">
+      <Filter>Header Files\backend\FileIO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

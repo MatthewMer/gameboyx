@@ -4,20 +4,22 @@
 #include "al.h"
 #include "alc.h"
 
+namespace Backend {
+	namespace Audio {
+		class AudioOpenAL : AudioMgr {
+		public:
+			friend class AudioMgr;
+			void InitAudio(audio_settings& _audio_settings, const bool& _reinit) override;
 
-class AudioOpenAL : AudioMgr {
-public:
-	friend class AudioMgr;
-	void InitAudio(audio_settings& _audio_settings, const bool& _reinit) override;
+		protected:
+			AudioOpenAL() : AudioMgr() {}
 
-protected:
-	AudioOpenAL() : AudioMgr() {}
-
-private:
-	ALCdevice* alcDev = nullptr;
-	ALCcontext* alcCtx = nullptr;
-	std::vector<ALshort> data = {};
-	ALuint buffer = 0;
-	ALuint source = 0;
-};
-
+		private:
+			ALCdevice* alcDev = nullptr;
+			ALCcontext* alcCtx = nullptr;
+			std::vector<ALshort> data = {};
+			ALuint buffer = 0;
+			ALuint source = 0;
+		};
+	}
+}

@@ -33,222 +33,226 @@
 #define FRAMES_IN_FLIGHT		2
 #define FRAMES_IN_FLIGHT_2D		2
 
-struct VulkanPipelineBufferInfo {
-	std::vector<VkVertexInputAttributeDescription> attrDesc;
-	std::vector<VkVertexInputBindingDescription> bindDesc;
-};
+namespace Backend {
+	namespace Graphics {
+		struct VulkanPipelineBufferInfo {
+			std::vector<VkVertexInputAttributeDescription> attrDesc;
+			std::vector<VkVertexInputBindingDescription> bindDesc;
+		};
 
-struct vulkan_buffer {
-	VkBuffer buffer;					// memory view (offset and size)
-	VkDeviceMemory memory;				// allocated memory
-};
+		struct vulkan_buffer {
+			VkBuffer buffer;					// memory view (offset and size)
+			VkDeviceMemory memory;				// allocated memory
+		};
 
-struct vulkan_image {
-	VkImage image;
-	VkImageView image_view;
-	VkDeviceMemory memory;
-};
+		struct vulkan_image {
+			VkImage image;
+			VkImageView image_view;
+			VkDeviceMemory memory;
+		};
 
-struct tex2d_data {
-	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+		struct tex2d_data {
+			VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
 
-	vulkan_buffer vertex_buffer = {};
-	vulkan_buffer index_buffer = {};
-	vulkan_image image = {};
+			vulkan_buffer vertex_buffer = {};
+			vulkan_buffer index_buffer = {};
+			vulkan_image image = {};
 
-	u64 size = {};
+			u64 size = {};
 
-	VkPipelineLayout pipeline_layout;
-	VkPipeline pipeline;
-	std::vector<vulkan_buffer> staging_buffer = std::vector<vulkan_buffer>();
+			VkPipelineLayout pipeline_layout;
+			VkPipeline pipeline;
+			std::vector<vulkan_buffer> staging_buffer = std::vector<vulkan_buffer>();
 
-	int update_index = 0;
-	alignas(64) std::atomic<bool> cmdbuf_0_submitted = true;
-	alignas(64) std::atomic<bool> cmdbuf_1_submitted = true;
-	std::vector<std::atomic<bool>*> cmdbufSubmitSignals = std::vector<std::atomic<bool>*>({&cmdbuf_0_submitted, &cmdbuf_1_submitted});
+			int update_index = 0;
+			alignas(64) std::atomic<bool> cmdbuf_0_submitted = true;
+			alignas(64) std::atomic<bool> cmdbuf_1_submitted = true;
+			std::vector<std::atomic<bool>*> cmdbufSubmitSignals = std::vector<std::atomic<bool>*>({ &cmdbuf_0_submitted, &cmdbuf_1_submitted });
 
-	std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>();
-	std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>();
-	std::vector<VkFence> update_fence = std::vector<VkFence>();
+			std::vector<VkCommandPool> command_pool = std::vector<VkCommandPool>();
+			std::vector<VkCommandBuffer> command_buffer = std::vector<VkCommandBuffer>();
+			std::vector<VkFence> update_fence = std::vector<VkFence>();
 
-	VkDescriptorPool descriptor_pool = {};
-	VkDescriptorSet descriptor_set = {};
-	std::vector<VkDescriptorSetLayout> descriptor_set_layout = std::vector<VkDescriptorSetLayout>(1);
+			VkDescriptorPool descriptor_pool = {};
+			VkDescriptorSet descriptor_set = {};
+			std::vector<VkDescriptorSetLayout> descriptor_set_layout = std::vector<VkDescriptorSetLayout>(1);
 
-	VkSampler sampler = {};
+			VkSampler sampler = {};
 
-	std::vector<void*> mapped_image_data = std::vector<void*>();
+			std::vector<void*> mapped_image_data = std::vector<void*>();
 
-	float scale_x = 1.f;
-	float scale_y = 1.f;
-	glm::mat4 scale_matrix = {};
-};
+			float scale_x = 1.f;
+			float scale_y = 1.f;
+			glm::mat4 scale_matrix = {};
+		};
 
-class GraphicsVulkan : protected GraphicsMgr {
-public:
-	friend class GraphicsMgr;
+		class GraphicsVulkan : protected GraphicsMgr {
+		public:
+			friend class GraphicsMgr;
 
-	// render
-	void RenderFrame() override;
+			// render
+			void RenderFrame() override;
 
-	// (de)init
-	bool InitGraphics() override;
-	bool ExitGraphics() override;
+			// (de)init
+			bool InitGraphics() override;
+			bool ExitGraphics() override;
 
-	// deinit
-	bool StartGraphics(bool& _present_mode_fifo, bool& _triple_buffering) override;
-	void StopGraphics() override;
+			// deinit
+			bool StartGraphics(bool& _present_mode_fifo, bool& _triple_buffering) override;
+			void StopGraphics() override;
 
-	// shader compilation
-	void EnumerateShaders() override;
-	void CompileNextShader() override;
+			// shader compilation
+			void EnumerateShaders() override;
+			void CompileNextShader() override;
 
-	// imgui
-	bool InitImgui() override;
-	void DestroyImgui() override;
-	void NextFrameImGui() const override;
+			// imgui
+			bool InitImgui() override;
+			void DestroyImgui() override;
+			void NextFrameImGui() const override;
 
-	// update 3d/2d data
-	void UpdateGpuData() override;
+			// update 3d/2d data
+			void UpdateGpuData() override;
 
-	void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering) override;
+			void SetSwapchainSettings(bool& _present_mode_fifo, bool& _triple_buffering) override;
 
-private:
-	// constructor/destructor
-	explicit GraphicsVulkan(SDL_Window** _window);
-	~GraphicsVulkan() = default;
+		private:
+			// constructor/destructor
+			explicit GraphicsVulkan(SDL_Window** _window);
+			~GraphicsVulkan() = default;
 
-	// (de)init 2d render target
-	bool Init2dGraphicsBackend() override;
-	void Destroy2dGraphicsBackend() override;
+			// (de)init 2d render target
+			bool Init2dGraphicsBackend() override;
+			void Destroy2dGraphicsBackend() override;
 
-	// graphics queue
-	VkQueue queue = VK_NULL_HANDLE;
-	std::thread queueSubmitThread;
-	void QueueSubmit();
-	alignas(64) std::atomic<bool> submitRunning = true;
-	uint32_t familyIndex = (uint32_t)-1;
-	VkPhysicalDeviceMemoryProperties devMemProps = {};
+			// graphics queue
+			VkQueue queue = VK_NULL_HANDLE;
+			std::thread queueSubmitThread;
+			void QueueSubmit();
+			alignas(64) std::atomic<bool> submitRunning = true;
+			uint32_t familyIndex = (uint32_t)-1;
+			VkPhysicalDeviceMemoryProperties devMemProps = {};
 
-	// swapchain
-	uint32_t minImageCount = 2;
-	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-	VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE;
-	VkFormat swapchainFormat = {};
-	VkColorSpaceKHR colorSpace = {};
-	std::vector<VkImage> images;
-	VkPresentModeKHR presentMode = {};
-	std::vector<VkImageView> imageViews;
-	
-	// context
-	VkSurfaceKHR surface = {};
-	VkInstance vulkanInstance = VK_NULL_HANDLE;
-	VkDevice device = VK_NULL_HANDLE;
-	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-	VkPhysicalDeviceProperties physicalDeviceProperties = {};
-	VkDebugUtilsMessengerEXT debugCallback = 0;
+			// swapchain
+			uint32_t minImageCount = 2;
+			VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+			VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE;
+			VkFormat swapchainFormat = {};
+			VkColorSpaceKHR colorSpace = {};
+			std::vector<VkImage> images;
+			VkPresentModeKHR presentMode = {};
+			std::vector<VkImageView> imageViews;
 
-	// renderpass
-	VkRenderPass renderPass = {};
-	VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT;
+			// context
+			VkSurfaceKHR surface = {};
+			VkInstance vulkanInstance = VK_NULL_HANDLE;
+			VkDevice device = VK_NULL_HANDLE;
+			VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+			VkPhysicalDeviceProperties physicalDeviceProperties = {};
+			VkDebugUtilsMessengerEXT debugCallback = 0;
 
-	// main buffers
-	std::vector<VkFramebuffer> frameBuffers;
-	VkCommandBuffer commandBuffers[FRAMES_IN_FLIGHT] = {};
-	VkCommandPool commandPools[FRAMES_IN_FLIGHT] = {};
+			// renderpass
+			VkRenderPass renderPass = {};
+			VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT;
 
-	VkBufferUsageFlags bufferUsageFlags = {};
-	VkMemoryPropertyFlags memoryPropertyFlags = {};
+			// main buffers
+			std::vector<VkFramebuffer> frameBuffers;
+			VkCommandBuffer commandBuffers[FRAMES_IN_FLIGHT] = {};
+			VkCommandPool commandPools[FRAMES_IN_FLIGHT] = {};
 
-	// graphics pipeline
-	std::vector<std::string> enumeratedShaderFiles;										// contains all shader source files
-	std::vector<std::pair<std::string, std::string>> shaderSourceFiles;					// contains the vertex and fragment shaders in groups of two
-	shaderc_compiler_t compiler = {};
-	shaderc_compile_options_t options = {};
-	std::vector<std::pair<VkPipelineLayout, VkPipeline>> pipelines;
-	VkViewport viewport = {};
-	VkRect2D scissor = {};
+			VkBufferUsageFlags bufferUsageFlags = {};
+			VkMemoryPropertyFlags memoryPropertyFlags = {};
 
-	// main sync
-	std::vector<VkFence> renderFences = std::vector<VkFence>(FRAMES_IN_FLIGHT);
-	std::vector<VkSemaphore> acquireSemaphores = std::vector<VkSemaphore>(FRAMES_IN_FLIGHT);
-	std::vector<VkSemaphore> releaseSemaphores = std::vector<VkSemaphore>(FRAMES_IN_FLIGHT);
-	VkPipelineStageFlags waitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;				// swapchain
+			// graphics pipeline
+			std::vector<std::string> enumeratedShaderFiles;										// contains all shader source files
+			std::vector<std::pair<std::string, std::string>> shaderSourceFiles;					// contains the vertex and fragment shaders in groups of two
+			shaderc_compiler_t compiler = {};
+			shaderc_compile_options_t options = {};
+			std::vector<std::pair<VkPipelineLayout, VkPipeline>> pipelines;
+			VkViewport viewport = {};
+			VkRect2D scissor = {};
 
-	// imgui
-	VkDescriptorPool imguiDescriptorPool = {};
+			// main sync
+			std::vector<VkFence> renderFences = std::vector<VkFence>(FRAMES_IN_FLIGHT);
+			std::vector<VkSemaphore> acquireSemaphores = std::vector<VkSemaphore>(FRAMES_IN_FLIGHT);
+			std::vector<VkSemaphore> releaseSemaphores = std::vector<VkSemaphore>(FRAMES_IN_FLIGHT);
+			VkPipelineStageFlags waitFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;				// swapchain
 
-	// clear color
-	VkClearValue clearColor = { 0.f, 0.f, 0.f, 1.f };
+			// imgui
+			VkDescriptorPool imguiDescriptorPool = {};
 
-	// render functions
-	typedef void (GraphicsVulkan::* update_function)();
-	update_function updateFunction = nullptr;
-	std::mutex mutQueue;
+			// clear color
+			VkClearValue clearColor = { 0.f, 0.f, 0.f, 1.f };
 
-	std::vector<std::tuple<VkCommandBuffer*, VkFence*, std::atomic<bool>*>> queueSubmitData = std::vector<std::tuple<VkCommandBuffer*, VkFence*, std::atomic<bool>*>>();
-	std::mutex mutSubmit;
-	std::condition_variable queueNotify;
+			// render functions
+			typedef void (GraphicsVulkan::* update_function)();
+			update_function updateFunction = nullptr;
+			std::mutex mutQueue;
 
-	void UpdateDummy();
+			std::vector<std::tuple<VkCommandBuffer*, VkFence*, std::atomic<bool>*>> queueSubmitData = std::vector<std::tuple<VkCommandBuffer*, VkFence*, std::atomic<bool>*>>();
+			std::mutex mutSubmit;
+			std::condition_variable queueNotify;
 
-	typedef void (GraphicsVulkan::* render_function)(VkCommandBuffer& _command_buffer);
-	render_function bindPipelines = nullptr;
-	void BindPipelinesDummy(VkCommandBuffer& _command_buffer);
+			void UpdateDummy();
 
-	// initialize
-	bool InitVulkanInstance(std::vector<const char*>& _sdl_extensions);
-	bool InitPhysicalDevice();
-	bool InitLogicalDevice(std::vector<const char*>& _device_extensions);
-	bool InitSwapchain(const VkImageUsageFlags& _flags);
-	bool InitSurface();
-	bool InitRenderPass();
-	bool InitFrameBuffers();
-	bool InitCommandBuffers();
-	bool InitShaderModule(const std::vector<char>& _byte_code, VkShaderModule& _shader);
-	bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info, std::vector<VkDescriptorSetLayout>& _set_leyouts, std::vector<VkPushConstantRange>& _push_constants);
-	void SetGPUInfo();
-	bool InitBuffer(vulkan_buffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
-	bool InitImage(vulkan_image& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
-	bool InitSemaphore(VkSemaphore& _semaphore);
+			typedef void (GraphicsVulkan::* render_function)(VkCommandBuffer& _command_buffer);
+			render_function bindPipelines = nullptr;
+			void BindPipelinesDummy(VkCommandBuffer& _command_buffer);
 
-	bool LoadBuffer(vulkan_buffer& _buffer, void* _data, size_t _size);
+			// initialize
+			bool InitVulkanInstance(std::vector<const char*>& _sdl_extensions);
+			bool InitPhysicalDevice();
+			bool InitLogicalDevice(std::vector<const char*>& _device_extensions);
+			bool InitSwapchain(const VkImageUsageFlags& _flags);
+			bool InitSurface();
+			bool InitRenderPass();
+			bool InitFrameBuffers();
+			bool InitCommandBuffers();
+			bool InitShaderModule(const std::vector<char>& _byte_code, VkShaderModule& _shader);
+			bool InitPipeline(VkShaderModule& _vertex_shader, VkShaderModule& _fragment_shader, VkPipelineLayout& _layout, VkPipeline& _pipeline, VulkanPipelineBufferInfo& _info, std::vector<VkDescriptorSetLayout>& _set_leyouts, std::vector<VkPushConstantRange>& _push_constants);
+			void SetGPUInfo();
+			bool InitBuffer(vulkan_buffer& _buffer, u64 _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _memory_properties);
+			bool InitImage(vulkan_image& _image, u32 _width, u32 _height, VkFormat _format, VkImageUsageFlags _usage, VkImageTiling _tiling);
+			bool InitSemaphore(VkSemaphore& _semaphore);
 
-	// deinitialize
-	void DestroySwapchain(const bool& _rebuild);
-	void DestroySurface();
-	void DestroyRenderPass();
-	void DestroyFrameBuffers();
-	void DestroyCommandBuffer();
-	void DestroyPipelines();
-	void DestroyBuffer(vulkan_buffer& _buffer);
-	void DestroyImage(vulkan_image& _image);
-	void DestroySemaphore(VkSemaphore& _semaphore);
+			bool LoadBuffer(vulkan_buffer& _buffer, void* _data, size_t _size);
 
-	// rebuild -> resize window(surface/render area)
-	void RebuildSwapchain();
+			// deinitialize
+			void DestroySwapchain(const bool& _rebuild);
+			void DestroySurface();
+			void DestroyRenderPass();
+			void DestroyFrameBuffers();
+			void DestroyCommandBuffer();
+			void DestroyPipelines();
+			void DestroyBuffer(vulkan_buffer& _buffer);
+			void DestroyImage(vulkan_image& _image);
+			void DestroySemaphore(VkSemaphore& _semaphore);
 
-	// render target 2d texture
-	tex2d_data tex2dData = {};
+			// rebuild -> resize window(surface/render area)
+			void RebuildSwapchain();
 
-	void UpdateTex2d() override;
-	void RecalcTex2dScaleMatrix() override;
+			// render target 2d texture
+			tex2d_data tex2dData = {};
 
-	bool InitTex2dPipeline();
-	void DestroyTex2dPipeline();
-	void BindPipelines2d(VkCommandBuffer& _command_buffer);
-	bool InitTex2dBuffers();
-	bool InitTex2dSampler();
-	void DestroyTex2dSampler();
-	bool InitTex2dDescriptorSets();
+			void UpdateTex2d() override;
+			void RecalcTex2dScaleMatrix() override;
 
-	u32 FindMemoryTypes(u32 _type_filter, VkMemoryPropertyFlags _mem_properties);
-	void DetectResizableBar() override;
+			bool InitTex2dPipeline();
+			void DestroyTex2dPipeline();
+			void BindPipelines2d(VkCommandBuffer& _command_buffer);
+			bool InitTex2dBuffers();
+			bool InitTex2dSampler();
+			void DestroyTex2dSampler();
+			bool InitTex2dDescriptorSets();
 
-	// sync to gpu (work done)
-	void WaitIdle();
+			u32 FindMemoryTypes(u32 _type_filter, VkMemoryPropertyFlags _mem_properties);
+			void DetectResizableBar() override;
+
+			// sync to gpu (work done)
+			void WaitIdle();
 
 #ifdef VK_DEBUG_CALLBACK
-	VkDebugUtilsMessengerEXT RegisterDebugCallback();
+			VkDebugUtilsMessengerEXT RegisterDebugCallback();
 #endif
-};
+		};
+	}
+}

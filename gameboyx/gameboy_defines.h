@@ -9,12 +9,6 @@
 #define GB_PLAYER_COUNT                 1
 
 /* ***********************************************************************************************************
-    FILES
-*********************************************************************************************************** */
-inline const std::string DMG_BOOT_ROM = "dmg_boot.bin";
-inline const std::string CGB_BOOT_ROM = "cgb_boot.bin";
-
-/* ***********************************************************************************************************
     FREQUENCIES
 *********************************************************************************************************** */
 #define DIV_FREQUENCY                   16384                                                       // Hz
@@ -495,16 +489,25 @@ inline const std::string CGB_BOOT_ROM = "cgb_boot.bin";
 #define RAM_BANK_MASK_8                 0x07
 #define RAM_BANK_MASK_16                0x0F
 
+namespace Emulation {
+    namespace Gameboy {
+        enum MEM_TYPE : int {
+            ROM0 = 0,
+            ROMn = 1,
+            VRAM = 2,
+            RAMn = 3,
+            WRAM0 = 4,
+            WRAMn = 5,
+            OAM = 6,
+            IO = 7,
+            HRAM = 8,
+            IE = 9
+        };
 
-enum MEM_TYPE : int {
-    ROM0 = 0,
-    ROMn = 1,
-    VRAM = 2,
-    RAMn = 3,
-    WRAM0 = 4,
-    WRAMn = 5,
-    OAM = 6,
-    IO = 7,
-    HRAM = 8,
-    IE = 9
-};
+        /* ***********************************************************************************************************
+            FILES
+        *********************************************************************************************************** */
+        inline const std::string DMG_BOOT_ROM = "dmg_boot.bin";
+        inline const std::string CGB_BOOT_ROM = "cgb_boot.bin";
+    }
+}

@@ -7,27 +7,31 @@
 #else
 #endif
 
-class FileMapper {
-public:
-	FileMapper(const char* _path, const size_t& _size);
-	FileMapper() {};
-	~FileMapper();
+namespace Backend {
+	namespace FileIO {
+		class FileMapper {
+		public:
+			FileMapper(const char* _path, const size_t& _size);
+			FileMapper() {};
+			~FileMapper();
 
 #ifdef _WIN32
-	LPVOID GetMappedFile();
-	LPVOID GetMappedFile(const char* _path, const size_t& _size);
+			LPVOID GetMappedFile();
+			LPVOID GetMappedFile(const char* _path, const size_t& _size);
 #else
 #endif
 
-private:
+		private:
 #ifdef _WIN32
-	HANDLE hFile = nullptr;
-	HANDLE hMapping = nullptr;
-	LPVOID lpMapAddress = nullptr;
+			HANDLE hFile = nullptr;
+			HANDLE hMapping = nullptr;
+			LPVOID lpMapAddress = nullptr;
 
-	LPVOID MapFile(const char* _path, const size_t& _size);
+			LPVOID MapFile(const char* _path, const size_t& _size);
 #else
 #endif
 
-	void UnmapFile();
-};
+			void UnmapFile();
+		};
+	}
+}

@@ -36,30 +36,30 @@ int main(int, char**)
 
     // todo: implement a config loader that loads configuration data and pass the data to the different application components
     //          and probably add a namespace that contains all the settings structs instead of passing them around
-    graphics_settings s_graphics_settings = {};
+    Backend::graphics_settings s_graphics_settings = {};
     s_graphics_settings.framerateTarget = 144;
     s_graphics_settings.fpsUnlimited = false;
     s_graphics_settings.presentModeFifo = false;
     s_graphics_settings.tripleBuffering = false;
 
     int sampling_rate_max = 0;
-    for (const auto& [key, val] : SAMPLING_RATES) {
+    for (const auto& [key, val] : Config::SAMPLING_RATES) {
         if (val.first > sampling_rate_max) { sampling_rate_max = val.first; }
     }
 
-    audio_settings s_audio_settings = {};
+    Backend::audio_settings s_audio_settings = {};
     s_audio_settings.master_volume = .5f;
     s_audio_settings.lfe = 1.f;
     s_audio_settings.sampling_rate = sampling_rate_max;
     s_audio_settings.delay = APP_REVERB_DELAY_DEFAULT;
     s_audio_settings.decay = APP_REVERB_DECAY_DEFAULT;
 
-    control_settings s_control_settings = {};
+    Backend::control_settings s_control_settings = {};
     s_control_settings.mouse_always_visible = false;
 
-    if (!HardwareMgr::InitHardware(s_graphics_settings, s_audio_settings, s_control_settings))   { return -1; }
+    if (!Backend::HardwareMgr::InitHardware(s_graphics_settings, s_audio_settings, s_control_settings))   { return -1; }
 
-    GuiMgr* gui_mgr = GuiMgr::getInstance();
+    GUI::GuiMgr* gui_mgr = GUI::GuiMgr::getInstance();
 
     // Main loop
     LOG_INFO("[emu] application up and running");
@@ -67,20 +67,20 @@ int main(int, char**)
     bool running = true;
     while (running)
     {
-        HardwareMgr::ProcessEvents(running);
+        Backend::HardwareMgr::ProcessEvents(running);
         gui_mgr->ProcessInput();
 
-        HardwareMgr::ProcessTimedEvents();
+        Backend::HardwareMgr::ProcessTimedEvents();
 
-        if (HardwareMgr::CheckFrame()) {
-            HardwareMgr::NextFrame();
+        if (Backend::HardwareMgr::CheckFrame()) {
+            Backend::HardwareMgr::NextFrame();
             gui_mgr->ProcessGUI();
-            HardwareMgr::RenderFrame();
+            Backend::HardwareMgr::RenderFrame();
         }
     }
     
     gui_mgr->resetInstance();
-    HardwareMgr::ShutdownHardware();
+    Backend::HardwareMgr::ShutdownHardware();
 
     return 0;
 }
@@ -89,10 +89,10 @@ int main(int, char**)
     MISC
 *********************************************************************************************************** */
 void create_fs_hierarchy() {
-    check_and_create_config_folders();
-    check_and_create_config_files();
-    check_and_create_log_folders();
-    check_and_create_shader_folders();
-    check_and_create_save_folders();
-    check_and_create_rom_folder();
+    Backend::FileIO::check_and_create_config_folders();
+    Backend::FileIO::check_and_create_config_files();
+    Backend::FileIO::check_and_create_log_folders();
+    Backend::FileIO::check_and_create_shader_folders();
+    Backend::FileIO::check_and_create_save_folders();
+    Backend::FileIO::check_and_create_rom_folder();
 }
