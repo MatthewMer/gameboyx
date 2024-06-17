@@ -16,7 +16,7 @@ alternatively you can build the application from source as described in the foll
 * install latest [Vulkan SDK](https://vulkan.lunarg.com/) (Requires a GPU with at least Vulkan 1.0 support)
 * clone repository with following command (to clone the required submodules):
 ```
-git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git
+git clone --recurse-submodules https://github.com/MatthewMer/gameboyx.git --recursive
 ```
 * in the cloned repository open gameboyx.sln with Visual Studio 2022
 * you can either build an installer or create a portable executable, as described in the following section
