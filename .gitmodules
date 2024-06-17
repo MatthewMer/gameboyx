@@ -4,9 +4,6 @@
 [submodule "submodules/nativefiledialog-extended"]
 	path = submodules/nativefiledialog-extended
 	url = https://github.com/btzy/nativefiledialog-extended.git
-[submodule "submodules/glm"]
-	path = submodules/glm
-	url = https://github.com/g-truc/glm.git
 [submodule "submodules/HardwareBackend"]
 	path = submodules/HardwareBackend
 	url = https://github.com/MatthewMer/HardwareBackend.git
