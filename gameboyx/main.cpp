@@ -39,6 +39,7 @@ int main(int, char**)
     s_graphics_settings.app_title = Config::APP_TITLE;
     s_graphics_settings.font = Config::FONT_FOLDER + Config::FONT_MAIN;
     s_graphics_settings.icon = Config::ICON_FOLDER + Config::ICON_FILE;
+    s_graphics_settings.shader_folder = Config::SHADER_FOLDER;
     s_graphics_settings.win_height = Config::GUI_WIN_HEIGHT;
     s_graphics_settings.win_height_min = Config::GUI_WIN_HEIGHT_MIN;
     s_graphics_settings.win_width = Config::GUI_WIN_WIDTH;
@@ -58,9 +59,10 @@ int main(int, char**)
 
     Backend::control_settings s_control_settings = {};
     s_control_settings.mouse_always_visible = false;
+    s_control_settings.bmp_custom_cursor = Config::CURSOR_FOLDER + Config::CURSOR_MAIN;
 
     if (!Backend::HardwareMgr::InitHardware(s_graphics_settings, s_audio_settings, s_control_settings))   { return -1; }
-
+    
     GUI::GuiMgr* gui_mgr = GUI::GuiMgr::getInstance();
 
     // Main loop
