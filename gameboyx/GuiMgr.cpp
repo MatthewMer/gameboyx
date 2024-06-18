@@ -53,6 +53,8 @@ namespace GUI {
         lfe = aud_settings.lfe;
         delay = aud_settings.delay;
         decay = aud_settings.decay;
+        highFrequencies = aud_settings.high_frequencies;
+        lowFrequencies = aud_settings.low_frequencies;
 
         vhwmgr = Emulation::VHardwareMgr::getInstance();
 
@@ -918,6 +920,21 @@ namespace GUI {
                 ImGui::TableNextRow();
 
                 ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Enable high frequencies");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("enables channels for high frequency output");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::Checkbox("##hf", &highFrequencies)) {
+                    ActionSetOutputChannels();
+                }
+                ImGui::TableNextRow();
+
+                ImGui::TableNextColumn();
                 ImGui::TextUnformatted("Low frequency");
                 if (ImGui::IsItemHovered()) {
                     if (ImGui::BeginTooltip()) {
@@ -929,6 +946,21 @@ namespace GUI {
 
                 if (ImGui::SliderFloat("##lfe", &lfe, Config::APP_MIN_LFE, Config::APP_MAX_LFE)) {
                     ActionSetVolume();
+                }
+                ImGui::TableNextRow();
+
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Enable low frequencies");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("enables channels for low frequency output");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::Checkbox("##lf", &lowFrequencies)) {
+                    ActionSetOutputChannels();
                 }
                 ImGui::TableNextRow();
 
@@ -1368,6 +1400,9 @@ namespace GUI {
         Backend::HardwareMgr::SetReverb(delay, decay);
     }
 
+    void GuiMgr::ActionSetOutputChannels() {
+        Backend::HardwareMgr::SetFrequencies(highFrequencies, lowFrequencies);
+    }
 
     void GuiMgr::StartGame(const bool& _restart) {
         if (games.size() > 0) {

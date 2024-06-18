@@ -197,6 +197,8 @@ namespace GUI {
 		int samplingRate = 0;
 		float delay = 0;
 		float decay = 0;
+		bool highFrequencies = true;
+		bool lowFrequencies = true;
 
 		std::array<int, 4> ipv4Address = { 127, 0, 0, 1 };
 		int port = 9800;
@@ -262,6 +264,7 @@ namespace GUI {
 		void ActionSetSamplingRate();
 		void ActionSetReverb();
 		void ActionAutoExecution();
+		void ActionSetOutputChannels();
 
 		// helpers
 		void AddGameGuiCtx(Emulation::BaseCartridge* _game_ctx);

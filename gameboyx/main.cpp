@@ -56,6 +56,8 @@ int main(int, char**)
     s_audio_settings.sampling_rate = sampling_rate_max;
     s_audio_settings.delay = Config::APP_REVERB_DELAY_DEFAULT;
     s_audio_settings.decay = Config::APP_REVERB_DECAY_DEFAULT;
+    s_audio_settings.low_frequencies = true;
+    s_audio_settings.high_frequencies = true;
 
     Backend::control_settings s_control_settings = {};
     s_control_settings.mouse_always_visible = false;
