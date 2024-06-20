@@ -54,7 +54,7 @@ namespace GUI {
         delay = aud_settings.delay;
         decay = aud_settings.decay;
         highFrequencies = aud_settings.high_frequencies;
-        lowFrequencies = aud_settings.low_frequencies;
+        lfeLowPass = aud_settings.low_frequencies;
 
         vhwmgr = Emulation::VHardwareMgr::getInstance();
 
@@ -950,16 +950,16 @@ namespace GUI {
                 ImGui::TableNextRow();
 
                 ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Enable low frequencies");
+                ImGui::TextUnformatted("LFE Low-pass");
                 if (ImGui::IsItemHovered()) {
                     if (ImGui::BeginTooltip()) {
-                        ImGui::Text("enables channels for low frequency output");
+                        ImGui::Text("enables a low-pass filter for the LFE channel, can mess with sound driver EQs");
                         ImGui::EndTooltip();
                     }
                 }
                 ImGui::TableNextColumn();
 
-                if (ImGui::Checkbox("##lf", &lowFrequencies)) {
+                if (ImGui::Checkbox("##lf", &lfeLowPass)) {
                     ActionSetOutputChannels();
                 }
                 ImGui::TableNextRow();
@@ -1401,7 +1401,7 @@ namespace GUI {
     }
 
     void GuiMgr::ActionSetOutputChannels() {
-        Backend::HardwareMgr::SetFrequencies(highFrequencies, lowFrequencies);
+        Backend::HardwareMgr::SetFrequencies(highFrequencies, lfeLowPass);
     }
 
     void GuiMgr::StartGame(const bool& _restart) {

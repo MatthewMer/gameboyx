@@ -199,6 +199,8 @@ namespace GUI {
 		float decay = 0;
 		bool highFrequencies = true;
 		bool lowFrequencies = true;
+		bool lfeLowPass = false;
+		bool distLowPass = true;
 
 		std::array<int, 4> ipv4Address = { 127, 0, 0, 1 };
 		int port = 9800;

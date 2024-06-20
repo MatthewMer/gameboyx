@@ -78,7 +78,7 @@ namespace Config {
     inline const float APP_MAX_LFE = 5.f;
     inline const float APP_MIN_LFE = .0f;
 
-    inline const float APP_REVERB_DECAY_DEFAULT = .1f;
+    inline const float APP_REVERB_DECAY_DEFAULT = .3f;
     inline const float APP_REVERB_DELAY_DEFAULT = .02f;
 
     /* ***********************************************************************************************************
