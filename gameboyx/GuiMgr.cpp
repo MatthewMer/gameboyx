@@ -38,15 +38,13 @@ namespace GUI {
     }
 
     GuiMgr::GuiMgr() {
-        Backend::graphics_settings graph_settings = {};
-        Backend::HardwareMgr::GetGraphicsSettings(graph_settings);
+        auto graph_settings = Backend::HardwareMgr::GetGraphicsSettings();
         framerateTarget = graph_settings.framerateTarget;
         fpsUnlimited = graph_settings.fpsUnlimited;
         tripleBuffering = graph_settings.tripleBuffering;
         vsync = graph_settings.presentModeFifo;
 
-        Backend::audio_settings aud_settings = {};
-        Backend::HardwareMgr::GetAudioSettings(aud_settings);
+        auto aud_settings = Backend::HardwareMgr::GetAudioSettings();
         samplingRate = aud_settings.sampling_rate;
         samplingRateMax = aud_settings.sampling_rate_max;
         volume = aud_settings.master_volume;
@@ -1401,7 +1399,7 @@ namespace GUI {
     }
 
     void GuiMgr::ActionSetOutputChannels() {
-        Backend::HardwareMgr::SetFrequencies(highFrequencies, lfeLowPass);
+        Backend::HardwareMgr::SetAudioChannels(highFrequencies, lfeLowPass);
     }
 
     void GuiMgr::StartGame(const bool& _restart) {

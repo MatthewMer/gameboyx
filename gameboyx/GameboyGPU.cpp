@@ -86,7 +86,7 @@ namespace Emulation {
 							ly++;
 
 							if (ly >= LCD_SCANLINES_VBLANK) {
-								Backend::HardwareMgr::UpdateGpuData();
+								Backend::HardwareMgr::UpdateTexture2d();
 								frameCounter++;
 								EnterMode1();
 							} else {

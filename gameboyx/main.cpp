@@ -63,7 +63,8 @@ int main(int, char**)
     s_control_settings.mouse_always_visible = false;
     s_control_settings.bmp_custom_cursor = Config::CURSOR_FOLDER + Config::CURSOR_MAIN;
 
-    if (!Backend::HardwareMgr::InitHardware(s_graphics_settings, s_audio_settings, s_control_settings))   { return -1; }
+    Backend::HardwareMgr::InitHardware(s_graphics_settings, s_audio_settings, s_control_settings);
+    if (Backend::HardwareMgr::GetError() != Backend::HW_ERROR::NONE)   { return -1; }
     
     GUI::GuiMgr* gui_mgr = GUI::GuiMgr::getInstance();
 
