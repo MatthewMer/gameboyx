@@ -1,6 +1,6 @@
 [submodule "submodules/nativefiledialog-extended"]
 	path = submodules/nativefiledialog-extended
 	url = https://github.com/btzy/nativefiledialog-extended.git
-[submodule "submodules/HardwareBackend"]
-	path = submodules/HardwareBackend
-	url = https://github.com/MatthewMer/HardwareBackend.git
+[submodule "submodules/backend"]
+	path = submodules/backend
+	url = https://github.com/MatthewMer/backend.git
