@@ -29,11 +29,11 @@ namespace Emulation {
 				virt_audio_info.apu_callback = [this](std::vector<std::vector<std::complex<float>>>& _samples, const int& _num, const int& _sampling_rate) {
 					this->SampleAPU(_samples, _num, _sampling_rate);
 					};
-				Backend::HardwareMgr::InitAudioBackend(virt_audio_info);
+				Backend::HardwareMgr::StartAudioBackend(virt_audio_info);
 			}
 			// destructor
 			~GameboyAPU() override {
-				Backend::HardwareMgr::DestroyAudioBackend();
+				Backend::HardwareMgr::StopAudioBackend();
 			}
 
 			int envelopeSweepCounter = 0;
