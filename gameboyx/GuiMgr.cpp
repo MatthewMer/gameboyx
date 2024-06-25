@@ -47,12 +47,15 @@ namespace GUI {
         auto aud_settings = Backend::HardwareMgr::GetAudioSettings();
         samplingRate = aud_settings.sampling_rate;
         samplingRateMax = aud_settings.sampling_rate_max;
-        volume = aud_settings.master_volume;
-        lfe = aud_settings.lfe;
-        delay = aud_settings.delay;
-        decay = aud_settings.decay;
-        highFrequencies = aud_settings.high_frequencies;
-        lfeLowPass = aud_settings.low_frequencies;
+        masterVolume = aud_settings.master_volume;
+        lfeVolume = aud_settings.lfe_volume;
+        reverbDelay = aud_settings.delay;
+        reverbDecay = aud_settings.decay;
+        hfOutputEnable = aud_settings.hf_output_enable;
+        lfeOutputEnable = aud_settings.lfe_output_enable;
+        lfeLowPassEnable = aud_settings.lfe_low_pass_enable;
+        distLowPassEnable = aud_settings.dist_low_pass_enable;
+        baseVolume = aud_settings.base_volume;
 
         vhwmgr = Emulation::VHardwareMgr::getInstance();
 
@@ -888,11 +891,15 @@ namespace GUI {
         }
     }
 
+    /* *************************************************************************************************
+        AUDIO SETTINGS
+    ************************************************************************************************* */
     void GuiMgr::ShowAudioSettings() {
         ImGui::SetNextWindowSize(Config::graph_settings_win_size);
 
         if (ImGui::Begin("Audio Settings", &showAudioSettings, Config::WIN_CHILD_FLAGS)) {
 
+            ImGui::TextColored(HIGHLIGHT_COLOR, "General");
             if (ImGui::BeginTable("audio general", 2, Config::TABLE_FLAGS_NO_BORDER_OUTER_H)) {
 
                 for (int i = 0; i < 2; i++) {
@@ -901,9 +908,11 @@ namespace GUI {
 
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
 
-                // application ******************************************
+                /* *************************************************************************************************
+                    MASTER VOLUME
+                ************************************************************************************************* */
                 ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Master volume");
+                ImGui::TextUnformatted("Master Volume");
                 if (ImGui::IsItemHovered()) {
                     if (ImGui::BeginTooltip()) {
                         ImGui::Text("sets overall volume");
@@ -912,86 +921,14 @@ namespace GUI {
                 }
                 ImGui::TableNextColumn();
 
-                if (ImGui::SliderFloat("##volume", &volume, Config::APP_MIN_VOLUME, Config::APP_MAX_VOLUME)) {
+                if (ImGui::SliderFloat("##master_volume", &masterVolume, Config::APP_MIN_VOLUME, Config::APP_MAX_VOLUME)) {
                     ActionSetVolume();
                 }
                 ImGui::TableNextRow();
 
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Enable high frequencies");
-                if (ImGui::IsItemHovered()) {
-                    if (ImGui::BeginTooltip()) {
-                        ImGui::Text("enables channels for high frequency output");
-                        ImGui::EndTooltip();
-                    }
-                }
-                ImGui::TableNextColumn();
-
-                if (ImGui::Checkbox("##hf", &highFrequencies)) {
-                    ActionSetOutputChannels();
-                }
-                ImGui::TableNextRow();
-
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Low frequency");
-                if (ImGui::IsItemHovered()) {
-                    if (ImGui::BeginTooltip()) {
-                        ImGui::Text("sets amplitude multiplier of low frequency channel");
-                        ImGui::EndTooltip();
-                    }
-                }
-                ImGui::TableNextColumn();
-
-                if (ImGui::SliderFloat("##lfe", &lfe, Config::APP_MIN_LFE, Config::APP_MAX_LFE)) {
-                    ActionSetVolume();
-                }
-                ImGui::TableNextRow();
-
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("LFE Low-pass");
-                if (ImGui::IsItemHovered()) {
-                    if (ImGui::BeginTooltip()) {
-                        ImGui::Text("enables a low-pass filter for the LFE channel, can mess with sound driver EQs");
-                        ImGui::EndTooltip();
-                    }
-                }
-                ImGui::TableNextColumn();
-
-                if (ImGui::Checkbox("##lf", &lfeLowPass)) {
-                    ActionSetOutputChannels();
-                }
-                ImGui::TableNextRow();
-
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Delay");
-                if (ImGui::IsItemHovered()) {
-                    if (ImGui::BeginTooltip()) {
-                        ImGui::Text("sets delay for reverb (how long it takes until an echo occurs)");
-                        ImGui::EndTooltip();
-                    }
-                }
-                ImGui::TableNextColumn();
-
-                if (ImGui::SliderFloat("##delay", &delay, .0f, .5f)) {
-                    ActionSetReverb();
-                }
-                ImGui::TableNextRow();
-
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Decay");
-                if (ImGui::IsItemHovered()) {
-                    if (ImGui::BeginTooltip()) {
-                        ImGui::Text("sets decay factor for reverb (how much audio echoes)");
-                        ImGui::EndTooltip();
-                    }
-                }
-                ImGui::TableNextColumn();
-
-                if (ImGui::SliderFloat("##decay", &decay, .0f, .5f)) {
-                    ActionSetReverb();
-                }
-                ImGui::TableNextRow();
-
+                /* *************************************************************************************************
+                    DEVICE SAMPLING RATE
+                ************************************************************************************************* */
                 ImGui::TableNextColumn();
                 ImGui::TextUnformatted("Sampling rate");
                 if (ImGui::IsItemHovered()) {
@@ -1029,6 +966,184 @@ namespace GUI {
                     }
                     ImGui::EndCombo();
                 }
+
+                ImGui::PopStyleVar();
+                ImGui::EndTable();
+            }
+
+            ImGui::TextColored(HIGHLIGHT_COLOR, "LFE Channel");
+            if (ImGui::BeginTable("audio lfe", 2, Config::TABLE_FLAGS_NO_BORDER_OUTER_H)) {
+
+                for (int i = 0; i < 2; i++) {
+                    ImGui::TableSetupColumn("", Config::TABLE_COLUMN_FLAGS_NO_HEADER);
+                }
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+
+                /* *************************************************************************************************
+                    LFE CHANNEL OUTPUT
+                ************************************************************************************************* */
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Enable LFE channel");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("enables channel for low frequency output");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::Checkbox("##lfe", &lfeOutputEnable)) {
+                    ActionSetOutputChannels();
+                }
+                ImGui::TableNextRow();
+
+                /* *************************************************************************************************
+                    LFE VOLUME
+                ************************************************************************************************* */
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("LFE volume");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("sets volume for LFE output");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::SliderFloat("##lfe_volume", &lfeVolume, Config::APP_MIN_LFE, Config::APP_MAX_LFE)) {
+                    ActionSetVolume();
+                }
+                ImGui::TableNextRow();
+
+                /* *************************************************************************************************
+                    LFE LOW-PASS
+                ************************************************************************************************* */
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("LFE low-pass");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("enables a low-pass filter for the LFE channel, can mess with sound driver EQs\n(use only if there is no subwoofer for the LFE channel)");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::Checkbox("##lfe_lowpass", &lfeLowPassEnable)) {
+                    ActionSetAudioFilters();
+                }
+                ImGui::TableNextRow();
+
+                ImGui::PopStyleVar();
+                ImGui::EndTable();
+            }
+
+            ImGui::TextColored(HIGHLIGHT_COLOR, "HF Channels");
+            if (ImGui::BeginTable("audio hf", 2, Config::TABLE_FLAGS_NO_BORDER_OUTER_H)) {
+
+                for (int i = 0; i < 2; i++) {
+                    ImGui::TableSetupColumn("", Config::TABLE_COLUMN_FLAGS_NO_HEADER);
+                }
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+
+                /* *************************************************************************************************
+                   HF CHANNEL OUTPUT
+               ************************************************************************************************* */
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Enable HF channels");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("enables channels for high frequency output");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::Checkbox("##hf", &hfOutputEnable)) {
+                    ActionSetOutputChannels();
+                }
+                ImGui::TableNextRow();
+
+                /* *************************************************************************************************
+                    BASE VOLUME
+                ************************************************************************************************* */
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Base volume");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("sets volume for direct output");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::SliderFloat("##base_volume", &baseVolume, Config::APP_MIN_VOLUME, Config::APP_MAX_VOLUME)) {
+                    ActionSetVolume();
+                }
+                ImGui::PopStyleVar();
+                ImGui::EndTable();
+            }
+               
+            ImGui::TextColored(HIGHLIGHT_COLOR, "Reverb");
+            if (ImGui::BeginTable("audio reverb", 2, Config::TABLE_FLAGS_NO_BORDER_OUTER_H)) {
+
+                for (int i = 0; i < 2; i++) {
+                    ImGui::TableSetupColumn("", Config::TABLE_COLUMN_FLAGS_NO_HEADER);
+                }
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+
+                /* *************************************************************************************************
+                    DIST LOW-PASS
+                ************************************************************************************************* */
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Dist low-pass");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("enables a low-pass filter for reverberation. Creates an echo effect");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::Checkbox("##dist_lowpass", &distLowPassEnable)) {
+                    ActionSetAudioFilters();
+                }
+                ImGui::TableNextRow();
+
+                /* *************************************************************************************************
+                    DIST DELAY
+                ************************************************************************************************* */
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Delay");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("sets delay for reverberation (how long it takes until an echo occurs)");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::SliderFloat("##reverb_delay", &reverbDelay, .0f, .5f)) {
+                    ActionSetReverb();
+                }
+                ImGui::TableNextRow();
+
+                /* *************************************************************************************************
+                    DIST DECAY
+                ************************************************************************************************* */
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Decay");
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::BeginTooltip()) {
+                        ImGui::Text("sets reverbDecay factor for reverb (how much audio echoes)");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::TableNextColumn();
+
+                if (ImGui::SliderFloat("##reverb_decay", &reverbDecay, .0f, .5f)) {
+                    ActionSetReverb();
+                }
+                ImGui::TableNextRow();
 
                 ImGui::PopStyleVar();
                 ImGui::EndTable();
@@ -1387,7 +1502,7 @@ namespace GUI {
     }
 
     void GuiMgr::ActionSetVolume() {
-        Backend::HardwareMgr::SetVolume(volume, lfe);
+        Backend::HardwareMgr::SetVolume(masterVolume, lfeVolume, baseVolume);
     }
 
     void GuiMgr::ActionSetSamplingRate() {
@@ -1395,12 +1510,18 @@ namespace GUI {
     }
 
     void GuiMgr::ActionSetReverb() {
-        Backend::HardwareMgr::SetReverb(delay, decay);
+        Backend::HardwareMgr::SetReverb(reverbDelay, reverbDecay);
     }
 
     void GuiMgr::ActionSetOutputChannels() {
-        Backend::HardwareMgr::SetAudioChannels(highFrequencies, lfeLowPass);
+        Backend::HardwareMgr::SetAudioOutputEnable(hfOutputEnable, lfeOutputEnable);
     }
+
+    void GuiMgr::ActionSetAudioFilters() {
+        Backend::HardwareMgr::SetFilterEnable(distLowPassEnable, lfeLowPassEnable);
+    }
+
+
 
     void GuiMgr::StartGame(const bool& _restart) {
         if (games.size() > 0) {

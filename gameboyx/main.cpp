@@ -52,12 +52,15 @@ int main(int, char**)
 
     Backend::audio_settings s_audio_settings = {};
     s_audio_settings.master_volume = .5f;
-    s_audio_settings.lfe = 1.f;
+    s_audio_settings.lfe_volume = 1.f;
     s_audio_settings.sampling_rate = sampling_rate_max;
     s_audio_settings.delay = Config::APP_REVERB_DELAY_DEFAULT;
     s_audio_settings.decay = Config::APP_REVERB_DECAY_DEFAULT;
-    s_audio_settings.low_frequencies = true;
-    s_audio_settings.high_frequencies = true;
+    s_audio_settings.lfe_low_pass_enable = false;
+    s_audio_settings.dist_low_pass_enable = true;
+    s_audio_settings.base_volume = .5f;
+    s_audio_settings.hf_output_enable = true;
+    s_audio_settings.lfe_output_enable = true;
 
     Backend::control_settings s_control_settings = {};
     s_control_settings.mouse_always_visible = false;

@@ -804,7 +804,7 @@ namespace Emulation {
 
         // eneable interrupts
         void GameboyCPU::EI() {
-            // gets enabled with with 1 cycle delay -> execute one more instruction
+            // gets enabled with with 1 cycle reverbDelay -> execute one more instruction
             imeEnable = true;
         }
 

@@ -191,16 +191,17 @@ namespace GUI {
 		bool vsync = false;
 
 		bool showAudioMenu = false;
-		float volume = .5f;
-		float lfe = .5f;
+		float masterVolume = .5f;
+		float lfeVolume = 1.f;
+		float baseVolume = 1.f;
 		int samplingRateMax = 0;
 		int samplingRate = 0;
-		float delay = 0;
-		float decay = 0;
-		bool highFrequencies = true;
-		bool lowFrequencies = true;
-		bool lfeLowPass = false;
-		bool distLowPass = true;
+		float reverbDelay = 0;
+		float reverbDecay = 0;
+		bool hfOutputEnable = true;
+		bool lfeOutputEnable = true;
+		bool lfeLowPassEnable = true;
+		bool distLowPassEnable = true;
 
 		std::array<int, 4> ipv4Address = { 127, 0, 0, 1 };
 		int port = 9800;
@@ -267,6 +268,7 @@ namespace GUI {
 		void ActionSetReverb();
 		void ActionAutoExecution();
 		void ActionSetOutputChannels();
+		void ActionSetAudioFilters();
 
 		// helpers
 		void AddGameGuiCtx(Emulation::BaseCartridge* _game_ctx);

@@ -184,7 +184,7 @@ namespace Emulation {
 			alignas(64) std::atomic<bool> ch3Left = false;
 			alignas(64) std::atomic<bool> ch4Left = false;
 
-			// master volume	NR50
+			// master masterVolume	NR50
 			alignas(64) std::atomic<float> masterVolumeRight = 1.f;
 			alignas(64) std::atomic<float> masterVolumeLeft = 1.f;
 			alignas(64) std::atomic<bool> outRightEnabled = true;
@@ -238,7 +238,7 @@ namespace Emulation {
 			// length						NR31
 			int ch3LengthTimer = 0;
 			bool ch3LengthAltered = false;
-			// volume						NR32
+			// masterVolume						NR32
 			alignas(64) std::atomic<float> ch3Volume = 1.f;
 			// period low					NR33
 			int ch3Period = 0;
