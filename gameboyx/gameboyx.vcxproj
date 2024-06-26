@@ -256,6 +256,7 @@
   <ItemGroup>
     <ClCompile Include="BaseCartridge.cpp" />
     <ClCompile Include="BaseMEM.cpp" />
+    <ClCompile Include="CoreLoader.cpp" />
     <ClCompile Include="GameboyCartridge.cpp" />
     <ClCompile Include="BaseCTRL.cpp" />
     <ClCompile Include="GameboyCTRL.cpp" />
@@ -276,6 +277,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseCartridge.h" />
+    <ClInclude Include="CoreLoader.h" />
     <ClInclude Include="GameboyCartridge.h" />
     <ClInclude Include="BaseCTRL.h" />
     <ClInclude Include="GameboyCTRL.h" />

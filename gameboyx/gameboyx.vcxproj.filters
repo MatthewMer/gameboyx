@@ -96,6 +96,9 @@
     <ClCompile Include="include\simple_logger.cpp">
       <Filter>Source Files\misc</Filter>
     </ClCompile>
+    <ClCompile Include="CoreLoader.cpp">
+      <Filter>Source Files\emulator</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="general_config.h">
@@ -169,6 +172,9 @@
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="CoreLoader.h">
+      <Filter>Header Files\emulator</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

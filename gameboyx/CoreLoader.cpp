@@ -51,7 +51,7 @@ namespace Emulation {
 
             HINSTANCE hGetProcIDDLL = LoadLibrary(lpcw_str);
             if (!hGetProcIDDLL) {
-                LOG_ERROR("[DLL Loader] Could not load core: ", lpcw_str);
+                LOG_ERROR("[DLL Loader] Could not load core: ", path);
                 continue;
             }
 
@@ -69,7 +69,7 @@ namespace Emulation {
             
             auto ids = fn_console_id();
             for (const auto& id : ids) {
-                if (std::find_if(loadedCores.begin(), loadedCores.end(), [&id](auto& _e) { return _e.first == id; }) == loadedCores.end()) {
+                if (std::find_if(loadedCores.begin(), loadedCores.end(), [&id](std::pair<console_ids, functions>& _e) { return _e.first == id; }) == loadedCores.end()) {
 
                     loadedCores.emplace_back();
                     auto& core_data = loadedCores.back();
@@ -84,8 +84,8 @@ namespace Emulation {
                         }
                     }
 
-                } else if(std::find_if(FILE_EXTS.begin(), FILE_EXTS.end(), [&id](auto& _e) { _e.first == id; }) != FILE_EXTS.end()) {
-                    LOG_WARN("[DLL Loader] Core has already been loaded: ", FILE_EXTS.at(id));
+                } else if(FILE_EXTS.find(id) != FILE_EXTS.end()) {
+                    LOG_WARN("[DLL Loader] Core has already been loaded: ", FILE_EXTS.at(id).first);
                 } else {
                     LOG_WARN("[DLL Loader] Could not find requested core: ", id);
                 }

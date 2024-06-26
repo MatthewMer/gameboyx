@@ -13,11 +13,11 @@ namespace Emulation {
 
     typedef std::vector<console_ids>(__stdcall* GetConsoleIDs_ptr)();
 
-    typedef struct function_ptrs {
+    struct function_ptrs {
         std::vector<console_ids>(__stdcall* GetConsoleIDs_ptr)();
     };
 
-    typedef union functions {
+    union functions {
         function_ptrs by_type;
         func_ptr ptrs[FUNC_NUM];
     };
