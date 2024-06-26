@@ -59,13 +59,6 @@ namespace Emulation {
             if (!check_function_pointer((func_ptr)fn_console_id, "GetConsoleIDs")) {
                 continue;
             }
-
-            try {
-                if (!fn_console_id) { throw "GetConsoleIDs"; }
-            } catch (std::string fn_name) {
-                LOG_ERROR("[DLL Loader] Could not acquire pointer to function: ", fn_name);
-                continue;
-            }
             
             auto ids = fn_console_id();
             for (const auto& id : ids) {
