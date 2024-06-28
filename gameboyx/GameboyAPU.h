@@ -36,6 +36,10 @@ namespace Emulation {
 				Backend::HardwareMgr::StopAudioBackend();
 			}
 
+			void tickLengthTimer(bool& _length_altered, const int& _length_timer, int& _length_counter, const u8& _ch_enable_bit, std::atomic<bool>* _ch_enable);
+			void envelopeSweep(int& _sweep_counter, const int& _sweep_pace, const bool& _envelope_increase, int& _envelope_volume, std::atomic<float>* _volume);
+
+			// TODO: probably combine these into structs and pass them by reference to the sweep and timer functions
 			int envelopeSweepCounter = 0;
 			int soundLengthCounter = 0;
 			int ch1SamplingRateCounter = 0;
@@ -44,22 +48,17 @@ namespace Emulation {
 			int ch1LengthCounter = 0;
 			int ch1EnvelopeSweepCounter = 0;
 			void ch1PeriodSweep();
-			void ch1TickLengthTimer();
-			void ch1EnvelopeSweep();
 
 			int ch1SampleCount = 0;
 			float ch1VirtSamples = .0f;
 
 			int ch2LengthCounter = 0;
 			int ch2EnvelopeSweepCounter = 0;
-			void ch2TickLengthTimer();
-			void ch2EnvelopeSweep();
 
 			int ch2SampleCount = 0;
 			float ch2VirtSamples = .0f;
 
 			int ch3LengthCounter = 0;
-			void ch3TickLengthTimer();
 
 			int ch3SampleCount = 0;
 			float ch3VirtSamples = .0f;
@@ -70,8 +69,6 @@ namespace Emulation {
 			float ch4LFSRTickCounter = 0;
 			std::mutex mutLFSR;
 			std::vector<float> ch4LFSRSamples = std::vector<float>(CH_4_LFSR_BUFFER_SIZE);
-			void ch4TickLengthTimer();
-			void ch4EnvelopeSweep();
 
 			float ch4VirtSamples = .0f;
 

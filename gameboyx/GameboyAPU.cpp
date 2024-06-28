@@ -25,31 +25,32 @@ namespace Emulation {
 					if (envelopeSweepCounter == ENVELOPE_SWEEP_TICK_RATE) {
 						envelopeSweepCounter = 0;
 
-						if (soundCtx->ch1Enable.load()) {
-							ch1EnvelopeSweep();
+						// TODO: put stuff into seperate structs an just pass a pointer/reference to the required struct
+						if (soundCtx->ch1Enable.load() && soundCtx->ch1EnvelopePace) {
+							envelopeSweep(ch1EnvelopeSweepCounter, soundCtx->ch1EnvelopePace, soundCtx->ch1EnvelopeIncrease, soundCtx->ch1EnvelopeVolume, &soundCtx->ch1Volume);
 						}
-						if (soundCtx->ch2Enable.load()) {
-							ch2EnvelopeSweep();
+						if (soundCtx->ch2Enable.load() && soundCtx->ch2EnvelopePace) {
+							envelopeSweep(ch2EnvelopeSweepCounter, soundCtx->ch2EnvelopePace, soundCtx->ch2EnvelopeIncrease, soundCtx->ch2EnvelopeVolume, &soundCtx->ch2Volume);
 						}
-						if (soundCtx->ch4Enable.load()) {
-							ch4EnvelopeSweep();
+						if (soundCtx->ch4Enable.load() && soundCtx->ch4EnvelopePace) {
+							envelopeSweep(ch4EnvelopeSweepCounter, soundCtx->ch4EnvelopePace, soundCtx->ch4EnvelopeIncrease, soundCtx->ch4EnvelopeVolume, &soundCtx->ch4Volume);
 						}
 					}
 
 					if (soundLengthCounter == SOUND_LENGTH_TICK_RATE) {
 						soundLengthCounter = 0;
 
-						if (soundCtx->ch1Enable.load()) {
-							ch1TickLengthTimer();
+						if (soundCtx->ch1Enable.load() && soundCtx->ch1LengthEnable) {
+							tickLengthTimer(soundCtx->ch1LengthAltered, soundCtx->ch1LengthTimer, ch1LengthCounter, CH_1_ENABLE, &soundCtx->ch1Enable);
 						}
-						if (soundCtx->ch2Enable.load()) {
-							ch2TickLengthTimer();
+						if (soundCtx->ch2Enable.load() && soundCtx->ch2LengthEnable) {
+							tickLengthTimer(soundCtx->ch2LengthAltered, soundCtx->ch2LengthTimer, ch2LengthCounter, CH_2_ENABLE, &soundCtx->ch2Enable);
 						}
-						if (soundCtx->ch3Enable.load()) {
-							ch3TickLengthTimer();
+						if (soundCtx->ch3Enable.load() && soundCtx->ch3LengthEnable) {
+							tickLengthTimer(soundCtx->ch3LengthAltered, soundCtx->ch3LengthTimer, ch3LengthCounter, CH_3_ENABLE, &soundCtx->ch3Enable);
 						}
-						if (soundCtx->ch4Enable.load()) {
-							ch4TickLengthTimer();
+						if (soundCtx->ch4Enable.load() && soundCtx->ch4LengthEnable) {
+							tickLengthTimer(soundCtx->ch4LengthAltered, soundCtx->ch4LengthTimer, ch4LengthCounter, CH_4_ENABLE, &soundCtx->ch4Enable);
 						}
 					}
 
@@ -117,6 +118,42 @@ namespace Emulation {
 			}
 		}
 
+		void GameboyAPU::tickLengthTimer(bool& _length_altered, const int& _length_timer, int& _length_counter, const u8& _ch_enable_bit, std::atomic<bool>* _ch_enable) {
+			if (_length_altered) {
+				_length_counter = _length_timer;
+
+				_length_altered = false;
+			}
+
+			_length_counter++;
+			if (_length_counter == CH_LENGTH_TIMER_THRESHOLD) {
+				_ch_enable->store(false);
+				memInstance->GetIO(NR52_ADDR) &= ~_ch_enable_bit;
+			}
+		}
+
+		void GameboyAPU::envelopeSweep(int& _sweep_counter, const int& _sweep_pace, const bool& _envelope_increase, int& _envelope_volume, std::atomic<float>* _volume) {
+			_sweep_counter++;
+			if (_sweep_counter >= _sweep_pace) {
+				_sweep_counter = 0;
+
+				switch (_envelope_increase) {
+				case true:
+					if (_envelope_volume < 0xF) {
+						_envelope_volume++;
+						_volume->store((float)_envelope_volume / 0xF);
+					}
+					break;
+				case false:
+					if (_envelope_volume > 0x0) {
+						--_envelope_volume;
+						_volume->store((float)_envelope_volume / 0xF);
+					}
+					break;
+				}
+			}
+		}
+
 		void GameboyAPU::ch1PeriodSweep() {
 			if (soundCtx->ch1SweepPace != 0) {
 				ch1PeriodSweepCounter++;
@@ -156,149 +193,6 @@ namespace Emulation {
 						//LOG_INFO("sweep: fs = ", soundCtx->ch1SamplingRate.load() / pow(2, 3), "; dir: ", soundCtx->ch1SweepDirSubtract ? "sub" : "add");
 					}
 				}
-			}
-		}
-
-		void GameboyAPU::ch1TickLengthTimer() {
-			if (soundCtx->ch1LengthEnable) {
-				if (soundCtx->ch1LengthAltered) {
-					ch1LengthCounter = soundCtx->ch1LengthTimer;
-
-					soundCtx->ch1LengthAltered = false;
-				}
-
-				ch1LengthCounter++;
-				if (ch1LengthCounter == CH_LENGTH_TIMER_THRESHOLD) {
-					soundCtx->ch1Enable.store(false);
-					memInstance->GetIO(NR52_ADDR) &= ~CH_1_ENABLE;
-				}
-				//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
-			}
-		}
-
-		void GameboyAPU::ch1EnvelopeSweep() {
-			if (soundCtx->ch1EnvelopePace != 0) {
-				ch1EnvelopeSweepCounter++;
-				if (ch1EnvelopeSweepCounter >= soundCtx->ch1EnvelopePace) {
-					ch1EnvelopeSweepCounter = 0;
-
-					switch (soundCtx->ch1EnvelopeIncrease) {
-					case true:
-						if (soundCtx->ch1EnvelopeVolume < 0xF) {
-							soundCtx->ch1EnvelopeVolume++;
-							soundCtx->ch1Volume.store((float)soundCtx->ch1EnvelopeVolume / 0xF);
-						}
-						break;
-					case false:
-						if (soundCtx->ch1EnvelopeVolume > 0x0) {
-							--soundCtx->ch1EnvelopeVolume;
-							soundCtx->ch1Volume.store((float)soundCtx->ch1EnvelopeVolume / 0xF);
-						}
-						break;
-					}
-					//LOG_INFO("envelope: x = ", soundCtx->ch1EnvelopeVolume);
-				}
-			}
-		}
-
-		void GameboyAPU::ch2TickLengthTimer() {
-			if (soundCtx->ch2LengthEnable) {
-				if (soundCtx->ch2LengthAltered) {
-					ch2LengthCounter = soundCtx->ch2LengthTimer;
-
-					soundCtx->ch2LengthAltered = false;
-				}
-
-				ch2LengthCounter++;
-				if (ch2LengthCounter == CH_LENGTH_TIMER_THRESHOLD) {
-					soundCtx->ch2Enable.store(false);
-					memInstance->GetIO(NR52_ADDR) &= ~CH_2_ENABLE;
-				}
-				//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
-			}
-		}
-
-		void GameboyAPU::ch2EnvelopeSweep() {
-			if (soundCtx->ch2EnvelopePace != 0) {
-				ch2EnvelopeSweepCounter++;
-				if (ch2EnvelopeSweepCounter >= soundCtx->ch2EnvelopePace) {
-					ch2EnvelopeSweepCounter = 0;
-
-					switch (soundCtx->ch2EnvelopeIncrease) {
-					case true:
-						if (soundCtx->ch2EnvelopeVolume < 0xF) {
-							soundCtx->ch2EnvelopeVolume++;
-							soundCtx->ch2Volume.store((float)soundCtx->ch2EnvelopeVolume / 0xF);
-						}
-						break;
-					case false:
-						if (soundCtx->ch2EnvelopeVolume > 0x0) {
-							--soundCtx->ch2EnvelopeVolume;
-							soundCtx->ch2Volume.store((float)soundCtx->ch2EnvelopeVolume / 0xF);
-						}
-						break;
-					}
-					//LOG_INFO("envelope: x = ", soundCtx->ch1EnvelopeVolume);
-				}
-			}
-		}
-
-		void GameboyAPU::ch3TickLengthTimer() {
-			if (soundCtx->ch3LengthEnable) {
-				if (soundCtx->ch3LengthAltered) {
-					ch3LengthCounter = soundCtx->ch3LengthTimer;
-
-					soundCtx->ch3LengthAltered = false;
-				}
-
-				ch3LengthCounter++;
-				if (ch3LengthCounter == CH_LENGTH_TIMER_THRESHOLD << 1) {
-					soundCtx->ch3Enable.store(false);
-					memInstance->GetIO(NR52_ADDR) &= ~CH_3_ENABLE;
-				}
-				//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
-			}
-		}
-
-		void GameboyAPU::ch4EnvelopeSweep() {
-			if (soundCtx->ch4EnvelopePace != 0) {
-				ch4EnvelopeSweepCounter++;
-				if (ch4EnvelopeSweepCounter >= soundCtx->ch4EnvelopePace) {
-					ch4EnvelopeSweepCounter = 0;
-
-					switch (soundCtx->ch4EnvelopeIncrease) {
-					case true:
-						if (soundCtx->ch4EnvelopeVolume < 0xF) {
-							soundCtx->ch4EnvelopeVolume++;
-							soundCtx->ch4Volume.store((float)soundCtx->ch4EnvelopeVolume / 0xF);
-						}
-						break;
-					case false:
-						if (soundCtx->ch4EnvelopeVolume > 0x0) {
-							--soundCtx->ch4EnvelopeVolume;
-							soundCtx->ch4Volume.store((float)soundCtx->ch4EnvelopeVolume / 0xF);
-						}
-						break;
-					}
-					//LOG_INFO("envelope: x = ", soundCtx->ch1EnvelopeVolume);
-				}
-			}
-		}
-
-		void GameboyAPU::ch4TickLengthTimer() {
-			if (soundCtx->ch4LengthEnable) {
-				if (soundCtx->ch4LengthAltered) {
-					ch4LengthCounter = soundCtx->ch4LengthTimer;
-
-					soundCtx->ch4LengthAltered = false;
-				}
-
-				ch4LengthCounter++;
-				if (ch4LengthCounter == CH_LENGTH_TIMER_THRESHOLD) {
-					soundCtx->ch4Enable.store(false);
-					memInstance->GetIO(NR52_ADDR) &= ~CH_4_ENABLE;
-				}
-				//LOG_INFO("length: l = ", ch1LengthCounter, "; ch on: ", soundCtx->ch1Enable ? "true" : "false");
 			}
 		}
 

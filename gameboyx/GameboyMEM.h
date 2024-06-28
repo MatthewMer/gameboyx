@@ -290,6 +290,19 @@ namespace Emulation {
 			bool right_pressed = false;
 		};
 
+		struct serial_context {
+			bool transfer_requested = false;
+			u8 outgoing = 0x00;
+			
+			bool reveived = false;
+			u8 incoming = 0x00;
+
+			bool master = false;
+
+			bool div_low_byte = false;
+			u8 div_bit = SERIAL_NORMAL_SPEED_BIT;
+		};
+
 		class GameboyMEM : private BaseMEM {
 		public:
 			friend class BaseMEM;
@@ -461,11 +474,16 @@ namespace Emulation {
 			void SetAPUCh4FrequRandomness(const u8& _data);
 			void SetAPUCh4Control(const u8& _data);
 
+			// serial
+			void SetSerialData(const u8& _data);
+			void SetSerialControl(const u8& _data);
+
 			// memory cpu context
 			machine_context machine_ctx = machine_context();
 			graphics_context graphics_ctx = graphics_context();
 			sound_context sound_ctx = sound_context();
 			control_context control_ctx = control_context();
+			serial_context serial_ctx = serial_context();
 		};
 	}
 }

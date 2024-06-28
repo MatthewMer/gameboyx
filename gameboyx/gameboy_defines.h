@@ -89,6 +89,12 @@
 // serial
 #define SERIAL_DATA                     0xFF01
 #define SERIAL_CTRL                     0xFF02
+#define SERIAL_CTRL_MASK                0x83
+#define SERIAL_CTRL_CLOCK               0x01
+#define SERIAL_CTRL_SPEED               0x02
+#define SERIAL_CTRL_ENABLE              0x80
+#define SERIAL_HIGH_SPEED_BIT           0x08
+#define SERIAL_NORMAL_SPEED_BIT         0x01
 
 // timers
 #define DIV_ADDR                        0xFF04              // RW

@@ -1313,6 +1313,28 @@ namespace Emulation {
         }
 
         /* ***********************************************************************************************************
+            SERIAL (SPI)
+        *********************************************************************************************************** */
+        void GameboyMEM::SetSerialData(const u8& _data) {
+            IO[SERIAL_DATA - IO_OFFSET] = _data;
+        }
+
+        void GameboyMEM::SetSerialControl(const u8& _data) {
+            u8& ctrl = IO[SERIAL_CTRL - IO_OFFSET];
+            ctrl = (ctrl & ~SERIAL_CTRL_MASK) | (_data & SERIAL_CTRL_MASK);
+
+            serial_ctx.master = ctrl & SERIAL_CTRL_CLOCK ? true : false;
+            serial_ctx.transfer_requested = ctrl & SERIAL_CTRL_ENABLE ? true : false;
+            if (ctrl & SERIAL_CTRL_SPEED) {
+                serial_ctx.div_low_byte = true;
+                serial_ctx.div_bit = SERIAL_HIGH_SPEED_BIT;
+            } else {
+                serial_ctx.div_low_byte = false;
+                serial_ctx.div_bit = SERIAL_NORMAL_SPEED_BIT;
+            }
+        }
+
+        /* ***********************************************************************************************************
             MEMORY DEBUGGER
         *********************************************************************************************************** */
         void GameboyMEM::FillMemoryDebugTable(GUI::GuiTable::TableSection<memory_entry>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) {
