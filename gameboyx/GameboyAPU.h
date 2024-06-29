@@ -8,6 +8,14 @@
 
 namespace Emulation {
 	namespace Gameboy {
+		struct channel_info {
+			int length_counter = 0;
+			int envelope_sweep_counter = 0;
+			int sample_count = 0;
+			float virt_samples = .0f;
+			int period_sweep_counter = 0;
+		};
+
 		class GameboyAPU : protected BaseAPU {
 		public:
 			friend class BaseAPU;
@@ -44,33 +52,14 @@ namespace Emulation {
 			int soundLengthCounter = 0;
 			int ch1SamplingRateCounter = 0;
 
-			int ch1PeriodSweepCounter = 0;
-			int ch1LengthCounter = 0;
-			int ch1EnvelopeSweepCounter = 0;
+			
 			void ch1PeriodSweep();
 
-			int ch1SampleCount = 0;
-			float ch1VirtSamples = .0f;
-
-			int ch2LengthCounter = 0;
-			int ch2EnvelopeSweepCounter = 0;
-
-			int ch2SampleCount = 0;
-			float ch2VirtSamples = .0f;
-
-			int ch3LengthCounter = 0;
-
-			int ch3SampleCount = 0;
-			float ch3VirtSamples = .0f;
-
-			int ch4LengthCounter = 0;
-			int ch4EnvelopeSweepCounter = 0;
+			channel_info chInfo[4] = { {}, {}, {}, {} };
 
 			float ch4LFSRTickCounter = 0;
 			std::mutex mutLFSR;
 			std::vector<float> ch4LFSRSamples = std::vector<float>(CH_4_LFSR_BUFFER_SIZE);
-
-			float ch4VirtSamples = .0f;
 
 			int virtualChannels = 0;
 

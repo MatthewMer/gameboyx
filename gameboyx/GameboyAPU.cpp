@@ -27,13 +27,13 @@ namespace Emulation {
 
 						// TODO: put stuff into seperate structs an just pass a pointer/reference to the required struct
 						if (soundCtx->ch1Enable.load() && soundCtx->ch1EnvelopePace) {
-							envelopeSweep(ch1EnvelopeSweepCounter, soundCtx->ch1EnvelopePace, soundCtx->ch1EnvelopeIncrease, soundCtx->ch1EnvelopeVolume, &soundCtx->ch1Volume);
+							envelopeSweep(chInfo[0].envelope_sweep_counter, soundCtx->ch1EnvelopePace, soundCtx->ch1EnvelopeIncrease, soundCtx->ch1EnvelopeVolume, &soundCtx->ch1Volume);
 						}
 						if (soundCtx->ch2Enable.load() && soundCtx->ch2EnvelopePace) {
-							envelopeSweep(ch2EnvelopeSweepCounter, soundCtx->ch2EnvelopePace, soundCtx->ch2EnvelopeIncrease, soundCtx->ch2EnvelopeVolume, &soundCtx->ch2Volume);
+							envelopeSweep(chInfo[1].envelope_sweep_counter, soundCtx->ch2EnvelopePace, soundCtx->ch2EnvelopeIncrease, soundCtx->ch2EnvelopeVolume, &soundCtx->ch2Volume);
 						}
 						if (soundCtx->ch4Enable.load() && soundCtx->ch4EnvelopePace) {
-							envelopeSweep(ch4EnvelopeSweepCounter, soundCtx->ch4EnvelopePace, soundCtx->ch4EnvelopeIncrease, soundCtx->ch4EnvelopeVolume, &soundCtx->ch4Volume);
+							envelopeSweep(chInfo[3].envelope_sweep_counter, soundCtx->ch4EnvelopePace, soundCtx->ch4EnvelopeIncrease, soundCtx->ch4EnvelopeVolume, &soundCtx->ch4Volume);
 						}
 					}
 
@@ -41,16 +41,16 @@ namespace Emulation {
 						soundLengthCounter = 0;
 
 						if (soundCtx->ch1Enable.load() && soundCtx->ch1LengthEnable) {
-							tickLengthTimer(soundCtx->ch1LengthAltered, soundCtx->ch1LengthTimer, ch1LengthCounter, CH_1_ENABLE, &soundCtx->ch1Enable);
+							tickLengthTimer(soundCtx->ch1LengthAltered, soundCtx->ch1LengthTimer, chInfo[0].length_counter, CH_1_ENABLE, &soundCtx->ch1Enable);
 						}
 						if (soundCtx->ch2Enable.load() && soundCtx->ch2LengthEnable) {
-							tickLengthTimer(soundCtx->ch2LengthAltered, soundCtx->ch2LengthTimer, ch2LengthCounter, CH_2_ENABLE, &soundCtx->ch2Enable);
+							tickLengthTimer(soundCtx->ch2LengthAltered, soundCtx->ch2LengthTimer, chInfo[1].length_counter, CH_2_ENABLE, &soundCtx->ch2Enable);
 						}
 						if (soundCtx->ch3Enable.load() && soundCtx->ch3LengthEnable) {
-							tickLengthTimer(soundCtx->ch3LengthAltered, soundCtx->ch3LengthTimer, ch3LengthCounter, CH_3_ENABLE, &soundCtx->ch3Enable);
+							tickLengthTimer(soundCtx->ch3LengthAltered, soundCtx->ch3LengthTimer, chInfo[2].length_counter, CH_3_ENABLE, &soundCtx->ch3Enable);
 						}
 						if (soundCtx->ch4Enable.load() && soundCtx->ch4LengthEnable) {
-							tickLengthTimer(soundCtx->ch4LengthAltered, soundCtx->ch4LengthTimer, ch4LengthCounter, CH_4_ENABLE, &soundCtx->ch4Enable);
+							tickLengthTimer(soundCtx->ch4LengthAltered, soundCtx->ch4LengthTimer, chInfo[3].length_counter, CH_4_ENABLE, &soundCtx->ch4Enable);
 						}
 					}
 
@@ -156,10 +156,10 @@ namespace Emulation {
 
 		void GameboyAPU::ch1PeriodSweep() {
 			if (soundCtx->ch1SweepPace != 0) {
-				ch1PeriodSweepCounter++;
+				chInfo[0].period_sweep_counter++;
 
-				if (ch1PeriodSweepCounter >= soundCtx->ch1SweepPace) {
-					ch1PeriodSweepCounter = 0;
+				if (chInfo[0].period_sweep_counter >= soundCtx->ch1SweepPace) {
+					chInfo[0].period_sweep_counter = 0;
 
 					bool writeback = true;
 
@@ -209,131 +209,97 @@ namespace Emulation {
 			bool vol_right = soundCtx->masterVolumeRight.load();
 			bool vol_left = soundCtx->masterVolumeLeft.load();
 
-			// channel 1 & 2
-			bool ch1_enable = soundCtx->ch1Enable.load();
-			float ch1_virt_sample_step = soundCtx->ch1SamplingRate.load() / _sampling_rate;
-			int ch1_wave_index = soundCtx->ch1DutyCycleIndex.load();
-			bool ch1_right = soundCtx->ch1Right.load();
-			bool ch1_left = soundCtx->ch1Left.load();
-			float ch1_vol = soundCtx->ch1Volume.load();
+			float sample_steps[4] = {
+				soundCtx->ch1SamplingRate.load() / _sampling_rate,
+				soundCtx->ch2SamplingRate.load() / _sampling_rate,
+				soundCtx->ch3SamplingRate.load() / _sampling_rate,
+				soundCtx->ch4SamplingRate.load() / _sampling_rate
+			};
 
-			float ch1_amp;
-			if (ch1_left || ch1_right) {
-				if (ch1_left && ch1_right) {
-					ch1_amp = 1.f;
-				} else {
-					ch1_amp = 2.f;
-				}
-			}
+			bool ch_enabled[4] = {
+				soundCtx->ch1Enable.load(),
+				soundCtx->ch2Enable.load(),
+				soundCtx->ch3Enable.load(),
+				soundCtx->ch4Enable.load()
+			};
 
-			bool ch2_enable = soundCtx->ch2Enable.load();
-			float ch2_virt_sample_step = soundCtx->ch2SamplingRate.load() / _sampling_rate;
-			int ch2_wave_index = soundCtx->ch2DutyCycleIndex.load();
-			bool ch2_right = soundCtx->ch2Right.load();
-			bool ch2_left = soundCtx->ch2Left.load();
-			float ch2_vol = soundCtx->ch2Volume.load();
+			bool ch_lr_enabled[4][2] = {
+				{soundCtx->ch1Right.load(), soundCtx->ch1Left.load()},
+				{soundCtx->ch2Right.load(), soundCtx->ch2Left.load()},
+				{soundCtx->ch3Right.load(), soundCtx->ch3Left.load()},
+				{soundCtx->ch4Right.load(), soundCtx->ch4Left.load()}
+			};
 
-			float ch2_amp;
-			if (ch2_left || ch2_right) {
-				if (ch2_left && ch2_right) {
-					ch2_amp = 1.f;
-				} else {
-					ch2_amp = 2.f;
-				}
-			}
+			float ch_volume[4] = {
+				soundCtx->ch1Volume.load(),
+				soundCtx->ch2Volume.load(),
+				soundCtx->ch3Volume.load(),
+				soundCtx->ch4Volume.load()
+			};
 
-			bool ch3_enable = soundCtx->ch3Enable.load();
-			float ch3_virt_sample_step = soundCtx->ch3SamplingRate.load() / _sampling_rate;
-			bool ch3_right = soundCtx->ch3Right.load();
-			bool ch3_left = soundCtx->ch3Left.load();
-			float ch3_vol = soundCtx->ch3Volume.load();
+			float amps[4] = {
+				ch_lr_enabled[0][0] && ch_lr_enabled[0][1] ? 1.f : 2.f,
+				ch_lr_enabled[1][0] && ch_lr_enabled[1][1] ? 1.f : 2.f,
+				ch_lr_enabled[2][0] && ch_lr_enabled[2][1] ? 1.f : 2.f,
+				ch_lr_enabled[3][0] && ch_lr_enabled[3][1] ? 1.f : 2.f
+			};
 
-			float ch3_amp;
-			if (ch3_left || ch3_right) {
-				if (ch3_left && ch3_right) {
-					ch3_amp = 1.f;
-				} else {
-					ch3_amp = 2.f;
-				}
-			}
-
-			float ch4_virt_sample_step = soundCtx->ch4SamplingRate.load() / _sampling_rate;
-			bool ch4_right = soundCtx->ch4Right.load();
-			bool ch4_left = soundCtx->ch4Left.load();
-			float ch4_vol = soundCtx->ch4Volume.load();
-
-			float ch4_amp;
-
-			if (ch4_left || ch4_right) {
-				if (ch4_left && ch4_right) {
-					ch4_amp = 1.f;
-				} else {
-					ch4_amp = 2.f;
-				}
-			}
+			int duty_cycle_index[2] = {
+				soundCtx->ch1DutyCycleIndex.load(),
+				soundCtx->ch2DutyCycleIndex.load()
+			};
 
 			unique_lock<mutex> lock_wave_ram(soundCtx->mutWaveRam, std::defer_lock);
 			unique_lock<mutex> lock_lfsr_buffer(mutLFSR, std::defer_lock);
 
+			float samples[4];
+
 			for (int i = 0; i < _samples; i++) {
-				float sample_0 = .0f;	// front-left
-				float sample_1 = .0f;	// front-right
-				float sample_2 = .0f;	// rear-left
-				float sample_3 = .0f;	// rear-right
+				memset(samples, 0x00, sizeof(float) * 4);
 
-				if (ch1_enable) {
-					ch1VirtSamples += ch1_virt_sample_step;
-					while (ch1VirtSamples > 1.f) {
-						ch1VirtSamples -= 1.f;
-						++ch1SampleCount %= 8;
-					}
+				for (int j = 0; j < 2; j++) {
+					if (ch_enabled[j]) {
+						chInfo[j].virt_samples += sample_steps[j];
+						while (chInfo[j].virt_samples > 1.f) {
+							chInfo[j].virt_samples -= 1.f;
+							++chInfo[j].sample_count %= 8;
+						}
 
 
-					if (ch1_right) {
-						sample_1 += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol * ch1_amp;
-					}
-					if (ch1_left) {
-						sample_0 += CH_1_2_PWM_SIGNALS[ch1_wave_index][ch1SampleCount] * ch1_vol * ch1_amp;
-					}
-				}
-
-				if (ch2_enable) {
-					ch2VirtSamples += ch2_virt_sample_step;
-					while (ch2VirtSamples > 1.f) {
-						ch2VirtSamples -= 1.f;
-						++ch2SampleCount %= 8;
-					}
-
-					if (ch2_right) {
-						sample_1 += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol * ch2_amp;
-					}
-					if (ch2_left) {
-						sample_0 += CH_1_2_PWM_SIGNALS[ch2_wave_index][ch2SampleCount] * ch2_vol * ch2_amp;
+						if (ch_lr_enabled[j][0]) {
+							samples[1] += CH_1_2_PWM_SIGNALS[duty_cycle_index[j]][chInfo[j].sample_count] * ch_volume[j] * amps[j];
+						}
+						if (ch_lr_enabled[j][1]) {
+							samples[0] += CH_1_2_PWM_SIGNALS[duty_cycle_index[j]][chInfo[j].sample_count] * ch_volume[j] * amps[j];
+						}
 					}
 				}
 
-				if (ch3_enable) {
-					ch3VirtSamples += ch3_virt_sample_step;
-					while (ch3VirtSamples > 1.f) {
-						ch3VirtSamples -= 1.f;
-						++ch3SampleCount %= 32;
+				if (ch_enabled[2]) {
+					auto& ch3Info = chInfo[2];
+
+					ch3Info.virt_samples += sample_steps[2];
+					while (ch3Info.virt_samples > 1.f) {
+						ch3Info.virt_samples -= 1.f;
+						++ch3Info.sample_count %= 32;
 					}
 
 					lock_wave_ram.lock();
-					if (ch3_right) {
-						sample_3 += soundCtx->waveRam[ch3SampleCount] * ch3_vol * ch3_amp;
+					if (ch_lr_enabled[2][0]) {
+						samples[3] += soundCtx->waveRam[ch3Info.sample_count] * ch_volume[2] * amps[2];
 					}
-					if (ch3_left) {
-						sample_2 += soundCtx->waveRam[ch3SampleCount] * ch3_vol * ch3_amp;
+					if (ch_lr_enabled[2][0]) {
+						samples[2] += soundCtx->waveRam[ch3Info.sample_count] * ch_volume[2] * amps[2];
 					}
 					lock_wave_ram.unlock();
 				}
 
 				{
+					auto& ch4Info = chInfo[3];;
 					lock_lfsr_buffer.lock();
-					ch4VirtSamples += ch4_virt_sample_step;
-					while (ch4VirtSamples > 1.f) {
-						ch4VirtSamples -= 1.f;
+					ch4Info.virt_samples += sample_steps[3];
+					while (ch4Info.virt_samples > 1.f) {
+						ch4Info.virt_samples -= 1.f;
 
 						int read_cursor = ch4ReadCursor.load();
 
@@ -345,19 +311,19 @@ namespace Emulation {
 						}
 					}
 
-					if (ch4_right) {
-						sample_3 += ch4LFSRSamples[ch4ReadCursor] * ch4_vol * ch4_amp;
+					if (ch_lr_enabled[3][0]) {
+						samples[3] += ch4LFSRSamples[ch4ReadCursor] * ch_volume[3] * amps[3];
 					}
-					if (ch4_left) {
-						sample_2 += ch4LFSRSamples[ch4ReadCursor] * ch4_vol * ch4_amp;
+					if (ch_lr_enabled[3][0]) {
+						samples[2] += ch4LFSRSamples[ch4ReadCursor] * ch_volume[3] * amps[3];
 					}
 					lock_lfsr_buffer.unlock();
 				}
 
-				_data[i * virtualChannels    ].real(sample_1 * vol_right * .05f);		// front-right
-				_data[i * virtualChannels + 1].real(sample_3 * vol_right * .05f);		// rear-right
-				_data[i * virtualChannels + 2].real(sample_2 * vol_left * .05f);		// rear-left
-				_data[i * virtualChannels + 3].real(sample_0 * vol_left * .05f);		// front-left
+				_data[i * virtualChannels    ].real(samples[1] * vol_right * .05f);		// front-right
+				_data[i * virtualChannels + 1].real(samples[3] * vol_right * .05f);		// rear-right
+				_data[i * virtualChannels + 2].real(samples[2] * vol_left * .05f);		// rear-left
+				_data[i * virtualChannels + 3].real(samples[0] * vol_left * .05f);		// front-left
 			}
 		}
 	}
