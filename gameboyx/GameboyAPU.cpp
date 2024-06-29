@@ -203,7 +203,7 @@ namespace Emulation {
 		* 3. rear left
 		* 4. front left
 		*/
-		void GameboyAPU::SampleAPU(std::vector<std::vector<std::complex<float>>>& _data, const int& _samples, const int& _sampling_rate) {
+		void GameboyAPU::SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) {
 			bool right = soundCtx->outRightEnabled.load();
 			bool left = soundCtx->outLeftEnabled.load();
 			bool vol_right = soundCtx->masterVolumeRight.load();
@@ -354,10 +354,10 @@ namespace Emulation {
 					lock_lfsr_buffer.unlock();
 				}
 
-				_data[0][i].real(sample_1 * vol_right * .05f);		// front-right
-				_data[1][i].real(sample_3 * vol_right * .05f);		// rear-right
-				_data[2][i].real(sample_2 * vol_left * .05f);		// rear-left
-				_data[3][i].real(sample_0 * vol_left * .05f);		// front-left
+				_data[i * virtualChannels    ].real(sample_1 * vol_right * .05f);		// front-right
+				_data[i * virtualChannels + 1].real(sample_3 * vol_right * .05f);		// rear-right
+				_data[i * virtualChannels + 2].real(sample_2 * vol_left * .05f);		// rear-left
+				_data[i * virtualChannels + 3].real(sample_0 * vol_left * .05f);		// front-left
 			}
 		}
 	}

@@ -14,7 +14,7 @@ namespace Emulation {
 
 			// members
 			void ProcessAPU(const int& _ticks) override;
-			void SampleAPU(std::vector<std::vector<std::complex<float>>>& _data, const int& _samples, const int& _sampling_rate) override;
+			void SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) override;
 
 		private:
 			// constructor
@@ -26,7 +26,7 @@ namespace Emulation {
 
 				Backend::virtual_audio_information virt_audio_info = {};
 				virt_audio_info.channels = virtualChannels;
-				virt_audio_info.apu_callback = [this](std::vector<std::vector<std::complex<float>>>& _samples, const int& _num, const int& _sampling_rate) {
+				virt_audio_info.apu_callback = [this](std::vector<std::complex<float>>& _samples, const int& _num, const int& _sampling_rate) {
 					this->SampleAPU(_samples, _num, _sampling_rate);
 					};
 				Backend::HardwareMgr::StartAudioBackend(virt_audio_info);
