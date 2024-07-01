@@ -8,6 +8,10 @@
 
 namespace Emulation {
 	namespace Gameboy {
+		/* *************************************************************************************************
+			THE STRUCT THAT HOLDS THE CHANNEL SPECIFIC DATA USED BY THE PROCESS FUNCTION 
+			(BOUND TO THE CPUS TIMERS)
+		************************************************************************************************* */
 		struct channel_info {
 			int length_counter = 0;
 			int envelope_sweep_counter = 0;
@@ -16,6 +20,9 @@ namespace Emulation {
 			int period_sweep_counter = 0;
 		};
 
+		/* *************************************************************************************************
+			GameboyAPU CLASS
+		************************************************************************************************* */
 		class GameboyAPU : protected BaseAPU {
 		public:
 			friend class BaseAPU;
@@ -44,29 +51,25 @@ namespace Emulation {
 				Backend::HardwareMgr::StopAudioBackend();
 			}
 
-			void tickLengthTimer(bool& _length_altered, const int& _length_timer, int& _length_counter, const u8& _ch_enable_bit, std::atomic<bool>* _ch_enable);
-			void envelopeSweep(int& _sweep_counter, const int& _sweep_pace, const bool& _envelope_increase, int& _envelope_volume, std::atomic<float>* _volume);
-
-			// TODO: probably combine these into structs and pass them by reference to the sweep and timer functions
 			int envelopeSweepCounter = 0;
 			int soundLengthCounter = 0;
 			int ch1SamplingRateCounter = 0;
 
-			
-			void ch1PeriodSweep();
+			int virtualChannels = 0;
+			channel_info chInfos[4] = { {}, {}, {}, {} };
 
-			channel_info chInfo[4] = { {}, {}, {}, {} };
+			void tickLengthTimer(channel_info* _ch_info, channel_context* _ch_ctx);
+			void envelopeSweep(channel_info* _ch_info, channel_context* _ch_ctx);
+			void periodSweep(channel_info* _ch_info, channel_context* _ch_ctx);
 
+			// Channel 4 specific (probably move to struct, too)
 			float ch4LFSRTickCounter = 0;
 			std::mutex mutLFSR;
 			std::vector<float> ch4LFSRSamples = std::vector<float>(CH_4_LFSR_BUFFER_SIZE);
-
-			int virtualChannels = 0;
-
 			alignas(64) std::atomic<int> ch4WriteCursor = 1;			// always points to the next sample to write
 			alignas(64) std::atomic<int> ch4ReadCursor = 0;				// always points to the current sample to read
 
-			void TickLFSR(const int& _ticks);
+			void TickLFSR(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx);
 
 			GameboyMEM* memInstance = nullptr;
 			sound_context* soundCtx = nullptr;
