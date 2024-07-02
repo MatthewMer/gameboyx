@@ -167,6 +167,8 @@
 #define OBP0_ADDR                       0xFF48              // RW
 #define OBP1_ADDR                       0xFF49              // RW
 
+#define BANK_ADDR                       0xFF50              // only for boot ROM
+
 // WINDOW POS
 #define WY_ADDR                         0xFF4A              // RW
 #define WX_ADDR                         0xFF4B              // RW

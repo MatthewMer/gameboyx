@@ -29,4 +29,8 @@ namespace Emulation {
             instance = nullptr;
         }
     }
+
+    std::vector<memory_type_tables>& BaseMEM::GetMemoryTables() {
+        return memoryTables;
+    }
 }

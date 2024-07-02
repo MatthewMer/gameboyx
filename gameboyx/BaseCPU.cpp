@@ -42,4 +42,8 @@ namespace Emulation {
 	void BaseCPU::ResetClockCycles() {
 		tickCounter = 0;
 	}
+
+	assembly_tables& BaseCPU::GetAssemblyTables() {
+		return asmTables;
+	}
 }

@@ -54,6 +54,8 @@ namespace Emulation {
 			int ram_bank_num = 0;
 			int wram_bank_num = 0;
 			int vram_bank_num = 0;
+
+			bool boot_rom_mapped = false;
 		};
 
 		struct graphics_context {
@@ -380,12 +382,8 @@ namespace Emulation {
 			u8& GetIO(const u16& _addr);
 			void SetIO(const u16& _addr, const u8& _data);
 
-			std::vector<u8>* GetProgramData(const int& _bank) const override;
-
 			void SetButton(const u8& _bit, const bool& _is_button);
 			void UnsetButton(const u8& _bit, const bool& _is_button);
-
-			void GetMemoryDebugTables(std::vector<GUI::GuiTable::Table<memory_entry>>& _tables) override;
 
 			const u8* GetBank(const MEM_TYPE& _type, const int& _bank);
 
@@ -408,8 +406,6 @@ namespace Emulation {
 				machine_ctx.ram_present = _cartridge->ramPresent;
 				machine_ctx.timer_present = _cartridge->timerPresent;
 
-				InitMemory(_cartridge);
-
 				if (machine_ctx.isCgb) {
 					graphics_ctx.dmg_bgp_color_palette[0] = CGB_DMG_COLOR_WHITE;
 					graphics_ctx.dmg_bgp_color_palette[1] = CGB_DMG_COLOR_LIGHTGREY;
@@ -429,6 +425,10 @@ namespace Emulation {
 					graphics_ctx.dmg_obp1_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
 					graphics_ctx.dmg_obp1_color_palette[3] = DMG_COLOR_BLACK_ALT;
 				}
+
+				InitMemory(_cartridge);
+
+				GenerateMemoryTables();
 			};
 			// destructor
 			~GameboyMEM() override {
@@ -442,10 +442,14 @@ namespace Emulation {
 			// members
 			void InitMemory(BaseCartridge* _cartridge) override;
 			void InitMemoryState() override;
-			void FillMemoryDebugTable(GUI::GuiTable::TableSection<memory_entry>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) override;
+
+			void GenerateMemoryTables() override;
+			void FillMemoryTable(std::vector<std::tuple<int, memory_entry>>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) override;
 
 			bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) override;
-			bool CopyRom(const std::vector<u8>& _vec_rom) override;
+			bool InitRom(const std::vector<u8>& _vec_rom) override;
+			bool InitBootRom(const std::vector<u8>& _boot_rom, const std::vector<u8>& _vec_rom) override;
+
 			void ProcessTAC();
 
 			void AllocateMemory(BaseCartridge* _cartridge) override;
@@ -504,6 +508,8 @@ namespace Emulation {
 			// serial
 			void SetSerialData(const u8& _data);
 			void SetSerialControl(const u8& _data);
+
+			void UnmapBootRom();
 
 			// memory cpu context
 			machine_context machine_ctx = machine_context();

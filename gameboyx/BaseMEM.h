@@ -11,11 +11,25 @@
 #include "HardwareMgr.h"
 
 #include "BaseCartridge.h"
-#include "GuiTable.h"
 #include "defs.h"
 #include "VHardwareTypes.h"
 
 namespace Emulation {
+
+	using memory_type_table = std::vector<std::tuple<int, memory_entry>>;
+
+	struct memory_type_tables : std::vector<memory_type_table> {
+		std::string memory_type = "";
+
+		void SetMemoryType(const std::string& _name) {
+			memory_type = _name;
+		}
+
+		std::string GetMemoryType() {
+			return memory_type;
+		}
+	};
+
 	class BaseMEM {
 	public:
 		// get/reset instance
@@ -23,7 +37,7 @@ namespace Emulation {
 		static BaseMEM* getInstance();
 		static void resetInstance();
 
-		virtual void GetMemoryDebugTables(std::vector<GUI::GuiTable::Table<memory_entry>>& _tables) = 0;
+		std::vector<memory_type_tables>& GetMemoryTables();
 
 	protected:
 		// constructor
@@ -34,15 +48,20 @@ namespace Emulation {
 		virtual void InitMemory(BaseCartridge* _cartridge) = 0;
 		virtual void InitMemoryState() = 0;
 		virtual bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) = 0;
-		virtual bool CopyRom(const std::vector<u8>& _vec_rom) = 0;
-		virtual void FillMemoryDebugTable(GUI::GuiTable::TableSection<memory_entry>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) = 0;
+		virtual bool InitRom(const std::vector<u8>& _vec_rom) = 0;
+		virtual bool InitBootRom(const std::vector<u8>& _boot_rom, const std::vector<u8>& _vec_rom) = 0;
+
+		virtual void GenerateMemoryTables() = 0;
+		virtual void FillMemoryTable(std::vector<std::tuple<int, memory_entry>>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) = 0;		
 
 		virtual void AllocateMemory(BaseCartridge* _cartridge) = 0;
 
 		virtual void RequestInterrupts(const u8& isr_flags) = 0;
 
-		virtual std::vector<u8>* GetProgramData(const int& _bank) const = 0;
-
 		static BaseMEM* instance;
+
+		std::vector<u8> romData;
+
+		std::vector<memory_type_tables> memoryTables;
 	};
 }

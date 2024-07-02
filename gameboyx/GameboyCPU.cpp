@@ -7,7 +7,6 @@
 #include <format>
 #include "logger.h"
 #include "GameboyMEM.h"
-#include "GuiTable.h"
 #include <unordered_map>
 
 #include <iostream>
@@ -20,7 +19,6 @@ namespace Emulation {
             MISC LOOKUPS
         *********************************************************************************************************** */
         enum instr_lookup_enums {
-            INSTR_OPCODE,
             INSTR_FUNC,
             INSTR_MNEMONIC,
             INSTR_ARG_1,
@@ -85,12 +83,16 @@ namespace Emulation {
             graphics_ctx = mem_instance->GetGraphicsContext();
             sound_ctx = mem_instance->GetSoundContext();
 
-            InitRegisterStates();
+            if (!_cartridge->CheckBootRom()) {
+                InitRegisterStates();
+            } else {
+                LOG_INFO("[emu] running with boot ROM: ", _cartridge->GetBootRomPath());
+            }
 
             setupLookupTable();
             setupLookupTableCB();
 
-
+            GenerateAssemblyTables(_cartridge);
         }
 
         void GameboyCPU::SetInstances() {
@@ -400,292 +402,292 @@ namespace Emulation {
             // Elements: opcode, instruction function, machine cycles, bytes (without opcode), instr_info
 
             // 0x00
-            instrMap.emplace_back(0x00, &GameboyCPU::NOP, "NOP", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0x01, &GameboyCPU::LDd16, "LD", BC, d16);
-            instrMap.emplace_back(0x02, &GameboyCPU::LDfromAtoRef, "LD", BC_ref, A);
-            instrMap.emplace_back(0x03, &GameboyCPU::INC16, "INC", BC, NO_DATA_TYPE);
-            instrMap.emplace_back(0x04, &GameboyCPU::INC8, "INC", B, NO_DATA_TYPE);
-            instrMap.emplace_back(0x05, &GameboyCPU::DEC8, "DEC", B, NO_DATA_TYPE);
-            instrMap.emplace_back(0x06, &GameboyCPU::LDd8, "LD", B, d8);
-            instrMap.emplace_back(0x07, &GameboyCPU::RLCA, "RLCA", A, NO_DATA_TYPE);
-            instrMap.emplace_back(0x08, &GameboyCPU::LDSPa16, "LD", a16_ref, SP);
-            instrMap.emplace_back(0x09, &GameboyCPU::ADDHL, "ADD", HL, BC);
-            instrMap.emplace_back(0x0a, &GameboyCPU::LDtoAfromRef, "LD", A, BC_ref);
-            instrMap.emplace_back(0x0b, &GameboyCPU::DEC16, "DEC", BC, NO_DATA_TYPE);
-            instrMap.emplace_back(0x0c, &GameboyCPU::INC8, "INC", C, NO_DATA_TYPE);
-            instrMap.emplace_back(0x0d, &GameboyCPU::DEC8, "DEC", C, NO_DATA_TYPE);
-            instrMap.emplace_back(0x0e, &GameboyCPU::LDd8, "LD", C, d8);
-            instrMap.emplace_back(0x0f, &GameboyCPU::RRCA, "RRCA", A, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NOP, "NOP", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd16, "LD", BC, d16);
+            instrMap.emplace_back(&GameboyCPU::LDfromAtoRef, "LD", BC_ref, A);
+            instrMap.emplace_back(&GameboyCPU::INC16, "INC", BC, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::INC8, "INC", B, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::DEC8, "DEC", B, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd8, "LD", B, d8);
+            instrMap.emplace_back(&GameboyCPU::RLCA, "RLCA", A, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDSPa16, "LD", a16_ref, SP);
+            instrMap.emplace_back(&GameboyCPU::ADDHL, "ADD", HL, BC);
+            instrMap.emplace_back(&GameboyCPU::LDtoAfromRef, "LD", A, BC_ref);
+            instrMap.emplace_back(&GameboyCPU::DEC16, "DEC", BC, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::INC8, "INC", C, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::DEC8, "DEC", C, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd8, "LD", C, d8);
+            instrMap.emplace_back(&GameboyCPU::RRCA, "RRCA", A, NO_DATA_TYPE);
 
             // 0x10
-            instrMap.emplace_back(0x10, &GameboyCPU::STOP, "STOP", d8, NO_DATA_TYPE);
-            instrMap.emplace_back(0x11, &GameboyCPU::LDd16, "LD", DE, d16);
-            instrMap.emplace_back(0x12, &GameboyCPU::LDfromAtoRef, "LD", DE_ref, A);
-            instrMap.emplace_back(0x13, &GameboyCPU::INC16, "INC", DE, NO_DATA_TYPE);
-            instrMap.emplace_back(0x14, &GameboyCPU::INC8, "INC", D, NO_DATA_TYPE);
-            instrMap.emplace_back(0x15, &GameboyCPU::DEC8, "DEC", D, NO_DATA_TYPE);
-            instrMap.emplace_back(0x16, &GameboyCPU::LDd8, "LD", D, d8);
-            instrMap.emplace_back(0x17, &GameboyCPU::RLA, "RLA", A, NO_DATA_TYPE);
-            instrMap.emplace_back(0x18, &GameboyCPU::JR, "JR", r8, NO_DATA_TYPE);
-            instrMap.emplace_back(0x19, &GameboyCPU::ADDHL, "ADD", HL, DE);
-            instrMap.emplace_back(0x1a, &GameboyCPU::LDtoAfromRef, "LD", A, DE_ref);
-            instrMap.emplace_back(0x1b, &GameboyCPU::DEC16, "DEC", DE, NO_DATA_TYPE);
-            instrMap.emplace_back(0x1c, &GameboyCPU::INC8, "INC", E, NO_DATA_TYPE);
-            instrMap.emplace_back(0x1d, &GameboyCPU::DEC8, "DEC", E, NO_DATA_TYPE);
-            instrMap.emplace_back(0x1e, &GameboyCPU::LDd8, "LD", E, d8);
-            instrMap.emplace_back(0x1f, &GameboyCPU::RRA, "RRA", A, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::STOP, "STOP", d8, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd16, "LD", DE, d16);
+            instrMap.emplace_back(&GameboyCPU::LDfromAtoRef, "LD", DE_ref, A);
+            instrMap.emplace_back(&GameboyCPU::INC16, "INC", DE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::INC8, "INC", D, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::DEC8, "DEC", D, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd8, "LD", D, d8);
+            instrMap.emplace_back(&GameboyCPU::RLA, "RLA", A, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JR, "JR", r8, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::ADDHL, "ADD", HL, DE);
+            instrMap.emplace_back(&GameboyCPU::LDtoAfromRef, "LD", A, DE_ref);
+            instrMap.emplace_back(&GameboyCPU::DEC16, "DEC", DE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::INC8, "INC", E, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::DEC8, "DEC", E, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd8, "LD", E, d8);
+            instrMap.emplace_back(&GameboyCPU::RRA, "RRA", A, NO_DATA_TYPE);
 
             // 0x20
-            instrMap.emplace_back(0x20, &GameboyCPU::JR, "JR NZ", r8, NO_DATA_TYPE);
-            instrMap.emplace_back(0x21, &GameboyCPU::LDd16, "LD", HL, d16);
-            instrMap.emplace_back(0x22, &GameboyCPU::LDfromAtoRef, "LD", HL_INC_ref, A);
-            instrMap.emplace_back(0x23, &GameboyCPU::INC16, "INC", HL, NO_DATA_TYPE);
-            instrMap.emplace_back(0x24, &GameboyCPU::INC8, "INC", H, NO_DATA_TYPE);
-            instrMap.emplace_back(0x25, &GameboyCPU::DEC8, "DEC", H, NO_DATA_TYPE);
-            instrMap.emplace_back(0x26, &GameboyCPU::LDd8, "LD", H, d8);
-            instrMap.emplace_back(0x27, &GameboyCPU::DAA, "DAA", A, NO_DATA_TYPE);
-            instrMap.emplace_back(0x28, &GameboyCPU::JR, "JR Z", r8, NO_DATA_TYPE);
-            instrMap.emplace_back(0x29, &GameboyCPU::ADDHL, "ADD", HL, HL);
-            instrMap.emplace_back(0x2a, &GameboyCPU::LDtoAfromRef, "LD", A, HL_INC_ref);
-            instrMap.emplace_back(0x2b, &GameboyCPU::DEC16, "DEC", HL, NO_DATA_TYPE);
-            instrMap.emplace_back(0x2c, &GameboyCPU::INC8, "INC", L, NO_DATA_TYPE);
-            instrMap.emplace_back(0x2d, &GameboyCPU::DEC8, "DEC", L, NO_DATA_TYPE);
-            instrMap.emplace_back(0x2e, &GameboyCPU::LDd8, "LD", L, NO_DATA_TYPE);
-            instrMap.emplace_back(0x2f, &GameboyCPU::CPL, "CPL", A, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JR, "JR NZ", r8, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd16, "LD", HL, d16);
+            instrMap.emplace_back(&GameboyCPU::LDfromAtoRef, "LD", HL_INC_ref, A);
+            instrMap.emplace_back(&GameboyCPU::INC16, "INC", HL, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::INC8, "INC", H, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::DEC8, "DEC", H, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd8, "LD", H, d8);
+            instrMap.emplace_back(&GameboyCPU::DAA, "DAA", A, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JR, "JR Z", r8, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::ADDHL, "ADD", HL, HL);
+            instrMap.emplace_back(&GameboyCPU::LDtoAfromRef, "LD", A, HL_INC_ref);
+            instrMap.emplace_back(&GameboyCPU::DEC16, "DEC", HL, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::INC8, "INC", L, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::DEC8, "DEC", L, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd8, "LD", L, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::CPL, "CPL", A, NO_DATA_TYPE);
 
             // 0x30
-            instrMap.emplace_back(0x30, &GameboyCPU::JR, "JR NC", r8, NO_DATA_TYPE);
-            instrMap.emplace_back(0x31, &GameboyCPU::LDd16, "LD", SP, d16);
-            instrMap.emplace_back(0x32, &GameboyCPU::LDfromAtoRef, "LD", HL_DEC_ref, A);
-            instrMap.emplace_back(0x33, &GameboyCPU::INC16, "INC", SP, NO_DATA_TYPE);
-            instrMap.emplace_back(0x34, &GameboyCPU::INC8, "INC", HL_ref, NO_DATA_TYPE);
-            instrMap.emplace_back(0x35, &GameboyCPU::DEC8, "DEC", HL_ref, NO_DATA_TYPE);
-            instrMap.emplace_back(0x36, &GameboyCPU::LDd8, "LD", HL_ref, d8);
-            instrMap.emplace_back(0x37, &GameboyCPU::SCF, "SCF", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0x38, &GameboyCPU::JR, "JR C", r8, NO_DATA_TYPE);
-            instrMap.emplace_back(0x39, &GameboyCPU::ADDHL, "ADD", HL, SP);
-            instrMap.emplace_back(0x3a, &GameboyCPU::LDtoAfromRef, "LD", A, HL_DEC_ref);
-            instrMap.emplace_back(0x3b, &GameboyCPU::DEC16, "DEC", SP, NO_DATA_TYPE);
-            instrMap.emplace_back(0x3c, &GameboyCPU::INC8, "INC", A, NO_DATA_TYPE);
-            instrMap.emplace_back(0x3d, &GameboyCPU::DEC8, "DEC", A, NO_DATA_TYPE);
-            instrMap.emplace_back(0x3e, &GameboyCPU::LDd8, "LD", A, d8);
-            instrMap.emplace_back(0x3f, &GameboyCPU::CCF, "CCF", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JR, "JR NC", r8, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd16, "LD", SP, d16);
+            instrMap.emplace_back(&GameboyCPU::LDfromAtoRef, "LD", HL_DEC_ref, A);
+            instrMap.emplace_back(&GameboyCPU::INC16, "INC", SP, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::INC8, "INC", HL_ref, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::DEC8, "DEC", HL_ref, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd8, "LD", HL_ref, d8);
+            instrMap.emplace_back(&GameboyCPU::SCF, "SCF", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JR, "JR C", r8, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::ADDHL, "ADD", HL, SP);
+            instrMap.emplace_back(&GameboyCPU::LDtoAfromRef, "LD", A, HL_DEC_ref);
+            instrMap.emplace_back(&GameboyCPU::DEC16, "DEC", SP, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::INC8, "INC", A, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::DEC8, "DEC", A, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDd8, "LD", A, d8);
+            instrMap.emplace_back(&GameboyCPU::CCF, "CCF", NO_DATA_TYPE, NO_DATA_TYPE);
 
             // 0x40
-            instrMap.emplace_back(0x40, &GameboyCPU::LDtoB, "LD", B, B);
-            instrMap.emplace_back(0x41, &GameboyCPU::LDtoB, "LD", B, C);
-            instrMap.emplace_back(0x42, &GameboyCPU::LDtoB, "LD", B, D);
-            instrMap.emplace_back(0x43, &GameboyCPU::LDtoB, "LD", B, E);
-            instrMap.emplace_back(0x44, &GameboyCPU::LDtoB, "LD", B, H);
-            instrMap.emplace_back(0x45, &GameboyCPU::LDtoB, "LD", B, L);
-            instrMap.emplace_back(0x46, &GameboyCPU::LDtoB, "LD", B, HL_ref);
-            instrMap.emplace_back(0x47, &GameboyCPU::LDtoB, "LD", B, A);
-            instrMap.emplace_back(0x48, &GameboyCPU::LDtoC, "LD", C, B);
-            instrMap.emplace_back(0x49, &GameboyCPU::LDtoC, "LD", C, C);
-            instrMap.emplace_back(0x4a, &GameboyCPU::LDtoC, "LD", C, D);
-            instrMap.emplace_back(0x4b, &GameboyCPU::LDtoC, "LD", C, E);
-            instrMap.emplace_back(0x4c, &GameboyCPU::LDtoC, "LD", C, H);
-            instrMap.emplace_back(0x4d, &GameboyCPU::LDtoC, "LD", C, L);
-            instrMap.emplace_back(0x4e, &GameboyCPU::LDtoC, "LD", C, HL_ref);
-            instrMap.emplace_back(0x4f, &GameboyCPU::LDtoC, "LD", C, A);
+            instrMap.emplace_back(&GameboyCPU::LDtoB, "LD", B, B);
+            instrMap.emplace_back(&GameboyCPU::LDtoB, "LD", B, C);
+            instrMap.emplace_back(&GameboyCPU::LDtoB, "LD", B, D);
+            instrMap.emplace_back(&GameboyCPU::LDtoB, "LD", B, E);
+            instrMap.emplace_back(&GameboyCPU::LDtoB, "LD", B, H);
+            instrMap.emplace_back(&GameboyCPU::LDtoB, "LD", B, L);
+            instrMap.emplace_back(&GameboyCPU::LDtoB, "LD", B, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::LDtoB, "LD", B, A);
+            instrMap.emplace_back(&GameboyCPU::LDtoC, "LD", C, B);
+            instrMap.emplace_back(&GameboyCPU::LDtoC, "LD", C, C);
+            instrMap.emplace_back(&GameboyCPU::LDtoC, "LD", C, D);
+            instrMap.emplace_back(&GameboyCPU::LDtoC, "LD", C, E);
+            instrMap.emplace_back(&GameboyCPU::LDtoC, "LD", C, H);
+            instrMap.emplace_back(&GameboyCPU::LDtoC, "LD", C, L);
+            instrMap.emplace_back(&GameboyCPU::LDtoC, "LD", C, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::LDtoC, "LD", C, A);
 
             // 0x50
-            instrMap.emplace_back(0x50, &GameboyCPU::LDtoD, "LD", D, B);
-            instrMap.emplace_back(0x51, &GameboyCPU::LDtoD, "LD", D, C);
-            instrMap.emplace_back(0x52, &GameboyCPU::LDtoD, "LD", D, D);
-            instrMap.emplace_back(0x53, &GameboyCPU::LDtoD, "LD", D, E);
-            instrMap.emplace_back(0x54, &GameboyCPU::LDtoD, "LD", D, H);
-            instrMap.emplace_back(0x55, &GameboyCPU::LDtoD, "LD", D, L);
-            instrMap.emplace_back(0x56, &GameboyCPU::LDtoD, "LD", D, HL_ref);
-            instrMap.emplace_back(0x57, &GameboyCPU::LDtoD, "LD", D, A);
-            instrMap.emplace_back(0x58, &GameboyCPU::LDtoE, "LD", E, B);
-            instrMap.emplace_back(0x59, &GameboyCPU::LDtoE, "LD", E, C);
-            instrMap.emplace_back(0x5a, &GameboyCPU::LDtoE, "LD", E, D);
-            instrMap.emplace_back(0x5b, &GameboyCPU::LDtoE, "LD", E, E);
-            instrMap.emplace_back(0x5c, &GameboyCPU::LDtoE, "LD", E, H);
-            instrMap.emplace_back(0x5d, &GameboyCPU::LDtoE, "LD", E, L);
-            instrMap.emplace_back(0x5e, &GameboyCPU::LDtoE, "LD", E, HL_ref);
-            instrMap.emplace_back(0x5f, &GameboyCPU::LDtoE, "LD", E, A);
+            instrMap.emplace_back(&GameboyCPU::LDtoD, "LD", D, B);
+            instrMap.emplace_back(&GameboyCPU::LDtoD, "LD", D, C);
+            instrMap.emplace_back(&GameboyCPU::LDtoD, "LD", D, D);
+            instrMap.emplace_back(&GameboyCPU::LDtoD, "LD", D, E);
+            instrMap.emplace_back(&GameboyCPU::LDtoD, "LD", D, H);
+            instrMap.emplace_back(&GameboyCPU::LDtoD, "LD", D, L);
+            instrMap.emplace_back(&GameboyCPU::LDtoD, "LD", D, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::LDtoD, "LD", D, A);
+            instrMap.emplace_back(&GameboyCPU::LDtoE, "LD", E, B);
+            instrMap.emplace_back(&GameboyCPU::LDtoE, "LD", E, C);
+            instrMap.emplace_back(&GameboyCPU::LDtoE, "LD", E, D);
+            instrMap.emplace_back(&GameboyCPU::LDtoE, "LD", E, E);
+            instrMap.emplace_back(&GameboyCPU::LDtoE, "LD", E, H);
+            instrMap.emplace_back(&GameboyCPU::LDtoE, "LD", E, L);
+            instrMap.emplace_back(&GameboyCPU::LDtoE, "LD", E, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::LDtoE, "LD", E, A);
 
             // 0x60
-            instrMap.emplace_back(0x60, &GameboyCPU::LDtoH, "LD", H, B);
-            instrMap.emplace_back(0x61, &GameboyCPU::LDtoH, "LD", H, C);
-            instrMap.emplace_back(0x62, &GameboyCPU::LDtoH, "LD", H, D);
-            instrMap.emplace_back(0x63, &GameboyCPU::LDtoH, "LD", H, E);
-            instrMap.emplace_back(0x64, &GameboyCPU::LDtoH, "LD", H, H);
-            instrMap.emplace_back(0x65, &GameboyCPU::LDtoH, "LD", H, L);
-            instrMap.emplace_back(0x66, &GameboyCPU::LDtoH, "LD", H, HL_ref);
-            instrMap.emplace_back(0x67, &GameboyCPU::LDtoH, "LD", H, A);
-            instrMap.emplace_back(0x68, &GameboyCPU::LDtoL, "LD", L, B);
-            instrMap.emplace_back(0x69, &GameboyCPU::LDtoL, "LD", L, C);
-            instrMap.emplace_back(0x6a, &GameboyCPU::LDtoL, "LD", L, D);
-            instrMap.emplace_back(0x6b, &GameboyCPU::LDtoL, "LD", L, E);
-            instrMap.emplace_back(0x6c, &GameboyCPU::LDtoL, "LD", L, H);
-            instrMap.emplace_back(0x6d, &GameboyCPU::LDtoL, "LD", L, L);
-            instrMap.emplace_back(0x6e, &GameboyCPU::LDtoL, "LD", L, HL_ref);
-            instrMap.emplace_back(0x6f, &GameboyCPU::LDtoL, "LD", L, A);
+            instrMap.emplace_back(&GameboyCPU::LDtoH, "LD", H, B);
+            instrMap.emplace_back(&GameboyCPU::LDtoH, "LD", H, C);
+            instrMap.emplace_back(&GameboyCPU::LDtoH, "LD", H, D);
+            instrMap.emplace_back(&GameboyCPU::LDtoH, "LD", H, E);
+            instrMap.emplace_back(&GameboyCPU::LDtoH, "LD", H, H);
+            instrMap.emplace_back(&GameboyCPU::LDtoH, "LD", H, L);
+            instrMap.emplace_back(&GameboyCPU::LDtoH, "LD", H, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::LDtoH, "LD", H, A);
+            instrMap.emplace_back(&GameboyCPU::LDtoL, "LD", L, B);
+            instrMap.emplace_back(&GameboyCPU::LDtoL, "LD", L, C);
+            instrMap.emplace_back(&GameboyCPU::LDtoL, "LD", L, D);
+            instrMap.emplace_back(&GameboyCPU::LDtoL, "LD", L, E);
+            instrMap.emplace_back(&GameboyCPU::LDtoL, "LD", L, H);
+            instrMap.emplace_back(&GameboyCPU::LDtoL, "LD", L, L);
+            instrMap.emplace_back(&GameboyCPU::LDtoL, "LD", L, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::LDtoL, "LD", L, A);
 
             // 0x70
-            instrMap.emplace_back(0x70, &GameboyCPU::LDtoHLref, "LD", HL_ref, B);
-            instrMap.emplace_back(0x71, &GameboyCPU::LDtoHLref, "LD", HL_ref, C);
-            instrMap.emplace_back(0x72, &GameboyCPU::LDtoHLref, "LD", HL_ref, D);
-            instrMap.emplace_back(0x73, &GameboyCPU::LDtoHLref, "LD", HL_ref, E);
-            instrMap.emplace_back(0x74, &GameboyCPU::LDtoHLref, "LD", HL_ref, H);
-            instrMap.emplace_back(0x75, &GameboyCPU::LDtoHLref, "LD", HL_ref, L);
-            instrMap.emplace_back(0x76, &GameboyCPU::HALT, "HALT", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0x77, &GameboyCPU::LDtoHLref, "LD", HL_ref, A);
-            instrMap.emplace_back(0x78, &GameboyCPU::LDtoA, "LD", A, B);
-            instrMap.emplace_back(0x79, &GameboyCPU::LDtoA, "LD", A, C);
-            instrMap.emplace_back(0x7a, &GameboyCPU::LDtoA, "LD", A, D);
-            instrMap.emplace_back(0x7b, &GameboyCPU::LDtoA, "LD", A, E);
-            instrMap.emplace_back(0x7c, &GameboyCPU::LDtoA, "LD", A, H);
-            instrMap.emplace_back(0x7d, &GameboyCPU::LDtoA, "LD", A, L);
-            instrMap.emplace_back(0x7e, &GameboyCPU::LDtoA, "LD", A, HL_ref);
-            instrMap.emplace_back(0x7f, &GameboyCPU::LDtoA, "LD", A, A);
+            instrMap.emplace_back(&GameboyCPU::LDtoHLref, "LD", HL_ref, B);
+            instrMap.emplace_back(&GameboyCPU::LDtoHLref, "LD", HL_ref, C);
+            instrMap.emplace_back(&GameboyCPU::LDtoHLref, "LD", HL_ref, D);
+            instrMap.emplace_back(&GameboyCPU::LDtoHLref, "LD", HL_ref, E);
+            instrMap.emplace_back(&GameboyCPU::LDtoHLref, "LD", HL_ref, H);
+            instrMap.emplace_back(&GameboyCPU::LDtoHLref, "LD", HL_ref, L);
+            instrMap.emplace_back(&GameboyCPU::HALT, "HALT", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDtoHLref, "LD", HL_ref, A);
+            instrMap.emplace_back(&GameboyCPU::LDtoA, "LD", A, B);
+            instrMap.emplace_back(&GameboyCPU::LDtoA, "LD", A, C);
+            instrMap.emplace_back(&GameboyCPU::LDtoA, "LD", A, D);
+            instrMap.emplace_back(&GameboyCPU::LDtoA, "LD", A, E);
+            instrMap.emplace_back(&GameboyCPU::LDtoA, "LD", A, H);
+            instrMap.emplace_back(&GameboyCPU::LDtoA, "LD", A, L);
+            instrMap.emplace_back(&GameboyCPU::LDtoA, "LD", A, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::LDtoA, "LD", A, A);
 
             // 0x80
-            instrMap.emplace_back(0x80, &GameboyCPU::ADD8, "ADD", A, B);
-            instrMap.emplace_back(0x81, &GameboyCPU::ADD8, "ADD", A, C);
-            instrMap.emplace_back(0x82, &GameboyCPU::ADD8, "ADD", A, D);
-            instrMap.emplace_back(0x83, &GameboyCPU::ADD8, "ADD", A, E);
-            instrMap.emplace_back(0x84, &GameboyCPU::ADD8, "ADD", A, H);
-            instrMap.emplace_back(0x85, &GameboyCPU::ADD8, "ADD", A, L);
-            instrMap.emplace_back(0x86, &GameboyCPU::ADD8, "ADD", A, HL_ref);
-            instrMap.emplace_back(0x87, &GameboyCPU::ADD8, "ADD", A, A);
-            instrMap.emplace_back(0x88, &GameboyCPU::ADC, "ADC", A, B);
-            instrMap.emplace_back(0x89, &GameboyCPU::ADC, "ADC", A, C);
-            instrMap.emplace_back(0x8a, &GameboyCPU::ADC, "ADC", A, D);
-            instrMap.emplace_back(0x8b, &GameboyCPU::ADC, "ADC", A, E);
-            instrMap.emplace_back(0x8c, &GameboyCPU::ADC, "ADC", A, H);
-            instrMap.emplace_back(0x8d, &GameboyCPU::ADC, "ADC", A, L);
-            instrMap.emplace_back(0x8e, &GameboyCPU::ADC, "ADC", A, HL_ref);
-            instrMap.emplace_back(0x8f, &GameboyCPU::ADC, "ADC", A, A);
+            instrMap.emplace_back(&GameboyCPU::ADD8, "ADD", A, B);
+            instrMap.emplace_back(&GameboyCPU::ADD8, "ADD", A, C);
+            instrMap.emplace_back(&GameboyCPU::ADD8, "ADD", A, D);
+            instrMap.emplace_back(&GameboyCPU::ADD8, "ADD", A, E);
+            instrMap.emplace_back(&GameboyCPU::ADD8, "ADD", A, H);
+            instrMap.emplace_back(&GameboyCPU::ADD8, "ADD", A, L);
+            instrMap.emplace_back(&GameboyCPU::ADD8, "ADD", A, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::ADD8, "ADD", A, A);
+            instrMap.emplace_back(&GameboyCPU::ADC, "ADC", A, B);
+            instrMap.emplace_back(&GameboyCPU::ADC, "ADC", A, C);
+            instrMap.emplace_back(&GameboyCPU::ADC, "ADC", A, D);
+            instrMap.emplace_back(&GameboyCPU::ADC, "ADC", A, E);
+            instrMap.emplace_back(&GameboyCPU::ADC, "ADC", A, H);
+            instrMap.emplace_back(&GameboyCPU::ADC, "ADC", A, L);
+            instrMap.emplace_back(&GameboyCPU::ADC, "ADC", A, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::ADC, "ADC", A, A);
 
             // 0x90
-            instrMap.emplace_back(0x90, &GameboyCPU::SUB, "SUB", A, B);
-            instrMap.emplace_back(0x91, &GameboyCPU::SUB, "SUB", A, C);
-            instrMap.emplace_back(0x92, &GameboyCPU::SUB, "SUB", A, D);
-            instrMap.emplace_back(0x93, &GameboyCPU::SUB, "SUB", A, E);
-            instrMap.emplace_back(0x94, &GameboyCPU::SUB, "SUB", A, H);
-            instrMap.emplace_back(0x95, &GameboyCPU::SUB, "SUB", A, L);
-            instrMap.emplace_back(0x96, &GameboyCPU::SUB, "SUB", A, HL_ref);
-            instrMap.emplace_back(0x97, &GameboyCPU::SUB, "SUB", A, A);
-            instrMap.emplace_back(0x98, &GameboyCPU::SBC, "SBC", A, B);
-            instrMap.emplace_back(0x99, &GameboyCPU::SBC, "SBC", A, C);
-            instrMap.emplace_back(0x9a, &GameboyCPU::SBC, "SBC", A, D);
-            instrMap.emplace_back(0x9b, &GameboyCPU::SBC, "SBC", A, E);
-            instrMap.emplace_back(0x9c, &GameboyCPU::SBC, "SBC", A, H);
-            instrMap.emplace_back(0x9d, &GameboyCPU::SBC, "SBC", A, L);
-            instrMap.emplace_back(0x9e, &GameboyCPU::SBC, "SBC", A, HL_ref);
-            instrMap.emplace_back(0x9f, &GameboyCPU::SBC, "SBC", A, A);
+            instrMap.emplace_back(&GameboyCPU::SUB, "SUB", A, B);
+            instrMap.emplace_back(&GameboyCPU::SUB, "SUB", A, C);
+            instrMap.emplace_back(&GameboyCPU::SUB, "SUB", A, D);
+            instrMap.emplace_back(&GameboyCPU::SUB, "SUB", A, E);
+            instrMap.emplace_back(&GameboyCPU::SUB, "SUB", A, H);
+            instrMap.emplace_back(&GameboyCPU::SUB, "SUB", A, L);
+            instrMap.emplace_back(&GameboyCPU::SUB, "SUB", A, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::SUB, "SUB", A, A);
+            instrMap.emplace_back(&GameboyCPU::SBC, "SBC", A, B);
+            instrMap.emplace_back(&GameboyCPU::SBC, "SBC", A, C);
+            instrMap.emplace_back(&GameboyCPU::SBC, "SBC", A, D);
+            instrMap.emplace_back(&GameboyCPU::SBC, "SBC", A, E);
+            instrMap.emplace_back(&GameboyCPU::SBC, "SBC", A, H);
+            instrMap.emplace_back(&GameboyCPU::SBC, "SBC", A, L);
+            instrMap.emplace_back(&GameboyCPU::SBC, "SBC", A, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::SBC, "SBC", A, A);
 
             // 0xa0
-            instrMap.emplace_back(0xa0, &GameboyCPU::AND, "AND", A, B);
-            instrMap.emplace_back(0xa1, &GameboyCPU::AND, "AND", A, C);
-            instrMap.emplace_back(0xa2, &GameboyCPU::AND, "AND", A, D);
-            instrMap.emplace_back(0xa3, &GameboyCPU::AND, "AND", A, E);
-            instrMap.emplace_back(0xa4, &GameboyCPU::AND, "AND", A, H);
-            instrMap.emplace_back(0xa5, &GameboyCPU::AND, "AND", A, L);
-            instrMap.emplace_back(0xa6, &GameboyCPU::AND, "AND", A, HL_ref);
-            instrMap.emplace_back(0xa7, &GameboyCPU::AND, "AND", A, A);
-            instrMap.emplace_back(0xa8, &GameboyCPU::XOR, "XOR", A, B);
-            instrMap.emplace_back(0xa9, &GameboyCPU::XOR, "XOR", A, C);
-            instrMap.emplace_back(0xaa, &GameboyCPU::XOR, "XOR", A, D);
-            instrMap.emplace_back(0xab, &GameboyCPU::XOR, "XOR", A, E);
-            instrMap.emplace_back(0xac, &GameboyCPU::XOR, "XOR", A, H);
-            instrMap.emplace_back(0xad, &GameboyCPU::XOR, "XOR", A, L);
-            instrMap.emplace_back(0xae, &GameboyCPU::XOR, "XOR", A, HL_ref);
-            instrMap.emplace_back(0xaf, &GameboyCPU::XOR, "XOR", A, A);
+            instrMap.emplace_back(&GameboyCPU::AND, "AND", A, B);
+            instrMap.emplace_back(&GameboyCPU::AND, "AND", A, C);
+            instrMap.emplace_back(&GameboyCPU::AND, "AND", A, D);
+            instrMap.emplace_back(&GameboyCPU::AND, "AND", A, E);
+            instrMap.emplace_back(&GameboyCPU::AND, "AND", A, H);
+            instrMap.emplace_back(&GameboyCPU::AND, "AND", A, L);
+            instrMap.emplace_back(&GameboyCPU::AND, "AND", A, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::AND, "AND", A, A);
+            instrMap.emplace_back(&GameboyCPU::XOR, "XOR", A, B);
+            instrMap.emplace_back(&GameboyCPU::XOR, "XOR", A, C);
+            instrMap.emplace_back(&GameboyCPU::XOR, "XOR", A, D);
+            instrMap.emplace_back(&GameboyCPU::XOR, "XOR", A, E);
+            instrMap.emplace_back(&GameboyCPU::XOR, "XOR", A, H);
+            instrMap.emplace_back(&GameboyCPU::XOR, "XOR", A, L);
+            instrMap.emplace_back(&GameboyCPU::XOR, "XOR", A, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::XOR, "XOR", A, A);
 
             // 0xb0
-            instrMap.emplace_back(0xb0, &GameboyCPU::OR, "OR", A, B);
-            instrMap.emplace_back(0xb1, &GameboyCPU::OR, "OR", A, C);
-            instrMap.emplace_back(0xb2, &GameboyCPU::OR, "OR", A, D);
-            instrMap.emplace_back(0xb3, &GameboyCPU::OR, "OR", A, E);
-            instrMap.emplace_back(0xb4, &GameboyCPU::OR, "OR", A, H);
-            instrMap.emplace_back(0xb5, &GameboyCPU::OR, "OR", A, L);
-            instrMap.emplace_back(0xb6, &GameboyCPU::OR, "OR", A, HL_ref);
-            instrMap.emplace_back(0xb7, &GameboyCPU::OR, "OR", A, A);
-            instrMap.emplace_back(0xb8, &GameboyCPU::CP, "CP", A, B);
-            instrMap.emplace_back(0xb9, &GameboyCPU::CP, "CP", A, C);
-            instrMap.emplace_back(0xba, &GameboyCPU::CP, "CP", A, D);
-            instrMap.emplace_back(0xbb, &GameboyCPU::CP, "CP", A, E);
-            instrMap.emplace_back(0xbc, &GameboyCPU::CP, "CP", A, H);
-            instrMap.emplace_back(0xbd, &GameboyCPU::CP, "CP", A, L);
-            instrMap.emplace_back(0xbe, &GameboyCPU::CP, "CP", A, HL_ref);
-            instrMap.emplace_back(0xbf, &GameboyCPU::CP, "CP", A, A);
+            instrMap.emplace_back(&GameboyCPU::OR, "OR", A, B);
+            instrMap.emplace_back(&GameboyCPU::OR, "OR", A, C);
+            instrMap.emplace_back(&GameboyCPU::OR, "OR", A, D);
+            instrMap.emplace_back(&GameboyCPU::OR, "OR", A, E);
+            instrMap.emplace_back(&GameboyCPU::OR, "OR", A, H);
+            instrMap.emplace_back(&GameboyCPU::OR, "OR", A, L);
+            instrMap.emplace_back(&GameboyCPU::OR, "OR", A, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::OR, "OR", A, A);
+            instrMap.emplace_back(&GameboyCPU::CP, "CP", A, B);
+            instrMap.emplace_back(&GameboyCPU::CP, "CP", A, C);
+            instrMap.emplace_back(&GameboyCPU::CP, "CP", A, D);
+            instrMap.emplace_back(&GameboyCPU::CP, "CP", A, E);
+            instrMap.emplace_back(&GameboyCPU::CP, "CP", A, H);
+            instrMap.emplace_back(&GameboyCPU::CP, "CP", A, L);
+            instrMap.emplace_back(&GameboyCPU::CP, "CP", A, HL_ref);
+            instrMap.emplace_back(&GameboyCPU::CP, "CP", A, A);
 
             // 0xc0
-            instrMap.emplace_back(0xc0, &GameboyCPU::RET, "RET NZ", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xc1, &GameboyCPU::POP, "POP", BC, NO_DATA_TYPE);
-            instrMap.emplace_back(0xc2, &GameboyCPU::JP, "JP NZ", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xc3, &GameboyCPU::JP, "JP", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xc4, &GameboyCPU::CALL, "CALL NZ", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xc5, &GameboyCPU::PUSH, "PUSH", BC, NO_DATA_TYPE);
-            instrMap.emplace_back(0xc6, &GameboyCPU::ADD8, "ADD", A, d8);
-            instrMap.emplace_back(0xc7, &GameboyCPU::RST, "RST $00", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xc8, &GameboyCPU::RET, "RET Z", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xc9, &GameboyCPU::RET, "RET", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xca, &GameboyCPU::JP, "JP Z", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xcb, &GameboyCPU::CB, "CB", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xcc, &GameboyCPU::CALL, "CALL Z", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xcd, &GameboyCPU::CALL, "CALL", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xce, &GameboyCPU::ADC, "ADC", A, d8);
-            instrMap.emplace_back(0xcf, &GameboyCPU::RST, "RST $08", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::RET, "RET NZ", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::POP, "POP", BC, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JP, "JP NZ", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JP, "JP", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::CALL, "CALL NZ", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::PUSH, "PUSH", BC, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::ADD8, "ADD", A, d8);
+            instrMap.emplace_back(&GameboyCPU::RST, "RST $00", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::RET, "RET Z", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::RET, "RET", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JP, "JP Z", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::CB, "CB", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::CALL, "CALL Z", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::CALL, "CALL", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::ADC, "ADC", A, d8);
+            instrMap.emplace_back(&GameboyCPU::RST, "RST $08", NO_DATA_TYPE, NO_DATA_TYPE);
 
             // 0xd0
-            instrMap.emplace_back(0xd0, &GameboyCPU::RET, "RET NC", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xd1, &GameboyCPU::POP, "POP", DE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xd2, &GameboyCPU::JP, "JP NC", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xd3, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xd4, &GameboyCPU::CALL, "CALL NC", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xd5, &GameboyCPU::PUSH, "PUSH", DE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xd6, &GameboyCPU::SUB, "SUB", A, d8);
-            instrMap.emplace_back(0xd7, &GameboyCPU::RST, "RST $10", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xd8, &GameboyCPU::RET, "RET C", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xd9, &GameboyCPU::RETI, "RETI", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xda, &GameboyCPU::JP, "JP C", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xdb, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xdc, &GameboyCPU::CALL, "CALL C", a16, NO_DATA_TYPE);
-            instrMap.emplace_back(0xdd, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xde, &GameboyCPU::SBC, "SBC", A, d8);
-            instrMap.emplace_back(0xdf, &GameboyCPU::RST, "RST $18", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::RET, "RET NC", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::POP, "POP", DE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JP, "JP NC", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::CALL, "CALL NC", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::PUSH, "PUSH", DE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::SUB, "SUB", A, d8);
+            instrMap.emplace_back(&GameboyCPU::RST, "RST $10", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::RET, "RET C", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::RETI, "RETI", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::JP, "JP C", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::CALL, "CALL C", a16, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::SBC, "SBC", A, d8);
+            instrMap.emplace_back(&GameboyCPU::RST, "RST $18", NO_DATA_TYPE, NO_DATA_TYPE);
 
             // 0xe0
-            instrMap.emplace_back(0xe0, &GameboyCPU::LDH, "LDH", a8_ref, A);
-            instrMap.emplace_back(0xe1, &GameboyCPU::POP, "POP", HL, NO_DATA_TYPE);
-            instrMap.emplace_back(0xe2, &GameboyCPU::LDCref, "LD", C_ref, A);
-            instrMap.emplace_back(0xe3, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xe4, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xe5, &GameboyCPU::PUSH, "PUSH", HL, NO_DATA_TYPE);
-            instrMap.emplace_back(0xe6, &GameboyCPU::AND, "AND", A, d8);
-            instrMap.emplace_back(0xe7, &GameboyCPU::RST, "RST $20", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xe8, &GameboyCPU::ADDSPr8, "ADD", SP, r8);
-            instrMap.emplace_back(0xe9, &GameboyCPU::JP, "JP", HL_ref, NO_DATA_TYPE);
-            instrMap.emplace_back(0xea, &GameboyCPU::LDHa16, "LD", a16_ref, A);
-            instrMap.emplace_back(0xeb, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xec, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xed, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xee, &GameboyCPU::XOR, "XOR", A, d8);
-            instrMap.emplace_back(0xef, &GameboyCPU::RST, "RST $28", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDH, "LDH", a8_ref, A);
+            instrMap.emplace_back(&GameboyCPU::POP, "POP", HL, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDCref, "LD", C_ref, A);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::PUSH, "PUSH", HL, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::AND, "AND", A, d8);
+            instrMap.emplace_back(&GameboyCPU::RST, "RST $20", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::ADDSPr8, "ADD", SP, r8);
+            instrMap.emplace_back(&GameboyCPU::JP, "JP", HL_ref, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDHa16, "LD", a16_ref, A);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::XOR, "XOR", A, d8);
+            instrMap.emplace_back(&GameboyCPU::RST, "RST $28", NO_DATA_TYPE, NO_DATA_TYPE);
 
             // 0xf0
-            instrMap.emplace_back(0xf0, &GameboyCPU::LDH, "LD", A, a8_ref);
-            instrMap.emplace_back(0xf1, &GameboyCPU::POP, "POP", AF, NO_DATA_TYPE);
-            instrMap.emplace_back(0xf2, &GameboyCPU::LDCref, "LD", A, C_ref);
-            instrMap.emplace_back(0xf3, &GameboyCPU::DI, "DI", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xf4, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xf5, &GameboyCPU::PUSH, "PUSH", AF, NO_DATA_TYPE);
-            instrMap.emplace_back(0xf6, &GameboyCPU::OR, "OR", A, d8);
-            instrMap.emplace_back(0xf7, &GameboyCPU::RST, "RST $30", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xf8, &GameboyCPU::LDHLSPr8, "LD", HL, SP_r8);
-            instrMap.emplace_back(0xf9, &GameboyCPU::LDSPHL, "LD", SP, HL);
-            instrMap.emplace_back(0xfa, &GameboyCPU::LDHa16, "LD", A, a16_ref);
-            instrMap.emplace_back(0xfb, &GameboyCPU::EI, "EI", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xfc, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xfd, &GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
-            instrMap.emplace_back(0xfe, &GameboyCPU::CP, "CP", A, d8);
-            instrMap.emplace_back(0xff, &GameboyCPU::RST, "RST $38", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDH, "LD", A, a8_ref);
+            instrMap.emplace_back(&GameboyCPU::POP, "POP", AF, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDCref, "LD", A, C_ref);
+            instrMap.emplace_back(&GameboyCPU::DI, "DI", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::PUSH, "PUSH", AF, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::OR, "OR", A, d8);
+            instrMap.emplace_back(&GameboyCPU::RST, "RST $30", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::LDHLSPr8, "LD", HL, SP_r8);
+            instrMap.emplace_back(&GameboyCPU::LDSPHL, "LD", SP, HL);
+            instrMap.emplace_back(&GameboyCPU::LDHa16, "LD", A, a16_ref);
+            instrMap.emplace_back(&GameboyCPU::EI, "EI", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::NoInstruction, "NoInstruction", NO_DATA_TYPE, NO_DATA_TYPE);
+            instrMap.emplace_back(&GameboyCPU::CP, "CP", A, d8);
+            instrMap.emplace_back(&GameboyCPU::RST, "RST $38", NO_DATA_TYPE, NO_DATA_TYPE);
         }
 
         /* ***********************************************************************************************************
@@ -2050,277 +2052,277 @@ namespace Emulation {
             instrMapCB.clear();
 
             // Elements: opcode, instruction function, machine cycles
-            instrMapCB.emplace_back(0x00, &GameboyCPU::RLC, "RLC", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x01, &GameboyCPU::RLC, "RLC", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x02, &GameboyCPU::RLC, "RLC", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x03, &GameboyCPU::RLC, "RLC", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x04, &GameboyCPU::RLC, "RLC", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x05, &GameboyCPU::RLC, "RLC", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x06, &GameboyCPU::RLC, "RLC", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x07, &GameboyCPU::RLC, "RLC", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x08, &GameboyCPU::RRC, "RRC", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x09, &GameboyCPU::RRC, "RRC", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x0a, &GameboyCPU::RRC, "RRC", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x0b, &GameboyCPU::RRC, "RRC", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x0c, &GameboyCPU::RRC, "RRC", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x0d, &GameboyCPU::RRC, "RRC", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x0e, &GameboyCPU::RRC, "RRC", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x0f, &GameboyCPU::RRC, "RRC", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RLC, "RLC", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RLC, "RLC", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RLC, "RLC", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RLC, "RLC", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RLC, "RLC", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RLC, "RLC", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RLC, "RLC", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RLC, "RLC", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RRC, "RRC", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RRC, "RRC", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RRC, "RRC", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RRC, "RRC", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RRC, "RRC", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RRC, "RRC", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RRC, "RRC", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RRC, "RRC", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0x10, &GameboyCPU::RL, "RL", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x11, &GameboyCPU::RL, "RL", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x12, &GameboyCPU::RL, "RL", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x13, &GameboyCPU::RL, "RL", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x14, &GameboyCPU::RL, "RL", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x15, &GameboyCPU::RL, "RL", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x16, &GameboyCPU::RL, "RL", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x17, &GameboyCPU::RL, "RL", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x18, &GameboyCPU::RR, "RR", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x19, &GameboyCPU::RR, "RR", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x1a, &GameboyCPU::RR, "RR", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x1b, &GameboyCPU::RR, "RR", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x1c, &GameboyCPU::RR, "RR", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x1d, &GameboyCPU::RR, "RR", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x1e, &GameboyCPU::RR, "RR", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x1f, &GameboyCPU::RR, "RR", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RL, "RL", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RL, "RL", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RL, "RL", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RL, "RL", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RL, "RL", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RL, "RL", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RL, "RL", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RL, "RL", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RR, "RR", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RR, "RR", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RR, "RR", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RR, "RR", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RR, "RR", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RR, "RR", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RR, "RR", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RR, "RR", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0x20, &GameboyCPU::SLA, "SLA", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x21, &GameboyCPU::SLA, "SLA", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x22, &GameboyCPU::SLA, "SLA", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x23, &GameboyCPU::SLA, "SLA", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x24, &GameboyCPU::SLA, "SLA", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x25, &GameboyCPU::SLA, "SLA", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x26, &GameboyCPU::SLA, "SLA", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x27, &GameboyCPU::SLA, "SLA", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x28, &GameboyCPU::SRA, "SRA", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x29, &GameboyCPU::SRA, "SRA", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x2a, &GameboyCPU::SRA, "SRA", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x2b, &GameboyCPU::SRA, "SRA", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x2c, &GameboyCPU::SRA, "SRA", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x2d, &GameboyCPU::SRA, "SRA", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x2e, &GameboyCPU::SRA, "SRA", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x2f, &GameboyCPU::SRA, "SRA", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SLA, "SLA", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SLA, "SLA", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SLA, "SLA", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SLA, "SLA", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SLA, "SLA", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SLA, "SLA", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SLA, "SLA", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SLA, "SLA", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRA, "SRA", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRA, "SRA", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRA, "SRA", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRA, "SRA", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRA, "SRA", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRA, "SRA", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRA, "SRA", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRA, "SRA", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0x30, &GameboyCPU::SWAP, "SWAP", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x31, &GameboyCPU::SWAP, "SWAP", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x32, &GameboyCPU::SWAP, "SWAP", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x33, &GameboyCPU::SWAP, "SWAP", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x34, &GameboyCPU::SWAP, "SWAP", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x35, &GameboyCPU::SWAP, "SWAP", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x36, &GameboyCPU::SWAP, "SWAP", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x37, &GameboyCPU::SWAP, "SWAP", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x38, &GameboyCPU::SRL, "SRL", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x39, &GameboyCPU::SRL, "SRL", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x3a, &GameboyCPU::SRL, "SRL", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x3b, &GameboyCPU::SRL, "SRL", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x3c, &GameboyCPU::SRL, "SRL", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x3d, &GameboyCPU::SRL, "SRL", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x3e, &GameboyCPU::SRL, "SRL", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x3f, &GameboyCPU::SRL, "SRL", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SWAP, "SWAP", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SWAP, "SWAP", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SWAP, "SWAP", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SWAP, "SWAP", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SWAP, "SWAP", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SWAP, "SWAP", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SWAP, "SWAP", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SWAP, "SWAP", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRL, "SRL", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRL, "SRL", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRL, "SRL", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRL, "SRL", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRL, "SRL", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRL, "SRL", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRL, "SRL", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SRL, "SRL", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0x40, &GameboyCPU::BIT0, "BIT0", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x41, &GameboyCPU::BIT0, "BIT0", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x42, &GameboyCPU::BIT0, "BIT0", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x43, &GameboyCPU::BIT0, "BIT0", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x44, &GameboyCPU::BIT0, "BIT0", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x45, &GameboyCPU::BIT0, "BIT0", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x46, &GameboyCPU::BIT0, "BIT0", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x47, &GameboyCPU::BIT0, "BIT0", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x48, &GameboyCPU::BIT1, "BIT1", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x49, &GameboyCPU::BIT1, "BIT1", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x4a, &GameboyCPU::BIT1, "BIT1", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x4b, &GameboyCPU::BIT1, "BIT1", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x4c, &GameboyCPU::BIT1, "BIT1", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x4d, &GameboyCPU::BIT1, "BIT1", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x4e, &GameboyCPU::BIT1, "BIT1", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x4f, &GameboyCPU::BIT1, "BIT1", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT0, "BIT0", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT0, "BIT0", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT0, "BIT0", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT0, "BIT0", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT0, "BIT0", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT0, "BIT0", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT0, "BIT0", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT0, "BIT0", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT1, "BIT1", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT1, "BIT1", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT1, "BIT1", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT1, "BIT1", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT1, "BIT1", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT1, "BIT1", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT1, "BIT1", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT1, "BIT1", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0x50, &GameboyCPU::BIT2, "BIT2", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x51, &GameboyCPU::BIT2, "BIT2", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x52, &GameboyCPU::BIT2, "BIT2", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x53, &GameboyCPU::BIT2, "BIT2", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x54, &GameboyCPU::BIT2, "BIT2", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x55, &GameboyCPU::BIT2, "BIT2", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x56, &GameboyCPU::BIT2, "BIT2", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x57, &GameboyCPU::BIT2, "BIT2", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x58, &GameboyCPU::BIT3, "BIT3", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x59, &GameboyCPU::BIT3, "BIT3", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x5a, &GameboyCPU::BIT3, "BIT3", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x5b, &GameboyCPU::BIT3, "BIT3", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x5c, &GameboyCPU::BIT3, "BIT3", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x5d, &GameboyCPU::BIT3, "BIT3", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x5e, &GameboyCPU::BIT3, "BIT3", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x5f, &GameboyCPU::BIT3, "BIT3", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT2, "BIT2", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT2, "BIT2", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT2, "BIT2", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT2, "BIT2", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT2, "BIT2", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT2, "BIT2", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT2, "BIT2", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT2, "BIT2", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT3, "BIT3", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT3, "BIT3", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT3, "BIT3", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT3, "BIT3", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT3, "BIT3", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT3, "BIT3", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT3, "BIT3", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT3, "BIT3", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0x60, &GameboyCPU::BIT4, "BIT4", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x61, &GameboyCPU::BIT4, "BIT4", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x62, &GameboyCPU::BIT4, "BIT4", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x63, &GameboyCPU::BIT4, "BIT4", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x64, &GameboyCPU::BIT4, "BIT4", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x65, &GameboyCPU::BIT4, "BIT4", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x66, &GameboyCPU::BIT4, "BIT4", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x67, &GameboyCPU::BIT4, "BIT4", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x68, &GameboyCPU::BIT5, "BIT5", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x69, &GameboyCPU::BIT5, "BIT5", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x6a, &GameboyCPU::BIT5, "BIT5", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x6b, &GameboyCPU::BIT5, "BIT5", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x6c, &GameboyCPU::BIT5, "BIT5", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x6d, &GameboyCPU::BIT5, "BIT5", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x6e, &GameboyCPU::BIT5, "BIT5", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x6f, &GameboyCPU::BIT5, "BIT5", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT4, "BIT4", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT4, "BIT4", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT4, "BIT4", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT4, "BIT4", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT4, "BIT4", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT4, "BIT4", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT4, "BIT4", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT4, "BIT4", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT5, "BIT5", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT5, "BIT5", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT5, "BIT5", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT5, "BIT5", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT5, "BIT5", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT5, "BIT5", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT5, "BIT5", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT5, "BIT5", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0x70, &GameboyCPU::BIT6, "BIT6", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x71, &GameboyCPU::BIT6, "BIT6", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x72, &GameboyCPU::BIT6, "BIT6", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x73, &GameboyCPU::BIT6, "BIT6", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x74, &GameboyCPU::BIT6, "BIT6", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x75, &GameboyCPU::BIT6, "BIT6", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x76, &GameboyCPU::BIT6, "BIT6", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x77, &GameboyCPU::BIT6, "BIT6", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x78, &GameboyCPU::BIT7, "BIT7", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x79, &GameboyCPU::BIT7, "BIT7", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x7a, &GameboyCPU::BIT7, "BIT7", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x7b, &GameboyCPU::BIT7, "BIT7", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x7c, &GameboyCPU::BIT7, "BIT7", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x7d, &GameboyCPU::BIT7, "BIT7", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x7e, &GameboyCPU::BIT7, "BIT7", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x7f, &GameboyCPU::BIT7, "BIT7", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT6, "BIT6", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT6, "BIT6", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT6, "BIT6", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT6, "BIT6", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT6, "BIT6", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT6, "BIT6", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT6, "BIT6", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT6, "BIT6", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT7, "BIT7", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT7, "BIT7", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT7, "BIT7", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT7, "BIT7", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT7, "BIT7", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT7, "BIT7", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT7, "BIT7", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::BIT7, "BIT7", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0x80, &GameboyCPU::RES0, "RES0", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x81, &GameboyCPU::RES0, "RES0", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x82, &GameboyCPU::RES0, "RES0", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x83, &GameboyCPU::RES0, "RES0", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x84, &GameboyCPU::RES0, "RES0", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x85, &GameboyCPU::RES0, "RES0", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x86, &GameboyCPU::RES0, "RES0", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x87, &GameboyCPU::RES0, "RES0", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x88, &GameboyCPU::RES1, "RES1", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x89, &GameboyCPU::RES1, "RES1", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x8a, &GameboyCPU::RES1, "RES1", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x8b, &GameboyCPU::RES1, "RES1", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x8c, &GameboyCPU::RES1, "RES1", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x8d, &GameboyCPU::RES1, "RES1", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x8e, &GameboyCPU::RES1, "RES1", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x8f, &GameboyCPU::RES1, "RES1", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES0, "RES0", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES0, "RES0", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES0, "RES0", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES0, "RES0", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES0, "RES0", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES0, "RES0", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES0, "RES0", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES0, "RES0", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES1, "RES1", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES1, "RES1", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES1, "RES1", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES1, "RES1", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES1, "RES1", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES1, "RES1", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES1, "RES1", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES1, "RES1", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0x90, &GameboyCPU::RES2, "RES2", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x91, &GameboyCPU::RES2, "RES2", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x92, &GameboyCPU::RES2, "RES2", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x93, &GameboyCPU::RES2, "RES2", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x94, &GameboyCPU::RES2, "RES2", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x95, &GameboyCPU::RES2, "RES2", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x96, &GameboyCPU::RES2, "RES2", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x97, &GameboyCPU::RES2, "RES2", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x98, &GameboyCPU::RES3, "RES3", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x99, &GameboyCPU::RES3, "RES3", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x9a, &GameboyCPU::RES3, "RES3", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x9b, &GameboyCPU::RES3, "RES3", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x9c, &GameboyCPU::RES3, "RES3", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x9d, &GameboyCPU::RES3, "RES3", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x9e, &GameboyCPU::RES3, "RES3", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0x9f, &GameboyCPU::RES3, "RES3", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES2, "RES2", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES2, "RES2", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES2, "RES2", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES2, "RES2", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES2, "RES2", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES2, "RES2", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES2, "RES2", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES2, "RES2", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES3, "RES3", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES3, "RES3", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES3, "RES3", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES3, "RES3", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES3, "RES3", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES3, "RES3", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES3, "RES3", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES3, "RES3", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0xa0, &GameboyCPU::RES4, "RES4", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xa1, &GameboyCPU::RES4, "RES4", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xa2, &GameboyCPU::RES4, "RES4", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xa3, &GameboyCPU::RES4, "RES4", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xa4, &GameboyCPU::RES4, "RES4", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xa5, &GameboyCPU::RES4, "RES4", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xa6, &GameboyCPU::RES4, "RES4", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xa7, &GameboyCPU::RES4, "RES4", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xa8, &GameboyCPU::RES5, "RES5", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xa9, &GameboyCPU::RES5, "RES5", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xaa, &GameboyCPU::RES5, "RES5", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xab, &GameboyCPU::RES5, "RES5", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xac, &GameboyCPU::RES5, "RES5", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xad, &GameboyCPU::RES5, "RES5", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xae, &GameboyCPU::RES5, "RES5", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xaf, &GameboyCPU::RES5, "RES5", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES4, "RES4", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES4, "RES4", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES4, "RES4", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES4, "RES4", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES4, "RES4", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES4, "RES4", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES4, "RES4", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES4, "RES4", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES5, "RES5", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES5, "RES5", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES5, "RES5", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES5, "RES5", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES5, "RES5", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES5, "RES5", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES5, "RES5", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES5, "RES5", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0xb0, &GameboyCPU::RES6, "RES6", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xb1, &GameboyCPU::RES6, "RES6", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xb2, &GameboyCPU::RES6, "RES6", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xb3, &GameboyCPU::RES6, "RES6", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xb4, &GameboyCPU::RES6, "RES6", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xb5, &GameboyCPU::RES6, "RES6", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xb6, &GameboyCPU::RES6, "RES6", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xb7, &GameboyCPU::RES6, "RES6", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xb8, &GameboyCPU::RES7, "RES7", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xb9, &GameboyCPU::RES7, "RES7", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xba, &GameboyCPU::RES7, "RES7", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xbb, &GameboyCPU::RES7, "RES7", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xbc, &GameboyCPU::RES7, "RES7", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xbd, &GameboyCPU::RES7, "RES7", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xbe, &GameboyCPU::RES7, "RES7", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xbf, &GameboyCPU::RES7, "RES7", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES6, "RES6", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES6, "RES6", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES6, "RES6", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES6, "RES6", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES6, "RES6", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES6, "RES6", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES6, "RES6", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES6, "RES6", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES7, "RES7", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES7, "RES7", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES7, "RES7", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES7, "RES7", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES7, "RES7", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES7, "RES7", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES7, "RES7", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::RES7, "RES7", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0xc0, &GameboyCPU::SET0, "SET0", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xc1, &GameboyCPU::SET0, "SET0", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xc2, &GameboyCPU::SET0, "SET0", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xc3, &GameboyCPU::SET0, "SET0", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xc4, &GameboyCPU::SET0, "SET0", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xc5, &GameboyCPU::SET0, "SET0", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xc6, &GameboyCPU::SET0, "SET0", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xc7, &GameboyCPU::SET0, "SET0", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xc8, &GameboyCPU::SET1, "SET1", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xc9, &GameboyCPU::SET1, "SET1", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xca, &GameboyCPU::SET1, "SET1", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xcb, &GameboyCPU::SET1, "SET1", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xcc, &GameboyCPU::SET1, "SET1", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xcd, &GameboyCPU::SET1, "SET1", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xce, &GameboyCPU::SET1, "SET1", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xcf, &GameboyCPU::SET1, "SET1", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET0, "SET0", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET0, "SET0", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET0, "SET0", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET0, "SET0", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET0, "SET0", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET0, "SET0", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET0, "SET0", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET0, "SET0", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET1, "SET1", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET1, "SET1", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET1, "SET1", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET1, "SET1", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET1, "SET1", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET1, "SET1", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET1, "SET1", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET1, "SET1", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0xd0, &GameboyCPU::SET2, "SET2", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xd1, &GameboyCPU::SET2, "SET2", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xd2, &GameboyCPU::SET2, "SET2", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xd3, &GameboyCPU::SET2, "SET2", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xd4, &GameboyCPU::SET2, "SET2", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xd5, &GameboyCPU::SET2, "SET2", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xd6, &GameboyCPU::SET2, "SET2", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xd7, &GameboyCPU::SET2, "SET2", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xd8, &GameboyCPU::SET3, "SET3", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xd9, &GameboyCPU::SET3, "SET3", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xda, &GameboyCPU::SET3, "SET3", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xdb, &GameboyCPU::SET3, "SET3", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xdc, &GameboyCPU::SET3, "SET3", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xdd, &GameboyCPU::SET3, "SET3", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xde, &GameboyCPU::SET3, "SET3", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xdf, &GameboyCPU::SET3, "SET3", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET2, "SET2", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET2, "SET2", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET2, "SET2", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET2, "SET2", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET2, "SET2", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET2, "SET2", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET2, "SET2", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET2, "SET2", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET3, "SET3", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET3, "SET3", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET3, "SET3", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET3, "SET3", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET3, "SET3", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET3, "SET3", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET3, "SET3", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET3, "SET3", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0xe0, &GameboyCPU::SET4, "SET4", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xe1, &GameboyCPU::SET4, "SET4", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xe2, &GameboyCPU::SET4, "SET4", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xe3, &GameboyCPU::SET4, "SET4", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xe4, &GameboyCPU::SET4, "SET4", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xe5, &GameboyCPU::SET4, "SET4", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xe6, &GameboyCPU::SET4, "SET4", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xe7, &GameboyCPU::SET4, "SET4", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xe8, &GameboyCPU::SET5, "SET5", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xe9, &GameboyCPU::SET5, "SET5", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xea, &GameboyCPU::SET5, "SET5", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xeb, &GameboyCPU::SET5, "SET5", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xec, &GameboyCPU::SET5, "SET5", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xed, &GameboyCPU::SET5, "SET5", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xee, &GameboyCPU::SET5, "SET5", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xef, &GameboyCPU::SET5, "SET5", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET4, "SET4", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET4, "SET4", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET4, "SET4", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET4, "SET4", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET4, "SET4", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET4, "SET4", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET4, "SET4", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET4, "SET4", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET5, "SET5", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET5, "SET5", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET5, "SET5", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET5, "SET5", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET5, "SET5", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET5, "SET5", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET5, "SET5", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET5, "SET5", A, NO_DATA_TYPE);
 
-            instrMapCB.emplace_back(0xf0, &GameboyCPU::SET6, "SET6", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xf1, &GameboyCPU::SET6, "SET6", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xf2, &GameboyCPU::SET6, "SET6", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xf3, &GameboyCPU::SET6, "SET6", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xf4, &GameboyCPU::SET6, "SET6", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xf5, &GameboyCPU::SET6, "SET6", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xf6, &GameboyCPU::SET6, "SET6", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xf7, &GameboyCPU::SET6, "SET6", A, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xf8, &GameboyCPU::SET7, "SET7", B, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xf9, &GameboyCPU::SET7, "SET7", C, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xfa, &GameboyCPU::SET7, "SET7", D, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xfb, &GameboyCPU::SET7, "SET7", E, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xfc, &GameboyCPU::SET7, "SET7", H, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xfd, &GameboyCPU::SET7, "SET7", L, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xfe, &GameboyCPU::SET7, "SET7", HL_ref, NO_DATA_TYPE);
-            instrMapCB.emplace_back(0xff, &GameboyCPU::SET7, "SET7", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET6, "SET6", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET6, "SET6", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET6, "SET6", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET6, "SET6", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET6, "SET6", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET6, "SET6", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET6, "SET6", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET6, "SET6", A, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET7, "SET7", B, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET7, "SET7", C, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET7, "SET7", D, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET7, "SET7", E, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET7, "SET7", H, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET7, "SET7", L, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET7, "SET7", HL_ref, NO_DATA_TYPE);
+            instrMapCB.emplace_back(&GameboyCPU::SET7, "SET7", A, NO_DATA_TYPE);
         }
 
         /* ***********************************************************************************************************
@@ -3643,18 +3645,17 @@ namespace Emulation {
         /* ***********************************************************************************************************
             PREPARE DEBUG DATA
         *********************************************************************************************************** */
-        void GameboyCPU::DecodeBankContent(GUI::GuiTable::TableSection<instr_entry>& _program_buffer, vector<u8>* _bank_data, const int& _offset, const int& _bank_num, const string& _bank_name) {
+        void GameboyCPU::DisassembleBankContent(assembly_table& _program_buffer, u8* _bank_data, const int& _offset, const size_t& _size, const int& _bank_num, const string& _bank_name) {
             u16 data = 0;
             bool cb = false;
 
             _program_buffer.clear();
-            auto current_entry = GUI::GuiTable::TableEntry<instr_entry>();                // a table entry consists of the address and a pair of two strings (left and right column of debugger)
-            u8* bank_data = _bank_data->data();
+            auto current_entry = std::tuple<int, instr_entry>();                // a table entry consists of the address and a pair of two strings (left and right column of debugger)
 
             std::string info = "";
 
-            for (u16 addr = 0; addr < _bank_data->size();) {
-                current_entry = GUI::GuiTable::TableEntry<instr_entry>();
+            for (u16 addr = 0; addr < ROM_N_SIZE;) {
+                current_entry = std::tuple<int, instr_entry>();
 
                 if (_bank_num == 0) {
                     switch (addr) {
@@ -3674,19 +3675,19 @@ namespace Emulation {
                         info = "JOYPAD";
                         break;
                     case ROM_HEAD_LOGO:
-                        get<GUI::GuiTable::ST_ENTRY_ADDRESS>(current_entry) = addr;
-                        get<GUI::GuiTable::ST_ENTRY_DATA>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr);
-                        get<GUI::GuiTable::ST_ENTRY_DATA>(current_entry).second = "- HEADER INFO -";
+                        get<0>(current_entry) = addr;
+                        get<1>(current_entry).first = "ROM" + to_string(_bank_num) + ": " + format("{:04x}  ", addr);
+                        get<1>(current_entry).second = "- HEADER INFO -";
                         addr = ROM_HEAD_END + 1;
                         _program_buffer.emplace_back(current_entry);
-                        current_entry = GUI::GuiTable::TableEntry<instr_entry>();
+                        current_entry = std::tuple<int, instr_entry>();
                         break;
                     }
                 }
 
                 // get opcode and set entry address
-                u8 opcode = bank_data[addr];
-                get<GUI::GuiTable::ST_ENTRY_ADDRESS>(current_entry) = _offset + addr;          // set the entry address
+                u8 opcode = _bank_data[addr];
+                get<0>(current_entry) = _offset + addr;          // set the entry address
 
                 {
                     instr_tuple* instr_ptr;
@@ -3729,7 +3730,7 @@ namespace Emulation {
                             case d8:
                             case a8:
                             case a8_ref:
-                                data = bank_data[addr]; addr++;
+                                data = _bank_data[addr]; addr++;
 
                                 result_binary += format(" {:02x}", (u8)data);
 
@@ -3742,7 +3743,7 @@ namespace Emulation {
                                 break;
                             case r8:
                             {
-                                data = bank_data[addr];
+                                data = _bank_data[addr];
                                 i8 signed_data = *(i8*)&data;
 
                                 result_binary += format(" {:02x}", data);
@@ -3755,8 +3756,8 @@ namespace Emulation {
                             case d16:
                             case a16:
                             case a16_ref:
-                                data = bank_data[addr];                 addr++;
-                                data |= ((u16)bank_data[addr]) << 8;    addr++;
+                                data = _bank_data[addr];                 addr++;
+                                data |= ((u16)_bank_data[addr]) << 8;    addr++;
 
                                 result_binary += format(" {:02x}", (u8)(data & 0xFF));
                                 result_binary += format(" {:02x}", (u8)((data & 0xFF00) >> 8));
@@ -3770,7 +3771,7 @@ namespace Emulation {
                                 break;
                             case SP_r8:
                             {
-                                data = bank_data[addr]; addr++;
+                                data = _bank_data[addr]; addr++;
                                 i8 signed_data = *(i8*)&data;
 
                                 result_binary += format(" {:02x}", (u8)(data & 0xFF));
@@ -3795,7 +3796,7 @@ namespace Emulation {
                         }
 
                         if (cb) {
-                            opcode = bank_data[addr];
+                            opcode = _bank_data[addr];
                             addr++;
                             instr_ptr = &(instrMapCB[opcode]);
 
@@ -3809,8 +3810,8 @@ namespace Emulation {
                             }
                         }
 
-                        get<GUI::GuiTable::ST_ENTRY_DATA>(current_entry).first = result_binary;
-                        get<GUI::GuiTable::ST_ENTRY_DATA>(current_entry).second = result_string + info;
+                        get<1>(current_entry).first = result_binary;
+                        get<1>(current_entry).second = result_string + info;
                         info = "";
                     }
                 }
@@ -3819,55 +3820,51 @@ namespace Emulation {
             }
         }
 
-        void GameboyCPU::GetInstrDebugTable(GUI::GuiTable::Table<instr_entry>& _table) {
-            _table = GUI::GuiTable::Table<instr_entry>(DEBUG_INSTR_LINES);
+        void GameboyCPU::GenerateAssemblyTables(BaseCartridge* _cartridge) {
+            auto& rom_data = _cartridge->GetRom();
+            asmTables = assembly_tables(machine_ctx->rom_bank_num);
 
-            int i = 0;
-
-            GUI::GuiTable::TableSection<instr_entry> current_table;
+            assembly_table current_table;
             int offset = 0;
 
-            while (vector<u8>* rom_data = mem_instance->GetProgramData(i)) {
-                current_table = GUI::GuiTable::TableSection<instr_entry>();
+            for (int i = 0; i < machine_ctx->rom_bank_num; i++) {
+                current_table = assembly_table();
 
                 if (i == 0)     { offset = ROM_0_OFFSET; } 
                 else            { offset = ROM_N_OFFSET; }
 
-                DecodeBankContent(current_table, rom_data, offset, i, "ROM");
-                _table.AddTableSectionDisposable(current_table);
+                auto* rom_data_ptr = rom_data.data() + i * ROM_N_SIZE;
+                DisassembleBankContent(current_table, rom_data_ptr, offset, ROM_N_SIZE, i, "ROM");
+                asmTables[i] = current_table;
 
                 i++;
             }
         }
 
-        void GameboyCPU::GetInstrDebugTableTmp(GUI::GuiTable::Table<instr_entry>& _table) {
-            auto bank_table = GUI::GuiTable::TableSection<instr_entry>();
+        void GameboyCPU::GenerateTemporaryAssemblyTable(assembly_tables& _table) {
             int bank_num;
-
-            _table = GUI::GuiTable::Table<instr_entry>(DEBUG_INSTR_LINES);
+            _table = assembly_tables(1);
 
             if (Regs.PC >= VRAM_N_OFFSET && Regs.PC < RAM_N_OFFSET) {
                 bank_num = mem_instance->GetIO(CGB_VRAM_SELECT_ADDR);
-                DecodeBankContent(bank_table, &graphics_ctx->VRAM_N[bank_num], VRAM_N_OFFSET, bank_num, "VRAM");
+                DisassembleBankContent(_table.back(), graphics_ctx->VRAM_N[bank_num].data(), VRAM_N_OFFSET, VRAM_N_SIZE, bank_num, "VRAM");
             } else if (Regs.PC >= RAM_N_OFFSET && Regs.PC < WRAM_0_OFFSET) {
                 bank_num = machine_ctx->ram_bank_selected;
                 std::vector<u8> ram = std::vector<u8>(RAM_N_SIZE);
                 memcpy(ram.data(), mem_instance->RAM_N[bank_num], RAM_N_SIZE);
-                DecodeBankContent(bank_table, &ram, RAM_N_OFFSET, bank_num, "RAM");
+                DisassembleBankContent(_table.back(), ram.data(), RAM_N_OFFSET, RAM_N_SIZE, bank_num, "RAM");
             } else if (Regs.PC >= WRAM_0_OFFSET && Regs.PC < WRAM_N_OFFSET) {
                 bank_num = 0;
-                DecodeBankContent(bank_table, &mem_instance->WRAM_0, WRAM_0_OFFSET, bank_num, "WRAM");
+                DisassembleBankContent(_table.back(), mem_instance->WRAM_0.data(), WRAM_0_OFFSET, WRAM_0_SIZE, bank_num, "WRAM");
             } else if (Regs.PC >= WRAM_N_OFFSET && Regs.PC < MIRROR_WRAM_OFFSET) {
                 bank_num = machine_ctx->wram_bank_selected;
-                DecodeBankContent(bank_table, &mem_instance->WRAM_N[bank_num], WRAM_N_OFFSET, bank_num + 1, "WRAM");
+                DisassembleBankContent(_table.back(), mem_instance->WRAM_N[bank_num].data(), WRAM_N_OFFSET, WRAM_N_SIZE, bank_num + 1, "WRAM");
             } else if (Regs.PC >= HRAM_OFFSET && Regs.PC < IE_OFFSET) {
                 bank_num = 0;
-                DecodeBankContent(bank_table, &mem_instance->HRAM, HRAM_OFFSET, bank_num, "HRAM");
+                DisassembleBankContent(_table.back(), mem_instance->HRAM.data(), HRAM_OFFSET, HRAM_SIZE, bank_num, "HRAM");
             } else {
                 // TODO
             }
-
-            _table.AddTableSectionDisposable(bank_table);
         }
 
         void GameboyCPU::AddToCallstack(const u16& _dest) {

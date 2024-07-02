@@ -16,11 +16,30 @@
 #include "BaseAPU.h"
 #include "BaseCartridge.h"
 #include "defs.h"
-#include "GuiTable.h"
 #include "VHardwareTypes.h"
 #include <map>
 
 namespace Emulation {
+	using assembly_table = std::vector<std::tuple<int, instr_entry>>;
+
+	struct assembly_tables : std::vector<assembly_table> {
+		std::string memory_type = "";
+
+		void SetMemoryType(const std::string& _name) {
+			memory_type = _name;
+		}
+
+		std::string GetMemoryType() {
+			return memory_type;
+		}
+
+		assembly_tables(size_t _size) {
+			this->assign(_size, {});
+		}
+
+		assembly_tables() = default;
+	};
+
 	class BaseCPU {
 	public:
 		// get/reset instance
@@ -43,8 +62,8 @@ namespace Emulation {
 		virtual void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const = 0;
 		virtual void UpdateDebugData(debug_data* _data) const = 0;
 
-		virtual void GetInstrDebugTable(GUI::GuiTable::Table<instr_entry>& _table) = 0;
-		virtual void GetInstrDebugTableTmp(GUI::GuiTable::Table<instr_entry>& _table) = 0;
+		virtual void GenerateAssemblyTables(BaseCartridge* _cartridge) = 0;
+		virtual void GenerateTemporaryAssemblyTable(assembly_tables& _table) = 0;
 
 		virtual void Write8Bit(const u8& _data, const u16& _addr) = 0;
 		virtual void Write16Bit(const u16& _data, const u16& _addr) = 0;
@@ -59,6 +78,8 @@ namespace Emulation {
 		void ResetClockCycles();
 
 		virtual void GetMemoryTypes(std::map<int, std::string>& _map) const = 0;
+
+		assembly_tables& GetAssemblyTables();
 
 	protected:
 		// constructor
@@ -81,6 +102,8 @@ namespace Emulation {
 		virtual bool CheckInterrupts() = 0;
 
 		virtual void InitRegisterStates() = 0;
+
+		assembly_tables asmTables;
 
 	private:
 		static BaseCPU* instance;

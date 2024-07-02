@@ -64,11 +64,11 @@ namespace Emulation {
 
         void GetFpsAndClock(int& _fps, float& _clock);
 
-        void GetInstrDebugTable(GUI::GuiTable::Table<instr_entry>& _table);
-        void GetInstrDebugTableTmp(GUI::GuiTable::Table<instr_entry>& _table);
+        assembly_tables& GetAssemblyTables();
+        void GenerateTemporaryAssemblyTable(assembly_tables& _table);
         void GetInstrDebugFlags(std::vector<reg_entry>& _reg_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values);
         void GetHardwareInfo(std::vector<data_entry>& _hardware_info);
-        void GetMemoryDebugTables(std::vector<GUI::GuiTable::Table<memory_entry>>& _tables);
+        std::vector<memory_type_tables>& GetMemoryTables();
 
         void GetGraphicsDebugSettings(std::vector<std::tuple<int, std::string, bool>>& _settings);
         void SetGraphicsDebugSetting(const bool& _val, const int& _id);

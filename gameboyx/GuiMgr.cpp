@@ -181,7 +181,7 @@ namespace GUI {
         if (showInstrDebugger)      { ShowDebugInstructions();                      show_any = true; }
         if (showWinAbout)           { ShowWindowAbout();                            show_any = true; }
         if (showHardwareInfo)       { ShowHardwareInfo();                           show_any = true; }
-        if (showMemoryInspector)    { ShowDebugMemoryInspector();                   show_any = true; }
+        if (showMemoryObserver)     { ShowMemoryObserver();                         show_any = true; }
         if (showImGuiDebug)         { ImGui::ShowDebugLogWindow(&showImGuiDebug);   show_any = true; }
         if (showGraphicsInfo)       { ShowGraphicsInfo();                           show_any = true; }
         if (showGraphicsOverlay)    { ShowGraphicsOverlay(); }
@@ -193,6 +193,7 @@ namespace GUI {
         if (showGraphicsDebugger)   { ShowDebugGraphics();                          show_any = true; }
         if (showNetworkSettings)    { ShowNetworkSettings();                        show_any = true; }
         if (showCallstack)          { ShowCallstack();                              show_any = true; }
+        if (showEmulationGeneral)   { ShowEmulationGeneralSettings();               show_any = true; }
         ImGui::PopFont();
 
         if (show_any != showAny) {
@@ -228,6 +229,7 @@ namespace GUI {
             if (ImGui::BeginMenu("Settings")) {
                 // Emulation
                 if (ImGui::BeginMenu("Emulation", &showEmulationMenu)) {
+                    ImGui::MenuItem("General", nullptr, &showEmulationGeneral);
                     ShowEmulationSpeeds();
                     ImGui::EndMenu();
                 }
@@ -255,7 +257,7 @@ namespace GUI {
                 ImGui::MenuItem("Hardware Info", nullptr, &showHardwareInfo);
                 ImGui::MenuItem("Instruction Debugger", nullptr, &showInstrDebugger);
                 ImGui::MenuItem("Graphics Debugger", nullptr, &showGraphicsDebugger);
-                ImGui::MenuItem("Memory Inspector", nullptr, &showMemoryInspector);
+                ImGui::MenuItem("Memory Observer", nullptr, &showMemoryObserver);
                 ImGui::MenuItem("ImGui Debug", nullptr, &showImGuiDebug);
                 ImGui::EndMenu();
             }
@@ -473,10 +475,10 @@ namespace GUI {
     }
 
 
-    void GuiMgr::ShowDebugMemoryInspector() {
+    void GuiMgr::ShowMemoryObserver() {
         ImGui::SetNextWindowSize(Config::debug_mem_win_size);
 
-        if (ImGui::Begin("Memory Inspector", &showMemoryInspector, Config::WIN_CHILD_FLAGS)) {
+        if (ImGui::Begin("Memory Observer", &showMemoryObserver, Config::WIN_CHILD_FLAGS)) {
             CheckWindow(DEBUG_MEM);
             if (ImGui::BeginTabBar("memory_inspector_tabs", 0)) {
 
@@ -1095,7 +1097,7 @@ namespace GUI {
                     DIST LOW-PASS
                 ************************************************************************************************* */
                 ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Dist low-pass");
+                ImGui::TextUnformatted("Reverberation with low-pass");
                 if (ImGui::IsItemHovered()) {
                     if (ImGui::BeginTooltip()) {
                         ImGui::Text("enables a low-pass filter for reverberation. Creates an echo effect");
@@ -1265,6 +1267,60 @@ namespace GUI {
                         }
                     }
                 }
+
+                ImGui::PopStyleVar();
+                ImGui::EndTable();
+            }
+            ImGui::End();
+        }
+    }
+
+    void GuiMgr::ShowEmulationGeneralSettings() {
+        ImGui::SetNextWindowSize(Config::emulation_general_win_size);
+
+        if (ImGui::Begin("General", &showEmulationGeneral, Config::WIN_CHILD_FLAGS)) {
+            ImGui::TextColored(HIGHLIGHT_COLOR, "Use boot ROM");
+
+            if (ImGui::BeginTable("emulation settings", 2, Config::TABLE_FLAGS_NO_BORDER_OUTER_H)) {
+
+                for (int i = 0; i < 2; i++) {
+                    ImGui::TableSetupColumn("", Config::TABLE_COLUMN_FLAGS_NO_HEADER);
+                }
+
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
+
+                for (int i = 0; const auto & n : bootRomList) {
+                    ImGui::TableNextColumn();
+                    const std::string& name = Emulation::FILE_EXTS.at(n.first).first;
+                    ImGui::TextUnformatted(name.c_str());
+                    ImGui::TableNextColumn();
+
+                    ImGui::Checkbox(("##boot_rom_" + name).c_str(), &get<0>(useBootRom[i]));
+                    ImGui::TableNextRow();
+
+                    if (get<0>(useBootRom[i])) {
+                        ImGui::TableNextColumn();
+                        ImGui::TableNextColumn();
+                        if (ImGui::BeginCombo(("##boot_rom_select_" + name).c_str(), get<2>(useBootRom[i]).c_str())) {
+                            for (const auto& n : bootRomList.at(get<1>(useBootRom[i]))) {
+                                bool selected = n.compare(get<2>(useBootRom[i])) == 0;
+
+                                if (ImGui::Selectable(n.c_str(), selected)) {
+                                    get<2>(useBootRom[i]) = n;
+                                }
+                                if (selected) {
+                                    ImGui::SetItemDefaultFocus();
+                                }
+                            }
+                            ImGui::EndCombo();
+                        }
+
+                        ImGui::TableNextRow();
+                    }
+                    i++;
+                }
+
+                
 
                 ImGui::PopStyleVar();
                 ImGui::EndTable();
@@ -1532,17 +1588,38 @@ namespace GUI {
             emu_settings.debug_enabled = showInstrDebugger;
             emu_settings.emulation_speed = currentSpeed;
 
+            auto* game = games[gameSelectedIndex];
+            for (const auto& n : useBootRom) {
+                if (get<1>(n) == game->console && get<0>(n)) {
+                    game->SetBootRom(true, Config::BOOT_FOLDER + get<2>(n));
+                }
+            }
+
             if (vhwmgr->InitHardware(games[gameSelectedIndex], emu_settings, _restart, 
                 [this](Emulation::debug_data& _data) { this->DebugCallback(_data); }) != 0x00)
             {
                 gameRunning = false;
             } else {
-                vhwmgr->GetInstrDebugTable(debugInstrTable);
-                vhwmgr->GetMemoryDebugTables(debugMemoryTables);
+                debugInstrTable = GuiTable::Table<Emulation::instr_entry>(DEBUG_INSTR_LINES);
+                auto& asm_tables = vhwmgr->GetAssemblyTables();
+                for (auto& n : asm_tables) {
+                    debugInstrTable.AddTableSectionDisposable(n);
+                }
+
+                debugMemoryTables = std::vector<GuiTable::Table<Emulation::memory_entry>>();
+                auto& memory_tables = vhwmgr->GetMemoryTables();
+                for (auto& type_tables : memory_tables) {
+                    auto table = GuiTable::Table<Emulation::memory_entry>(DEBUG_MEM_LINES);
+                    table.name = type_tables.GetMemoryType();
+                    for (auto& n : type_tables) {
+                        table.AddTableSectionDisposable(n);
+                    }
+                    debugMemoryTables.push_back(table);
+                }
 
                 vhwmgr->GetGraphicsDebugSettings(debugGraphicsSettings);
 
-                vhwmgr->GetMemoryTypes(memoryTypes);
+                //vhwmgr->GetMemoryTypes(memoryTypes);
 
                 if (vhwmgr->StartHardware() == 0x00) {
                     gameRunning = true;
@@ -1807,7 +1884,10 @@ namespace GUI {
                 pc_set_to_ram = !pc_set_to_ram;
 
                 if (pc_set_to_ram) {
-                    vhwmgr->GetInstrDebugTableTmp(debugInstrTableTmp);
+                    debugInstrTableTmp = GuiTable::Table<Emulation::instr_entry>(DEBUG_INSTR_LINES);
+                    Emulation::assembly_tables table_tmp;
+                    vhwmgr->GenerateTemporaryAssemblyTable(table_tmp);
+                    debugInstrTableTmp.AddTableSectionDisposable(table_tmp.front());
                 }
             }
 

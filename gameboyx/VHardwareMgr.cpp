@@ -81,8 +81,8 @@ namespace Emulation {
                 }
             } else {
                 errors |= VHWMGR_ERR_READ_ROM;
-                _cartridge->ClearRom();
             }
+            _cartridge->ClearRom();
         }
 
         if (errors) {
@@ -249,14 +249,12 @@ namespace Emulation {
         emulationSpeed.store(_emulation_speed);
     }
 
-    void VHardwareMgr::GetInstrDebugTable(GUI::GuiTable::Table<instr_entry>& _table) {
-        //unique_lock<mutex> lock_hardware(mutHardware);
-        core_instance->GetInstrDebugTable(_table);
+    assembly_tables& VHardwareMgr::GetAssemblyTables() {
+        return core_instance->GetAssemblyTables();
     }
 
-    void VHardwareMgr::GetInstrDebugTableTmp(GUI::GuiTable::Table<instr_entry>& _table) {
-        //unique_lock<mutex> lock_hardware(mutHardware);
-        core_instance->GetInstrDebugTableTmp(_table);
+    void VHardwareMgr::GenerateTemporaryAssemblyTable(assembly_tables& _table) {
+        core_instance->GenerateTemporaryAssemblyTable(_table);
     }
 
     void VHardwareMgr::GetInstrDebugFlags(std::vector<reg_entry>& _reg_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) {
@@ -269,9 +267,8 @@ namespace Emulation {
         core_instance->GetHardwareInfo(_hardware_info);
     }
 
-    void VHardwareMgr::GetMemoryDebugTables(std::vector<GUI::GuiTable::Table<memory_entry>>& _tables) {
-        //unique_lock<mutex> lock_hardware(mutHardware);
-        memory_instance->GetMemoryDebugTables(_tables);
+    std::vector<memory_type_tables>& VHardwareMgr::GetMemoryTables() {
+        return memory_instance->GetMemoryTables();
     }
 
     void VHardwareMgr::GetGraphicsDebugSettings(std::vector<std::tuple<int, std::string, bool>>& _settings) {

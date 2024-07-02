@@ -79,7 +79,7 @@ namespace GUI {
 		bool showGameSelect = true;
 		bool showInstrDebugger = false;
 		bool showHardwareInfo = false;
-		bool showMemoryInspector = false;
+		bool showMemoryObserver = false;
 		bool showGraphicsOverlay = false;
 		bool showEmulationMenu = false;
 		bool showEmulationSpeed = false;
@@ -92,6 +92,7 @@ namespace GUI {
 		bool showGraphicsDebugger = false;
 		bool showNetworkSettings = false;
 		bool showCallstack = false;
+		bool showEmulationGeneral = false;
 
 		bool showAny = false;
 
@@ -179,10 +180,19 @@ namespace GUI {
 		int graphicsFPScount = 0;
 		float graphicsFPScur = .0f;
 
+		// emulation settings
 		// emulation speed multiplier
 		int currentSpeedIndex = 0;
 		int currentSpeed = 1;
 		std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(Config::EMULATION_SPEEDS.size(), { false });
+		std::vector<std::tuple<bool, Emulation::console_ids, std::string>> useBootRom = {
+			{ false, Emulation::console_ids::GBC, Config::BOOT_CGB},
+			{ false, Emulation::console_ids::GB , Config::BOOT_CGB}
+		};
+		const std::unordered_map<Emulation::console_ids, std::vector<std::string>> bootRomList = {
+			{ Emulation::console_ids::GBC, { Config::BOOT_CGB } },
+			{ Emulation::console_ids::GB, { Config::BOOT_CGB, Config::BOOT_DMG } }
+		};
 
 		// graphics settings
 		int framerateTarget = 0;
@@ -203,6 +213,9 @@ namespace GUI {
 		bool lfeLowPassEnable = true;
 		bool distLowPassEnable = true;
 
+		
+
+
 		std::array<int, 4> ipv4Address = { 127, 0, 0, 1 };
 		int port = 9800;
 
@@ -222,7 +235,7 @@ namespace GUI {
 		void ShowNewGameDialog();
 		void ShowGameSelect();
 		void ShowDebugInstructions();
-		void ShowDebugMemoryInspector();
+		void ShowMemoryObserver();
 		void ShowHardwareInfo();
 		void ShowGraphicsInfo();
 		void ShowGraphicsOverlay();
@@ -231,6 +244,7 @@ namespace GUI {
 		void ShowDebugGraphics();
 		void ShowNetworkSettings();
 		void ShowCallstack();
+		void ShowEmulationGeneralSettings();
 
 		// main menur bar elements
 		void ShowEmulationSpeeds();

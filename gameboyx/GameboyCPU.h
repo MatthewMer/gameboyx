@@ -114,8 +114,8 @@ namespace Emulation {
 			void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const override;
 			void UpdateDebugData(debug_data* _data) const override;
 
-			void GetInstrDebugTable(GUI::GuiTable::Table<instr_entry>& _table) override;
-			void GetInstrDebugTableTmp(GUI::GuiTable::Table<instr_entry>& _table) override;
+			void GenerateAssemblyTables(BaseCartridge* _cartridge) override;
+			void GenerateTemporaryAssemblyTable(assembly_tables& _table) override;
 
 			void SetInstances() override;
 
@@ -177,11 +177,11 @@ namespace Emulation {
 			// raw data, decoded data
 
 			// current instruction context
-			using instr_tuple = std::tuple <const u8, const instruction, const std::string, const cgb_data_types, const cgb_data_types>;
+			using instr_tuple = std::tuple <const instruction, const std::string, const cgb_data_types, const cgb_data_types>;
 			instr_tuple* instrPtr = nullptr;
 			instruction functionPtr = nullptr;
 
-			void DecodeBankContent(GUI::GuiTable::TableSection<instr_entry>& _sub_table, std::vector<u8>* _bank_data, const int& _offset, const int& _bank_num, const std::string& _bank_name);
+			void DisassembleBankContent(assembly_table& _sub_table, u8* _bank_data, const int& _offset, const size_t& _size, const int& _bank_num, const std::string& _bank_name);
 
 			machine_context* machine_ctx;
 			graphics_context* graphics_ctx;

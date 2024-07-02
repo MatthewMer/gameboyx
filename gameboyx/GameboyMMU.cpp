@@ -74,7 +74,7 @@ namespace Emulation {
 		};
 
 		GameboyMMU* GameboyMMU::getInstance(BaseCartridge* _cartridge) {
-			const auto vec_rom = _cartridge->GetRomVector();
+			const auto vec_rom = _cartridge->GetRom();
 			u8 type_code = vec_rom[ROM_HEAD_HW_TYPE];
 
 			if (gameboy_mapper_map.find(type_code) != gameboy_mapper_map.end()) {

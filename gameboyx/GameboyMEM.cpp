@@ -44,29 +44,37 @@ namespace Emulation {
             INITIALIZE MEMORY
         *********************************************************************************************************** */
         void GameboyMEM::InitMemory(BaseCartridge* _cartridge) {
-            const auto& vec_rom = _cartridge->GetRomVector();
+            romData = _cartridge->GetRom();
 
-            machine_ctx.isCgb = vec_rom[ROM_HEAD_CGBFLAG] & 0x80 ? true : false;
+            machine_ctx.isCgb = romData[ROM_HEAD_CGBFLAG] & 0x80 ? true : false;
             machine_ctx.wram_bank_num = (machine_ctx.isCgb ? 8 : 2);
             machine_ctx.vram_bank_num = (machine_ctx.isCgb ? 2 : 1);
 
-            if (!ReadRomHeaderInfo(vec_rom)) { 
+            if (!ReadRomHeaderInfo(romData)) {
                 LOG_ERROR("Couldn't acquire memory information");
-                return; 
+                return;
             }
 
             AllocateMemory(_cartridge);
 
-            if (!CopyRom(vec_rom)) {
-                LOG_ERROR("Couldn't copy ROM data");
-                return;
+            if (_cartridge->CheckBootRom()) {
+                if (_cartridge->ReadBootRom() && InitBootRom(_cartridge->GetBootRom(), romData)) {
+                    LOG_INFO("[emu] boot ROM initialized");
+                } else {
+                    LOG_ERROR("[emu] Init boot ROM");
+                }
+                _cartridge->ClearBootRom();
             } else {
-                LOG_INFO("[emu] ROM copied");
+                if (!InitRom(romData)) {
+                    LOG_ERROR("[emu] Init ROM");
+                } else {
+                    LOG_INFO("[emu] ROM initialized");
+                    InitMemoryState();
+                }
             }
-            InitMemoryState();
         }
 
-        bool GameboyMEM::CopyRom(const vector<u8>& _vec_rom) {
+        bool GameboyMEM::InitRom(const vector<u8>& _vec_rom) {
             vector<u8>::const_iterator start = _vec_rom.begin() + ROM_0_OFFSET;
             vector<u8>::const_iterator end = _vec_rom.begin() + ROM_0_SIZE;
             ROM_0 = vector<u8>(start, end);
@@ -78,6 +86,22 @@ namespace Emulation {
                 ROM_N[i] = vector<u8>(start, end);
             }
 
+            machine_ctx.boot_rom_mapped = false;
+            return true;
+        }
+
+        bool GameboyMEM::InitBootRom(const std::vector<u8>& _boot_rom, const std::vector<u8>& _vec_rom) {
+            size_t boot_rom_size = _boot_rom.size();
+
+            vector<u8>::const_iterator start = _boot_rom.begin();
+            vector<u8>::const_iterator end = _boot_rom.end();
+            std::copy(start, end, ROM_0.begin());
+
+            start = _vec_rom.begin() + ROM_HEAD_ADDR;
+            end = start + ROM_HEAD_SIZE;
+            std::copy(start, end, ROM_0.begin() + ROM_HEAD_ADDR);
+
+            machine_ctx.boot_rom_mapped = true;
             return true;
         }
 
@@ -476,6 +500,11 @@ namespace Emulation {
                 // DMG only
                 IO[OBP1_ADDR - IO_OFFSET] = _data;
                 SetColorPaletteValues(_data, graphics_ctx.dmg_obp1_color_palette);
+                break;
+            case BANK_ADDR:
+                if (machine_ctx.boot_rom_mapped) {
+                    UnmapBootRom();
+                }
                 break;
             case BCPD_BGPD_ADDR:
                 SetBGWINPaletteValues(_data);
@@ -1285,164 +1314,139 @@ namespace Emulation {
         }
 
         /* ***********************************************************************************************************
+            UNMAP BOOT ROM (AFTER FINISHING BOOT SEQUENCE)
+        *********************************************************************************************************** */
+        void GameboyMEM::UnmapBootRom() {
+            InitRom(romData);
+            romData.clear();
+        }
+
+        /* ***********************************************************************************************************
             MEMORY DEBUGGER
         *********************************************************************************************************** */
-        void GameboyMEM::FillMemoryDebugTable(GUI::GuiTable::TableSection<memory_entry>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) {
+        void GameboyMEM::FillMemoryTable(std::vector<std::tuple<int, memory_entry>>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) {
             auto data = memory_entry();
 
             int size = (int)_size;
             int line_num = (int)LINE_NUM_HEX(size);
             int index;
 
-            _table_section = GUI::GuiTable::TableSection<memory_entry>(line_num);
+            _table_section = memory_type_table(line_num);
 
             for (int i = 0; i < line_num; i++) {
-                auto table_entry = GUI::GuiTable::TableEntry<memory_entry>();
+                auto table_entry = std::tuple<int, memory_entry>();
 
                 index = i * DEBUG_MEM_ELEM_PER_LINE;
-                get<GUI::GuiTable::ST_ENTRY_ADDRESS>(table_entry) = _offset + index;
+                get<0>(table_entry) = _offset + index;
 
                 data = memory_entry();
-                get<MEM_ENTRY_ADDR>(data) = format("{:04x}", _offset + index);
-                get<MEM_ENTRY_LEN>(data) = size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
-                get<MEM_ENTRY_REF>(data) = &_bank_data[index];
+                get<0>(data) = format("{:04x}", _offset + index);
+                get<1>(data) = size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
+                get<2>(data) = &_bank_data[index];
 
-                get<GUI::GuiTable::ST_ENTRY_DATA>(table_entry) = data;
+                get<1>(table_entry) = data;
 
                 _table_section[i] = table_entry;
             }
         }
 
-        void GameboyMEM::GetMemoryDebugTables(std::vector<GUI::GuiTable::Table<memory_entry>>& _tables) {
+        void GameboyMEM::GenerateMemoryTables() {
             // access for memory inspector
-            _tables.clear();
 
             // ROM
             {
                 // ROM 0
-                auto table = GUI::GuiTable::Table<memory_entry>(DEBUG_MEM_LINES);
-                table.name = "ROM";
-                auto table_section = GUI::GuiTable::TableSection<memory_entry>();
+                memoryTables.emplace_back();
+                auto& memory_type_tables = memoryTables.back();
+                memory_type_tables.SetMemoryType("ROM");
 
-                FillMemoryDebugTable(table_section, ROM_0.data(), ROM_0_OFFSET, ROM_0.size());
-
-                table.AddTableSectionDisposable(table_section);
+                memory_type_tables.emplace_back();
+                auto& content = memory_type_tables.back();
+                FillMemoryTable(content, ROM_0.data(), ROM_0_OFFSET, ROM_0.size());
 
                 // ROM n
                 for (auto& n : ROM_N) {
-                    table_section = GUI::GuiTable::TableSection<memory_entry>();
-
-                    FillMemoryDebugTable(table_section, n.data(), ROM_0_OFFSET, n.size());
-
-                    table.AddTableSectionDisposable(table_section);
+                    memory_type_tables.emplace_back();
+                    auto& content = memory_type_tables.back();
+                    FillMemoryTable(content, n.data(), ROM_0_OFFSET, n.size());
                 }
-
-                _tables.push_back(table);
             }
 
             // VRAM
             {
-                auto table = GUI::GuiTable::Table<memory_entry>(DEBUG_MEM_LINES);
-                table.name = "VRAM";
-                auto table_section = GUI::GuiTable::TableSection<memory_entry>();
+                memoryTables.emplace_back();
+                auto& memory_type_tables = memoryTables.back();
+                memory_type_tables.SetMemoryType("VRAM");
 
                 for (auto& n : graphics_ctx.VRAM_N) {
-                    table_section = GUI::GuiTable::TableSection<memory_entry>();
-
-                    FillMemoryDebugTable(table_section, n.data(), VRAM_N_OFFSET, n.size());
-
-                    table.AddTableSectionDisposable(table_section);
+                    memory_type_tables.emplace_back();
+                    auto& content = memory_type_tables.back();
+                    FillMemoryTable(content, n.data(), VRAM_N_OFFSET, n.size());
                 }
-
-                _tables.push_back(table);
             }
 
             // RAM
             if (machine_ctx.ram_bank_num > 0) {
-                auto table = GUI::GuiTable::Table<memory_entry>(DEBUG_MEM_LINES);
-                table.name = "RAM";
-                auto table_section = GUI::GuiTable::TableSection<memory_entry>();
+                memoryTables.emplace_back();
+                auto& memory_type_tables = memoryTables.back();
+                memory_type_tables.SetMemoryType("RAM");
 
                 for (auto& n : RAM_N) {
-                    table_section = GUI::GuiTable::TableSection<memory_entry>();
-
-                    FillMemoryDebugTable(table_section, n, RAM_N_OFFSET, RAM_N_SIZE);
-
-                    table.AddTableSectionDisposable(table_section);
+                    memory_type_tables.emplace_back();
+                    auto& content = memory_type_tables.back();
+                    FillMemoryTable(content, n, RAM_N_OFFSET, RAM_N_SIZE);
                 }
-
-                _tables.push_back(table);
             }
 
             // WRAM
             {
-                auto table = GUI::GuiTable::Table<memory_entry>(DEBUG_MEM_LINES);
-                table.name = "WRAM";
-                auto table_section = GUI::GuiTable::TableSection<memory_entry>();
+                memoryTables.emplace_back();
+                auto& memory_type_tables = memoryTables.back();
+                memory_type_tables.SetMemoryType("WRAM");
 
-                FillMemoryDebugTable(table_section, WRAM_0.data(), WRAM_0_OFFSET, WRAM_0.size());
-
-                table.AddTableSectionDisposable(table_section);
+                memory_type_tables.emplace_back();
+                auto& content = memory_type_tables.back();
+                FillMemoryTable(content, WRAM_0.data(), WRAM_0_OFFSET, WRAM_0.size());
 
                 // WRAM n
                 for (auto& n : WRAM_N) {
-                    table_section = GUI::GuiTable::TableSection<memory_entry>();
-
-                    FillMemoryDebugTable(table_section, n.data(), WRAM_N_OFFSET, n.size());
-
-                    table.AddTableSectionDisposable(table_section);
+                    memory_type_tables.emplace_back();
+                    auto& content = memory_type_tables.back();
+                    FillMemoryTable(content, n.data(), WRAM_N_OFFSET, n.size());
                 }
-
-                _tables.push_back(table);
             }
 
             // OAM
             {
-                auto table = GUI::GuiTable::Table<memory_entry>(DEBUG_MEM_LINES);
-                table.name = "OAM";
-                auto table_section = GUI::GuiTable::TableSection<memory_entry>();
+                memoryTables.emplace_back();
+                auto& memory_type_tables = memoryTables.back();
+                memory_type_tables.SetMemoryType("OAM");
 
-                FillMemoryDebugTable(table_section, graphics_ctx.OAM.data(), OAM_OFFSET, graphics_ctx.OAM.size());
-
-                table.AddTableSectionDisposable(table_section);
-
-                _tables.push_back(table);
+                memory_type_tables.emplace_back();
+                auto& content = memory_type_tables.back();
+                FillMemoryTable(content, graphics_ctx.OAM.data(), OAM_OFFSET, graphics_ctx.OAM.size());
             }
 
             // IO
             {
-                auto table = GUI::GuiTable::Table<memory_entry>(DEBUG_MEM_LINES);
-                table.name = "IO";
-                auto table_section = GUI::GuiTable::TableSection<memory_entry>();
+                memoryTables.emplace_back();
+                auto& memory_type_tables = memoryTables.back();
+                memory_type_tables.SetMemoryType("IO");
 
-                FillMemoryDebugTable(table_section, IO.data(), IO_OFFSET, IO.size());
-
-                table.AddTableSectionDisposable(table_section);
-
-                _tables.push_back(table);
+                memory_type_tables.emplace_back();
+                auto& content = memory_type_tables.back();
+                FillMemoryTable(content, IO.data(), IO_OFFSET, IO.size());
             }
 
             // HRAM
             {
-                auto table = GUI::GuiTable::Table<memory_entry>(DEBUG_MEM_LINES);
-                table.name = "HRAM";
-                auto table_section = GUI::GuiTable::TableSection<memory_entry>();
+                memoryTables.emplace_back();
+                auto& memory_type_tables = memoryTables.back();
+                memory_type_tables.SetMemoryType("HRAM");
 
-                FillMemoryDebugTable(table_section, HRAM.data(), HRAM_OFFSET, HRAM.size());
-
-                table.AddTableSectionDisposable(table_section);
-
-                _tables.push_back(table);
-            }
-        }
-
-        vector<u8>* GameboyMEM::GetProgramData(const int& _bank) const {
-            if (_bank == 0) {
-                return (vector<u8>*)&ROM_0;
-            } else if (_bank <= (int)ROM_N.size()) {
-                return (vector<u8>*)&ROM_N[_bank - 1];
-            } else {
-                return nullptr;
+                memory_type_tables.emplace_back();
+                auto& content = memory_type_tables.back();
+                FillMemoryTable(content, HRAM.data(), HRAM_OFFSET, HRAM.size());
             }
         }
     }

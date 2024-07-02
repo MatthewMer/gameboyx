@@ -63,6 +63,9 @@ namespace Config {
     inline const std::string CURSOR_FOLDER = "cursor/";
     inline const std::string CURSOR_MAIN = "cursor.bmp";
 
+    inline const std::string BOOT_CGB = "cgb_boot.bin";
+    inline const std::string BOOT_DMG = "dmg_boot.bin";
+
     /* ***********************************************************************************************************
         GRAPHICS
     *********************************************************************************************************** */
@@ -165,6 +168,8 @@ namespace Config {
 #define IP_ADDR_MAX 255
 #define PORT_MIN 1024
 #define PORT_MAX 65535
+
+    inline const ImVec2 emulation_general_win_size(400.f, 0.f);
 
     inline const ImVec2 graph_debug_win_size(600.f, 0.f);
 
