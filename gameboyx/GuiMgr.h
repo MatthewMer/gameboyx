@@ -185,13 +185,17 @@ namespace GUI {
 		int currentSpeedIndex = 0;
 		int currentSpeed = 1;
 		std::vector<Bool> emulationSpeedsEnabled = std::vector<Bool>(Config::EMULATION_SPEEDS.size(), { false });
-		std::vector<std::tuple<bool, Emulation::console_ids, std::string>> useBootRom = {
-			{ false, Emulation::console_ids::GBC, Config::BOOT_CGB},
-			{ false, Emulation::console_ids::GB , Config::BOOT_CGB}
+		std::unordered_map<Emulation::console_ids, std::pair<bool, Emulation::console_ids>> useBootRom = {
+			{ Emulation::console_ids::GBC, { false, Emulation::console_ids::GBC } },
+			{ Emulation::console_ids::GB , { false, Emulation::console_ids::GBC } }
 		};
-		const std::unordered_map<Emulation::console_ids, std::vector<std::string>> bootRomList = {
-			{ Emulation::console_ids::GBC, { Config::BOOT_CGB } },
-			{ Emulation::console_ids::GB, { Config::BOOT_CGB, Config::BOOT_DMG } }
+		const std::unordered_map<Emulation::console_ids, std::vector<Emulation::console_ids>> bootRomList = {
+			{ Emulation::console_ids::GBC, { Emulation::console_ids::GBC} },
+			{ Emulation::console_ids::GB, { Emulation::console_ids::GBC, Emulation::console_ids::GB} }
+		};
+		const std::unordered_map<Emulation::console_ids, std::string> BOOT_TYPES = {
+			{Emulation::console_ids::GB, Config::BOOT_DMG},
+			{Emulation::console_ids::GBC, Config::BOOT_CGB}
 		};
 
 		// graphics settings

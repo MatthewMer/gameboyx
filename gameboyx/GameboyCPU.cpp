@@ -111,7 +111,7 @@ namespace Emulation {
             Regs.SP = INIT_SP;
             Regs.PC = INIT_PC;
 
-            if (machine_ctx->isCgb) {
+            if (machine_ctx->is_cgb) {
                 Regs.A = (INIT_CGB_AF & 0xFF00) >> 8;
                 Regs.F = INIT_CGB_AF & 0xFF;
 

@@ -1289,24 +1289,24 @@ namespace GUI {
 
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 3, 3 });
 
-                for (int i = 0; const auto & n : bootRomList) {
+                for (auto & n : useBootRom) {
                     ImGui::TableNextColumn();
                     const std::string& name = Emulation::FILE_EXTS.at(n.first).first;
                     ImGui::TextUnformatted(name.c_str());
                     ImGui::TableNextColumn();
 
-                    ImGui::Checkbox(("##boot_rom_" + name).c_str(), &get<0>(useBootRom[i]));
+                    ImGui::Checkbox(("##boot_rom_" + name).c_str(), &n.second.first);
                     ImGui::TableNextRow();
 
-                    if (get<0>(useBootRom[i])) {
+                    if (n.second.first) {
                         ImGui::TableNextColumn();
                         ImGui::TableNextColumn();
-                        if (ImGui::BeginCombo(("##boot_rom_select_" + name).c_str(), get<2>(useBootRom[i]).c_str())) {
-                            for (const auto& n : bootRomList.at(get<1>(useBootRom[i]))) {
-                                bool selected = n.compare(get<2>(useBootRom[i])) == 0;
+                        if (ImGui::BeginCombo(("##boot_rom_select_" + name).c_str(), BOOT_TYPES.at(n.second.second).c_str())) {
+                            for (const auto& m : bootRomList.at(n.first)) {
+                                bool selected = m == n.second.second;
 
-                                if (ImGui::Selectable(n.c_str(), selected)) {
-                                    get<2>(useBootRom[i]) = n;
+                                if (ImGui::Selectable(BOOT_TYPES.at(m).c_str(), selected)) {
+                                    n.second.second = m;
                                 }
                                 if (selected) {
                                     ImGui::SetItemDefaultFocus();
@@ -1317,7 +1317,6 @@ namespace GUI {
 
                         ImGui::TableNextRow();
                     }
-                    i++;
                 }
 
                 
@@ -1589,9 +1588,9 @@ namespace GUI {
             emu_settings.emulation_speed = currentSpeed;
 
             auto* game = games[gameSelectedIndex];
-            for (const auto& n : useBootRom) {
-                if (get<1>(n) == game->console && get<0>(n)) {
-                    game->SetBootRom(true, Config::BOOT_FOLDER + get<2>(n));
+            for (const auto& [key, value] : useBootRom) {
+                if (key == game->console && value.first) {
+                    game->SetBootRom(true, Config::BOOT_FOLDER + BOOT_TYPES.at(value.second), value.second);
                 }
             }
 

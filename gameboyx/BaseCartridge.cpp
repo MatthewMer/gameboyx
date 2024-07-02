@@ -65,9 +65,10 @@ namespace Emulation {
 		return new Gameboy::GameboyCartridge(id, _file_path);
 	}
 
-	void BaseCartridge::SetBootRom(const bool& _enable, const std::string& _path) {
+	void BaseCartridge::SetBootRom(const bool& _enable, const std::string& _path, const console_ids& _id) {
 		bootRom = _enable;
 		bootRomPath = _path;
+		bootRomType = _id;
 	}
 
 	bool BaseCartridge::CheckBootRom() {

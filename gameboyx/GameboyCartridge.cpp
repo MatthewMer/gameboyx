@@ -189,5 +189,9 @@ namespace Emulation {
 
             return true;
         }
+
+        bool GameboyCartridge::CheckCompatibilityMode() {
+            return console == GB && bootRomType == GBC;
+        }
     }
 }

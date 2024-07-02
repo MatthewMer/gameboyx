@@ -46,9 +46,11 @@ namespace Emulation {
         void GameboyMEM::InitMemory(BaseCartridge* _cartridge) {
             romData = _cartridge->GetRom();
 
-            machine_ctx.isCgb = romData[ROM_HEAD_CGBFLAG] & 0x80 ? true : false;
-            machine_ctx.wram_bank_num = (machine_ctx.isCgb ? 8 : 2);
-            machine_ctx.vram_bank_num = (machine_ctx.isCgb ? 2 : 1);
+            machine_ctx.is_cgb = romData[ROM_HEAD_CGBFLAG] & 0x80 ? true : false;
+            machine_ctx.cgb_compatibility = _cartridge->CheckCompatibilityMode();
+
+            machine_ctx.wram_bank_num = (machine_ctx.is_cgb || machine_ctx.cgb_compatibility ? 8 : 2);
+            machine_ctx.vram_bank_num = (machine_ctx.is_cgb || machine_ctx.cgb_compatibility ? 2 : 1);
 
             if (!ReadRomHeaderInfo(romData)) {
                 LOG_ERROR("Couldn't acquire memory information");
@@ -87,6 +89,9 @@ namespace Emulation {
             }
 
             machine_ctx.boot_rom_mapped = false;
+            if (machine_ctx.cgb_compatibility) {
+                ((GameboyGPU*)BaseGPU::getInstance())->SetHardwareMode(GB);
+            }
             return true;
         }
 
@@ -188,7 +193,7 @@ namespace Emulation {
             SetLCDCValues(INIT_CGB_LCDC);
             SetLCDSTATValues(INIT_CGB_STAT);    
 
-            if (machine_ctx.isCgb) {
+            if (machine_ctx.is_cgb) {
                 IO[DIV_ADDR - IO_OFFSET] = INIT_CGB_DIV >> 8; 
                 machine_ctx.div_low_byte = INIT_CGB_DIV & 0xFF;
             }
@@ -412,7 +417,7 @@ namespace Emulation {
                 if (_addr > 0xFF77) {
                     return 0xFF;
                 }
-                else if(machine_ctx.isCgb){
+                else if(machine_ctx.is_cgb){
                     return IO[_addr - IO_OFFSET];
                 }
                 else {
@@ -636,7 +641,7 @@ namespace Emulation {
             DMA
         *********************************************************************************************************** */
         void GameboyMEM::VRAM_DMA(const u8& _data) {
-            if (machine_ctx.isCgb) {
+            if (machine_ctx.is_cgb) {
                 if (graphics_ctx.vram_dma) {
                     //LOG_WARN("HDMA5 while DMA");
                     graphics_ctx.vram_dma = false;
@@ -782,7 +787,7 @@ namespace Emulation {
             SPEED SWITCH
         *********************************************************************************************************** */
         void GameboyMEM::SwitchSpeed(const u8& _data) {
-            if (machine_ctx.isCgb) {
+            if (machine_ctx.is_cgb) {
                 if (_data & PREPARE_SPEED_SWITCH) {
                     IO[CGB_SPEED_SWITCH_ADDR - IO_OFFSET] ^= SET_SPEED;
                     machine_ctx.speed_switch_requested = true;
@@ -970,7 +975,7 @@ namespace Emulation {
             u8 colors = _data;
 
             // TODO: CGB is able to set different color palettes for DMG games
-            if (machine_ctx.isCgb) {
+            if (machine_ctx.is_cgb || machine_ctx.cgb_compatibility) {
                 for (int i = 0; i < 4; i++) {
                     switch (colors & 0x03) {
                     case 0x00:
@@ -1080,14 +1085,14 @@ namespace Emulation {
             MISC BANK SELECT
         *********************************************************************************************************** */
         void GameboyMEM::SetVRAMBank(const u8& _data) {
-            if (machine_ctx.isCgb) {
+            if (machine_ctx.is_cgb || machine_ctx.cgb_compatibility) {
                 IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x01;
                 machine_ctx.vram_bank_selected = IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET];
             }
         }
 
         void GameboyMEM::SetWRAMBank(const u8& _data) {
-            if (machine_ctx.isCgb) {
+            if (machine_ctx.is_cgb || machine_ctx.cgb_compatibility) {
                 IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x07;
                 if (IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] == 0) IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = 1;
 

@@ -33,12 +33,13 @@ namespace Emulation {
 
 		std::vector<u8>& GetRom();
 
-		void SetBootRom(const bool& _enable, const std::string& _path);
+		void SetBootRom(const bool& _enable, const std::string& _path, const console_ids& _id);
 		bool CheckBootRom();
 		bool ReadBootRom();
 		std::vector<u8>& GetBootRom();
 		void ClearBootRom();
 		std::string GetBootRomPath();
+		virtual bool CheckCompatibilityMode() = 0;
 
 		std::string title;
 		Emulation::console_ids console;
@@ -83,6 +84,7 @@ namespace Emulation {
 		bool bootRom = false;
 		std::string bootRomPath = "";
 		std::vector<u8> vecBootRom;
+		console_ids bootRomType = GB;
 
 	private:
 	};

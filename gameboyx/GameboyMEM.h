@@ -40,7 +40,8 @@ namespace Emulation {
 			int vram_bank_selected = 0;
 
 			// hardware
-			bool isCgb = false;
+			bool is_cgb = false;
+			bool cgb_compatibility = false;
 
 			// timers
 			u8 div_low_byte = 0x00;
@@ -406,7 +407,7 @@ namespace Emulation {
 				machine_ctx.ram_present = _cartridge->ramPresent;
 				machine_ctx.timer_present = _cartridge->timerPresent;
 
-				if (machine_ctx.isCgb) {
+				if (machine_ctx.is_cgb) {
 					graphics_ctx.dmg_bgp_color_palette[0] = CGB_DMG_COLOR_WHITE;
 					graphics_ctx.dmg_bgp_color_palette[1] = CGB_DMG_COLOR_LIGHTGREY;
 					graphics_ctx.dmg_bgp_color_palette[2] = CGB_DMG_COLOR_DARKGREY;

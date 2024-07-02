@@ -26,6 +26,8 @@ namespace Emulation {
 
 			void SetMode(const int& _mode);
 
+			void SetHardwareMode(const console_ids& _id);
+
 			std::vector<std::tuple<int, std::string, bool>> GetGraphicsDebugSettings() override;
 			void SetGraphicsDebugSetting(const bool& _val, const int& _id) override;
 
@@ -46,12 +48,10 @@ namespace Emulation {
 				virt_graphics_info.lcd_height = PPU_SCREEN_Y;
 				Backend::HardwareMgr::InitGraphicsBackend(virt_graphics_info);
 
-				if (machineCtx->isCgb) {
-					DrawScanline = &GameboyGPU::DrawScanlineCGB;
-					SearchOam = &GameboyGPU::SearchOAMCGB;
+				if (machineCtx->is_cgb || machineCtx->cgb_compatibility) {
+					SetHardwareMode(GBC);
 				} else {
-					DrawScanline = &GameboyGPU::DrawScanlineDMG;
-					SearchOam = &GameboyGPU::SearchOAMDMG;
+					SetHardwareMode(GB);
 				}
 
 				coreInstance = (GameboyCPU*)BaseCPU::getInstance(_cartridge);

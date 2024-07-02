@@ -32,6 +32,8 @@ namespace Emulation {
 
 			bool ReadRom() override;
 
+			bool CheckCompatibilityMode() override;
+
 		private:
 
 		};
