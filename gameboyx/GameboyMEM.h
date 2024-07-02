@@ -470,7 +470,7 @@ namespace Emulation {
 			// obj prio
 			void SetObjPrio(const u8& _data);
 
-			void SetColorPaletteValues(const u8& _data, u32* _color_palette);
+			void SetColorPaletteValues(const u8& _data, u32* _color_palette, u32* _source_palette);
 
 			void SetBGWINPaletteValues(const u8& _data);
 			void SetOBJPaletteValues(const u8& _data);

@@ -91,10 +91,6 @@ namespace Emulation {
             machineCtx.boot_rom_mapped = false;
             if (machineCtx.cgb_compatibility) {
                 ((GameboyGPU*)BaseGPU::getInstance())->SetHardwareMode(GB);
-                machineCtx.cgb_compatibility = false;
-
-                machineCtx.vram_bank_selected = 0;
-                machineCtx.wram_bank_selected = 0;
             }
             return true;
         }
@@ -498,17 +494,17 @@ namespace Emulation {
                 // DMG only
             case BGP_ADDR:
                 IO[BGP_ADDR - IO_OFFSET] = _data;
-                SetColorPaletteValues(_data, graphics_ctx.dmg_bgp_color_palette);
+                SetColorPaletteValues(_data, graphics_ctx.dmg_bgp_color_palette, graphics_ctx.cgb_bgp_color_palettes[0]);
                 break;
                 // DMG only
             case OBP0_ADDR:
                 IO[OBP0_ADDR - IO_OFFSET] = _data;
-                SetColorPaletteValues(_data, graphics_ctx.dmg_obp0_color_palette);
+                SetColorPaletteValues(_data, graphics_ctx.dmg_obp0_color_palette, graphics_ctx.cgb_obp_color_palettes[0]);
                 break;
             case OBP1_ADDR:
                 // DMG only
                 IO[OBP1_ADDR - IO_OFFSET] = _data;
-                SetColorPaletteValues(_data, graphics_ctx.dmg_obp1_color_palette);
+                SetColorPaletteValues(_data, graphics_ctx.dmg_obp1_color_palette, graphics_ctx.cgb_obp_color_palettes[1]);
                 break;
             case BANK_ADDR:
                 if (machineCtx.boot_rom_mapped) {
@@ -975,11 +971,11 @@ namespace Emulation {
             }
         }
 
-        void GameboyMEM::SetColorPaletteValues(const u8& _data, u32* _color_palette) {
+        void GameboyMEM::SetColorPaletteValues(const u8& _data, u32* _color_palette, u32* _source_palette) {
             u8 colors = _data;
 
             // TODO: CGB is able to set different color palettes for DMG games
-            if (machineCtx.is_cgb || machineCtx.cgb_compatibility) {
+            if (machineCtx.is_cgb) {
                 for (int i = 0; i < 4; i++) {
                     switch (colors & 0x03) {
                     case 0x00:
@@ -993,6 +989,25 @@ namespace Emulation {
                         break;
                     case 0x03:
                         _color_palette[i] = CGB_DMG_COLOR_BLACK;
+                        break;
+                    }
+
+                    colors >>= 2;
+                }
+            } else if (machineCtx.cgb_compatibility) {
+                for (int i = 0; i < 4; i++) {
+                    switch (colors & 0x03) {
+                    case 0x00:
+                        _color_palette[i] = _source_palette[0];
+                        break;
+                    case 0x01:
+                        _color_palette[i] = _source_palette[1];
+                        break;
+                    case 0x02:
+                        _color_palette[i] = _source_palette[2];
+                        break;
+                    case 0x03:
+                        _color_palette[i] = _source_palette[3];
                         break;
                     }
 

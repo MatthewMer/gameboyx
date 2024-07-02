@@ -83,10 +83,8 @@ namespace Emulation {
             graphics_ctx = mem_instance->GetGraphicsContext();
             sound_ctx = mem_instance->GetSoundContext();
 
-            if (!_cartridge->CheckBootRom()) {
+            if (!machineCtx->boot_rom_mapped) {
                 InitRegisterStates();
-            } else {
-                LOG_INFO("[emu] running with boot ROM: ", _cartridge->GetBootRomPath());
             }
 
             setupLookupTable();
