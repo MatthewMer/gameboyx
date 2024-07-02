@@ -183,7 +183,7 @@ namespace Emulation {
 
 			void DisassembleBankContent(assembly_table& _sub_table, u8* _bank_data, const int& _offset, const size_t& _size, const int& _bank_num, const std::string& _bank_name);
 
-			machine_context* machine_ctx;
+			machine_context* machineCtx;
 			graphics_context* graphics_ctx;
 			sound_context* sound_ctx;
 			GameboyMEM* mem_instance;

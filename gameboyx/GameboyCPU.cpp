@@ -79,7 +79,7 @@ namespace Emulation {
         *********************************************************************************************************** */
         GameboyCPU::GameboyCPU(BaseCartridge* _cartridge) : BaseCPU(_cartridge) {
             mem_instance = (GameboyMEM*)BaseMEM::getInstance();
-            machine_ctx = mem_instance->GetMachineContext();
+            machineCtx = mem_instance->GetMachineContext();
             graphics_ctx = mem_instance->GetGraphicsContext();
             sound_ctx = mem_instance->GetSoundContext();
 
@@ -111,7 +111,7 @@ namespace Emulation {
             Regs.SP = INIT_SP;
             Regs.PC = INIT_PC;
 
-            if (machine_ctx->is_cgb) {
+            if (machineCtx->is_cgb) {
                 Regs.A = (INIT_CGB_AF & 0xFF00) >> 8;
                 Regs.F = INIT_CGB_AF & 0xFF;
 
@@ -135,7 +135,7 @@ namespace Emulation {
         void GameboyCPU::RunCycles() {
             currentTicks = 0;
 
-            while ((currentTicks < (ticksPerFrame * machine_ctx->currentSpeed))) {
+            while ((currentTicks < (ticksPerFrame * machineCtx->currentSpeed))) {
                 RunCpu();
             }
 
@@ -147,27 +147,27 @@ namespace Emulation {
 
             do {
                 RunCpu();
-                if ((currentTicks > (ticksPerFrame * machine_ctx->currentSpeed))) { break; }
-            } while (machine_ctx->halted);
+                if ((currentTicks > (ticksPerFrame * machineCtx->currentSpeed))) { break; }
+            } while (machineCtx->halted);
 
             tickCounter += currentTicks;
         }
 
         void GameboyCPU::RunCpu() {
-            if (machine_ctx->stopped) {
+            if (machineCtx->stopped) {
                 // check button press
                 if (mem_instance->GetIO(IF_ADDR) & IRQ_JOYPAD) {
-                    machine_ctx->stopped = false;
+                    machineCtx->stopped = false;
                 } else {
                     return;
                 }
 
-            } else if (machine_ctx->halted) {
+            } else if (machineCtx->halted) {
                 TickTimers();
 
                 // check pending and enabled interrupts
-                if (machine_ctx->IE & mem_instance->GetIO(IF_ADDR)) {
-                    machine_ctx->halted = false;
+                if (machineCtx->IE & mem_instance->GetIO(IF_ADDR)) {
+                    machineCtx->halted = false;
                 }
             } else {
                 if (!CheckInterrupts()) {
@@ -202,35 +202,35 @@ namespace Emulation {
         bool GameboyCPU::CheckInterrupts() {
             if (ime) {
                 u8& isr_requested = mem_instance->GetIO(IF_ADDR);
-                if ((isr_requested & IRQ_VBLANK) && (machine_ctx->IE & IRQ_VBLANK)) {
+                if ((isr_requested & IRQ_VBLANK) && (machineCtx->IE & IRQ_VBLANK)) {
                     ime = false;
 
                     isr_push(ISR_VBLANK_HANDLER_ADDR);
                     isr_requested &= ~IRQ_VBLANK;
                     return true;
                 }
-                else if ((isr_requested & IRQ_LCD_STAT) && (machine_ctx->IE & IRQ_LCD_STAT)) {
+                else if ((isr_requested & IRQ_LCD_STAT) && (machineCtx->IE & IRQ_LCD_STAT)) {
                     ime = false;
 
                     isr_push(ISR_LCD_STAT_HANDLER_ADDR);
                     isr_requested &= ~IRQ_LCD_STAT;
                     return true;
                 }
-                else if ((isr_requested & IRQ_TIMER) && (machine_ctx->IE & IRQ_TIMER)) {
+                else if ((isr_requested & IRQ_TIMER) && (machineCtx->IE & IRQ_TIMER)) {
                     ime = false;
 
                     isr_push(ISR_TIMER_HANDLER_ADDR);
                     isr_requested &= ~IRQ_TIMER;
                     return true;
                 }
-                if ((isr_requested & IRQ_SERIAL) && (machine_ctx->IE & IRQ_SERIAL)) {
+                if ((isr_requested & IRQ_SERIAL) && (machineCtx->IE & IRQ_SERIAL)) {
                     ime = false;
 
                     isr_push(ISR_SERIAL_HANDLER_ADDR);
                     isr_requested &= ~IRQ_SERIAL;
                     return true;
                 }
-                else if ((isr_requested & IRQ_JOYPAD) && (machine_ctx->IE & IRQ_JOYPAD)) {
+                else if ((isr_requested & IRQ_JOYPAD) && (machineCtx->IE & IRQ_JOYPAD)) {
                     ime = false;
 
                     isr_push(ISR_JOYPAD_HANDLER_ADDR);
@@ -243,26 +243,26 @@ namespace Emulation {
 
         // ticks the timers for 4 clock cycles / 1 machine cycle and everything thats related to it
         void GameboyCPU::TickTimers() {
-            bool div_low_byte_selected = machine_ctx->timaDivMask < 0x100;
+            bool div_low_byte_selected = machineCtx->timaDivMask < 0x100;
             u8& div = mem_instance->GetIO(DIV_ADDR);
             bool tima_enabled = mem_instance->GetIO(TAC_ADDR) & TAC_CLOCK_ENABLE;
 
-            if (machine_ctx->tima_reload_cycle) {
+            if (machineCtx->tima_reload_cycle) {
                 div = mem_instance->GetIO(TMA_ADDR);
-                if (!machine_ctx->tima_reload_if_write) {
+                if (!machineCtx->tima_reload_if_write) {
                     mem_instance->RequestInterrupts(IRQ_TIMER);
                 } else {
-                    machine_ctx->tima_reload_if_write = false;
+                    machineCtx->tima_reload_if_write = false;
                 }
-                machine_ctx->tima_reload_cycle = false;
-            } else if (machine_ctx->tima_overflow_cycle) {
-                machine_ctx->tima_reload_cycle = true;
-                machine_ctx->tima_overflow_cycle = false;
+                machineCtx->tima_reload_cycle = false;
+            } else if (machineCtx->tima_overflow_cycle) {
+                machineCtx->tima_reload_cycle = true;
+                machineCtx->tima_overflow_cycle = false;
             }
 
             for (int i = 0; i < TICKS_PER_MC; i++) {
-                if (machine_ctx->div_low_byte == 0xFF) {
-                    machine_ctx->div_low_byte = 0x00;
+                if (machineCtx->div_low_byte == 0xFF) {
+                    machineCtx->div_low_byte = 0x00;
 
                     if (div == 0xFF) {
                         div = 0x00;
@@ -270,19 +270,19 @@ namespace Emulation {
                         div++;
                     }
 
-                    apuDivBitOverflowCur = div & machine_ctx->apuDivMask ? true : false;
+                    apuDivBitOverflowCur = div & machineCtx->apuDivMask ? true : false;
                     if (!apuDivBitOverflowCur && apuDivBitOverflowPrev) {
                         sound_instance->ProcessAPU(1);
                     }
                     apuDivBitOverflowPrev = apuDivBitOverflowCur;
                 } else {
-                    machine_ctx->div_low_byte++;
+                    machineCtx->div_low_byte++;
                 }
 
                 if (div_low_byte_selected) {
-                    timaEnAndDivOverflowCur = tima_enabled && (machine_ctx->div_low_byte & machine_ctx->timaDivMask ? true : false);
+                    timaEnAndDivOverflowCur = tima_enabled && (machineCtx->div_low_byte & machineCtx->timaDivMask ? true : false);
                 } else {
-                    timaEnAndDivOverflowCur = tima_enabled && (div & (machine_ctx->timaDivMask >> 8) ? true : false);
+                    timaEnAndDivOverflowCur = tima_enabled && (div & (machineCtx->timaDivMask >> 8) ? true : false);
                 }
 
                 if (!timaEnAndDivOverflowCur && timaEnAndDivOverflowPrev) {
@@ -300,7 +300,7 @@ namespace Emulation {
             u8& tima = mem_instance->GetIO(TIMA_ADDR);
             if (tima == 0xFF) {
                 tima = 0x00;
-                machine_ctx->tima_overflow_cycle = true;
+                machineCtx->tima_overflow_cycle = true;
             }
             else {
                 tima++;
@@ -718,36 +718,36 @@ namespace Emulation {
             bool div_reset = false;
 
             if (joyp) {
-                if (machine_ctx->IE & isr_requested) {
+                if (machineCtx->IE & isr_requested) {
                     return;
                 }
                 else {
                     two_byte = true;
-                    machine_ctx->halted = true;
+                    machineCtx->halted = true;
                 }
             }
             else {
-                if (machine_ctx->speed_switch_requested) {
-                    if (machine_ctx->IE & isr_requested) {
+                if (machineCtx->speed_switch_requested) {
+                    if (machineCtx->IE & isr_requested) {
                         if (ime) {
                             LOG_ERROR("[emu] STOP Glitch encountered");
-                            machine_ctx->halted = true;
+                            machineCtx->halted = true;
                             // set IE to 0x00 (this case is undefined behaviour, simply prevent cpu from execution)
-                            machine_ctx->IE = 0x00;
+                            machineCtx->IE = 0x00;
                         }
                         else {
                             div_reset = true;
                         }
                     }
                     else {
-                        // skipping machine_ctx->halted, not necessary
+                        // skipping machineCtx->halted, not necessary
                         two_byte = true;
                         div_reset = true;
                     }
                 }
                 else {
-                    two_byte = machine_ctx->IE & isr_requested ? false : true;
-                    machine_ctx->stopped = true;
+                    two_byte = machineCtx->IE & isr_requested ? false : true;
+                    machineCtx->stopped = true;
                     div_reset = true;
                 }
             }
@@ -767,18 +767,18 @@ namespace Emulation {
                 mmu_instance->Write8Bit(0x00, DIV_ADDR);
             }
 
-            if (machine_ctx->speed_switch_requested) {
-                machine_ctx->currentSpeed ^= 3;
-                machine_ctx->speed_switch_requested = false;
+            if (machineCtx->speed_switch_requested) {
+                machineCtx->currentSpeed ^= 3;
+                machineCtx->speed_switch_requested = false;
 
                 // selected bit ticks at 1024 Hz
-                machine_ctx->apuDivMask = (machine_ctx->currentSpeed == 2 ? APU_DIV_BIT_DOUBLESPEED : APU_DIV_BIT_SINGLESPEED);
+                machineCtx->apuDivMask = (machineCtx->currentSpeed == 2 ? APU_DIV_BIT_DOUBLESPEED : APU_DIV_BIT_SINGLESPEED);
             }
         }
 
-        // machine_ctx->halted
+        // machineCtx->halted
         void GameboyCPU::HALT() {
-            machine_ctx->halted = true;
+            machineCtx->halted = true;
         }
 
         // flip c
@@ -3566,7 +3566,7 @@ namespace Emulation {
             if (_data->pc < ROM_N_OFFSET) {
                 _data->bank = 0;
             } else if (_data->pc < VRAM_N_OFFSET) {
-                _data->bank = machine_ctx->rom_bank_selected + 1;
+                _data->bank = machineCtx->rom_bank_selected + 1;
             } else {
                 _data->bank = -1;
             }
@@ -3581,15 +3581,15 @@ namespace Emulation {
         // get current hardware status (currently mapped memory banks, etc.)
         void GameboyCPU::GetHardwareInfo(std::vector<data_entry>& _hardware_info) const {
             _hardware_info.clear();
-            _hardware_info.emplace_back("Speedmode", format("{:d}", machine_ctx->currentSpeed));
-            _hardware_info.emplace_back("ROM banks", format("{:d}", machine_ctx->rom_bank_num));
-            _hardware_info.emplace_back("ROM selected", format("{:d}", machine_ctx->rom_bank_selected + 1));
-            _hardware_info.emplace_back("RAM banks", format("{:d}", machine_ctx->ram_bank_num));
-            _hardware_info.emplace_back("RAM selected", format("{:d}", machine_ctx->ram_bank_selected));
-            _hardware_info.emplace_back("WRAM banks", format("{:d}", machine_ctx->wram_bank_num));
-            _hardware_info.emplace_back("WRAM selected", format("{:d}", machine_ctx->wram_bank_selected + 1));
-            _hardware_info.emplace_back("VRAM banks", format("{:d}", machine_ctx->vram_bank_num));
-            _hardware_info.emplace_back("VRAM selected", format("{:d}", machine_ctx->vram_bank_selected));
+            _hardware_info.emplace_back("Speedmode", format("{:d}", machineCtx->currentSpeed));
+            _hardware_info.emplace_back("ROM banks", format("{:d}", machineCtx->rom_bank_num));
+            _hardware_info.emplace_back("ROM selected", format("{:d}", machineCtx->rom_bank_selected + 1));
+            _hardware_info.emplace_back("RAM banks", format("{:d}", machineCtx->ram_bank_num));
+            _hardware_info.emplace_back("RAM selected", format("{:d}", machineCtx->ram_bank_selected));
+            _hardware_info.emplace_back("WRAM banks", format("{:d}", machineCtx->wram_bank_num));
+            _hardware_info.emplace_back("WRAM selected", format("{:d}", machineCtx->wram_bank_selected + 1));
+            _hardware_info.emplace_back("VRAM banks", format("{:d}", machineCtx->vram_bank_num));
+            _hardware_info.emplace_back("VRAM selected", format("{:d}", machineCtx->vram_bank_selected));
         }
 
         void GameboyCPU::GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const {
@@ -3600,7 +3600,7 @@ namespace Emulation {
             _register_values.emplace_back(REGISTER_NAMES.at(HL), format("{:04x}", Regs.HL));
             _register_values.emplace_back(REGISTER_NAMES.at(SP), format("{:04x}", Regs.SP));
             _register_values.emplace_back(REGISTER_NAMES.at(PC), format("{:04x}", Regs.PC));
-            _register_values.emplace_back(REGISTER_NAMES.at(IEreg), format("{:02x}", machine_ctx->IE));
+            _register_values.emplace_back(REGISTER_NAMES.at(IEreg), format("{:02x}", machineCtx->IE));
             _register_values.emplace_back(REGISTER_NAMES.at(IFreg), format("{:02x}", mem_instance->GetIO(IF_ADDR)));
 
             _flag_values.clear();
@@ -3822,12 +3822,12 @@ namespace Emulation {
 
         void GameboyCPU::GenerateAssemblyTables(BaseCartridge* _cartridge) {
             auto& rom_data = _cartridge->GetRom();
-            asmTables = assembly_tables(machine_ctx->rom_bank_num);
+            asmTables = assembly_tables(machineCtx->rom_bank_num);
 
             assembly_table current_table;
             int offset = 0;
 
-            for (int i = 0; i < machine_ctx->rom_bank_num; i++) {
+            for (int i = 0; i < machineCtx->rom_bank_num; i++) {
                 current_table = assembly_table();
 
                 if (i == 0)     { offset = ROM_0_OFFSET; } 
@@ -3849,7 +3849,7 @@ namespace Emulation {
                 bank_num = mem_instance->GetIO(CGB_VRAM_SELECT_ADDR);
                 DisassembleBankContent(_table.back(), graphics_ctx->VRAM_N[bank_num].data(), VRAM_N_OFFSET, VRAM_N_SIZE, bank_num, "VRAM");
             } else if (Regs.PC >= RAM_N_OFFSET && Regs.PC < WRAM_0_OFFSET) {
-                bank_num = machine_ctx->ram_bank_selected;
+                bank_num = machineCtx->ram_bank_selected;
                 std::vector<u8> ram = std::vector<u8>(RAM_N_SIZE);
                 memcpy(ram.data(), mem_instance->RAM_N[bank_num], RAM_N_SIZE);
                 DisassembleBankContent(_table.back(), ram.data(), RAM_N_OFFSET, RAM_N_SIZE, bank_num, "RAM");
@@ -3857,7 +3857,7 @@ namespace Emulation {
                 bank_num = 0;
                 DisassembleBankContent(_table.back(), mem_instance->WRAM_0.data(), WRAM_0_OFFSET, WRAM_0_SIZE, bank_num, "WRAM");
             } else if (Regs.PC >= WRAM_N_OFFSET && Regs.PC < MIRROR_WRAM_OFFSET) {
-                bank_num = machine_ctx->wram_bank_selected;
+                bank_num = machineCtx->wram_bank_selected;
                 DisassembleBankContent(_table.back(), mem_instance->WRAM_N[bank_num].data(), WRAM_N_OFFSET, WRAM_N_SIZE, bank_num + 1, "WRAM");
             } else if (Regs.PC >= HRAM_OFFSET && Regs.PC < IE_OFFSET) {
                 bank_num = 0;
@@ -3887,12 +3887,12 @@ namespace Emulation {
             case 0x6000:
             case 0x7000:
                 cs_data.src_mem_type = 0;
-                cs_data.src_bank = machine_ctx->rom_bank_selected + 1;
+                cs_data.src_bank = machineCtx->rom_bank_selected + 1;
                 break;
             case 0xA000:
             case 0xB000:
                 cs_data.src_mem_type = 2;
-                cs_data.src_bank = machine_ctx->ram_bank_selected;
+                cs_data.src_bank = machineCtx->ram_bank_selected;
                 break;
             case 0xC000:
                 cs_data.src_mem_type = 3;
@@ -3900,7 +3900,7 @@ namespace Emulation {
                 break;
             case 0xD000:
                 cs_data.src_mem_type = 3;
-                cs_data.src_bank = machine_ctx->wram_bank_selected + 1;
+                cs_data.src_bank = machineCtx->wram_bank_selected + 1;
                 break;
             case 0xF000:
                 if (((Regs.PC & 0xFF80) == 0xFF80) && Regs.PC != 0xFFFF) {
@@ -3935,12 +3935,12 @@ namespace Emulation {
             case 0x6000:
             case 0x7000:
                 cs_data.dest_mem_type = 0;
-                cs_data.dest_bank = machine_ctx->rom_bank_selected + 1;
+                cs_data.dest_bank = machineCtx->rom_bank_selected + 1;
                 break;
             case 0xA000:
             case 0xB000:
                 cs_data.dest_mem_type = 2;
-                cs_data.dest_bank = machine_ctx->ram_bank_selected;
+                cs_data.dest_bank = machineCtx->ram_bank_selected;
                 break;
             case 0xC000:
                 cs_data.dest_mem_type = 3;
@@ -3948,7 +3948,7 @@ namespace Emulation {
                 break;
             case 0xD000:
                 cs_data.dest_mem_type = 3;
-                cs_data.dest_bank = machine_ctx->wram_bank_selected + 1;
+                cs_data.dest_bank = machineCtx->wram_bank_selected + 1;
                 break;
             case 0xF000:
                 if (((_dest & 0xFF80) == 0xFF80) && _dest != 0xFFFF) {

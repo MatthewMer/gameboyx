@@ -403,11 +403,11 @@ namespace Emulation {
 		private:
 			// constructor
 			explicit GameboyMEM(BaseCartridge* _cartridge) {
-				machine_ctx.battery_buffered = _cartridge->batteryBuffered;
-				machine_ctx.ram_present = _cartridge->ramPresent;
-				machine_ctx.timer_present = _cartridge->timerPresent;
+				machineCtx.battery_buffered = _cartridge->batteryBuffered;
+				machineCtx.ram_present = _cartridge->ramPresent;
+				machineCtx.timer_present = _cartridge->timerPresent;
 
-				if (machine_ctx.is_cgb) {
+				if (machineCtx.is_cgb) {
 					graphics_ctx.dmg_bgp_color_palette[0] = CGB_DMG_COLOR_WHITE;
 					graphics_ctx.dmg_bgp_color_palette[1] = CGB_DMG_COLOR_LIGHTGREY;
 					graphics_ctx.dmg_bgp_color_palette[2] = CGB_DMG_COLOR_DARKGREY;
@@ -433,7 +433,7 @@ namespace Emulation {
 			};
 			// destructor
 			~GameboyMEM() override {
-				if (!machine_ctx.battery_buffered && machine_ctx.ram_present) {
+				if (!machineCtx.battery_buffered && machineCtx.ram_present) {
 					for (auto& n : RAM_N) {
 						delete[] n;
 					}
@@ -513,7 +513,7 @@ namespace Emulation {
 			void UnmapBootRom();
 
 			// memory cpu context
-			machine_context machine_ctx = machine_context();
+			machine_context machineCtx = machine_context();
 			graphics_context graphics_ctx = graphics_context();
 			sound_context sound_ctx = sound_context();
 			control_context control_ctx = control_context();

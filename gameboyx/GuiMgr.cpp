@@ -1576,8 +1576,6 @@ namespace GUI {
         Backend::HardwareMgr::SetFilterEnable(distLowPassEnable, lfeLowPassEnable);
     }
 
-
-
     void GuiMgr::StartGame(const bool& _restart) {
         if (games.size() > 0) {
             // gather settings
@@ -1588,6 +1586,8 @@ namespace GUI {
             emu_settings.emulation_speed = currentSpeed;
 
             auto* game = games[gameSelectedIndex];
+            game->SetBootRom(false, "", Emulation::console_ids::CONSOLE_NONE);
+
             for (const auto& [key, value] : useBootRom) {
                 if (key == game->console && value.first) {
                     game->SetBootRom(true, Config::BOOT_FOLDER + BOOT_TYPES.at(value.second), value.second);

@@ -54,6 +54,7 @@ namespace Emulation {
 			case GB:
 				DrawScanline = &GameboyGPU::DrawScanlineDMG;
 				SearchOam = &GameboyGPU::SearchOAMDMG;
+				cgbCompatibility = machineCtx->cgb_compatibility;
 				break;
 			}
 		}
@@ -235,7 +236,7 @@ namespace Emulation {
 				tile_offset = graphicsCtx->VRAM_N[0][tilemap_offset + tilemap_offset_y + tilemap_offset_x];
 
 				FetchTileDataBGWIN(tile_offset, y_clip * 2, 0);
-				DrawTileBGWINDMG(x - x_clip, ly, graphicsCtx->dmg_bgp_color_palette);
+				DrawTileBGWINDMG(x - x_clip, ly, cgbCompatibility ? graphicsCtx->cgb_bgp_color_palettes[0] : graphicsCtx->dmg_bgp_color_palette);
 			}
 		}
 
@@ -268,7 +269,7 @@ namespace Emulation {
 					tile_offset = graphicsCtx->VRAM_N[0][tilemap_offset + tilemap_offset_y + tilemap_offset_x];
 
 					FetchTileDataBGWIN(tile_offset, y_clip * 2, 0);
-					DrawTileBGWINDMG(x, ly, machineCtx->cgb_compatibility ? graphicsCtx->cgb_bgp_color_palettes[0] : graphicsCtx->dmg_bgp_color_palette);
+					DrawTileBGWINDMG(x, ly, cgbCompatibility ? graphicsCtx->cgb_bgp_color_palettes[0] : graphicsCtx->dmg_bgp_color_palette);
 				}
 			}
 		}
@@ -304,9 +305,9 @@ namespace Emulation {
 
 				u32* palette;
 				if (flags & OBJ_ATTR_PALETTE_DMG) {
-					palette = machineCtx->cgb_compatibility ? graphicsCtx->cgb_obp_color_palettes[0] : graphicsCtx->dmg_obp1_color_palette;
+					palette = cgbCompatibility ? graphicsCtx->cgb_obp_color_palettes[1] : graphicsCtx->dmg_obp1_color_palette;
 				} else {
-					palette = machineCtx->cgb_compatibility ? graphicsCtx->cgb_obp_color_palettes[1] : graphicsCtx->dmg_obp0_color_palette;
+					palette = cgbCompatibility ? graphicsCtx->cgb_obp_color_palettes[0] : graphicsCtx->dmg_obp0_color_palette;
 				}
 
 				bool x_flip = (flags & OBJ_ATTR_X_FLIP) ? true : false;

@@ -118,6 +118,8 @@ namespace Emulation {
 
 			int mode3Dots;
 
+			bool cgbCompatibility = false;
+
 			GameboyCPU* coreInstance;
 
 			alignas(64) std::atomic<bool> presentObjPrio0 = true;

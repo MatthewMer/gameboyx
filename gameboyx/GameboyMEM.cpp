@@ -21,7 +21,7 @@ namespace Emulation {
             HARDWARE ACCESS
         *********************************************************************************************************** */
         machine_context* GameboyMEM::GetMachineContext() {
-            return &machine_ctx;
+            return &machineCtx;
         }
 
         graphics_context* GameboyMEM::GetGraphicsContext() {
@@ -46,11 +46,11 @@ namespace Emulation {
         void GameboyMEM::InitMemory(BaseCartridge* _cartridge) {
             romData = _cartridge->GetRom();
 
-            machine_ctx.is_cgb = romData[ROM_HEAD_CGBFLAG] & 0x80 ? true : false;
-            machine_ctx.cgb_compatibility = _cartridge->CheckCompatibilityMode();
+            machineCtx.is_cgb = romData[ROM_HEAD_CGBFLAG] & 0x80 ? true : false;
+            machineCtx.cgb_compatibility = _cartridge->CheckCompatibilityMode();
 
-            machine_ctx.wram_bank_num = (machine_ctx.is_cgb || machine_ctx.cgb_compatibility ? 8 : 2);
-            machine_ctx.vram_bank_num = (machine_ctx.is_cgb || machine_ctx.cgb_compatibility ? 2 : 1);
+            machineCtx.wram_bank_num = (machineCtx.is_cgb || machineCtx.cgb_compatibility ? 8 : 2);
+            machineCtx.vram_bank_num = (machineCtx.is_cgb || machineCtx.cgb_compatibility ? 2 : 1);
 
             if (!ReadRomHeaderInfo(romData)) {
                 LOG_ERROR("Couldn't acquire memory information");
@@ -81,16 +81,20 @@ namespace Emulation {
             vector<u8>::const_iterator end = _vec_rom.begin() + ROM_0_SIZE;
             ROM_0 = vector<u8>(start, end);
 
-            for (int i = 0; i < machine_ctx.rom_bank_num - 1; i++) {
+            for (int i = 0; i < machineCtx.rom_bank_num - 1; i++) {
                 start = _vec_rom.begin() + ROM_N_OFFSET + i * ROM_N_SIZE;
                 end = _vec_rom.begin() + ROM_N_OFFSET + i * ROM_N_SIZE + ROM_N_SIZE;
 
                 ROM_N[i] = vector<u8>(start, end);
             }
 
-            machine_ctx.boot_rom_mapped = false;
-            if (machine_ctx.cgb_compatibility) {
+            machineCtx.boot_rom_mapped = false;
+            if (machineCtx.cgb_compatibility) {
                 ((GameboyGPU*)BaseGPU::getInstance())->SetHardwareMode(GB);
+                machineCtx.cgb_compatibility = false;
+
+                machineCtx.vram_bank_selected = 0;
+                machineCtx.wram_bank_selected = 0;
             }
             return true;
         }
@@ -106,7 +110,7 @@ namespace Emulation {
             end = start + ROM_HEAD_SIZE;
             std::copy(start, end, ROM_0.begin() + ROM_HEAD_ADDR);
 
-            machine_ctx.boot_rom_mapped = true;
+            machineCtx.boot_rom_mapped = true;
             return true;
         }
 
@@ -115,18 +119,18 @@ namespace Emulation {
         *********************************************************************************************************** */
         void GameboyMEM::AllocateMemory(BaseCartridge* _cartridge) {
             ROM_0 = vector<u8>(ROM_0_SIZE, 0);
-            ROM_N = vector<vector<u8>>(machine_ctx.rom_bank_num - 1);
-            for (int i = 0; i < machine_ctx.rom_bank_num - 1; i++) {
+            ROM_N = vector<vector<u8>>(machineCtx.rom_bank_num - 1);
+            for (int i = 0; i < machineCtx.rom_bank_num - 1; i++) {
                 ROM_N[i] = vector<u8>(ROM_N_SIZE, 0);
             }
 
-            graphics_ctx.VRAM_N = vector<vector<u8>>(machine_ctx.vram_bank_num);
-            for (int i = 0; i < machine_ctx.vram_bank_num; i++) {
+            graphics_ctx.VRAM_N = vector<vector<u8>>(machineCtx.vram_bank_num);
+            for (int i = 0; i < machineCtx.vram_bank_num; i++) {
                 graphics_ctx.VRAM_N[i] = vector<u8>(VRAM_N_SIZE, 0);
             }
 
-            if (machine_ctx.ram_present && machine_ctx.ram_bank_num > 0) {
-                if (machine_ctx.battery_buffered) {
+            if (machineCtx.ram_present && machineCtx.ram_bank_num > 0) {
+                if (machineCtx.battery_buffered) {
                     auto file_name = Helpers::split_string(_cartridge->fileName, ".");
                     saveFile = Config::SAVE_FOLDER;
 
@@ -137,10 +141,10 @@ namespace Emulation {
                     }
                     saveFile += Config::SAVE_EXT;
 
-                    u8* data = (u8*)mapper.GetMappedFile(saveFile.c_str(), machine_ctx.ram_bank_num * RAM_N_SIZE);
+                    u8* data = (u8*)mapper.GetMappedFile(saveFile.c_str(), machineCtx.ram_bank_num * RAM_N_SIZE);
 
                     RAM_N.clear();
-                    for (int i = 0; i < machine_ctx.ram_bank_num; i++) {
+                    for (int i = 0; i < machineCtx.ram_bank_num; i++) {
                         RAM_N.emplace_back(data + i * RAM_N_SIZE);
 
                         /* only for testing the mapping
@@ -154,16 +158,16 @@ namespace Emulation {
                         */
                     }
                 } else {
-                    RAM_N = vector<u8*>(machine_ctx.ram_bank_num);
-                    for (int i = 0; i < machine_ctx.ram_bank_num; i++) {
+                    RAM_N = vector<u8*>(machineCtx.ram_bank_num);
+                    for (int i = 0; i < machineCtx.ram_bank_num; i++) {
                         RAM_N[i] = new u8[RAM_N_SIZE];
                     }
                 }
             }
 
             WRAM_0 = vector<u8>(WRAM_0_SIZE, 0);
-            WRAM_N = vector<vector<u8>>(machine_ctx.wram_bank_num - 1);
-            for (int i = 0; i < machine_ctx.wram_bank_num - 1; i++) {
+            WRAM_N = vector<vector<u8>>(machineCtx.wram_bank_num - 1);
+            for (int i = 0; i < machineCtx.wram_bank_num - 1; i++) {
                 WRAM_N[i] = vector<u8>(WRAM_N_SIZE, 0);
             }
 
@@ -178,7 +182,7 @@ namespace Emulation {
             INIT MEMORY STATE
         *********************************************************************************************************** */
         void GameboyMEM::InitMemoryState() {   
-            machine_ctx.IE = INIT_CGB_IE;
+            machineCtx.IE = INIT_CGB_IE;
             IO[IF_ADDR - IO_OFFSET] = INIT_CGB_IF;
 
             IO[BGP_ADDR - IO_OFFSET] = INIT_BGP;
@@ -193,13 +197,13 @@ namespace Emulation {
             SetLCDCValues(INIT_CGB_LCDC);
             SetLCDSTATValues(INIT_CGB_STAT);    
 
-            if (machine_ctx.is_cgb) {
+            if (machineCtx.is_cgb) {
                 IO[DIV_ADDR - IO_OFFSET] = INIT_CGB_DIV >> 8; 
-                machine_ctx.div_low_byte = INIT_CGB_DIV & 0xFF;
+                machineCtx.div_low_byte = INIT_CGB_DIV & 0xFF;
             }
             else { 
                 IO[DIV_ADDR - IO_OFFSET] = INIT_DIV >> 8; 
-                machine_ctx.div_low_byte = INIT_DIV & 0xFF;
+                machineCtx.div_low_byte = INIT_DIV & 0xFF;
             }
 
             IO[TIMA_ADDR - IO_OFFSET] = INIT_TIMA;
@@ -219,7 +223,7 @@ namespace Emulation {
 
             if (value != 0x52 && value != 0x53 && value != 0x54) {                          // TODO: these values are used for special variations
                 int total_rom_size = ROM_BASE_SIZE * (1 << _vec_rom[ROM_HEAD_ROMSIZE]);
-                machine_ctx.rom_bank_num = total_rom_size >> 14;
+                machineCtx.rom_bank_num = total_rom_size >> 14;
             }
             else {
                 return false;
@@ -229,22 +233,22 @@ namespace Emulation {
             value = _vec_rom[ROM_HEAD_RAMSIZE];
             switch (value) {
             case RAM_BANK_NUM_0_VAL:
-                machine_ctx.ram_bank_num = 0;
+                machineCtx.ram_bank_num = 0;
                 break;
             case RAM_BANK_NUM_1_VAL:
-                machine_ctx.ram_bank_num = 1;
+                machineCtx.ram_bank_num = 1;
                 break;
             case RAM_BANK_NUM_4_VAL:
-                machine_ctx.ram_bank_num = 4;
+                machineCtx.ram_bank_num = 4;
                 break;
                 // not allowed
             case RAM_BANK_NUM_8_VAL:
-                machine_ctx.ram_bank_num = 8;
+                machineCtx.ram_bank_num = 8;
                 return false;
                 break;
                 // not allowed
             case RAM_BANK_NUM_16_VAL:
-                machine_ctx.ram_bank_num = 16;
+                machineCtx.ram_bank_num = 16;
                 return false;
                 break;
             default:
@@ -270,7 +274,7 @@ namespace Emulation {
         }
 
         u8 GameboyMEM::ReadROM_N(const u16& _addr) {
-            return ROM_N[machine_ctx.rom_bank_selected][_addr - ROM_N_OFFSET];
+            return ROM_N[machineCtx.rom_bank_selected][_addr - ROM_N_OFFSET];
         }
 
         u8 GameboyMEM::ReadVRAM_N(const u16& _addr) {
@@ -282,7 +286,7 @@ namespace Emulation {
         }
 
         u8 GameboyMEM::ReadRAM_N(const u16& _addr) {
-            return RAM_N[machine_ctx.ram_bank_selected][_addr - RAM_N_OFFSET];
+            return RAM_N[machineCtx.ram_bank_selected][_addr - RAM_N_OFFSET];
         }
 
         u8 GameboyMEM::ReadWRAM_0(const u16& _addr) {
@@ -290,7 +294,7 @@ namespace Emulation {
         }
 
         u8 GameboyMEM::ReadWRAM_N(const u16& _addr) {
-            return WRAM_N[machine_ctx.wram_bank_selected][_addr - WRAM_N_OFFSET];
+            return WRAM_N[machineCtx.wram_bank_selected][_addr - WRAM_N_OFFSET];
         }
 
         u8 GameboyMEM::ReadOAM(const u16& _addr) {
@@ -310,7 +314,7 @@ namespace Emulation {
         }
 
         u8 GameboyMEM::ReadIE() {
-            return machine_ctx.IE;
+            return machineCtx.IE;
         }
 
         // write *****
@@ -318,12 +322,12 @@ namespace Emulation {
             if (graphics_ctx.ppu_enable && graphics_ctx.mode == PPU_MODE_3) {
                 return;
             } else {
-                graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][_addr - VRAM_N_OFFSET] = _data;
+                graphics_ctx.VRAM_N[machineCtx.vram_bank_selected][_addr - VRAM_N_OFFSET] = _data;
             }
         }
 
         void GameboyMEM::WriteRAM_N(const u8& _data, const u16& _addr) {
-            RAM_N[machine_ctx.ram_bank_selected][_addr - RAM_N_OFFSET] = _data;
+            RAM_N[machineCtx.ram_bank_selected][_addr - RAM_N_OFFSET] = _data;
         }
 
         void GameboyMEM::WriteWRAM_0(const u8& _data, const u16& _addr) {
@@ -331,7 +335,7 @@ namespace Emulation {
         }
 
         void GameboyMEM::WriteWRAM_N(const u8& _data, const u16& _addr) {
-            WRAM_N[machine_ctx.wram_bank_selected][_addr - WRAM_N_OFFSET] = _data;
+            WRAM_N[machineCtx.wram_bank_selected][_addr - WRAM_N_OFFSET] = _data;
         }
 
         void GameboyMEM::WriteOAM(const u8& _data, const u16& _addr) {
@@ -351,7 +355,7 @@ namespace Emulation {
         }
 
         void GameboyMEM::WriteIE(const u8& _data) {
-            machine_ctx.IE = _data;
+            machineCtx.IE = _data;
         }
 
         /* ***********************************************************************************************************
@@ -417,7 +421,7 @@ namespace Emulation {
                 if (_addr > 0xFF77) {
                     return 0xFF;
                 }
-                else if(machine_ctx.is_cgb){
+                else if(machineCtx.is_cgb){
                     return IO[_addr - IO_OFFSET];
                 }
                 else {
@@ -449,20 +453,20 @@ namespace Emulation {
                 break;
             case DIV_ADDR:
                 IO[DIV_ADDR - IO_OFFSET] = 0x00;
-                machine_ctx.div_low_byte = 0x00;
+                machineCtx.div_low_byte = 0x00;
                 break;
             case TAC_ADDR:
                 IO[TAC_ADDR - IO_OFFSET] = _data;
                 ProcessTAC();
                 break;
             case TIMA_ADDR:
-                if (!machine_ctx.tima_reload_cycle) {
+                if (!machineCtx.tima_reload_cycle) {
                     IO[TIMA_ADDR - IO_OFFSET] = _data;
-                    machine_ctx.tima_overflow_cycle = false;
+                    machineCtx.tima_overflow_cycle = false;
                 }
                 break;
             case IF_ADDR:
-                machine_ctx.tima_reload_if_write = machine_ctx.tima_reload_cycle;
+                machineCtx.tima_reload_if_write = machineCtx.tima_reload_cycle;
                 graphics_ctx.vblank_if_write = true;
                 IO[IF_ADDR - IO_OFFSET] = _data;
                 break;
@@ -507,7 +511,7 @@ namespace Emulation {
                 SetColorPaletteValues(_data, graphics_ctx.dmg_obp1_color_palette);
                 break;
             case BANK_ADDR:
-                if (machine_ctx.boot_rom_mapped) {
+                if (machineCtx.boot_rom_mapped) {
                     UnmapBootRom();
                 }
                 break;
@@ -641,7 +645,7 @@ namespace Emulation {
             DMA
         *********************************************************************************************************** */
         void GameboyMEM::VRAM_DMA(const u8& _data) {
-            if (machine_ctx.is_cgb) {
+            if (machineCtx.is_cgb) {
                 if (graphics_ctx.vram_dma) {
                     //LOG_WARN("HDMA5 while DMA");
                     graphics_ctx.vram_dma = false;
@@ -700,26 +704,26 @@ namespace Emulation {
                     u8 blocks = (IO[CGB_HDMA5_ADDR - IO_OFFSET] & 0x7F) + 1;
                     u16 length = (u16)blocks * 0x10;
 
-                    int machine_cycles = ((int)blocks * VRAM_DMA_MC_PER_BLOCK * machine_ctx.currentSpeed) + 1;
+                    int machine_cycles = ((int)blocks * VRAM_DMA_MC_PER_BLOCK * machineCtx.currentSpeed) + 1;
                     for (int i = 0; i < machine_cycles; i++) {
                         core_instance->TickTimers();
                     }
 
                     if (source_addr < ROM_N_OFFSET) {
-                        memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &ROM_0[source_addr], length);
+                        memcpy(&graphics_ctx.VRAM_N[machineCtx.vram_bank_selected][dest_addr], &ROM_0[source_addr], length);
                     } else if (source_addr < VRAM_N_OFFSET) {
-                        memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &ROM_N[machine_ctx.rom_bank_selected][source_addr - ROM_N_OFFSET], length);
+                        memcpy(&graphics_ctx.VRAM_N[machineCtx.vram_bank_selected][dest_addr], &ROM_N[machineCtx.rom_bank_selected][source_addr - ROM_N_OFFSET], length);
                     } else if (source_addr < RAM_N_OFFSET) {
                         LOG_ERROR("[emu] HDMA source address ", std::format("{:04x}", source_addr), " undefined copy");
                         return;
                     } else if (source_addr < WRAM_0_OFFSET) {
-                        memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &RAM_N[machine_ctx.ram_bank_selected][source_addr - RAM_N_OFFSET], length);
+                        memcpy(&graphics_ctx.VRAM_N[machineCtx.vram_bank_selected][dest_addr], &RAM_N[machineCtx.ram_bank_selected][source_addr - RAM_N_OFFSET], length);
                     } else if (source_addr < WRAM_N_OFFSET) {
-                        memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
+                        memcpy(&graphics_ctx.VRAM_N[machineCtx.vram_bank_selected][dest_addr], &WRAM_0[source_addr - WRAM_0_OFFSET], length);
                     } else if (source_addr < MIRROR_WRAM_OFFSET) {
-                        memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &WRAM_N[machine_ctx.wram_bank_selected][source_addr - WRAM_N_OFFSET], length);
+                        memcpy(&graphics_ctx.VRAM_N[machineCtx.vram_bank_selected][dest_addr], &WRAM_N[machineCtx.wram_bank_selected][source_addr - WRAM_N_OFFSET], length);
                     } else {
-                        memcpy(&graphics_ctx.VRAM_N[machine_ctx.vram_bank_selected][dest_addr], &RAM_N[machine_ctx.ram_bank_selected][source_addr - (RAM_N_OFFSET + 0x4000)], length);
+                        memcpy(&graphics_ctx.VRAM_N[machineCtx.vram_bank_selected][dest_addr], &RAM_N[machineCtx.ram_bank_selected][source_addr - (RAM_N_OFFSET + 0x4000)], length);
                     }
 
                     IO[CGB_HDMA5_ADDR - IO_OFFSET] = 0xFF;
@@ -769,16 +773,16 @@ namespace Emulation {
         void GameboyMEM::ProcessTAC() {
             switch (IO[TAC_ADDR - IO_OFFSET] & TAC_CLOCK_SELECT) {
             case 0x00:
-                machine_ctx.timaDivMask = TIMA_DIV_BIT_9;
+                machineCtx.timaDivMask = TIMA_DIV_BIT_9;
                 break;
             case 0x01:
-                machine_ctx.timaDivMask = TIMA_DIV_BIT_3;
+                machineCtx.timaDivMask = TIMA_DIV_BIT_3;
                 break;
             case 0x02:
-                machine_ctx.timaDivMask = TIMA_DIV_BIT_5;
+                machineCtx.timaDivMask = TIMA_DIV_BIT_5;
                 break;
             case 0x03:
-                machine_ctx.timaDivMask = TIMA_DIV_BIT_7;
+                machineCtx.timaDivMask = TIMA_DIV_BIT_7;
                 break;
             }
         }
@@ -787,10 +791,10 @@ namespace Emulation {
             SPEED SWITCH
         *********************************************************************************************************** */
         void GameboyMEM::SwitchSpeed(const u8& _data) {
-            if (machine_ctx.is_cgb) {
+            if (machineCtx.is_cgb) {
                 if (_data & PREPARE_SPEED_SWITCH) {
                     IO[CGB_SPEED_SWITCH_ADDR - IO_OFFSET] ^= SET_SPEED;
-                    machine_ctx.speed_switch_requested = true;
+                    machineCtx.speed_switch_requested = true;
                 }
             }
         }
@@ -975,7 +979,7 @@ namespace Emulation {
             u8 colors = _data;
 
             // TODO: CGB is able to set different color palettes for DMG games
-            if (machine_ctx.is_cgb || machine_ctx.cgb_compatibility) {
+            if (machineCtx.is_cgb || machineCtx.cgb_compatibility) {
                 for (int i = 0; i < 4; i++) {
                     switch (colors & 0x03) {
                     case 0x00:
@@ -1085,18 +1089,18 @@ namespace Emulation {
             MISC BANK SELECT
         *********************************************************************************************************** */
         void GameboyMEM::SetVRAMBank(const u8& _data) {
-            if (machine_ctx.is_cgb || machine_ctx.cgb_compatibility) {
+            if (machineCtx.is_cgb || machineCtx.cgb_compatibility) {
                 IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x01;
-                machine_ctx.vram_bank_selected = IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET];
+                machineCtx.vram_bank_selected = IO[CGB_VRAM_SELECT_ADDR - IO_OFFSET];
             }
         }
 
         void GameboyMEM::SetWRAMBank(const u8& _data) {
-            if (machine_ctx.is_cgb || machine_ctx.cgb_compatibility) {
+            if (machineCtx.is_cgb || machineCtx.cgb_compatibility) {
                 IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = _data & 0x07;
                 if (IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] == 0) IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] = 1;
 
-                machine_ctx.wram_bank_selected = IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] - 1; 
+                machineCtx.wram_bank_selected = IO[CGB_WRAM_SELECT_ADDR - IO_OFFSET] - 1; 
             }
         }
 
@@ -1391,7 +1395,7 @@ namespace Emulation {
             }
 
             // RAM
-            if (machine_ctx.ram_bank_num > 0) {
+            if (machineCtx.ram_bank_num > 0) {
                 memoryTables.emplace_back();
                 auto& memory_type_tables = memoryTables.back();
                 memory_type_tables.SetMemoryType("RAM");

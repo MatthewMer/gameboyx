@@ -37,7 +37,7 @@ namespace Emulation {
 			GameboyMEM* mem_instance;
 
 			// hardware info and access
-			machine_context* machine_ctx;
+			machine_context* machineCtx;
 
 			std::string saveFile = "";
 

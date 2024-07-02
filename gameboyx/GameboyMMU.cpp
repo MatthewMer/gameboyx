@@ -128,7 +128,7 @@ namespace Emulation {
 
 		GameboyMMU::GameboyMMU(BaseCartridge* _cartridge) {
 			mem_instance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
-			machine_ctx = mem_instance->GetMachineContext();
+			machineCtx = mem_instance->GetMachineContext();
 		}
 
 		/* ***********************************************************************************************************
@@ -160,7 +160,7 @@ namespace Emulation {
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
-				if (machine_ctx->ram_present) {
+				if (machineCtx->ram_present) {
 					mem_instance->WriteRAM_N(_data, _addr);
 				} else {
 					return;
@@ -222,7 +222,7 @@ namespace Emulation {
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
-				if (machine_ctx->ram_present) {
+				if (machineCtx->ram_present) {
 					return mem_instance->ReadRAM_N(_addr);
 				} else {
 					return 0xFF;
@@ -293,7 +293,7 @@ namespace Emulation {
 *********************************************************************************************************** */
 		MmuSM83_MBC1::MmuSM83_MBC1(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {
 
-			switch (machine_ctx->ram_bank_num) {
+			switch (machineCtx->ram_bank_num) {
 			case 0:
 			case 1:
 				ramBankMask = RAM_BANK_MASK_0_1;
@@ -302,18 +302,18 @@ namespace Emulation {
 				ramBankMask = RAM_BANK_MASK_4;
 				break;
 			default:
-				LOG_ERROR("[emu] RAM bank number ", format("{:d}", machine_ctx->ram_bank_num), " unsupported by MBC1");
+				LOG_ERROR("[emu] RAM bank number ", format("{:d}", machineCtx->ram_bank_num), " unsupported by MBC1");
 				break;
 			}
 
 			/*
 			// bit mask for ROM Bank Number
-			for (int i = machine_ctx->rom_bank_num; i < 32 && i >= 2; i *= 2) {
+			for (int i = machineCtx->rom_bank_num; i < 32 && i >= 2; i *= 2) {
 				romBankMask >>= 1;
 			}
 			// set mask for upper bits of zero bank
-			if (machine_ctx->rom_bank_num < 64) { romBankMaskAdvanced &= 0x00; }
-			else if(machine_ctx->rom_bank_num < 128) { romBankMaskAdvanced &= 0x20; }
+			if (machineCtx->rom_bank_num < 64) { romBankMaskAdvanced &= 0x00; }
+			else if(machineCtx->rom_bank_num < 128) { romBankMaskAdvanced &= 0x20; }
 			*/
 		}
 
@@ -327,7 +327,7 @@ namespace Emulation {
 				if (_addr < MBC1_ROM_BANK_NUMBER_SEL_0_4) {
 					ramEnable = (_data & MBC1_RAM_ENABLE_MASK) == MBC1_RAM_ENABLE_BITS;
 
-					if (!ramEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
+					if (!ramEnable && machineCtx->ram_present && machineCtx->battery_buffered) {
 						//WriteSave();
 					}
 
@@ -339,7 +339,7 @@ namespace Emulation {
 					if (advancedBankingMode) {
 						romBankNumber |= (advancedBankingValue << 5) & MBC1_ROM_BANK_MASK_5_6;
 					}
-					machine_ctx->rom_bank_selected = romBankNumber - 1;
+					machineCtx->rom_bank_selected = romBankNumber - 1;
 				}
 			}
 			// ROM Bank 1-n -> RAM Bank select or RTC register select or Latch Clock Data
@@ -347,7 +347,7 @@ namespace Emulation {
 				// RAM Bank number or RTC register select
 				if (_addr < MBC1_BANKING_MODE) {
 					advancedBankingValue = _data & MBC1_RAM_ROM_BANK_MASK;
-					machine_ctx->ram_bank_selected = advancedBankingValue & ramBankMask;
+					machineCtx->ram_bank_selected = advancedBankingValue & ramBankMask;
 				} else {
 					advancedBankingMode = (_data ? true : false);
 				}
@@ -358,7 +358,7 @@ namespace Emulation {
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
-				if (machine_ctx->ram_present) {
+				if (machineCtx->ram_present) {
 					if (ramEnable) {
 						mem_instance->WriteRAM_N(_data, _addr);
 					}
@@ -426,7 +426,7 @@ namespace Emulation {
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
-				if (ramEnable && machine_ctx->ram_present) {
+				if (ramEnable && machineCtx->ram_present) {
 					return mem_instance->ReadRAM_N(_addr);
 				} else {
 					return 0xFF;
@@ -508,7 +508,7 @@ namespace Emulation {
 					static bool was_enabled = false;
 
 					timerRamEnable = (_data & MBC3_RAM_ENABLE_MASK) == MBC3_RAM_ENABLE_BITS;
-					if (was_enabled && !timerRamEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
+					if (was_enabled && !timerRamEnable && machineCtx->ram_present && machineCtx->battery_buffered) {
 						//WriteSave();
 						was_enabled = false;
 					} else {
@@ -519,7 +519,7 @@ namespace Emulation {
 				else {
 					int romBankNumber = _data & MBC3_ROM_BANK_MASK;
 					if (romBankNumber == 0) romBankNumber = 1;
-					machine_ctx->rom_bank_selected = romBankNumber - 1;
+					machineCtx->rom_bank_selected = romBankNumber - 1;
 				}
 			}
 			// ROM Bank 1-n -> RAM Bank select or RTC register select or Latch Clock Data
@@ -527,7 +527,7 @@ namespace Emulation {
 				// RAM Bank number or RTC register select
 				if (_addr < MBC3_LATCH_CLOCK_DATA) {
 					int ramBankRtcNumber = _data & MBC3_RAM_BANK_MASK;
-					machine_ctx->ram_bank_selected = ramBankRtcNumber;
+					machineCtx->ram_bank_selected = ramBankRtcNumber;
 				} else {
 					if (_data == 0x01 && rtcRegistersLastWrite == 0x00) {
 						LatchClock();
@@ -542,9 +542,9 @@ namespace Emulation {
 			}
 			// RAM 0-n -> RTC Registers 08-0C
 			else if (_addr < WRAM_0_OFFSET) {
-				if (machine_ctx->ram_present) {
+				if (machineCtx->ram_present) {
 					if (timerRamEnable) {
-						int ramBankNumber = machine_ctx->ram_bank_selected;
+						int ramBankNumber = machineCtx->ram_bank_selected;
 						if (ramBankNumber < 0x04) {
 							mem_instance->WriteRAM_N(_data, _addr);
 						} else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
@@ -610,8 +610,8 @@ namespace Emulation {
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
-				if (timerRamEnable && machine_ctx->ram_present) {
-					int ramBankNumber = machine_ctx->ram_bank_selected;
+				if (timerRamEnable && machineCtx->ram_present) {
+					int ramBankNumber = machineCtx->ram_bank_selected;
 					if (ramBankNumber < 0x04) {
 						return mem_instance->ReadRAM_N(_addr);
 					} else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
@@ -701,7 +701,7 @@ namespace Emulation {
 	CONSTRUCTOR
 *********************************************************************************************************** */
 		MmuSM83_MBC5::MmuSM83_MBC5(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {
-			switch (machine_ctx->ram_bank_num) {
+			switch (machineCtx->ram_bank_num) {
 			case 0:
 			case 1:
 				ramBankMask = RAM_BANK_MASK_0_1;
@@ -713,7 +713,7 @@ namespace Emulation {
 				ramBankMask = RAM_BANK_MASK_16;
 				break;
 			default:
-				LOG_ERROR("[emu] RAM bank number ", format("{:d}", machine_ctx->ram_bank_num), " unsupported by MBC5");
+				LOG_ERROR("[emu] RAM bank number ", format("{:d}", machineCtx->ram_bank_num), " unsupported by MBC5");
 				break;
 			}
 		}
@@ -728,7 +728,7 @@ namespace Emulation {
 				if (_addr < MBC5_ROM_BANK_NUMBER_SEL_0_7) {
 					ramEnable = (_data & MBC5_RAM_ENABLE_MASK) == MBC5_RAM_ENABLE;
 
-					if (!ramEnable && machine_ctx->ram_present && machine_ctx->battery_buffered) {
+					if (!ramEnable && machineCtx->ram_present && machineCtx->battery_buffered) {
 						//WriteSave();
 					}
 
@@ -737,11 +737,11 @@ namespace Emulation {
 				else if (_addr < MBC5_ROM_BANK_NUMBER_SEL_8) {
 					romBankValue = (romBankValue & ~MBC5_ROM_BANK_MASK_0_7) | _data;
 					rom0Mapped = (romBankValue == 0);
-					machine_ctx->rom_bank_selected = romBankValue - 1;
+					machineCtx->rom_bank_selected = romBankValue - 1;
 				} else {
 					romBankValue = (romBankValue & ~MBC5_ROM_BANK_MASK_8) | ((int)(_data & MBC5_ROM_BANK_MASK_8) << 8);
 					rom0Mapped = (romBankValue == 0);
-					machine_ctx->rom_bank_selected = romBankValue - 1;
+					machineCtx->rom_bank_selected = romBankValue - 1;
 				}
 			}
 			// ROM Bank 1-n -> RAM Bank select
@@ -749,7 +749,7 @@ namespace Emulation {
 				// RAM Bank number
 				if (_addr < MBC5_BANKING_MODE) {
 					if (_data < 0x10) {
-						machine_ctx->ram_bank_selected = _data & ramBankMask;
+						machineCtx->ram_bank_selected = _data & ramBankMask;
 					}
 				}
 			}
@@ -759,7 +759,7 @@ namespace Emulation {
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
-				if (machine_ctx->ram_present) {
+				if (machineCtx->ram_present) {
 					if (ramEnable) {
 						mem_instance->WriteRAM_N(_data, _addr);
 					}
@@ -827,7 +827,7 @@ namespace Emulation {
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
-				if (ramEnable && machine_ctx->ram_present) {
+				if (ramEnable && machineCtx->ram_present) {
 					return mem_instance->ReadRAM_N(_addr);
 				} else {
 					return 0xFF;
