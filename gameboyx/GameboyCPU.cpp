@@ -292,6 +292,7 @@ namespace Emulation {
             currentTicks += TICKS_PER_MC;
 
             graphics_instance->ProcessGPU(TICKS_PER_MC);
+            sound_instance->GenerateSamples(TICKS_PER_MC / machineCtx->currentSpeed);
         }
 
         void GameboyCPU::IncrementTIMA() {

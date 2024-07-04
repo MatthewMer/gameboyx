@@ -29,6 +29,7 @@ namespace Emulation {
 
 			// members
 			void ProcessAPU(const int& _ticks) override;
+			void GenerateSamples(const int& _ticks) override;
 			void SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) override;
 
 		private:
@@ -51,6 +52,8 @@ namespace Emulation {
 				Backend::HardwareMgr::StopAudioBackend();
 			}
 
+			float ticksPerSample = 0;
+
 			int envelopeSweepCounter = 0;
 			int soundLengthCounter = 0;
 			int ch1SamplingRateCounter = 0;
@@ -70,6 +73,14 @@ namespace Emulation {
 			alignas(64) std::atomic<int> ch4ReadCursor = 0;				// always points to the current sample to read
 
 			void TickLFSR(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx);
+
+			int ch3WaveTickCounter = 0;
+			std::mutex mutWaveRam;
+			std::vector<float> ch3WaveSamples = std::vector<float>(CH_4_LFSR_BUFFER_SIZE);
+			alignas(64) std::atomic<int> ch3WriteCursor = 1;			// always points to the next sample to write
+			alignas(64) std::atomic<int> ch3ReadCursor = 0;				// always points to the current sample to read
+
+			void SampleWaveRam(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx);
 
 			GameboyMEM* memInstance = nullptr;
 			sound_context* soundCtx = nullptr;

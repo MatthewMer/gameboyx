@@ -70,6 +70,49 @@ namespace Emulation {
 		}
 
 		/* *************************************************************************************************
+			GENERATE NEW SAMPLES DURING INSTRUCTION EXECUTION, AS SOME GAMES RELY ON THIS
+		************************************************************************************************* */
+		void GameboyAPU::GenerateSamples(const int& _ticks) {
+			SampleWaveRam(_ticks, &chInfos[2], &soundCtx->ch_ctxs[2]);
+		}
+
+		/* *************************************************************************************************
+			GENERATE NEW SAMPLES BASED ON CURRENT WAVE RAM STATE
+			some games require fast changes in volume and RAM state for more complex wave forms to work.
+			One such example is pokemon yellow, here is a good breakdown of how the "pikachu" sound was
+			achieved and why this is necessary: https://www.youtube.com/watch?v=fooSxCuWvZ4&t=421s
+		************************************************************************************************* */
+		void GameboyAPU::SampleWaveRam(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx) {
+			if (_ch_ctx->enable.load()) {
+				ch_ext_waveram* wave_ctx = static_cast<ch_ext_waveram*>(_ch_ctx->exts[WAVE_RAM].get());
+
+				float virt_ticks_per_sample = (int)(std::ceil(BASE_CLOCK_CPU / _ch_ctx->sampling_rate.load()));
+				float volume = _ch_ctx->volume.load();
+
+				wave_ctx->tick_count += _ticks;
+				while (wave_ctx->tick_count >= virt_ticks_per_sample) {
+					wave_ctx->tick_count -= virt_ticks_per_sample;
+					++_ch_info->sample_count %= 32;
+				}
+
+				int write_cursor = ch3WriteCursor.load();
+				int read_cursor = ch3ReadCursor.load();
+
+				ch3WaveTickCounter += _ticks;
+				while (ch3WaveTickCounter >= ticksPerSample) {
+					ch3WaveTickCounter -= ticksPerSample;
+
+					if (write_cursor != read_cursor) {
+						ch3WaveSamples[write_cursor] = wave_ctx->wave_ram[_ch_info->sample_count] * volume;
+						++write_cursor %= CH_4_LFSR_BUFFER_SIZE;
+					}
+				}
+
+				ch3WriteCursor.store(write_cursor);
+			}
+		}
+
+		/* *************************************************************************************************
 			PROCESSES AND SAMPLES THE LFSR -> BASICALLY A PSEUDO RANDOM NUMBER GENERATOR (NOISE)
 		************************************************************************************************* */
 		void GameboyAPU::TickLFSR(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx) {
@@ -224,6 +267,8 @@ namespace Emulation {
 		* 4. front left
 		*/
 		void GameboyAPU::SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) {
+			ticksPerSample = (int)(BASE_CLOCK_CPU / _sampling_rate);
+
 			bool right = soundCtx->outRightEnabled.load();
 			bool left = soundCtx->outLeftEnabled.load();
 			bool vol_right = soundCtx->masterVolumeRight.load();
@@ -305,20 +350,21 @@ namespace Emulation {
 				if (ch_enabled[2]) {
 					auto& ch3Info = chInfos[2];
 
-					ch3Info.virt_samples += sample_steps[2];
-					while (ch3Info.virt_samples > 1.f) {
-						ch3Info.virt_samples -= 1.f;
-						++ch3Info.sample_count %= 32;
-					}
+					int read_cursor = ch3ReadCursor.load();
 
-					lock_wave_ram.lock();
-					if (ch_lr_enabled[2][0]) {
-						samples[3] += wave_ctx->wave_ram[ch3Info.sample_count] * ch_volume[2] * amps[2];
+					if (read_cursor != (ch3WriteCursor.load() - 1) % CH_4_LFSR_BUFFER_SIZE) {
+						lock_wave_ram.lock();
+						if (ch_lr_enabled[2][0]) {
+							samples[3] += ch3WaveSamples[read_cursor] * amps[2];
+						}
+						if (ch_lr_enabled[2][1]) {
+							samples[2] += ch3WaveSamples[read_cursor] * amps[2];
+						}
+						lock_wave_ram.unlock();
+
+						++read_cursor %= CH_4_LFSR_BUFFER_SIZE;
+						ch3ReadCursor.store(read_cursor);
 					}
-					if (ch_lr_enabled[2][1]) {
-						samples[2] += wave_ctx->wave_ram[ch3Info.sample_count] * ch_volume[2] * amps[2];
-					}
-					lock_wave_ram.unlock();
 				}
 
 				{
