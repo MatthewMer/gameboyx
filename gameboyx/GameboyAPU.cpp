@@ -86,21 +86,21 @@ namespace Emulation {
 			if (_ch_ctx->enable.load()) {
 				ch_ext_waveram* wave_ctx = static_cast<ch_ext_waveram*>(_ch_ctx->exts[WAVE_RAM].get());
 
-				float virt_ticks_per_sample = (int)(std::ceil(BASE_CLOCK_CPU / _ch_ctx->sampling_rate.load()));
+				float virt_samples_per_tick = (float)(_ch_ctx->sampling_rate.load() / BASE_CLOCK_CPU);
 				float volume = _ch_ctx->volume.load();
 
-				wave_ctx->tick_count += _ticks;
-				while (wave_ctx->tick_count >= virt_ticks_per_sample) {
-					wave_ctx->tick_count -= virt_ticks_per_sample;
+				wave_ctx->sample_count += _ticks * virt_samples_per_tick;
+				while (wave_ctx->sample_count >= 1.f) {
+					wave_ctx->sample_count -= 1.f;
 					++_ch_info->sample_count %= 32;
 				}
 
 				int write_cursor = ch3WriteCursor.load();
 				int read_cursor = ch3ReadCursor.load();
 
-				ch3WaveTickCounter += _ticks;
-				while (ch3WaveTickCounter >= ticksPerSample) {
-					ch3WaveTickCounter -= ticksPerSample;
+				ch3WaveTickCounter += _ticks * samplesPerTick.load();
+				while (ch3WaveTickCounter >= 1.f) {
+					ch3WaveTickCounter -= 1.f;
 
 					if (write_cursor != read_cursor) {
 						ch3WaveSamples[write_cursor] = wave_ctx->wave_ram[_ch_info->sample_count] * volume;
@@ -267,7 +267,7 @@ namespace Emulation {
 		* 4. front left
 		*/
 		void GameboyAPU::SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) {
-			ticksPerSample = (int)(BASE_CLOCK_CPU / _sampling_rate);
+			samplesPerTick.store((float)((double)_sampling_rate / BASE_CLOCK_CPU));
 
 			bool right = soundCtx->outRightEnabled.load();
 			bool left = soundCtx->outLeftEnabled.load();

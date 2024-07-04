@@ -52,7 +52,7 @@ namespace Emulation {
 				Backend::HardwareMgr::StopAudioBackend();
 			}
 
-			float ticksPerSample = 0;
+			alignas(64) std::atomic<float> samplesPerTick = 0;
 
 			int envelopeSweepCounter = 0;
 			int soundLengthCounter = 0;
@@ -74,7 +74,7 @@ namespace Emulation {
 
 			void TickLFSR(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx);
 
-			int ch3WaveTickCounter = 0;
+			float ch3WaveTickCounter = 0;
 			std::mutex mutWaveRam;
 			std::vector<float> ch3WaveSamples = std::vector<float>(CH_4_LFSR_BUFFER_SIZE);
 			alignas(64) std::atomic<int> ch3WriteCursor = 1;			// always points to the next sample to write
