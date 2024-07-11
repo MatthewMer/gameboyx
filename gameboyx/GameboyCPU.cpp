@@ -3653,10 +3653,10 @@ namespace Emulation {
 
             std::string info = "";
 
-            for (u16 addr = 0; addr < ROM_N_SIZE;) {
+            for (u16 addr = 0; addr < _size;) {
                 current_entry = std::tuple<int, instr_entry>();
 
-                if (_bank_num == 0) {
+                if (_bank_num == 0 && _bank_name.compare("ROM") == 0) {
                     switch (addr) {
                     case ISR_VBLANK_HANDLER_ADDR:
                         info = "VBLANK";
@@ -3835,8 +3835,6 @@ namespace Emulation {
                 auto* rom_data_ptr = rom_data.data() + i * ROM_N_SIZE;
                 DisassembleBankContent(current_table, rom_data_ptr, offset, ROM_N_SIZE, i, "ROM");
                 asmTables[i] = current_table;
-
-                i++;
             }
         }
 

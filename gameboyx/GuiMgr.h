@@ -126,7 +126,7 @@ namespace GUI {
 		};
 		void CheckWindow(const windowID& _id);
 		template <class T>
-		void CheckScroll(const windowID& _id, GuiTable::Table<T>& _table);
+		bool CheckScroll(const windowID& _id, GuiTable::Table<T>& _table);
 
 		// game select
 		int gameSelectedIndex = 0;
@@ -135,19 +135,14 @@ namespace GUI {
 		const int mainColNum = (int)Config::GAMES_COLUMNS.size();
 
 		// debug instructions
-		int bankSelect = 0;
-		int addrSelect = 0;
+		GuiTable::bank_index bankAddrSelect;
+		GuiTable::bank_index indexCurInstruction;
 		std::vector<GuiTable::bank_index> breakpointsTable = std::vector<GuiTable::bank_index>();
 		std::vector<GuiTable::bank_index> breakpointsTableTmp = std::vector<GuiTable::bank_index>();
-		std::vector<std::pair<int, int>> breakpointsAddr = std::vector<std::pair<int, int>>();
-		std::vector<std::pair<int, int>> breakpointsAddrTmp = std::vector<std::pair<int, int>>();
-		int lastPc = -1;
-		int lastBank = -1;
-		alignas(64) std::atomic<int> currentPc = -1;
-		alignas(64) std::atomic<int> currentBank = -1;
+		GuiTable::bank_index lastIndex;
+		GuiTable::bank_index currentIndex;
 		alignas(64) std::atomic<bool> pcSetToRam = false;
 		alignas(64) std::atomic<bool> debugInstrAutoscroll = false;
-		GuiTable::bank_index debugInstrCurrentInstrIndex = GuiTable::bank_index(0, 0);
 		const int debugInstrColNum = (int)Config::DEBUG_INSTR_COLUMNS.size();
 		const int debugInstrRegColNum = (int)Config::DEBUG_REGISTER_COLUMNS.size();
 		const int debugInstrFlagColNum = (int)Config::DEBUG_FLAG_COLUMNS.size();
@@ -271,11 +266,10 @@ namespace GUI {
 		bool ActionAddGame(const std::string& _path_to_rom);
 		void ActionGameSelectUp();
 		void ActionGameSelectDown();
-		void ActionContinueExecution();
+		void ActionStepThroughExecution();
 		void ActionToggleMainMenuBar();
 		void ActionSetToCurrentPC();
-		void ActionSetToBank(GuiTable::TableBase& _table_obj, int& _bank);
-		void ActionSetToAddress(GuiTable::TableBase& _table_obj, int& _address);
+		void ActionSetToIndex(GuiTable::TableBase& _table_obj, GuiTable::bank_index& _index);
 		void ActionSetEmulationSpeed(const int& _index);
 		void ActionGamesSelect(const int& _index);
 		void ActionGamesSelectAll();
@@ -291,8 +285,7 @@ namespace GUI {
 		// helpers
 		void AddGameGuiCtx(Emulation::BaseCartridge* _game_ctx);
 		void ReloadGamesGuiCtx();
-		void ActionSetBreakPoint(std::vector<GuiTable::bank_index>& _table_breakpoints, const GuiTable::bank_index& _current_index, std::vector<std::pair<int, int>>& _breakpoints, GuiTable::TableBase& _table_obj);
-		void GetBankAndAddressTable(GuiTable::TableBase& _tyble_obj, int& _bank, int& _address);
+		void ActionSetBreakPoint(std::vector<GuiTable::bank_index>& _table_breakpoints, const GuiTable::bank_index& _current_index);
 		void StartGame(const bool& _restart);
 
 		const ImGuiViewport* MAIN_VIEWPORT = ImGui::GetMainViewport();

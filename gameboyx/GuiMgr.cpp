@@ -313,7 +313,7 @@ namespace GUI {
 
     void GuiMgr::ShowDebugInstrButtonsHead() {
         if (gameRunning) {
-            if (ImGui::Button("Step")) { ActionContinueExecution(); }
+            if (ImGui::Button("Step")) { ActionStepThroughExecution(); }
             ImGui::SameLine();
             if (ImGui::Button("Jump to PC")) { ActionSetToCurrentPC(); }
             ImGui::SameLine();
@@ -359,47 +359,35 @@ namespace GUI {
             
                 unique_lock<mutex> lock_debug_instr(mutDebugInstr);
                 bool pc_set_to_ram = pcSetToRam.load();
-
                 auto& table = (pc_set_to_ram ? debugInstrTableTmp : debugInstrTable);
-
                 if (debugInstrAutoscroll.load()) {
-                    int current_pc = currentPc.load();
-                    int current_bank = currentBank.load();
+                    lastIndex = currentIndex;
 
-                    if (current_bank != lastBank) {
-                        lastBank = current_bank;
-                        table.SearchBank(lastBank);
-                        lastPc = current_pc;
-                        table.SearchAddress(lastPc);
-                    } else if (current_pc != lastPc) {
-                        lastPc = current_pc;
-                        table.SearchAddress(lastPc);
-                    }
+                    indexCurInstruction = currentIndex;
+                    table.SetToIndex(indexCurInstruction);
+                    bankAddrSelect = table.GetIndexCentre();
 
-                    debugInstrCurrentInstrIndex = table.GetIndexByAddress(lastPc);
                     debugInstrAutoscroll.store(false);
-                } else {
-                    CheckScroll(DEBUG_INSTR, table);
+                } else if(CheckScroll(DEBUG_INSTR, table)) {
+                    bankAddrSelect = table.GetIndexCentre();
                 }
+                lock_debug_instr.unlock();
             
-                GetBankAndAddressTable(table, bankSelect, addrSelect);
+                auto& breakpoints = (pc_set_to_ram ? breakpointsTableTmp : breakpointsTable);
 
-                auto& tabel_breakpts = (pc_set_to_ram ? breakpointsTableTmp : breakpointsTable);
-                auto& breakpts = (pc_set_to_ram ? breakpointsAddrTmp : breakpointsAddr);
-
-                while (table.GetNextEntry(cur_entry)) {
-                    GuiTable::bank_index& current_index = table.GetCurrentIndex();
+                while (table.Next(cur_entry)) {
+                    GuiTable::bank_index current_index = table.GetIndex();
 
                     ImGui::TableNextColumn();
 
-                    if (std::find(tabel_breakpts.begin(), tabel_breakpts.end(), current_index) != tabel_breakpts.end()) {
+                    if (std::find(breakpoints.begin(), breakpoints.end(), current_index) != breakpoints.end()) {
                         ImGui::TextColored(Config::IMGUI_RED_COL, ">>>");
                     }
                     ImGui::TableNextColumn();
 
-                    ImGui::Selectable(cur_entry.first.c_str(), current_index == debugInstrCurrentInstrIndex, Config::SEL_FLAGS);
+                    ImGui::Selectable(cur_entry.first.c_str(), current_index == indexCurInstruction, Config::SEL_FLAGS);
                     if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
-                        ActionSetBreakPoint(tabel_breakpts, current_index, breakpts, table);
+                        ActionSetBreakPoint(breakpoints, current_index);
                     }
                     ImGui::TableNextColumn();
 
@@ -436,16 +424,17 @@ namespace GUI {
         if (gameRunning) {
             auto& table = (pcSetToRam ? debugInstrTableTmp : debugInstrTable);
 
-            if (ImGui::InputInt("Memory bank", &bankSelect, 1, 100, Config::INPUT_INT_FLAGS)) {
-                ActionSetToBank(table, bankSelect);
+            if (ImGui::InputInt("Memory bank", &bankAddrSelect.bank, 1, 100, Config::INPUT_INT_FLAGS)) {
+                bankAddrSelect.address = 0;
+                ActionSetToIndex(table, bankAddrSelect);
             }
-            if (ImGui::InputInt("Memory address", &addrSelect, 0, 100, Config::INPUT_INT_HEX_FLAGS)) {
-                ActionSetToAddress(table, addrSelect);
+            if (ImGui::InputInt("Memory address", &bankAddrSelect.address, 0, 100, Config::INPUT_INT_HEX_FLAGS)) {
+                ActionSetToIndex(table, bankAddrSelect);
             }
         } else {
             ImGui::BeginDisabled();
-            ImGui::InputInt("Memory bank", &bankSelect);
-            ImGui::InputInt("Memory address", &addrSelect, 0);
+            ImGui::InputInt("Memory bank", &bankAddrSelect.bank);
+            ImGui::InputInt("Memory address", &bankAddrSelect.address, 0);
             ImGui::EndDisabled();
         }
     }
@@ -522,18 +511,15 @@ namespace GUI {
         if (ImGui::BeginTabItem(table_name.c_str())) {
             CheckScroll(DEBUG_MEM, _table);
 
-            int bank;
-            int address;
-            GetBankAndAddressTable(_table, bank, address);
-
-            if (ImGui::InputInt("Memory bank", &bank, 1, 100, Config::INPUT_INT_FLAGS)) {
-                ActionSetToBank(_table, bank);
+            auto index = GuiTable::bank_index(0, 0);
+            
+            if (ImGui::InputInt("Memory bank", &index.bank, 1, 100, Config::INPUT_INT_FLAGS)) {
+                ActionSetToIndex(_table, index);
             }
-            if (ImGui::InputInt("Memory address", &address, 0, 100, Config::INPUT_INT_HEX_FLAGS)) {
-                ActionSetToAddress(_table, address);
+            if (ImGui::InputInt("Memory address", &index.address, 0, 100, Config::INPUT_INT_HEX_FLAGS)) {
+                ActionSetToIndex(_table, index);
             }
 
-            int tables_num = (int)_table.size - 1;
             dbgMemCellAnyHovered = false;
 
             if (ImGui::BeginTable(table_name.c_str(), dbgMemColNum, Config::TABLE_FLAGS)) {
@@ -547,7 +533,7 @@ namespace GUI {
                 int line = 0;
 
                 Emulation::memory_entry current_entry;
-                while (_table.GetNextEntry(current_entry)) {
+                while (_table.Next(current_entry)) {
                     ImGui::TableNextColumn();
 
                     ImGui::TextColored(HIGHLIGHT_COLOR, get<Emulation::MEM_ENTRY_ADDR>(current_entry).c_str());
@@ -1356,7 +1342,7 @@ namespace GUI {
         requestGameReset = false;
     }
 
-    void GuiMgr::ActionContinueExecution() {
+    void GuiMgr::ActionStepThroughExecution() {
         if (gameRunning) {
             nextInstruction.store(true);
             autoRun = false;
@@ -1369,7 +1355,7 @@ namespace GUI {
             unique_lock<mutex> lock_debug_breakpoints(mutDebugBreakpoints);
             auto& current_table_breakpoints = pcSetToRam.load() ? breakpointsTableTmp : breakpointsTable;
 
-            if (std::find(current_table_breakpoints.begin(), current_table_breakpoints.end(), debugInstrCurrentInstrIndex) != current_table_breakpoints.end()) {
+            if (std::find(current_table_breakpoints.begin(), current_table_breakpoints.end(), currentIndex) != current_table_breakpoints.end()) {
                 autoRun = true;
                 nextInstruction.store(true);
             } else {
@@ -1423,20 +1409,16 @@ namespace GUI {
         }
     }
 
-    void GuiMgr::ActionSetToBank(GuiTable::TableBase& _table_obj, int& _bank) {
-        _table_obj.SearchBank(_bank);
-    }
-
-    void GuiMgr::ActionSetToAddress(GuiTable::TableBase& _table_obj, int& _address) {
-        _table_obj.SearchAddress(_address);
+    void GuiMgr::ActionSetToIndex(GuiTable::TableBase& _table_obj, GuiTable::bank_index& _index) {
+        _table_obj.SetToIndex(_index);
+        _index = _table_obj.GetIndexCentre();
     }
 
     void GuiMgr::ActionSetToCurrentPC() {
         if (gameRunning) {
             auto& table = (pcSetToRam ? debugInstrTableTmp : debugInstrTable);
 
-            table.SearchBank(debugInstrCurrentInstrIndex.bank);
-            table.SearchAddress(lastPc);
+            table.SetToIndex(indexCurInstruction);
         }
     }
 
@@ -1522,7 +1504,7 @@ namespace GUI {
         }
     }
 
-    void GuiMgr::ActionSetBreakPoint(vector<GuiTable::bank_index>& _table_breakpoints, const GuiTable::bank_index& _current_index, vector<pair<int, int>>& _breakpoints, GuiTable::TableBase& _table_obj) {
+    void GuiMgr::ActionSetBreakPoint(vector<GuiTable::bank_index>& _table_breakpoints, const GuiTable::bank_index& _current_index) {
         unique_lock<mutex> lock_debug_breakpoints(mutDebugBreakpoints);
 
         bool found = false;
@@ -1538,13 +1520,11 @@ namespace GUI {
 
         if (found) {
             _table_breakpoints.erase(_table_breakpoints.begin() + i);
-            _breakpoints.erase(_breakpoints.begin() + i);
         } else {
             int bank = _current_index.bank;
-            int addr = _table_obj.GetAddressByIndex(_current_index);
-
+            int addr = _current_index.address;
+            
             _table_breakpoints.emplace_back(_current_index);
-            _breakpoints.emplace_back(pair(bank, addr));
         }
     }
 
@@ -1629,12 +1609,6 @@ namespace GUI {
         }
     }
 
-    void GuiMgr::GetBankAndAddressTable(GuiTable::TableBase& _table_obj, int& _bank, int& _address) {
-        GuiTable::bank_index centre = _table_obj.GetCurrentIndexCentre();
-        _bank = centre.bank;
-        _address = _table_obj.GetAddressByIndex(centre);
-    }
-
     void GuiMgr::CheckWindow(const windowID& _id) {
         windowsActive.at(_id) = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
         windowsHovered.at(_id) = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
@@ -1642,7 +1616,7 @@ namespace GUI {
 
     // needs revision, but works so far
     template <class T>
-    void GuiMgr::CheckScroll(const windowID& _id, GuiTable::Table<T>& _table) {
+    bool GuiMgr::CheckScroll(const windowID& _id, GuiTable::Table<T>& _table) {
         if (sdlScrollUp || sdlScrollDown) {
             bool scroll = false;
 
@@ -1661,6 +1635,10 @@ namespace GUI {
                     if (sdlkShiftDown) { _table.ScrollDownPage(); } else { _table.ScrollDown(1); }
                 }
             }
+
+            return scroll;
+        } else {
+            return false;
         }
     }
 
@@ -1694,17 +1672,9 @@ namespace GUI {
     }
 
     void GuiMgr::ResetGUI() {
-        bankSelect = 0;
-        addrSelect = 0;
+        bankAddrSelect = {};
         breakpointsTable = std::vector<GuiTable::bank_index>();
         breakpointsTableTmp = std::vector<GuiTable::bank_index>();
-        breakpointsAddr = std::vector<std::pair<int, int>>();
-        breakpointsAddrTmp = std::vector<std::pair<int, int>>();
-        lastPc = -1;
-        lastBank = -1;
-        currentPc.store(0);
-        currentBank.store(0);
-        debugInstrCurrentInstrIndex = GuiTable::bank_index(0, 0);
         debugInstrTable = GuiTable::Table<Emulation::instr_entry>(DEBUG_INSTR_LINES);
         debugInstrTableTmp = GuiTable::Table<Emulation::instr_entry>(DEBUG_INSTR_LINES);
         regValues = std::vector<Emulation::reg_entry>();
@@ -1722,7 +1692,7 @@ namespace GUI {
         if (gameRunning) {
             switch (_key) {
             case SDLK_F3:
-                ActionContinueExecution();
+                ActionStepThroughExecution();
                 break;
             case SDLK_LSHIFT:
                 sdlkShiftDown = true;
@@ -1867,19 +1837,14 @@ namespace GUI {
         CALLBACKS
     *********************************************************************************************************** */
     void GuiMgr::DebugCallback(Emulation::debug_data& _data) {
+        GuiTable::bank_index tmp = GuiTable::bank_index(_data.bank, _data.pc);
+
         // instruction debugger 
         unique_lock<mutex> lock_debug_instr(mutDebugInstr);
-
-        int pc = _data.pc;
-        int bank = _data.bank;
-
-        int current_bank = currentBank.load();
-        int current_pc = currentPc.load();
-
-        if (pc != current_pc || bank != current_bank) {
+        if (tmp != currentIndex) {
             bool pc_set_to_ram = pcSetToRam.load();
 
-            if (pc_set_to_ram != (bank < 0)) {
+            if (pc_set_to_ram != (tmp.bank < 0)) {
                 pc_set_to_ram = !pc_set_to_ram;
 
                 if (pc_set_to_ram) {
@@ -1890,17 +1855,17 @@ namespace GUI {
                 }
             }
 
-            currentPc.store(pc);
-            currentBank.store(bank);
+            currentIndex = tmp;
             pcSetToRam.store(pc_set_to_ram);
 
             debugInstrAutoscroll.store(true);
         }
+        lock_debug_instr.unlock();
     
         if (autoRunInstructions.load()) {
             unique_lock<mutex> lock_debug_breakpoints(mutDebugBreakpoints);
-            auto& breakpoint_list = (pcSetToRam.load() ? breakpointsAddrTmp : breakpointsAddr);
-            if (!(find(breakpoint_list.begin(), breakpoint_list.end(), std::pair(bank, pc)) != breakpoint_list.end())) {
+            auto& breakpoint_list = (pcSetToRam.load() ? breakpointsTableTmp : breakpointsTable);
+            if (find(breakpoint_list.begin(), breakpoint_list.end(), tmp) == breakpoint_list.end()) {
                 vhwmgr->SetProceedExecution(true);
             }
         }

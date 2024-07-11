@@ -20,24 +20,22 @@ namespace GUI {
     namespace GuiTable {
         struct bank_index {
             int bank;
-            int index;
+            int address;
 
-            bank_index(int _bank, int _index) : bank(_bank), index(_index) {};
+            bank_index() = default;
+            bank_index(int _bank, int _address) : bank(_bank), address(_address) {};
 
             constexpr bool operator==(const bank_index& n) const {
-                return (n.bank == bank) && (n.index == index);
+                return (n.bank == bank) && (n.address == address);
             }
         };
 
-        // index, address, data (T)
+        // address, data (T)
         template <class T> using TableEntry = std::tuple<int, T>;
         enum entry_content_types {
             ST_ENTRY_ADDRESS,
             ST_ENTRY_DATA
         };
-
-        // size, vector<entries>
-        template <class T> using TableSection = std::vector<TableEntry<T>>;
 
         class TableBase {
         public:
@@ -45,169 +43,151 @@ namespace GUI {
             virtual void ScrollDown(const int& _num) = 0;
             virtual void ScrollUpPage() = 0;
             virtual void ScrollDownPage() = 0;
-            virtual void SearchBank(int& _bank) = 0;
-            virtual bank_index GetCurrentIndexCentre() = 0;
-            virtual int& GetAddressByIndex(const bank_index& _index) = 0;
-            virtual bank_index GetIndexByAddress(const int& _address) = 0;
-            virtual void SearchAddress(int& _addr) = 0;
+            virtual void SetToBank(bank_index& _index) = 0;
+            virtual void SearchIndex(bank_index& _index, int& _offset) = 0;
+            virtual bank_index GetIndexByAddress(const int& _addr) = 0;
+            virtual void SetToAddress(bank_index& _index) = 0;
+            virtual void SetToIndex(bank_index& _index) = 0;
+            virtual bank_index GetIndexCentre() = 0;
 
             std::string name = "";
-            size_t size = 0;
 
         protected:
             TableBase() = default;
             ~TableBase() = default;
         };
 
+        // vector<entries>
+        template <class T> using TableSection = std::vector<TableEntry<T>>;
+
         template <class T> class Table : public TableBase {
         public:
-            explicit constexpr Table(const int& _elements_to_show) : visibleElements(_elements_to_show) {
-                currentlyVisibleElements = 0;
-                SetElementsToShow();
-            };
+            explicit constexpr Table(const int& _elements_to_show) : visibleElements(_elements_to_show) {};
             constexpr ~Table() noexcept = default;
 
-            constexpr void SetElementsToShow();
             constexpr Table& operator=(const Table& _right) noexcept;
 
-            void AddTableSectionDisposable(TableSection<T>& _buffer);
+            bool AddTableSectionDisposable(TableSection<T>& _buffer);
 
             void ScrollUp(const int& _num) override;
             void ScrollDown(const int& _num) override;
             void ScrollUpPage() override;
             void ScrollDownPage() override;
-            void SearchBank(int& _bank) override;
-            void SearchAddress(int& _addr) override;
+            void SetToIndex(bank_index& _index) override;
+            void SetToBank(bank_index& _index) override;
+            void SetToAddress(bank_index& _index) override;
+            void SearchIndex(bank_index& _index, int& _offset) override;
 
-            bool GetNextEntry(T& _entry);
-            T& GetEntry(bank_index& _instr_index);
+            bool Next(T& _entry);
+            bool IsCentre();
+            bank_index GetIndexCentre() override;
 
-            bank_index& GetCurrentIndex();
-            bank_index GetCurrentIndexCentre() override;
-            int& GetAddressByIndex(const bank_index& _index) override;
+            bank_index GetIndex();
             bank_index GetIndexByAddress(const int& _address) override;
 
         private:
-
-            // size, offset <index, address,  template type T>
             std::vector<TableSection<T>> tableSections = std::vector<TableSection<T>>();
-            bank_index startIndex = bank_index(0, 0);
-            bank_index endIndex = bank_index(0, 0);
-            bank_index indexIterator = bank_index(0, 0);
-            bank_index currentIndex = bank_index(0, 0);
             int visibleElements;
-            int currentlyVisibleElements;
+            int currentlyVisibleElements = 0;
+            int counter = 0;
+            std::vector<TableSection<T>>::iterator tableIterator;
+            std::vector<TableEntry<T>>::iterator contentIterator;
+
+            bank_index currentIndex;
+            std::vector<TableSection<T>>::iterator currentTable;
+            std::vector<TableEntry<T>>::iterator currentElement;
+
+            bool centre = false;
+
+            void ResetAllIterators();
+            void ResetIterators();
+            void SwitchTableUp();
+            void SwitchTableDown();
         };
 
         template <class T> constexpr Table<T>& Table<T>::operator=(const Table<T>& _right) noexcept {
             if (this != &_right) {
-                tableSections = std::move(_right.tableSections);
-                startIndex = _right.startIndex;
-                endIndex = _right.startIndex;
-                indexIterator = _right.indexIterator;
+                name = _right.name;
+                tableSections = _right.tableSections;
                 visibleElements = _right.visibleElements;
-                currentIndex = _right.currentIndex;
                 currentlyVisibleElements = _right.currentlyVisibleElements;
-                size = _right.size;
+                counter = _right.counter;
+                tableIterator = _right.tableIterator;
+                contentIterator = _right.contentIterator;
+                currentIndex = _right.currentIndex;
+                currentTable = _right.currentTable;
+                currentElement = _right.currentElement;
+                centre = _right.centre;
             }
 
             return *this;
         }
 
-        template <class T> constexpr void Table<T>::SetElementsToShow() {
-            int elements = 0;
-            for (const auto& n : tableSections) {
-                elements += (int)n.size();
-            }
-
-            if (elements > visibleElements) { currentlyVisibleElements = visibleElements; } else { currentlyVisibleElements = elements; }
-
-            startIndex = bank_index(0, 0);
-            endIndex = startIndex;
-
-            int bank = 0;
-            for (int i = 0; const auto & n : tableSections) {
-                i += (int)n.size();
-                if (i >= currentlyVisibleElements) {
-                    endIndex.bank = bank;
-                    endIndex.index = currentlyVisibleElements - (int)(i - n.size());
-                    break;
-                } else {
-                    bank++;
+        template <class T> bool Table<T>::AddTableSectionDisposable(TableSection<T>& _table) {
+            if (_table.size() > 0) {
+                currentlyVisibleElements += _table.size();
+                tableSections.emplace_back(std::move(_table));
+                if (currentlyVisibleElements > visibleElements) {
+                    currentlyVisibleElements = visibleElements;
                 }
+                ResetAllIterators();
+                return true;
+            } else {
+                return false;
             }
-
-            //endIndex = bank_index(0, startIndex.index + currentlyVisibleElements);
-            indexIterator = startIndex;
         }
 
-        template <class T> void Table<T>::AddTableSectionDisposable(TableSection<T>& _buffer) {
-            tableSections.emplace_back(std::move(_buffer));
-            size = tableSections.size();
+        template <class T> void Table<T>::ResetAllIterators() {
+            tableIterator = tableSections.begin();
+            contentIterator = tableIterator->begin();
+            ResetIterators();
+        }
 
-            SetElementsToShow();
+        template <class T> void Table<T>::ResetIterators() {
+            currentTable = tableIterator;
+            currentElement = contentIterator;
+            counter = 0;
+            currentIndex = bank_index(std::distance(tableSections.begin(), currentTable), get<ST_ENTRY_ADDRESS>(*currentElement));
+        }
+
+        template <class T> void Table<T>::SwitchTableUp() {
+            while (std::distance(tableIterator->begin(), contentIterator) < 0) {
+                if (std::distance(tableSections.begin(), tableIterator) <= 0) {
+                    contentIterator = tableIterator->begin();
+                } else {
+                    auto prev_table = tableIterator;
+                    --tableIterator;
+                    contentIterator = tableIterator->end() + std::distance(prev_table->begin(), contentIterator);
+                }
+            }
+        }
+
+        template <class T> void Table<T>::SwitchTableDown() {
+            if (std::distance(tableSections.end() - 1, tableIterator) >= 0) {
+                if (std::distance(tableIterator->end() - currentlyVisibleElements, contentIterator) >= 0) {
+                    tableIterator = tableSections.end() - 1;
+                    contentIterator = tableIterator->end() - currentlyVisibleElements;
+                    SwitchTableUp();
+                }
+            } else {
+                while (std::distance(tableIterator->end(), contentIterator) >= 0) {
+                    auto prev_table = tableIterator;
+                    ++tableIterator;
+                    contentIterator = tableIterator->begin() + std::distance(prev_table->end(), contentIterator);
+                }
+            }
         }
 
         template <class T> void Table<T>::ScrollUp(const int& _num) {
-            bool full_scroll = true;
-
-            if (startIndex.bank > 0 || startIndex.index > 0) {
-                startIndex.index -= _num;
-                if (startIndex.index < 0) {
-                    if (startIndex.bank == 0) {
-                        startIndex.index = 0;
-                        full_scroll = false;
-                    } else {
-                        --startIndex.bank;
-                        startIndex.index += (int)tableSections[startIndex.bank].size();
-                    }
-                }
-
-                if (full_scroll) {
-                    endIndex.index -= _num;
-                    if (endIndex.index < 1) {
-                        --endIndex.bank;
-                        endIndex.index += (int)tableSections[endIndex.bank].size();
-                    }
-                } else {
-                    endIndex.index = startIndex.index + currentlyVisibleElements;
-                }
-            }
-
-            indexIterator = startIndex;
+            contentIterator -= _num;
+            SwitchTableUp();
+            ResetIterators();
         }
 
         template <class T> void Table<T>::ScrollDown(const int& _num) {
-            bool full_scroll = true;
-            int current_buf_size_end = (int)tableSections[endIndex.bank].size();
-
-            if (endIndex.bank < (int)tableSections.size() - 1 || endIndex.index < current_buf_size_end) {
-                endIndex.index += _num;
-                if (endIndex.index > (int)tableSections[endIndex.bank].size()) {
-                    if (endIndex.bank == tableSections.size() - 1) {
-                        endIndex.index = (int)tableSections[endIndex.bank].size();
-                        full_scroll = false;
-                    } else {
-                        endIndex.index -= (int)tableSections[endIndex.bank].size();
-                        endIndex.bank++;
-                    }
-                }
-
-
-                if (full_scroll) {
-                    int current_buf_size_start = (int)tableSections[startIndex.bank].size();
-
-                    startIndex.index += _num;
-                    if (startIndex.index >= current_buf_size_start) {
-                        startIndex.index -= current_buf_size_start;
-                        startIndex.bank++;
-                    }
-                } else {
-                    startIndex.index = endIndex.index - currentlyVisibleElements;
-                }
-            }
-
-            indexIterator = startIndex;
+            contentIterator += _num;
+            SwitchTableDown();
+            ResetIterators();
         }
 
         template <class T> void Table<T>::ScrollUpPage() {
@@ -218,108 +198,130 @@ namespace GUI {
             ScrollDown(currentlyVisibleElements);
         }
 
-        template <class T> void Table<T>::SearchBank(int& _bank) {
-            if (_bank < 0) { _bank = 0; } else if (_bank >= (int)tableSections.size()) { _bank = (int)tableSections.size() - 1; }
+        template <class T> void Table<T>::SearchIndex(bank_index& _index, int& _offset) {
+            if (_index.bank >= tableSections.size()) { _index.bank = (int)tableSections.size() - 1; }
+            else if (_index.bank < 0) { _index.bank = 0; }
 
-            startIndex = bank_index(_bank, 0);
-            endIndex = bank_index(_bank, currentlyVisibleElements);
+            TableSection<T>& current_table = tableSections[_index.bank];
 
-            indexIterator = startIndex;
-        }
+            int first_address = get<ST_ENTRY_ADDRESS>(current_table.front());
+            int last_address = get<ST_ENTRY_ADDRESS>(current_table.back());
 
-        template <class T> void Table<T>::SearchAddress(int& _addr) {
-            bank_index current_index = GetCurrentIndexCentre();
-            TableSection<T>& current_bank = tableSections[current_index.bank];
+            if (_index.address < first_address) { _index.address = first_address; } 
+            else if (_index.address > last_address) { _index.address = last_address; }
 
-            int first_address = get<ST_ENTRY_ADDRESS>(current_bank.front());
-            int last_address = get<ST_ENTRY_ADDRESS>(current_bank.back());
+            // binary search (sort of), as the addresses are sorted
+            int size = (int)current_table.size();
+            int offset = size / 2;
+            int suboffset = size / 2;
+            bool found = false;
+            while (!found) {
+                if (suboffset >= 2) {
+                    suboffset /= 2;
+                }
 
-            if (_addr < first_address) { _addr = first_address; } else if (_addr > last_address) { _addr = last_address; }
+                auto cur = current_table.begin() + offset;
+                int current_address = get<ST_ENTRY_ADDRESS>(*cur);
+                if (_index.address < current_address) {
+                    offset -= suboffset;
+                } else if (current_address < _index.address &&
+                    (offset + 1) < size && 
+                    get<ST_ENTRY_ADDRESS>(*(cur + 1)) <= _index.address) {
 
-            int i;
-            for (i = 0; i < (int)current_bank.size() - 1; i++) {
-                if (get<ST_ENTRY_ADDRESS>(current_bank[i]) <= _addr &&
-                    get<ST_ENTRY_ADDRESS>(current_bank[i + 1]) > _addr) {
-                    break;
+                    offset += suboffset;
+                } else {
+                    found = true;
                 }
             }
 
-            if (i < current_index.index) { ScrollUp(current_index.index - i); } else if (i > current_index.index) { ScrollDown(i - current_index.index); }
-
-            indexIterator = startIndex;
+            _index.address = get<ST_ENTRY_ADDRESS>(current_table[offset]);
+            _offset = offset;
         }
 
-        template <class T> bool Table<T>::GetNextEntry(T& _entry) {
-            if (indexIterator == endIndex) {
-                indexIterator = startIndex;
+        template <class T> void Table<T>::SetToBank(bank_index& _index) {
+            if (_index.bank < 0) { _index.bank = 0; } 
+            else if (_index.bank >= (int)tableSections.size()) { _index.bank = (int)tableSections.size() - 1; }
+
+            tableIterator = tableSections.begin() + _index.bank;
+            contentIterator = tableIterator->begin();
+            ResetIterators();
+        }
+
+        template <class T> void Table<T>::SetToAddress(bank_index& _index) {
+            bank_index index = _index;
+            int offset = 0;
+
+            SearchIndex(index, offset);
+
+            contentIterator = tableIterator->begin() + offset;
+
+            ScrollUp(currentlyVisibleElements / 2);
+            SwitchTableDown();
+            ResetIterators();
+        }
+
+        template <class T> void Table<T>::SetToIndex(bank_index& _index) {
+            SetToBank(_index);
+            SetToAddress(_index);
+        }
+
+        template <class T> bool Table<T>::Next(T& _entry) {
+            if (counter >= currentlyVisibleElements) {
+                ResetIterators();
                 return false;
-            } else if (indexIterator.index == tableSections[indexIterator.bank].size()) {
-                indexIterator.bank++;
-                indexIterator.index = 0;
+            } 
+            
+            while (std::distance(currentTable->end(), currentElement) >= 0) {
+                ++currentTable;
+                currentElement = currentTable->begin();
             }
 
-            TableSection<T>& current_bank = tableSections[indexIterator.bank];
-            TableEntry<T>& current_entry = current_bank[indexIterator.index];
-            _entry = get<ST_ENTRY_DATA>(current_entry);
+            currentIndex = bank_index(std::distance(tableSections.begin(), tableIterator), get<ST_ENTRY_ADDRESS>(*currentElement));
+            _entry = get<ST_ENTRY_DATA>(*currentElement);
 
-            currentIndex = indexIterator;
-            indexIterator.index++;
+            centre = counter == currentlyVisibleElements / 2;
+
+            ++currentElement;
+            ++counter;
 
             return true;
         }
 
-        template <class T> T& Table<T>::GetEntry(bank_index& _instr_index) {
-            TableSection<T>& current_bank = tableSections[_instr_index.bank];
-            TableEntry<T>& current_entry = current_bank[_instr_index.index];
-            return get<ST_ENTRY_DATA>(current_entry);
-        }
-
-        template <class T> bank_index& Table<T>::GetCurrentIndex() {
+        template <class T> bank_index Table<T>::GetIndex() {
             return currentIndex;
         }
 
-        template <class T> bank_index Table<T>::GetCurrentIndexCentre() {
-            if (size > 0) {
-                int n = currentlyVisibleElements / 2;
-                int m = (int)tableSections[startIndex.bank].size() - startIndex.index;
-                int bank = startIndex.bank;
-                while (m <= n) {
-                    bank++;
-                    m += (int)tableSections[bank].size();
-                }
+        // search correcponding index(bank,address) by address in current table section
+        template <class T> bank_index Table<T>::GetIndexByAddress(const int& _addr) {
+            bank_index index = bank_index(std::distance(tableSections.begin(), tableIterator), _addr);
+            int offset = 0;
+            SearchIndex(index, offset);
 
-                int index = ((int)(n - (m - (int)tableSections[bank].size())));
-                return bank_index(bank, index);
-            } else {
-                return bank_index(0, 0);
-            }
+            return index;
         }
 
-        // search address in current table section
-        template <class T> int& Table<T>::GetAddressByIndex(const bank_index& _index) {
-            return get<ST_ENTRY_ADDRESS>(tableSections[_index.bank][_index.index]);
-        }
+        template <class T> bank_index Table<T>::GetIndexCentre() {
+            auto table = tableIterator;
+            auto element = contentIterator;
 
-        // search correcponding index(bank,index) by address in current table section
-        template <class T> bank_index Table<T>::GetIndexByAddress(const int& _address) {
-            bank_index current_index = GetCurrentIndexCentre();
-            TableSection<T>& current_bank = tableSections[current_index.bank];
+            element += currentlyVisibleElements / 2;
 
-            int first_address = get<ST_ENTRY_ADDRESS>(current_bank.front());
-            int last_address = get<ST_ENTRY_ADDRESS>(current_bank.back());
-            int addr = _address;
-
-            if (addr < first_address) { addr = first_address; } else if (addr > last_address) { addr = last_address; }
-
-            int i;
-            for (i = 0; i < (int)current_bank.size() - 1; i++) {
-                if (get<ST_ENTRY_ADDRESS>(current_bank[i]) <= addr &&
-                    get<ST_ENTRY_ADDRESS>(current_bank[i + 1]) > addr) {
-                    break;
+            while (std::distance(table->end(), element) >= 0) {
+                if (std::distance(tableSections.end() - 1, table) < 0) {
+                    auto last_table = table;
+                    ++table;
+                    element = table->begin() + std::distance(last_table->end(), element);
+                } else {
+                    // should never occur as tables don't allow scrolling beyond the end of the last table section, but just in case
+                    element = table->end() - 1;
                 }
             }
 
-            return bank_index(current_index.bank, i);
+            return bank_index(std::distance(tableSections.begin(), table), get<ST_ENTRY_ADDRESS>(*element));
+        }
+
+        template <class T> bool Table<T>::IsCentre() {
+            return centre;
         }
     }
 }
