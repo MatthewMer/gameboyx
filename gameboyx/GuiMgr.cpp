@@ -472,9 +472,8 @@ namespace GUI {
             if (ImGui::BeginTabBar("memory_inspector_tabs", 0)) {
 
                 if (gameRunning) {
-                    for (int i = 0; auto & table : debugMemoryTables) {
+                    for (auto & table : debugMemoryTables) {
                         ShowDebugMemoryTab(table);
-                        i++;
                     }
                 } else {
                     if (ImGui::BeginTabItem("NONE")) {
@@ -511,9 +510,10 @@ namespace GUI {
         if (ImGui::BeginTabItem(table_name.c_str())) {
             CheckScroll(DEBUG_MEM, _table);
 
-            auto index = GuiTable::bank_index(0, 0);
+            auto index = _table.GetIndexCentre();
             
             if (ImGui::InputInt("Memory bank", &index.bank, 1, 100, Config::INPUT_INT_FLAGS)) {
+                index.address = 0;
                 ActionSetToIndex(_table, index);
             }
             if (ImGui::InputInt("Memory address", &index.address, 0, 100, Config::INPUT_INT_HEX_FLAGS)) {
@@ -1585,26 +1585,23 @@ namespace GUI {
                     debugInstrTable.AddTableSectionDisposable(n);
                 }
 
-                debugMemoryTables = std::vector<GuiTable::Table<Emulation::memory_entry>>();
                 auto& memory_tables = vhwmgr->GetMemoryTables();
-                for (auto& type_tables : memory_tables) {
-                    auto table = GuiTable::Table<Emulation::memory_entry>(DEBUG_MEM_LINES);
-                    table.name = type_tables.GetMemoryType();
-                    for (auto& n : type_tables) {
-                        table.AddTableSectionDisposable(n);
+                debugMemoryTables = std::vector<GuiTable::Table<Emulation::memory_entry>>();
+                
+                for (auto& n : memory_tables) {
+                    debugMemoryTables.emplace_back(GuiTable::Table<Emulation::memory_entry>(DEBUG_MEM_LINES));
+                    auto& table = debugMemoryTables.back();
+                    table.name = n.GetMemoryType();
+                    for (auto& m : n) {
+                        table.AddTableSectionDisposable(m);
                     }
-                    debugMemoryTables.push_back(table);
                 }
 
                 vhwmgr->GetGraphicsDebugSettings(debugGraphicsSettings);
 
                 //vhwmgr->GetMemoryTypes(memoryTypes);
 
-                if (vhwmgr->StartHardware() == 0x00) {
-                    gameRunning = true;
-                } else {
-                    gameRunning = false;
-                }
+                gameRunning = vhwmgr->StartHardware() == 0x00;
             }
         }
     }
@@ -1855,6 +1852,7 @@ namespace GUI {
                 }
             }
 
+            if (tmp.bank < 0) { tmp.bank = 0; }
             currentIndex = tmp;
             pcSetToRam.store(pc_set_to_ram);
 

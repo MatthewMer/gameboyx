@@ -64,6 +64,7 @@ namespace GUI {
         public:
             explicit constexpr Table(const int& _elements_to_show) : visibleElements(_elements_to_show) {};
             constexpr ~Table() noexcept = default;
+            Table(const Table& _right);
 
             constexpr Table& operator=(const Table& _right) noexcept;
 
@@ -104,6 +105,23 @@ namespace GUI {
             void SwitchTableUp();
             void SwitchTableDown();
         };
+
+        template <class T> Table<T>::Table(const Table& _right) {
+            name = _right.name;
+            tableSections = _right.tableSections;
+            visibleElements = _right.visibleElements;
+            currentlyVisibleElements = _right.currentlyVisibleElements;
+            counter = _right.counter;
+            tableIterator = _right.tableIterator;
+            contentIterator = _right.contentIterator;
+            currentIndex = _right.currentIndex;
+            currentTable = _right.currentTable;
+            currentElement = _right.currentElement;
+            centre = _right.centre;
+            if (tableSections.size() > 0) {
+                ResetAllIterators();
+            }
+        }
 
         template <class T> constexpr Table<T>& Table<T>::operator=(const Table<T>& _right) noexcept {
             if (this != &_right) {

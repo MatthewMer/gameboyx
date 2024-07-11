@@ -83,33 +83,33 @@ namespace Emulation {
 			achieved and why this is necessary: https://www.youtube.com/watch?v=fooSxCuWvZ4&t=421s
 		************************************************************************************************* */
 		void GameboyAPU::SampleWaveRam(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx) {
-			if (_ch_ctx->enable.load()) {
-				ch_ext_waveram* wave_ctx = static_cast<ch_ext_waveram*>(_ch_ctx->exts[WAVE_RAM].get());
+			bool enable = _ch_ctx->enable.load();
 
-				float virt_samples_per_tick = (float)(_ch_ctx->sampling_rate.load() / BASE_CLOCK_CPU);
-				float volume = _ch_ctx->volume.load();
+			ch_ext_waveram* wave_ctx = static_cast<ch_ext_waveram*>(_ch_ctx->exts[WAVE_RAM].get());
 
-				wave_ctx->sample_count += _ticks * virt_samples_per_tick;
-				while (wave_ctx->sample_count >= 1.f) {
-					wave_ctx->sample_count -= 1.f;
-					++_ch_info->sample_count %= 32;
-				}
+			float virt_samples_per_tick = (float)(_ch_ctx->sampling_rate.load() / BASE_CLOCK_CPU);
+			float volume = _ch_ctx->volume.load();
 
-				int write_cursor = ch3WriteCursor.load();
-				int read_cursor = ch3ReadCursor.load();
-
-				ch3WaveTickCounter += _ticks * samplesPerTick.load();
-				while (ch3WaveTickCounter >= 1.f) {
-					ch3WaveTickCounter -= 1.f;
-
-					if (write_cursor != read_cursor) {
-						ch3WaveSamples[write_cursor] = wave_ctx->wave_ram[_ch_info->sample_count] * volume;
-						++write_cursor %= CH_4_LFSR_BUFFER_SIZE;
-					}
-				}
-
-				ch3WriteCursor.store(write_cursor);
+			wave_ctx->sample_count += _ticks * virt_samples_per_tick;
+			while (wave_ctx->sample_count >= 1.f) {
+				wave_ctx->sample_count -= 1.f;
+				++_ch_info->sample_count %= 32;
 			}
+
+			int write_cursor = ch3WriteCursor.load();
+			int read_cursor = ch3ReadCursor.load();
+
+			ch3WaveTickCounter += _ticks * samplesPerTick.load();
+			while (ch3WaveTickCounter >= 1.f) {
+				ch3WaveTickCounter -= 1.f;
+
+				if (write_cursor != read_cursor) {
+					ch3WaveSamples[write_cursor] = wave_ctx->wave_ram[_ch_info->sample_count] * volume;
+					++write_cursor %= CH_4_LFSR_BUFFER_SIZE;
+				}
+			}
+
+			ch3WriteCursor.store(write_cursor);
 		}
 
 		/* *************************************************************************************************
@@ -267,7 +267,7 @@ namespace Emulation {
 		* 4. front left
 		*/
 		void GameboyAPU::SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) {
-			samplesPerTick.store((float)((double)_sampling_rate / BASE_CLOCK_CPU));
+			samplesPerTick.store((float)(_sampling_rate / BASE_CLOCK_CPU));
 
 			bool right = soundCtx->outRightEnabled.load();
 			bool left = soundCtx->outLeftEnabled.load();
@@ -347,28 +347,25 @@ namespace Emulation {
 					}
 				}
 
-				if (ch_enabled[2]) {
-					auto& ch3Info = chInfos[2];
+				auto& ch3Info = chInfos[2];
+				int read_cursor = ch3ReadCursor.load();
 
-					int read_cursor = ch3ReadCursor.load();
-
-					if (read_cursor != (ch3WriteCursor.load() - 1) % CH_4_LFSR_BUFFER_SIZE) {
-						lock_wave_ram.lock();
-						if (ch_lr_enabled[2][0]) {
-							samples[3] += ch3WaveSamples[read_cursor] * amps[2];
-						}
-						if (ch_lr_enabled[2][1]) {
-							samples[2] += ch3WaveSamples[read_cursor] * amps[2];
-						}
-						lock_wave_ram.unlock();
-
-						++read_cursor %= CH_4_LFSR_BUFFER_SIZE;
-						ch3ReadCursor.store(read_cursor);
+				if (read_cursor != (ch3WriteCursor.load() - 1) % CH_4_LFSR_BUFFER_SIZE) {
+					lock_wave_ram.lock();
+					if (ch_lr_enabled[2][0]) {
+						samples[3] += ch3WaveSamples[read_cursor] * amps[2];
 					}
+					if (ch_lr_enabled[2][1]) {
+						samples[2] += ch3WaveSamples[read_cursor] * amps[2];
+					}
+					lock_wave_ram.unlock();
+
+					++read_cursor %= CH_4_LFSR_BUFFER_SIZE;
+					ch3ReadCursor.store(read_cursor);
 				}
 
 				{
-					auto& ch4Info = chInfos[3];;
+					auto& ch4Info = chInfos[3];
 					lock_lfsr_buffer.lock();
 					ch4Info.virt_samples += sample_steps[3];
 					while (ch4Info.virt_samples > 1.f) {

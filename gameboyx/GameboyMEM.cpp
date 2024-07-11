@@ -1376,6 +1376,7 @@ namespace Emulation {
 
         void GameboyMEM::GenerateMemoryTables() {
             // access for memory inspector
+            memoryTables.clear();
 
             // ROM
             {
