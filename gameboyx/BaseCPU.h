@@ -43,10 +43,10 @@ namespace Emulation {
 	class BaseCPU {
 	public:
 		// get/reset instance
-		static BaseCPU* getInstance(BaseCartridge* _cartridge);
-		static void resetInstance();
-
-		static BaseCPU* getInstance();
+		static std::shared_ptr<BaseCPU> s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge);
+		static std::shared_ptr<BaseCPU> s_GetInstance();
+		static void s_ResetInstance();
+		virtual void Init() = 0;
 
 		// clone/assign protection
 		BaseCPU(BaseCPU const&) = delete;
@@ -62,15 +62,13 @@ namespace Emulation {
 		virtual void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const = 0;
 		virtual void UpdateDebugData(debug_data* _data) const = 0;
 
-		virtual void GenerateAssemblyTables(BaseCartridge* _cartridge) = 0;
+		virtual void GenerateAssemblyTables(std::shared_ptr<BaseCartridge> _cartridge) = 0;
 		virtual void GenerateTemporaryAssemblyTable(assembly_tables& _table) = 0;
 
 		virtual void Write8Bit(const u8& _data, const u16& _addr) = 0;
 		virtual void Write16Bit(const u16& _data, const u16& _addr) = 0;
 		virtual u8 Read8Bit(const u16& _addr) = 0;
 		virtual u16 Read16Bit(const u16& _addr) = 0;
-
-		virtual void SetInstances() = 0;
 
 		virtual int GetPlayerCount() const = 0;
 
@@ -83,14 +81,12 @@ namespace Emulation {
 
 	protected:
 		// constructor
-		explicit BaseCPU(BaseCartridge* _cartridge) {
-			mmu_instance = BaseMMU::getInstance(_cartridge);
-		};
+		explicit BaseCPU(std::shared_ptr<BaseCartridge> _cartridge) {};
 		virtual ~BaseCPU() {}
 
-		BaseMMU* mmu_instance = nullptr;
-		BaseGPU* graphics_instance = nullptr;
-		BaseAPU* sound_instance = nullptr;
+		std::weak_ptr<BaseMMU> m_MmuInstance;
+		std::weak_ptr<BaseGPU> m_GraphicsInstance;
+		std::weak_ptr<BaseAPU> m_SoundInstance;
 
 		int currentTicks = 0;
 		int ticksPerFrame = 0;
@@ -106,6 +102,6 @@ namespace Emulation {
 		assembly_tables asmTables;
 
 	private:
-		static BaseCPU* instance;
+		static std::weak_ptr<BaseCPU> m_Instance;
 	};
 }

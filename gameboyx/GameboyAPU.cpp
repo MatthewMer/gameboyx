@@ -18,6 +18,29 @@ namespace Emulation {
 		};
 
 		/* *************************************************************************************************
+			CONSTRUCTOR
+		************************************************************************************************* */
+		GameboyAPU::GameboyAPU(std::shared_ptr<BaseCartridge> _cartridge) : BaseAPU() {}
+
+		GameboyAPU::~GameboyAPU() {
+			Backend::HardwareMgr::StopAudioBackend();
+		}
+
+		void GameboyAPU::Init() {
+			m_MemInstance = std::dynamic_pointer_cast<GameboyMEM>(BaseMEM::s_GetInstance());
+			soundCtx = m_MemInstance.lock()->GetSoundContext();
+
+			virtualChannels = APU_CHANNELS_NUM;
+
+			Backend::virtual_audio_information virt_audio_info = {};
+			virt_audio_info.channels = virtualChannels;
+			virt_audio_info.apu_callback = [this](std::vector<std::complex<float>>& _samples, const int& _num, const int& _sampling_rate) {
+				this->SampleAPU(_samples, _num, _sampling_rate);
+				};
+			Backend::HardwareMgr::StartAudioBackend(virt_audio_info);
+		}
+
+		/* *************************************************************************************************
 			APU PROCESSING -> DIRECTLY ATTACHED TO THE CPUS INTERNAL TIMERS
 		************************************************************************************************* */
 		void GameboyAPU::ProcessAPU(const int& _ticks) {
@@ -175,7 +198,7 @@ namespace Emulation {
 				_ch_info->length_counter++;
 				if (_ch_info->length_counter == CH_LENGTH_TIMER_THRESHOLD) {
 					_ch_ctx->enable.store(false);
-					memInstance->GetIO(NR52_ADDR) &= ~_ch_ctx->enable_bit;
+					m_MemInstance.lock()->GetIO(NR52_ADDR) &= ~_ch_ctx->enable_bit;
 				}
 			}
 		}
@@ -239,14 +262,14 @@ namespace Emulation {
 						if (period > CH_1_2_3_PERIOD_FLIP - 1) {
 							writeback = false;
 							_ch_ctx->enable.store(false);
-							memInstance->GetIO(NR52_ADDR) &= ~_ch_ctx->enable_bit;
+							m_MemInstance.lock()->GetIO(NR52_ADDR) &= ~_ch_ctx->enable_bit;
 						}
 						break;
 					}
 
 					if (writeback) {
-						memInstance->GetIO(_ch_ctx->regs.nrX3) = period & CH_1_2_PERIOD_LOW;
-						u8& period_ctrl = memInstance->GetIO(_ch_ctx->regs.nrX4);
+						m_MemInstance.lock()->GetIO(_ch_ctx->regs.nrX3) = period & CH_1_2_PERIOD_LOW;
+						u8& period_ctrl = m_MemInstance.lock()->GetIO(_ch_ctx->regs.nrX4);
 						period_ctrl = (period_ctrl & ~CH_1_2_3_PERIOD_HIGH) | ((period >> 8) & CH_1_2_3_PERIOD_HIGH);
 
 						_ch_ctx->period = period;

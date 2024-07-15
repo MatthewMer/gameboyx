@@ -6,33 +6,33 @@
 #include "general_config.h"
 
 namespace Emulation {
-	BaseCPU* BaseCPU::instance = nullptr;
+	std::weak_ptr<BaseCPU> BaseCPU::m_Instance;
 
-	BaseCPU* BaseCPU::getInstance(BaseCartridge* _cartridge) {
-		if (instance == nullptr) {
+	std::shared_ptr<BaseCPU> BaseCPU::s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge) {
+		std::shared_ptr<BaseCPU> ptr = m_Instance.lock();
+
+		if (!ptr) {
 			switch (_cartridge->console) {
 			case GB:
 			case GBC:
-				instance = new Gameboy::GameboyCPU(_cartridge);
+				ptr = std::static_pointer_cast<BaseCPU>(std::make_shared<Gameboy::GameboyCPU>(_cartridge));
 				break;
 			}
+
+			m_Instance = ptr;
 		}
 
-		return instance;
+		return ptr;
 	}
 
-	void BaseCPU::resetInstance() {
-		if (instance != nullptr) {
-			delete instance;
-			instance = nullptr;
-		}
+	std::shared_ptr<BaseCPU> BaseCPU::s_GetInstance() {
+		return m_Instance.lock();
 	}
 
-	BaseCPU* BaseCPU::getInstance() {
-		if (instance == nullptr) {
-			LOG_ERROR("[emu] CPU instance is nullptr");
+	void BaseCPU::s_ResetInstance() {
+		if (m_Instance.lock()) {
+			m_Instance.reset();
 		}
-		return instance;
 	}
 
 	int BaseCPU::GetClockCycles() const {

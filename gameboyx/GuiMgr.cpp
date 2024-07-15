@@ -20,20 +20,23 @@ namespace GUI {
     /* ***********************************************************************************************************
         IMGUIGAMEBOYX FUNCTIONS
     *********************************************************************************************************** */
-    GuiMgr* GuiMgr::instance = nullptr;
+    std::weak_ptr<GuiMgr> GuiMgr::m_Instance;
 
-    GuiMgr* GuiMgr::getInstance() {
-        if (instance == nullptr) {
-            instance = new GuiMgr();
+    std::shared_ptr<GuiMgr> GuiMgr::s_GetInstance() {
+        std::shared_ptr<GuiMgr> ptr = m_Instance.lock();
+
+        if (!ptr) {
+            struct shared_enabler : public GuiMgr {};       // workaround for private constructor/destructor
+            ptr = std::make_shared<shared_enabler>();
+            m_Instance = ptr;
         }
 
-        return instance;
+        return ptr;
     }
 
-    void GuiMgr::resetInstance() {
-        if (instance != nullptr) {
-            delete instance;
-            instance = nullptr;
+    void GuiMgr::s_ResetInstance() {
+        if (m_Instance.lock()) {
+            m_Instance.reset();
         }
     }
 
@@ -57,7 +60,7 @@ namespace GUI {
         distLowPassEnable = aud_settings.dist_low_pass_enable;
         baseVolume = aud_settings.base_volume;
 
-        vhwmgr = Emulation::VHardwareMgr::getInstance();
+        m_Vhwmgr = Emulation::VHardwareMgr::s_GetInstance();
 
         // init explorer
         NFD_Init();
@@ -93,9 +96,9 @@ namespace GUI {
 
     GuiMgr::~GuiMgr() {
         if (gameRunning) {
-            vhwmgr->ShutdownHardware();
+            m_Vhwmgr->ShutdownHardware();
         }
-        Emulation::VHardwareMgr::resetInstance();
+        Emulation::VHardwareMgr::s_ResetInstance();
     }
 
     /* ***********************************************************************************************************
@@ -107,7 +110,7 @@ namespace GUI {
         if (debug_enabled != showInstrDebugger) {
             debug_enabled = showInstrDebugger;
 
-            vhwmgr->SetDebugEnabled(debug_enabled);
+            m_Vhwmgr->SetDebugEnabled(debug_enabled);
         }
 
         // keys
@@ -168,10 +171,10 @@ namespace GUI {
     void GuiMgr::ProcessGUI() {
         //IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "Missing dear imgui context. Refer to examples app!");
         if (gameRunning) {
-            if (showGraphicsOverlay || showHardwareInfo) { vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency); }
-            if (showHardwareInfo) { vhwmgr->GetHardwareInfo(hardwareInfo); }
+            if (showGraphicsOverlay || showHardwareInfo) { m_Vhwmgr->GetFpsAndClock(virtualFramerate, virtualFrequency); }
+            if (showHardwareInfo) { m_Vhwmgr->GetHardwareInfo(hardwareInfo); }
             if (showInstrDebugger) {
-                vhwmgr->GetInstrDebugFlags(regValues, flagValues, miscValues);
+                m_Vhwmgr->GetInstrDebugFlags(regValues, flagValues, miscValues);
             }
         }
 
@@ -1158,7 +1161,7 @@ namespace GUI {
                 bool was_set = set;
                 ImGui::Checkbox(get<1>(n).c_str(), &set);
                 if (was_set != set) {
-                    vhwmgr->SetGraphicsDebugSetting(set, get<0>(n));
+                    m_Vhwmgr->SetGraphicsDebugSetting(set, get<0>(n));
                 }
             }
         }
@@ -1327,7 +1330,7 @@ namespace GUI {
 
     void GuiMgr::ActionGameStop() {
         if (gameRunning) {
-            vhwmgr->ShutdownHardware();
+            m_Vhwmgr->ShutdownHardware();
             gameRunning = false;
             showMainMenuBar = true;
             ResetGUI();
@@ -1429,7 +1432,7 @@ namespace GUI {
         for (int i = 0; const auto & [key, value] : Config::EMULATION_SPEEDS) {
             if (_index == i) {
                 currentSpeed = key;
-                vhwmgr->SetEmulationSpeed(currentSpeed);
+                m_Vhwmgr->SetEmulationSpeed(currentSpeed);
             }
             i++;
         }
@@ -1445,7 +1448,6 @@ namespace GUI {
 
         if (cartridge->console == Emulation::CONSOLE_NONE) {
             LOG_ERROR("[emu] Console type not recognized");
-            delete cartridge;
             showNewGameDialog = false;
             return false;
         }
@@ -1453,7 +1455,6 @@ namespace GUI {
         if (!cartridge->ReadRom()) {
             showNewGameDialog = false;
             LOG_ERROR("[emu] error while reading rom ", _path_to_rom);
-            delete cartridge;
             return false;
         }
 
@@ -1463,7 +1464,6 @@ namespace GUI {
         if (!IO::write_games_to_config({ cartridge }, false)) {
             showNewGameDialog = false;
             LOG_ERROR("[emu] couldn't write new game to config");
-            delete cartridge;
             return false;
         }
 
@@ -1472,7 +1472,7 @@ namespace GUI {
     }
 
     void GuiMgr::ActionDeleteGames() {
-        auto games_to_delete = vector<Emulation::BaseCartridge*>();
+        auto games_to_delete = std::vector<std::shared_ptr<Emulation::BaseCartridge>>();
         for (int i = 0; const auto & n : gamesSelected) {
             if (n.value) games_to_delete.push_back(games[i]);
             i++;
@@ -1565,7 +1565,7 @@ namespace GUI {
             emu_settings.debug_enabled = showInstrDebugger;
             emu_settings.emulation_speed = currentSpeed;
 
-            auto* game = games[gameSelectedIndex];
+            auto& game = games[gameSelectedIndex];
             game->SetBootRom(false, "", Emulation::console_ids::CONSOLE_NONE);
 
             for (const auto& [key, value] : useBootRom) {
@@ -1574,18 +1574,21 @@ namespace GUI {
                 }
             }
 
-            if (vhwmgr->InitHardware(games[gameSelectedIndex], emu_settings, _restart, 
-                [this](Emulation::debug_data& _data) { this->DebugCallback(_data); }) != 0x00)
+            emu_settings.callback = [this](Emulation::debug_data& _data) { this->DebugCallback(_data); };
+            emu_settings.cartridge = games[gameSelectedIndex];
+            emu_settings.reset = _restart;
+
+            if (m_Vhwmgr->InitHardware(emu_settings) != Emulation::Errors::NONE)
             {
                 gameRunning = false;
             } else {
                 debugInstrTable = GuiTable::Table<Emulation::instr_entry>(DEBUG_INSTR_LINES);
-                auto& asm_tables = vhwmgr->GetAssemblyTables();
+                auto& asm_tables = m_Vhwmgr->GetAssemblyTables();
                 for (auto& n : asm_tables) {
                     debugInstrTable.AddTableSectionDisposable(n);
                 }
 
-                auto& memory_tables = vhwmgr->GetMemoryTables();
+                auto& memory_tables = m_Vhwmgr->GetMemoryTables();
                 debugMemoryTables = std::vector<GuiTable::Table<Emulation::memory_entry>>();
                 
                 for (auto& n : memory_tables) {
@@ -1597,11 +1600,11 @@ namespace GUI {
                     }
                 }
 
-                vhwmgr->GetGraphicsDebugSettings(debugGraphicsSettings);
+                m_Vhwmgr->GetGraphicsDebugSettings(debugGraphicsSettings);
 
-                //vhwmgr->GetMemoryTypes(memoryTypes);
+                //m_Vhwmgr->GetMemoryTypes(memoryTypes);
 
-                gameRunning = vhwmgr->StartHardware() == 0x00;
+                gameRunning = m_Vhwmgr->StartHardware() == 0x00;
             }
         }
     }
@@ -1639,8 +1642,8 @@ namespace GUI {
         }
     }
 
-    void GuiMgr::AddGameGuiCtx(Emulation::BaseCartridge* _game_ctx) {
-        games.emplace_back(_game_ctx);
+    void GuiMgr::AddGameGuiCtx(std::shared_ptr<Emulation::BaseCartridge> _cartridge) {
+        games.emplace_back(_cartridge);
         gamesSelected.clear();
         for (const auto& game : games) {
             gamesSelected.push_back({ false });
@@ -1651,7 +1654,6 @@ namespace GUI {
 
     void GuiMgr::ReloadGamesGuiCtx() {
         for (int i = (int)games.size() - 1; i > -1; i--) {
-            delete games[i];
             games.erase(games.begin() + i);
         }
 
@@ -1696,7 +1698,7 @@ namespace GUI {
                 break;
             default:
                 if (keyboardMapping.find(_key) != keyboardMapping.end()) {
-                    vhwmgr->EventButtonDown(_player, keyboardMapping[_key]);
+                    m_Vhwmgr->EventButtonDown(_player, keyboardMapping[_key]);
                 }
                 break;
             }
@@ -1748,7 +1750,7 @@ namespace GUI {
                 break;
             default:
                 if (keyboardMapping.find(_key) != keyboardMapping.end()) {
-                    vhwmgr->EventButtonUp(_player, keyboardMapping[_key]);
+                    m_Vhwmgr->EventButtonUp(_player, keyboardMapping[_key]);
                 }
                 break;
             }
@@ -1796,7 +1798,7 @@ namespace GUI {
         if (gameRunning) {
             switch (_button) {
             default:
-                vhwmgr->EventButtonDown(_player, _button);
+                m_Vhwmgr->EventButtonDown(_player, _button);
                 break;
             }
         } else {
@@ -1818,7 +1820,7 @@ namespace GUI {
                 ActionGameStop();
                 break;
             default:
-                vhwmgr->EventButtonUp(_player, _button);
+                m_Vhwmgr->EventButtonUp(_player, _button);
                 break;
             }
         } else {
@@ -1847,7 +1849,7 @@ namespace GUI {
                 if (pc_set_to_ram) {
                     debugInstrTableTmp = GuiTable::Table<Emulation::instr_entry>(DEBUG_INSTR_LINES);
                     Emulation::assembly_tables table_tmp;
-                    vhwmgr->GenerateTemporaryAssemblyTable(table_tmp);
+                    m_Vhwmgr->GenerateTemporaryAssemblyTable(table_tmp);
                     debugInstrTableTmp.AddTableSectionDisposable(table_tmp.front());
                 }
             }
@@ -1864,11 +1866,11 @@ namespace GUI {
             unique_lock<mutex> lock_debug_breakpoints(mutDebugBreakpoints);
             auto& breakpoint_list = (pcSetToRam.load() ? breakpointsTableTmp : breakpointsTable);
             if (find(breakpoint_list.begin(), breakpoint_list.end(), tmp) == breakpoint_list.end()) {
-                vhwmgr->SetProceedExecution(true);
+                m_Vhwmgr->SetProceedExecution(true);
             }
         }
         if (nextInstruction.load()) {
-            vhwmgr->SetProceedExecution(true);
+            m_Vhwmgr->SetProceedExecution(true);
             nextInstruction.store(false);
         }
     }
@@ -1910,7 +1912,7 @@ namespace GUI {
             { Emulation::GAME_VER,"game_ver" }
         };
 
-        void games_from_string(vector<Emulation::BaseCartridge*>& _games, const vector<string>& _config_games) {
+        void games_from_string(vector<std::shared_ptr<Emulation::BaseCartridge>>& _games, const vector<string>& _config_games) {
             string line;
             _games.clear();
 
@@ -1980,7 +1982,7 @@ namespace GUI {
             return;
         }
 
-        void games_to_string(const vector<Emulation::BaseCartridge*>& _games, vector<string>& _config_games) {
+        void games_to_string(const vector<std::shared_ptr<Emulation::BaseCartridge>>& _games, vector<string>& _config_games) {
             _config_games.clear();
             for (const auto& n : _games) {
                 _config_games.emplace_back("");
@@ -1992,7 +1994,7 @@ namespace GUI {
             }
         }
 
-        bool read_games_from_config(vector<Emulation::BaseCartridge*>& _games) {
+        bool read_games_from_config(std::vector<std::shared_ptr<Emulation::BaseCartridge>>& _games) {
             if (auto config_games = vector<string>(); Backend::FileIO::read_data(config_games, Config::CONFIG_FOLDER + Config::GAMES_CONFIG_FILE)) {
                 games_from_string(_games, config_games);
                 return true;
@@ -2002,7 +2004,7 @@ namespace GUI {
         }
 
 
-        bool write_games_to_config(const vector<Emulation::BaseCartridge*>& _games, const bool& _rewrite) {
+        bool write_games_to_config(const vector<std::shared_ptr<Emulation::BaseCartridge>>& _games, const bool& _rewrite) {
             auto config_games = vector<string>();
             games_to_string(_games, config_games);
 
@@ -2014,8 +2016,8 @@ namespace GUI {
             return false;
         }
 
-        bool delete_games_from_config(vector<Emulation::BaseCartridge*>& _games) {
-            auto games = vector<Emulation::BaseCartridge*>();
+        bool delete_games_from_config(std::vector<std::shared_ptr<Emulation::BaseCartridge>>& _games) {
+            auto games = vector<std::shared_ptr<Emulation::BaseCartridge>>();
             if (!read_games_from_config(games)) {
                 LOG_ERROR("[emu] reading games from ", Config::CONFIG_FOLDER + Config::GAMES_CONFIG_FILE);
                 return false;
@@ -2024,7 +2026,6 @@ namespace GUI {
             for (int i = (int)games.size() - 1; i >= 0; i--) {
                 for (const auto& m : _games) {
                     if ((games[i]->filePath + games[i]->fileName).compare(m->filePath + m->fileName) == 0) {
-                        delete games[i];
                         games.erase(games.begin() + i);
                     }
                 }

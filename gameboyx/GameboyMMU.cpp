@@ -73,7 +73,7 @@ namespace Emulation {
 			{0xFF, HuC1_RAM_BATTERY}
 		};
 
-		GameboyMMU* GameboyMMU::getInstance(BaseCartridge* _cartridge) {
+		std::shared_ptr<GameboyMMU> GameboyMMU::s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge) {
 			const auto vec_rom = _cartridge->GetRom();
 			u8 type_code = vec_rom[ROM_HEAD_HW_TYPE];
 
@@ -86,14 +86,14 @@ namespace Emulation {
 				case ROM_RAM:
 					_cartridge->ramPresent = true;
 				case ROM_ONLY:
-					return new MmuSM83_ROM(_cartridge);
+					return std::static_pointer_cast<GameboyMMU>(std::make_shared<MmuSM83_ROM>(_cartridge));
 					break;
 				case MBC1_RAM_BATTERY:
 					_cartridge->batteryBuffered = true;
 				case MBC1_RAM:
 					_cartridge->ramPresent = true;
 				case MBC1:
-					return new MmuSM83_MBC1(_cartridge);
+					return std::static_pointer_cast<GameboyMMU>(std::make_shared<MmuSM83_MBC1>(_cartridge));
 					break;
 				case MBC3_TIMER_RAM_BATTERY:
 					_cartridge->ramPresent = true;
@@ -106,14 +106,14 @@ namespace Emulation {
 						_cartridge->ramPresent = true;
 					}
 				case MBC3:
-					return new MmuSM83_MBC3(_cartridge);
+					return std::static_pointer_cast<GameboyMMU>(std::make_shared<MmuSM83_MBC3>(_cartridge));
 					break;
 				case MBC5_RAM_BATTERY:
 					_cartridge->batteryBuffered = true;
 				case MBC5_RAM:
 					_cartridge->ramPresent = true;
 				case MBC5:
-					return new MmuSM83_MBC5(_cartridge);
+					return std::static_pointer_cast<GameboyMMU>(std::make_shared<MmuSM83_MBC5>(_cartridge));
 					break;
 				default:
 					LOG_WARN("Mapper type ", format("{:02x}", type_code), " not implemented");
@@ -126,9 +126,11 @@ namespace Emulation {
 			}
 		}
 
-		GameboyMMU::GameboyMMU(BaseCartridge* _cartridge) {
-			mem_instance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
-			machineCtx = mem_instance->GetMachineContext();
+		GameboyMMU::GameboyMMU(std::shared_ptr<BaseCartridge> _cartridge) : BaseMMU() {}
+
+		void GameboyMMU::Init() {
+			m_MemInstance = std::dynamic_pointer_cast<GameboyMEM>(BaseMEM::s_GetInstance());
+			machineCtx = m_MemInstance.lock()->GetMachineContext();
 		}
 
 		/* ***********************************************************************************************************
@@ -140,7 +142,11 @@ namespace Emulation {
 		/* ***********************************************************************************************************
 			CONSTRUCTOR
 		*********************************************************************************************************** */
-		MmuSM83_ROM::MmuSM83_ROM(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {}
+		MmuSM83_ROM::MmuSM83_ROM(std::shared_ptr<BaseCartridge> _cartridge) : GameboyMMU(_cartridge) {}
+
+		void MmuSM83_ROM::Init() {
+			GameboyMMU::Init();
+		}
 
 		/* ***********************************************************************************************************
 			MEMORY ACCESS
@@ -156,23 +162,23 @@ namespace Emulation {
 			}
 			// VRAM 0-n
 			else if (_addr < RAM_N_OFFSET) {
-				mem_instance->WriteVRAM_N(_data, _addr);
+				m_MemInstance.lock()->WriteVRAM_N(_data, _addr);
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
 				if (machineCtx->ram_present) {
-					mem_instance->WriteRAM_N(_data, _addr);
+					m_MemInstance.lock()->WriteRAM_N(_data, _addr);
 				} else {
 					return;
 				}
 			}
 			// WRAM 0
 			else if (_addr < WRAM_N_OFFSET) {
-				mem_instance->WriteWRAM_0(_data, _addr);
+				m_MemInstance.lock()->WriteWRAM_0(_data, _addr);
 			}
 			// WRAM 1-n
 			else if (_addr < MIRROR_WRAM_OFFSET) {
-				mem_instance->WriteWRAM_N(_data, _addr);
+				m_MemInstance.lock()->WriteWRAM_N(_data, _addr);
 			}
 			// MIRROR WRAM, prohibited
 			else if (_addr < OAM_OFFSET) {
@@ -180,7 +186,7 @@ namespace Emulation {
 			}
 			// OAM
 			else if (_addr < NOT_USED_MEMORY_OFFSET) {
-				mem_instance->WriteOAM(_data, _addr);
+				m_MemInstance.lock()->WriteOAM(_data, _addr);
 			}
 			// NOT USED
 			else if (_addr < IO_OFFSET) {
@@ -188,15 +194,15 @@ namespace Emulation {
 			}
 			// IO REGISTERS
 			else if (_addr < HRAM_OFFSET) {
-				mem_instance->WriteIO(_data, _addr);
+				m_MemInstance.lock()->WriteIO(_data, _addr);
 			}
 			// HRAM (stack,...)
 			else if (_addr < IE_OFFSET) {
-				mem_instance->WriteHRAM(_data, _addr);
+				m_MemInstance.lock()->WriteHRAM(_data, _addr);
 			}
 			// IE register
 			else {
-				mem_instance->WriteIE(_data);
+				m_MemInstance.lock()->WriteIE(_data);
 			}
 		}
 
@@ -210,39 +216,39 @@ namespace Emulation {
 		u8 MmuSM83_ROM::Read8Bit(const u16& _addr) {
 			// ROM Bank 0
 			if (_addr < ROM_N_OFFSET) {
-				return mem_instance->ReadROM_0(_addr);
+				return m_MemInstance.lock()->ReadROM_0(_addr);
 			}
 			// ROM Bank 1-n
 			else if (_addr < VRAM_N_OFFSET) {
-				return mem_instance->ReadROM_N(_addr);
+				return m_MemInstance.lock()->ReadROM_N(_addr);
 			}
 			// VRAM 0-n
 			else if (_addr < RAM_N_OFFSET) {
-				return mem_instance->ReadVRAM_N(_addr);
+				return m_MemInstance.lock()->ReadVRAM_N(_addr);
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
 				if (machineCtx->ram_present) {
-					return mem_instance->ReadRAM_N(_addr);
+					return m_MemInstance.lock()->ReadRAM_N(_addr);
 				} else {
 					return 0xFF;
 				}
 			}
 			// WRAM 0
 			else if (_addr < WRAM_N_OFFSET) {
-				return mem_instance->ReadWRAM_0(_addr);
+				return m_MemInstance.lock()->ReadWRAM_0(_addr);
 			}
 			// WRAM 1-n
 			else if (_addr < MIRROR_WRAM_OFFSET) {
-				return mem_instance->ReadWRAM_N(_addr);
+				return m_MemInstance.lock()->ReadWRAM_N(_addr);
 			}
 			// MIRROR WRAM (prohibited)
 			else if (_addr < OAM_OFFSET) {
-				return mem_instance->ReadWRAM_0(_addr);
+				return m_MemInstance.lock()->ReadWRAM_0(_addr);
 			}
 			// OAM
 			else if (_addr < NOT_USED_MEMORY_OFFSET) {
-				return mem_instance->ReadOAM(_addr);
+				return m_MemInstance.lock()->ReadOAM(_addr);
 			}
 			// NOT USED
 			else if (_addr < IO_OFFSET) {
@@ -250,15 +256,15 @@ namespace Emulation {
 			}
 			// IO REGISTERS
 			else if (_addr < HRAM_OFFSET) {
-				return mem_instance->ReadIO(_addr);
+				return m_MemInstance.lock()->ReadIO(_addr);
 			}
 			// HRAM (stack,...)
 			else if (_addr < IE_OFFSET) {
-				return mem_instance->ReadHRAM(_addr);
+				return m_MemInstance.lock()->ReadHRAM(_addr);
 			}
 			// IE register
 			else {
-				return mem_instance->ReadIE();
+				return m_MemInstance.lock()->ReadIE();
 			}
 		}
 
@@ -291,7 +297,10 @@ namespace Emulation {
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-		MmuSM83_MBC1::MmuSM83_MBC1(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {
+		MmuSM83_MBC1::MmuSM83_MBC1(std::shared_ptr<BaseCartridge> _cartridge) : GameboyMMU(_cartridge) {}
+
+		void MmuSM83_MBC1::Init() {
+			GameboyMMU::Init();
 
 			switch (machineCtx->ram_bank_num) {
 			case 0:
@@ -305,16 +314,6 @@ namespace Emulation {
 				LOG_ERROR("[emu] RAM bank number ", format("{:d}", machineCtx->ram_bank_num), " unsupported by MBC1");
 				break;
 			}
-
-			/*
-			// bit mask for ROM Bank Number
-			for (int i = machineCtx->rom_bank_num; i < 32 && i >= 2; i *= 2) {
-				romBankMask >>= 1;
-			}
-			// set mask for upper bits of zero bank
-			if (machineCtx->rom_bank_num < 64) { romBankMaskAdvanced &= 0x00; }
-			else if(machineCtx->rom_bank_num < 128) { romBankMaskAdvanced &= 0x20; }
-			*/
 		}
 
 		/* ***********************************************************************************************************
@@ -354,13 +353,13 @@ namespace Emulation {
 			}
 			// VRAM 0-n
 			else if (_addr < RAM_N_OFFSET) {
-				mem_instance->WriteVRAM_N(_data, _addr);
+				m_MemInstance.lock()->WriteVRAM_N(_data, _addr);
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
 				if (machineCtx->ram_present) {
 					if (ramEnable) {
-						mem_instance->WriteRAM_N(_data, _addr);
+						m_MemInstance.lock()->WriteRAM_N(_data, _addr);
 					}
 				} else {
 					LOG_ERROR("[emu] tried to access nonpresent RAM");
@@ -368,11 +367,11 @@ namespace Emulation {
 			}
 			// WRAM 0
 			else if (_addr < WRAM_N_OFFSET) {
-				mem_instance->WriteWRAM_0(_data, _addr);
+				m_MemInstance.lock()->WriteWRAM_0(_data, _addr);
 			}
 			// WRAM 1-n
 			else if (_addr < MIRROR_WRAM_OFFSET) {
-				mem_instance->WriteWRAM_N(_data, _addr);
+				m_MemInstance.lock()->WriteWRAM_N(_data, _addr);
 			}
 			// MIRROR WRAM, prohibited
 			else if (_addr < OAM_OFFSET) {
@@ -380,7 +379,7 @@ namespace Emulation {
 			}
 			// OAM
 			else if (_addr < NOT_USED_MEMORY_OFFSET) {
-				mem_instance->WriteOAM(_data, _addr);
+				m_MemInstance.lock()->WriteOAM(_data, _addr);
 			}
 			// NOT USED
 			else if (_addr < IO_OFFSET) {
@@ -388,15 +387,15 @@ namespace Emulation {
 			}
 			// IO REGISTERS
 			else if (_addr < HRAM_OFFSET) {
-				mem_instance->WriteIO(_data, _addr);
+				m_MemInstance.lock()->WriteIO(_data, _addr);
 			}
 			// HRAM (stack,...)
 			else if (_addr < IE_OFFSET) {
-				mem_instance->WriteHRAM(_data, _addr);
+				m_MemInstance.lock()->WriteHRAM(_data, _addr);
 			}
 			// IE register
 			else {
-				mem_instance->WriteIE(_data);
+				m_MemInstance.lock()->WriteIE(_data);
 			}
 		}
 
@@ -413,40 +412,40 @@ namespace Emulation {
 				if (advancedBankingMode) {
 
 				} else {
-					return mem_instance->ReadROM_0(_addr);
+					return m_MemInstance.lock()->ReadROM_0(_addr);
 				}
 			}
 			// ROM Bank 1-n
 			else if (_addr < VRAM_N_OFFSET) {
-				return mem_instance->ReadROM_N(_addr);
+				return m_MemInstance.lock()->ReadROM_N(_addr);
 			}
 			// VRAM 0-n
 			else if (_addr < RAM_N_OFFSET) {
-				return mem_instance->ReadVRAM_N(_addr);
+				return m_MemInstance.lock()->ReadVRAM_N(_addr);
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
 				if (ramEnable && machineCtx->ram_present) {
-					return mem_instance->ReadRAM_N(_addr);
+					return m_MemInstance.lock()->ReadRAM_N(_addr);
 				} else {
 					return 0xFF;
 				}
 			}
 			// WRAM 0
 			else if (_addr < WRAM_N_OFFSET) {
-				return mem_instance->ReadWRAM_0(_addr);
+				return m_MemInstance.lock()->ReadWRAM_0(_addr);
 			}
 			// WRAM 1-n
 			else if (_addr < MIRROR_WRAM_OFFSET) {
-				return mem_instance->ReadWRAM_N(_addr);
+				return m_MemInstance.lock()->ReadWRAM_N(_addr);
 			}
 			// MIRROR WRAM (prohibited)
 			else if (_addr < OAM_OFFSET) {
-				return mem_instance->ReadWRAM_0(_addr);
+				return m_MemInstance.lock()->ReadWRAM_0(_addr);
 			}
 			// OAM
 			else if (_addr < NOT_USED_MEMORY_OFFSET) {
-				return mem_instance->ReadOAM(_addr);
+				return m_MemInstance.lock()->ReadOAM(_addr);
 			}
 			// NOT USED
 			else if (_addr < IO_OFFSET) {
@@ -454,15 +453,15 @@ namespace Emulation {
 			}
 			// IO REGISTERS
 			else if (_addr < HRAM_OFFSET) {
-				return mem_instance->ReadIO(_addr);
+				return m_MemInstance.lock()->ReadIO(_addr);
 			}
 			// HRAM (stack,...)
 			else if (_addr < IE_OFFSET) {
-				return mem_instance->ReadHRAM(_addr);
+				return m_MemInstance.lock()->ReadHRAM(_addr);
 			}
 			// IE register
 			else {
-				return mem_instance->ReadIE();
+				return m_MemInstance.lock()->ReadIE();
 			}
 
 			return 0xFF;
@@ -495,7 +494,11 @@ namespace Emulation {
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-		MmuSM83_MBC3::MmuSM83_MBC3(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {}
+		MmuSM83_MBC3::MmuSM83_MBC3(std::shared_ptr<BaseCartridge> _cartridge) : GameboyMMU(_cartridge) {}
+
+		void MmuSM83_MBC3::Init() {
+			GameboyMMU::Init();
+		}
 
 		/* ***********************************************************************************************************
 			MEMORY ACCESS
@@ -538,7 +541,7 @@ namespace Emulation {
 			}
 			// VRAM 0-n
 			else if (_addr < RAM_N_OFFSET) {
-				mem_instance->WriteVRAM_N(_data, _addr);
+				m_MemInstance.lock()->WriteVRAM_N(_data, _addr);
 			}
 			// RAM 0-n -> RTC Registers 08-0C
 			else if (_addr < WRAM_0_OFFSET) {
@@ -546,7 +549,7 @@ namespace Emulation {
 					if (timerRamEnable) {
 						int ramBankNumber = machineCtx->ram_bank_selected;
 						if (ramBankNumber < 0x04) {
-							mem_instance->WriteRAM_N(_data, _addr);
+							m_MemInstance.lock()->WriteRAM_N(_data, _addr);
 						} else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
 							WriteClock(_data);
 						}
@@ -557,11 +560,11 @@ namespace Emulation {
 			}
 			// WRAM 0
 			else if (_addr < WRAM_N_OFFSET) {
-				mem_instance->WriteWRAM_0(_data, _addr);
+				m_MemInstance.lock()->WriteWRAM_0(_data, _addr);
 			}
 			// WRAM 1-n
 			else if (_addr < MIRROR_WRAM_OFFSET) {
-				mem_instance->WriteWRAM_N(_data, _addr);
+				m_MemInstance.lock()->WriteWRAM_N(_data, _addr);
 			}
 			// MIRROR WRAM, prohibited
 			else if (_addr < OAM_OFFSET) {
@@ -569,7 +572,7 @@ namespace Emulation {
 			}
 			// OAM
 			else if (_addr < NOT_USED_MEMORY_OFFSET) {
-				mem_instance->WriteOAM(_data, _addr);
+				m_MemInstance.lock()->WriteOAM(_data, _addr);
 			}
 			// NOT USED
 			else if (_addr < IO_OFFSET) {
@@ -577,15 +580,15 @@ namespace Emulation {
 			}
 			// IO REGISTERS
 			else if (_addr < HRAM_OFFSET) {
-				mem_instance->WriteIO(_data, _addr);
+				m_MemInstance.lock()->WriteIO(_data, _addr);
 			}
 			// HRAM (stack,...)
 			else if (_addr < IE_OFFSET) {
-				mem_instance->WriteHRAM(_data, _addr);
+				m_MemInstance.lock()->WriteHRAM(_data, _addr);
 			}
 			// IE register
 			else {
-				mem_instance->WriteIE(_data);
+				m_MemInstance.lock()->WriteIE(_data);
 			}
 		}
 
@@ -598,22 +601,22 @@ namespace Emulation {
 		u8 MmuSM83_MBC3::Read8Bit(const u16& _addr) {
 			// ROM Bank 0
 			if (_addr < ROM_N_OFFSET) {
-				return mem_instance->ReadROM_0(_addr);
+				return m_MemInstance.lock()->ReadROM_0(_addr);
 			}
 			// ROM Bank 1-n
 			else if (_addr < VRAM_N_OFFSET) {
-				return mem_instance->ReadROM_N(_addr);
+				return m_MemInstance.lock()->ReadROM_N(_addr);
 			}
 			// VRAM 0-n
 			else if (_addr < RAM_N_OFFSET) {
-				return mem_instance->ReadVRAM_N(_addr);
+				return m_MemInstance.lock()->ReadVRAM_N(_addr);
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
 				if (timerRamEnable && machineCtx->ram_present) {
 					int ramBankNumber = machineCtx->ram_bank_selected;
 					if (ramBankNumber < 0x04) {
-						return mem_instance->ReadRAM_N(_addr);
+						return m_MemInstance.lock()->ReadRAM_N(_addr);
 					} else if (ramBankNumber > 0x07 && ramBankNumber < 0x0D) {
 						return ReadClock();
 					}
@@ -623,19 +626,19 @@ namespace Emulation {
 			}
 			// WRAM 0
 			else if (_addr < WRAM_N_OFFSET) {
-				return mem_instance->ReadWRAM_0(_addr);
+				return m_MemInstance.lock()->ReadWRAM_0(_addr);
 			}
 			// WRAM 1-n
 			else if (_addr < MIRROR_WRAM_OFFSET) {
-				return mem_instance->ReadWRAM_N(_addr);
+				return m_MemInstance.lock()->ReadWRAM_N(_addr);
 			}
 			// MIRROR WRAM (prohibited)
 			else if (_addr < OAM_OFFSET) {
-				return mem_instance->ReadWRAM_0(_addr);
+				return m_MemInstance.lock()->ReadWRAM_0(_addr);
 			}
 			// OAM
 			else if (_addr < NOT_USED_MEMORY_OFFSET) {
-				return mem_instance->ReadOAM(_addr);
+				return m_MemInstance.lock()->ReadOAM(_addr);
 			}
 			// NOT USED
 			else if (_addr < IO_OFFSET) {
@@ -643,15 +646,15 @@ namespace Emulation {
 			}
 			// IO REGISTERS
 			else if (_addr < HRAM_OFFSET) {
-				return mem_instance->ReadIO(_addr);
+				return m_MemInstance.lock()->ReadIO(_addr);
 			}
 			// HRAM (stack,...)
 			else if (_addr < IE_OFFSET) {
-				return mem_instance->ReadHRAM(_addr);
+				return m_MemInstance.lock()->ReadHRAM(_addr);
 			}
 			// IE register
 			else {
-				return mem_instance->ReadIE();
+				return m_MemInstance.lock()->ReadIE();
 			}
 
 			return 0xFF;
@@ -700,7 +703,11 @@ namespace Emulation {
 /* ***********************************************************************************************************
 	CONSTRUCTOR
 *********************************************************************************************************** */
-		MmuSM83_MBC5::MmuSM83_MBC5(BaseCartridge* _cartridge) : GameboyMMU(_cartridge) {
+		MmuSM83_MBC5::MmuSM83_MBC5(std::shared_ptr<BaseCartridge> _cartridge) : GameboyMMU(_cartridge) {}
+
+		void MmuSM83_MBC5::Init() {
+			GameboyMMU::Init();
+
 			switch (machineCtx->ram_bank_num) {
 			case 0:
 			case 1:
@@ -755,13 +762,13 @@ namespace Emulation {
 			}
 			// VRAM 0-n
 			else if (_addr < RAM_N_OFFSET) {
-				mem_instance->WriteVRAM_N(_data, _addr);
+				m_MemInstance.lock()->WriteVRAM_N(_data, _addr);
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
 				if (machineCtx->ram_present) {
 					if (ramEnable) {
-						mem_instance->WriteRAM_N(_data, _addr);
+						m_MemInstance.lock()->WriteRAM_N(_data, _addr);
 					}
 				} else {
 					LOG_ERROR("[emu] tried to access nonpresent RAM");
@@ -769,11 +776,11 @@ namespace Emulation {
 			}
 			// WRAM 0
 			else if (_addr < WRAM_N_OFFSET) {
-				mem_instance->WriteWRAM_0(_data, _addr);
+				m_MemInstance.lock()->WriteWRAM_0(_data, _addr);
 			}
 			// WRAM 1-n
 			else if (_addr < MIRROR_WRAM_OFFSET) {
-				mem_instance->WriteWRAM_N(_data, _addr);
+				m_MemInstance.lock()->WriteWRAM_N(_data, _addr);
 			}
 			// MIRROR WRAM, prohibited
 			else if (_addr < OAM_OFFSET) {
@@ -781,7 +788,7 @@ namespace Emulation {
 			}
 			// OAM
 			else if (_addr < NOT_USED_MEMORY_OFFSET) {
-				mem_instance->WriteOAM(_data, _addr);
+				m_MemInstance.lock()->WriteOAM(_data, _addr);
 			}
 			// NOT USED
 			else if (_addr < IO_OFFSET) {
@@ -789,15 +796,15 @@ namespace Emulation {
 			}
 			// IO REGISTERS
 			else if (_addr < HRAM_OFFSET) {
-				mem_instance->WriteIO(_data, _addr);
+				m_MemInstance.lock()->WriteIO(_data, _addr);
 			}
 			// HRAM (stack,...)
 			else if (_addr < IE_OFFSET) {
-				mem_instance->WriteHRAM(_data, _addr);
+				m_MemInstance.lock()->WriteHRAM(_data, _addr);
 			}
 			// IE register
 			else {
-				mem_instance->WriteIE(_data);
+				m_MemInstance.lock()->WriteIE(_data);
 			}
 		}
 
@@ -811,43 +818,43 @@ namespace Emulation {
 		u8 MmuSM83_MBC5::Read8Bit(const u16& _addr) {
 			// ROM Bank 0
 			if (_addr < ROM_N_OFFSET) {
-				return mem_instance->ReadROM_0(_addr);
+				return m_MemInstance.lock()->ReadROM_0(_addr);
 			}
 			// ROM Bank 1-n
 			else if (_addr < VRAM_N_OFFSET) {
 				if (rom0Mapped) {
-					return mem_instance->ReadROM_0(_addr - ROM_N_OFFSET);
+					return m_MemInstance.lock()->ReadROM_0(_addr - ROM_N_OFFSET);
 				} else {
-					return mem_instance->ReadROM_N(_addr);
+					return m_MemInstance.lock()->ReadROM_N(_addr);
 				}
 			}
 			// VRAM 0-n
 			else if (_addr < RAM_N_OFFSET) {
-				return mem_instance->ReadVRAM_N(_addr);
+				return m_MemInstance.lock()->ReadVRAM_N(_addr);
 			}
 			// RAM 0-n
 			else if (_addr < WRAM_0_OFFSET) {
 				if (ramEnable && machineCtx->ram_present) {
-					return mem_instance->ReadRAM_N(_addr);
+					return m_MemInstance.lock()->ReadRAM_N(_addr);
 				} else {
 					return 0xFF;
 				}
 			}
 			// WRAM 0
 			else if (_addr < WRAM_N_OFFSET) {
-				return mem_instance->ReadWRAM_0(_addr);
+				return m_MemInstance.lock()->ReadWRAM_0(_addr);
 			}
 			// WRAM 1-n
 			else if (_addr < MIRROR_WRAM_OFFSET) {
-				return mem_instance->ReadWRAM_N(_addr);
+				return m_MemInstance.lock()->ReadWRAM_N(_addr);
 			}
 			// MIRROR WRAM (prohibited)
 			else if (_addr < OAM_OFFSET) {
-				return mem_instance->ReadWRAM_0(_addr);
+				return m_MemInstance.lock()->ReadWRAM_0(_addr);
 			}
 			// OAM
 			else if (_addr < NOT_USED_MEMORY_OFFSET) {
-				return mem_instance->ReadOAM(_addr);
+				return m_MemInstance.lock()->ReadOAM(_addr);
 			}
 			// NOT USED
 			else if (_addr < IO_OFFSET) {
@@ -855,15 +862,15 @@ namespace Emulation {
 			}
 			// IO REGISTERS
 			else if (_addr < HRAM_OFFSET) {
-				return mem_instance->ReadIO(_addr);
+				return m_MemInstance.lock()->ReadIO(_addr);
 			}
 			// HRAM (stack,...)
 			else if (_addr < IE_OFFSET) {
-				return mem_instance->ReadHRAM(_addr);
+				return m_MemInstance.lock()->ReadHRAM(_addr);
 			}
 			// IE register
 			else {
-				return mem_instance->ReadIE();
+				return m_MemInstance.lock()->ReadIE();
 			}
 
 			return 0xFF;

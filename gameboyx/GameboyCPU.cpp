@@ -77,31 +77,35 @@ namespace Emulation {
         /* ***********************************************************************************************************
             CONSTRUCTOR
         *********************************************************************************************************** */
-        GameboyCPU::GameboyCPU(BaseCartridge* _cartridge) : BaseCPU(_cartridge) {
-            mem_instance = (GameboyMEM*)BaseMEM::getInstance();
-            machineCtx = mem_instance->GetMachineContext();
-            graphics_ctx = mem_instance->GetGraphicsContext();
-            sound_ctx = mem_instance->GetSoundContext();
-
-            if (!machineCtx->boot_rom_mapped) {
-                InitRegisterStates();
-            }
-
+        GameboyCPU::GameboyCPU(std::shared_ptr<BaseCartridge> _cartridge) : BaseCPU(_cartridge) {
             setupLookupTable();
             setupLookupTableCB();
 
             GenerateAssemblyTables(_cartridge);
         }
 
-        void GameboyCPU::SetInstances() {
-            graphics_instance = BaseGPU::getInstance();
-            sound_instance = BaseAPU::getInstance();
-            ticksPerFrame = graphics_instance->GetTicksPerFrame((float)(BASE_CLOCK_CPU));
-        }
-
         /* ***********************************************************************************************************
             INIT CPU
         *********************************************************************************************************** */
+        void GameboyCPU::Init() {
+            m_MmuInstance = BaseMMU::s_GetInstance();
+            m_GraphicsInstance = BaseGPU::s_GetInstance();
+            m_SoundInstance = BaseAPU::s_GetInstance();
+            m_MemInstance = std::dynamic_pointer_cast<GameboyMEM>(BaseMEM::s_GetInstance());
+
+            machineCtx = m_MemInstance.lock()->GetMachineContext();
+            graphics_ctx = m_MemInstance.lock()->GetGraphicsContext();
+            sound_ctx = m_MemInstance.lock()->GetSoundContext();
+
+            if (!machineCtx->boot_rom_mapped) {
+                InitRegisterStates();
+            }
+
+            m_GraphicsInstance = BaseGPU::s_GetInstance();
+            m_SoundInstance = BaseAPU::s_GetInstance();
+            ticksPerFrame = m_GraphicsInstance.lock()->GetTicksPerFrame((float)(BASE_CLOCK_CPU));
+        }
+
         // initial register states
         void GameboyCPU::InitRegisterStates() {
             Regs = registers();
@@ -154,7 +158,7 @@ namespace Emulation {
         void GameboyCPU::RunCpu() {
             if (machineCtx->stopped) {
                 // check button press
-                if (mem_instance->GetIO(IF_ADDR) & IRQ_JOYPAD) {
+                if (m_MemInstance.lock()->GetIO(IF_ADDR) & IRQ_JOYPAD) {
                     machineCtx->stopped = false;
                 } else {
                     return;
@@ -164,7 +168,7 @@ namespace Emulation {
                 TickTimers();
 
                 // check pending and enabled interrupts
-                if (machineCtx->IE & mem_instance->GetIO(IF_ADDR)) {
+                if (machineCtx->IE & m_MemInstance.lock()->GetIO(IF_ADDR)) {
                     machineCtx->halted = false;
                 }
             } else {
@@ -199,7 +203,7 @@ namespace Emulation {
 
         bool GameboyCPU::CheckInterrupts() {
             if (ime) {
-                u8& isr_requested = mem_instance->GetIO(IF_ADDR);
+                u8& isr_requested = m_MemInstance.lock()->GetIO(IF_ADDR);
                 if ((isr_requested & IRQ_VBLANK) && (machineCtx->IE & IRQ_VBLANK)) {
                     ime = false;
 
@@ -242,13 +246,13 @@ namespace Emulation {
         // ticks the timers for 4 clock cycles / 1 machine cycle and everything thats related to it
         void GameboyCPU::TickTimers() {
             bool div_low_byte_selected = machineCtx->timaDivMask < 0x100;
-            u8& div = mem_instance->GetIO(DIV_ADDR);
-            bool tima_enabled = mem_instance->GetIO(TAC_ADDR) & TAC_CLOCK_ENABLE;
+            u8& div = m_MemInstance.lock()->GetIO(DIV_ADDR);
+            bool tima_enabled = m_MemInstance.lock()->GetIO(TAC_ADDR) & TAC_CLOCK_ENABLE;
 
             if (machineCtx->tima_reload_cycle) {
-                div = mem_instance->GetIO(TMA_ADDR);
+                div = m_MemInstance.lock()->GetIO(TMA_ADDR);
                 if (!machineCtx->tima_reload_if_write) {
-                    mem_instance->RequestInterrupts(IRQ_TIMER);
+                    m_MemInstance.lock()->RequestInterrupts(IRQ_TIMER);
                 } else {
                     machineCtx->tima_reload_if_write = false;
                 }
@@ -270,7 +274,7 @@ namespace Emulation {
 
                     apuDivBitOverflowCur = div & machineCtx->apuDivMask ? true : false;
                     if (!apuDivBitOverflowCur && apuDivBitOverflowPrev) {
-                        sound_instance->ProcessAPU(1);
+                        m_SoundInstance.lock()->ProcessAPU(1);
                     }
                     apuDivBitOverflowPrev = apuDivBitOverflowCur;
                 } else {
@@ -291,12 +295,12 @@ namespace Emulation {
 
             currentTicks += TICKS_PER_MC;
 
-            graphics_instance->ProcessGPU(TICKS_PER_MC);
-            sound_instance->GenerateSamples(TICKS_PER_MC / machineCtx->currentSpeed);
+            m_GraphicsInstance.lock()->ProcessGPU(TICKS_PER_MC);
+            m_SoundInstance.lock()->GenerateSamples(TICKS_PER_MC / machineCtx->currentSpeed);
         }
 
         void GameboyCPU::IncrementTIMA() {
-            u8& tima = mem_instance->GetIO(TIMA_ADDR);
+            u8& tima = m_MemInstance.lock()->GetIO(TIMA_ADDR);
             if (tima == 0xFF) {
                 tima = 0x00;
                 machineCtx->tima_overflow_cycle = true;
@@ -307,49 +311,49 @@ namespace Emulation {
         }
 
         void GameboyCPU::FetchOpCode() {
-            opcode = mmu_instance->Read8Bit(Regs.PC);
+            opcode = m_MmuInstance.lock()->Read8Bit(Regs.PC);
             Regs.PC++;
             TickTimers();
         }
 
         void GameboyCPU::Fetch8Bit() {
-            data = mmu_instance->Read8Bit(Regs.PC);
+            data = m_MmuInstance.lock()->Read8Bit(Regs.PC);
             Regs.PC++;
             TickTimers();
         }
 
         void GameboyCPU::Fetch16Bit() {
-            data = mmu_instance->Read8Bit(Regs.PC);
+            data = m_MmuInstance.lock()->Read8Bit(Regs.PC);
             Regs.PC++;
             TickTimers();
 
-            data |= (((u16)mmu_instance->Read8Bit(Regs.PC)) << 8);
+            data |= (((u16)m_MmuInstance.lock()->Read8Bit(Regs.PC)) << 8);
             Regs.PC++;
             TickTimers();
         }
 
         void GameboyCPU::Write8Bit(const u8& _data, const u16& _addr) {
-            mmu_instance->Write8Bit(_data, _addr);
+            m_MmuInstance.lock()->Write8Bit(_data, _addr);
             TickTimers();
         }
 
         void GameboyCPU::Write16Bit(const u16& _data, const u16& _addr) {
-            mmu_instance->Write8Bit((_data >> 8) & 0xFF, _addr + 1);
+            m_MmuInstance.lock()->Write8Bit((_data >> 8) & 0xFF, _addr + 1);
             TickTimers();
-            mmu_instance->Write8Bit(_data & 0xFF, _addr);
+            m_MmuInstance.lock()->Write8Bit(_data & 0xFF, _addr);
             TickTimers();
         }
 
         u8 GameboyCPU::Read8Bit(const u16& _addr) {
-            u8 data = mmu_instance->Read8Bit(_addr);
+            u8 data = m_MmuInstance.lock()->Read8Bit(_addr);
             TickTimers();
             return data;
         }
 
         u16 GameboyCPU::Read16Bit(const u16& _addr) {
-            u16 data = mmu_instance->Read8Bit(_addr);
+            u16 data = m_MmuInstance.lock()->Read8Bit(_addr);
             TickTimers();
-            data |= (((u16)mmu_instance->Read8Bit(_addr + 1)) << 8);
+            data |= (((u16)m_MmuInstance.lock()->Read8Bit(_addr + 1)) << 8);
             TickTimers();
             return data;
         }
@@ -710,7 +714,7 @@ namespace Emulation {
 
         // stopped
         void GameboyCPU::STOP() {
-            u8 isr_requested = mem_instance->GetIO(IF_ADDR);
+            u8 isr_requested = m_MemInstance.lock()->GetIO(IF_ADDR);
 
             bool joyp = (isr_requested & IRQ_JOYPAD);
             bool two_byte = false;
@@ -753,7 +757,7 @@ namespace Emulation {
 
 
             if (two_byte) {
-                data = mmu_instance->Read8Bit(Regs.PC);
+                data = m_MmuInstance.lock()->Read8Bit(Regs.PC);
                 Regs.PC++;
 
                 if (data) {
@@ -763,7 +767,7 @@ namespace Emulation {
             }
 
             if (div_reset) {
-                mmu_instance->Write8Bit(0x00, DIV_ADDR);
+                m_MmuInstance.lock()->Write8Bit(0x00, DIV_ADDR);
             }
 
             if (machineCtx->speed_switch_requested) {
@@ -3600,7 +3604,7 @@ namespace Emulation {
             _register_values.emplace_back(REGISTER_NAMES.at(SP), format("{:04x}", Regs.SP));
             _register_values.emplace_back(REGISTER_NAMES.at(PC), format("{:04x}", Regs.PC));
             _register_values.emplace_back(REGISTER_NAMES.at(IEreg), format("{:02x}", machineCtx->IE));
-            _register_values.emplace_back(REGISTER_NAMES.at(IFreg), format("{:02x}", mem_instance->GetIO(IF_ADDR)));
+            _register_values.emplace_back(REGISTER_NAMES.at(IFreg), format("{:02x}", m_MemInstance.lock()->GetIO(IF_ADDR)));
 
             _flag_values.clear();
             _flag_values.emplace_back(FLAG_NAMES.at(FLAG_C), format("{:01b}", (Regs.F & FLAG_CARRY) >> 4));
@@ -3608,7 +3612,7 @@ namespace Emulation {
             _flag_values.emplace_back(FLAG_NAMES.at(FLAG_N), format("{:01b}", (Regs.F & FLAG_SUB) >> 6));
             _flag_values.emplace_back(FLAG_NAMES.at(FLAG_Z), format("{:01b}", (Regs.F & FLAG_ZERO) >> 7));
             _flag_values.emplace_back(FLAG_NAMES.at(FLAG_IME), format("{:01b}", ime ? 1 : 0));
-            u8 isr_requested = mem_instance->GetIO(IF_ADDR);
+            u8 isr_requested = m_MemInstance.lock()->GetIO(IF_ADDR);
             _flag_values.emplace_back(FLAG_NAMES.at(INT_VBLANK), format("{:01b}", (isr_requested & IRQ_VBLANK)));
             _flag_values.emplace_back(FLAG_NAMES.at(INT_STAT), format("{:01b}", (isr_requested & IRQ_LCD_STAT) >> 1));
             _flag_values.emplace_back(FLAG_NAMES.at(INT_TIMER), format("{:01b}", (isr_requested & IRQ_TIMER) >> 2));
@@ -3616,16 +3620,16 @@ namespace Emulation {
             _flag_values.emplace_back(FLAG_NAMES.at(INT_JOYPAD), format("{:01b}", (isr_requested & IRQ_JOYPAD) >> 4));
 
             _misc_values.clear();
-            _misc_values.emplace_back("LCDC", format("{:08b} (bin)", mem_instance->GetIO(LCDC_ADDR)));
-            _misc_values.emplace_back("STAT", format("{:08b} (bin)", mem_instance->GetIO(STAT_ADDR)));
-            _misc_values.emplace_back("WRAM", format("{:01d} (dec)", mem_instance->GetIO(CGB_WRAM_SELECT_ADDR)));
-            _misc_values.emplace_back("VRAM", format("{:01d} (dec)", mem_instance->GetIO(CGB_VRAM_SELECT_ADDR)));
-            _misc_values.emplace_back("LY", format("{:03d} (dec)", mem_instance->GetIO(LY_ADDR)));
-            _misc_values.emplace_back("LYC", format("{:03d} (dec)", mem_instance->GetIO(LYC_ADDR)));
-            _misc_values.emplace_back("SCX", format("{:03d} (dec)", mem_instance->GetIO(SCX_ADDR)));
-            _misc_values.emplace_back("SCY", format("{:03d} (dec)", mem_instance->GetIO(SCY_ADDR)));
-            _misc_values.emplace_back("WX", format("{:03d} (dec)", mem_instance->GetIO(WX_ADDR)));
-            _misc_values.emplace_back("WY", format("{:03d} (dec)", mem_instance->GetIO(WY_ADDR)));
+            _misc_values.emplace_back("LCDC", format("{:08b} (bin)", m_MemInstance.lock()->GetIO(LCDC_ADDR)));
+            _misc_values.emplace_back("STAT", format("{:08b} (bin)", m_MemInstance.lock()->GetIO(STAT_ADDR)));
+            _misc_values.emplace_back("WRAM", format("{:01d} (dec)", m_MemInstance.lock()->GetIO(CGB_WRAM_SELECT_ADDR)));
+            _misc_values.emplace_back("VRAM", format("{:01d} (dec)", m_MemInstance.lock()->GetIO(CGB_VRAM_SELECT_ADDR)));
+            _misc_values.emplace_back("LY", format("{:03d} (dec)", m_MemInstance.lock()->GetIO(LY_ADDR)));
+            _misc_values.emplace_back("LYC", format("{:03d} (dec)", m_MemInstance.lock()->GetIO(LYC_ADDR)));
+            _misc_values.emplace_back("SCX", format("{:03d} (dec)", m_MemInstance.lock()->GetIO(SCX_ADDR)));
+            _misc_values.emplace_back("SCY", format("{:03d} (dec)", m_MemInstance.lock()->GetIO(SCY_ADDR)));
+            _misc_values.emplace_back("WX", format("{:03d} (dec)", m_MemInstance.lock()->GetIO(WX_ADDR)));
+            _misc_values.emplace_back("WY", format("{:03d} (dec)", m_MemInstance.lock()->GetIO(WY_ADDR)));
             _misc_values.emplace_back("Mode", format("{:1d} (dec)", graphics_ctx->mode));
         }
 
@@ -3819,14 +3823,15 @@ namespace Emulation {
             }
         }
 
-        void GameboyCPU::GenerateAssemblyTables(BaseCartridge* _cartridge) {
+        void GameboyCPU::GenerateAssemblyTables(std::shared_ptr<BaseCartridge> _cartridge) {
             auto& rom_data = _cartridge->GetRom();
-            asmTables = assembly_tables(machineCtx->rom_bank_num);
+            size_t bank_num = rom_data.size() / ROM_N_SIZE;
+            asmTables = assembly_tables(bank_num);
 
             assembly_table current_table;
             int offset = 0;
 
-            for (int i = 0; i < machineCtx->rom_bank_num; i++) {
+            for (int i = 0; i < (int)bank_num; i++) {
                 current_table = assembly_table();
 
                 if (i == 0)     { offset = ROM_0_OFFSET; } 
@@ -3843,22 +3848,22 @@ namespace Emulation {
             _table = assembly_tables(1);
 
             if (Regs.PC >= VRAM_N_OFFSET && Regs.PC < RAM_N_OFFSET) {
-                bank_num = mem_instance->GetIO(CGB_VRAM_SELECT_ADDR);
+                bank_num = m_MemInstance.lock()->GetIO(CGB_VRAM_SELECT_ADDR);
                 DisassembleBankContent(_table.back(), graphics_ctx->VRAM_N[bank_num].data(), VRAM_N_OFFSET, VRAM_N_SIZE, bank_num, "VRAM");
             } else if (Regs.PC >= RAM_N_OFFSET && Regs.PC < WRAM_0_OFFSET) {
                 bank_num = machineCtx->ram_bank_selected;
                 std::vector<u8> ram = std::vector<u8>(RAM_N_SIZE);
-                memcpy(ram.data(), mem_instance->RAM_N[bank_num], RAM_N_SIZE);
+                memcpy(ram.data(), m_MemInstance.lock()->RAM_N[bank_num], RAM_N_SIZE);
                 DisassembleBankContent(_table.back(), ram.data(), RAM_N_OFFSET, RAM_N_SIZE, bank_num, "RAM");
             } else if (Regs.PC >= WRAM_0_OFFSET && Regs.PC < WRAM_N_OFFSET) {
                 bank_num = 0;
-                DisassembleBankContent(_table.back(), mem_instance->WRAM_0.data(), WRAM_0_OFFSET, WRAM_0_SIZE, bank_num, "WRAM");
+                DisassembleBankContent(_table.back(), m_MemInstance.lock()->WRAM_0.data(), WRAM_0_OFFSET, WRAM_0_SIZE, bank_num, "WRAM");
             } else if (Regs.PC >= WRAM_N_OFFSET && Regs.PC < MIRROR_WRAM_OFFSET) {
                 bank_num = machineCtx->wram_bank_selected;
-                DisassembleBankContent(_table.back(), mem_instance->WRAM_N[bank_num].data(), WRAM_N_OFFSET, WRAM_N_SIZE, bank_num + 1, "WRAM");
+                DisassembleBankContent(_table.back(), m_MemInstance.lock()->WRAM_N[bank_num].data(), WRAM_N_OFFSET, WRAM_N_SIZE, bank_num + 1, "WRAM");
             } else if (Regs.PC >= HRAM_OFFSET && Regs.PC < IE_OFFSET) {
                 bank_num = 0;
-                DisassembleBankContent(_table.back(), mem_instance->HRAM.data(), HRAM_OFFSET, HRAM_SIZE, bank_num, "HRAM");
+                DisassembleBankContent(_table.back(), m_MemInstance.lock()->HRAM.data(), HRAM_OFFSET, HRAM_SIZE, bank_num, "HRAM");
             } else {
                 // TODO
             }

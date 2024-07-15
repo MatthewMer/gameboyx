@@ -20,9 +20,10 @@ namespace Emulation {
 	class BaseGPU {
 	public:
 		// get/reset instance
-		static BaseGPU* getInstance(BaseCartridge* _cartridge);
-		static BaseGPU* getInstance();
-		static void resetInstance();
+		static std::shared_ptr<BaseGPU> s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge);
+		static std::shared_ptr<BaseGPU> s_GetInstance();
+		static void s_ResetInstance();
+		virtual void Init() = 0;
 
 		// clone/assign protection
 		BaseGPU(BaseGPU const&) = delete;
@@ -53,6 +54,6 @@ namespace Emulation {
 		std::vector<std::atomic<bool>*> graphicsDebugSettings;
 
 	private:
-		static BaseGPU* instance;
+		static std::weak_ptr<BaseGPU> m_Instance;
 	};
 }

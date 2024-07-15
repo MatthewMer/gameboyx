@@ -4,32 +4,32 @@
 #include "logger.h"
 
 namespace Emulation {
-	BaseGPU* BaseGPU::instance = nullptr;
+	std::weak_ptr<BaseGPU> BaseGPU::m_Instance;
 
-	BaseGPU* BaseGPU::getInstance(BaseCartridge* _cartridge) {
-		if (instance == nullptr) {
+	std::shared_ptr<BaseGPU> BaseGPU::s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge) {
+		std::shared_ptr<BaseGPU> ptr = m_Instance.lock();
+
+		if (!ptr) {
 			switch (_cartridge->console) {
 			case GB:
 			case GBC:
-				instance = new Gameboy::GameboyGPU(_cartridge);
+				ptr = std::static_pointer_cast<BaseGPU>(std::make_shared<Gameboy::GameboyGPU>(_cartridge));
 				break;
 			}
+
+			m_Instance = ptr;
 		}
 
-		return instance;
+		return ptr;
 	}
 
-	BaseGPU* BaseGPU::getInstance() {
-		if (instance == nullptr) {
-			LOG_ERROR("[emu] GPU instance is nullptr");
-		}
-		return instance;
+	std::shared_ptr<BaseGPU> BaseGPU::s_GetInstance() {
+		return m_Instance.lock();
 	}
 
-	void BaseGPU::resetInstance() {
-		if (instance != nullptr) {
-			delete instance;
-			instance = nullptr;
+	void BaseGPU::s_ResetInstance() {
+		if (m_Instance.lock()) {
+			m_Instance.reset();
 		}
 	}
 

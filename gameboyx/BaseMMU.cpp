@@ -11,37 +11,32 @@ namespace Emulation {
 	/* ***********************************************************************************************************
 		MMU BASE CLASS
 	*********************************************************************************************************** */
-	BaseMMU* BaseMMU::instance = nullptr;
+	std::weak_ptr<BaseMMU> BaseMMU::m_Instance;
 
-	BaseMMU* BaseMMU::getInstance(BaseCartridge* _cartridge) {
-		if (instance == nullptr) {
+	std::shared_ptr<BaseMMU> BaseMMU::s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge) {
+		std::shared_ptr<BaseMMU> ptr = m_Instance.lock();
+
+		if (!ptr) {
 			switch (_cartridge->console) {
 			case GB:
 			case GBC:
-				instance = Gameboy::GameboyMMU::getInstance(_cartridge);
+				ptr = std::static_pointer_cast<BaseMMU>(Gameboy::GameboyMMU::s_GetInstance(_cartridge));
 				break;
 			}
+
+			m_Instance = ptr;
 		}
 
-		return instance;
+		return ptr;
 	}
 
-	BaseMMU* BaseMMU::getInstance() {
-		if (instance == nullptr) {
-			LOG_ERROR("[emu] MMU instance is nullptr");
+	std::shared_ptr<BaseMMU> BaseMMU::s_GetInstance() {
+		return m_Instance.lock();
+	}
+
+	void BaseMMU::s_ResetInstance() {
+		if (m_Instance.lock()) {
+			m_Instance.reset();
 		}
-		return instance;
-	}
-
-	void BaseMMU::resetInstance() {
-		if (instance != nullptr) {
-			delete instance;
-			instance = nullptr;
-		}
-	}
-
-	vector<char> BaseMMU::GetSaveData() {
-		saveFinished.store(true);
-		return saveData;
 	}
 }

@@ -14,9 +14,13 @@
 
 namespace Emulation {
 	namespace Gameboy {
-		class GameboyGPU : protected BaseGPU {
+		class GameboyGPU : public BaseGPU {
 		public:
 			friend class BaseGPU;
+			// constructor
+			GameboyGPU(std::shared_ptr<BaseCartridge> _cartridge);
+			~GameboyGPU() override;
+			void Init() override;
 
 			// members
 			void ProcessGPU(const int& _ticks) override;
@@ -32,40 +36,12 @@ namespace Emulation {
 			void SetGraphicsDebugSetting(const bool& _val, const int& _id) override;
 
 		private:
-			// constructor
-			GameboyGPU(BaseCartridge* _cartridge) {
-				memInstance = (GameboyMEM*)BaseMEM::getInstance(_cartridge);
-				graphicsCtx = memInstance->GetGraphicsContext();
-				machineCtx = memInstance->GetMachineContext();
-
-				imageData = std::vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * TEX2D_CHANNELS);
-
-				Backend::virtual_graphics_information virt_graphics_info = {};
-				virt_graphics_info.is2d = virt_graphics_info.en2d = true;
-				virt_graphics_info.image_data = &imageData;
-				virt_graphics_info.aspect_ratio = LCD_ASPECT_RATIO;
-				virt_graphics_info.lcd_width = PPU_SCREEN_X;
-				virt_graphics_info.lcd_height = PPU_SCREEN_Y;
-				Backend::HardwareMgr::InitGraphicsBackend(virt_graphics_info);
-
-				if (machineCtx->is_cgb || machineCtx->cgb_compatibility) {
-					SetHardwareMode(GBC);
-				} else {
-					SetHardwareMode(GB);
-				}
-
-				coreInstance = (GameboyCPU*)BaseCPU::getInstance(_cartridge);
-			}
-			// destructor
-			~GameboyGPU() override {
-				Backend::HardwareMgr::DestroyGraphicsBackend();
-			}
-
 			int GetDelayTime() const override;
 			int GetTicksPerFrame(const float& _clock) const override;
 
 			// memory access
-			GameboyMEM* memInstance = nullptr;
+			std::weak_ptr<GameboyMEM> m_MemInstance;
+			std::weak_ptr<GameboyCPU> m_CoreInstance;
 			graphics_context* graphicsCtx = nullptr;
 			machine_context* machineCtx = nullptr;
 
@@ -117,8 +93,6 @@ namespace Emulation {
 			bool drawWindow = false;
 
 			int mode3Dots;
-
-			GameboyCPU* coreInstance;
 
 			alignas(64) std::atomic<bool> presentObjPrio0 = true;
 			alignas(64) std::atomic<bool> presentObjPrio1 = true;

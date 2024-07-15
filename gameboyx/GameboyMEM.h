@@ -340,15 +340,19 @@ namespace Emulation {
 			u8 div_bit = SERIAL_NORMAL_SPEED_BIT;
 		};
 
-		class GameboyMEM : private BaseMEM {
+		class GameboyMEM : public BaseMEM {
 		public:
 			friend class BaseMEM;
+			// constructor
+			explicit GameboyMEM(std::shared_ptr<BaseCartridge> _cartridge);
+			virtual ~GameboyMEM() override;
+			void Init() override;
 
 			// clone/assign protection
-			GameboyMEM(GameboyMEM const&) = delete;
-			GameboyMEM(GameboyMEM&&) = delete;
-			GameboyMEM& operator=(GameboyMEM const&) = delete;
-			GameboyMEM& operator=(GameboyMEM&&) = delete;
+			//GameboyMEM(GameboyMEM const&) = delete;
+			//GameboyMEM(GameboyMEM&&) = delete;
+			//GameboyMEM& operator=(GameboyMEM const&) = delete;
+			//GameboyMEM& operator=(GameboyMEM&&) = delete;
 
 			// members for memory access
 			u8 ReadROM_0(const u16& _addr);
@@ -402,47 +406,8 @@ namespace Emulation {
 			std::string saveFile = "";
 
 		private:
-			// constructor
-			explicit GameboyMEM(BaseCartridge* _cartridge) {
-				machineCtx.battery_buffered = _cartridge->batteryBuffered;
-				machineCtx.ram_present = _cartridge->ramPresent;
-				machineCtx.timer_present = _cartridge->timerPresent;
-
-				if (machineCtx.is_cgb) {
-					graphics_ctx.dmg_bgp_color_palette[0] = CGB_DMG_COLOR_WHITE;
-					graphics_ctx.dmg_bgp_color_palette[1] = CGB_DMG_COLOR_LIGHTGREY;
-					graphics_ctx.dmg_bgp_color_palette[2] = CGB_DMG_COLOR_DARKGREY;
-					graphics_ctx.dmg_bgp_color_palette[3] = CGB_DMG_COLOR_BLACK;
-				} else {
-					graphics_ctx.dmg_bgp_color_palette[0] = DMG_COLOR_WHITE_ALT;
-					graphics_ctx.dmg_bgp_color_palette[1] = DMG_COLOR_LIGHTGREY_ALT;
-					graphics_ctx.dmg_bgp_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
-					graphics_ctx.dmg_bgp_color_palette[3] = DMG_COLOR_BLACK_ALT;
-					graphics_ctx.dmg_obp0_color_palette[0] = DMG_COLOR_WHITE_ALT;
-					graphics_ctx.dmg_obp0_color_palette[1] = DMG_COLOR_LIGHTGREY_ALT;
-					graphics_ctx.dmg_obp0_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
-					graphics_ctx.dmg_obp0_color_palette[3] = DMG_COLOR_BLACK_ALT;
-					graphics_ctx.dmg_obp1_color_palette[0] = DMG_COLOR_WHITE_ALT;
-					graphics_ctx.dmg_obp1_color_palette[1] = DMG_COLOR_LIGHTGREY_ALT;
-					graphics_ctx.dmg_obp1_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
-					graphics_ctx.dmg_obp1_color_palette[3] = DMG_COLOR_BLACK_ALT;
-				}
-
-				InitMemory(_cartridge);
-
-				GenerateMemoryTables();
-			};
-			// destructor
-			~GameboyMEM() override {
-				if (!machineCtx.battery_buffered && machineCtx.ram_present) {
-					for (auto& n : RAM_N) {
-						delete[] n;
-					}
-				}
-			}
-
 			// members
-			void InitMemory(BaseCartridge* _cartridge) override;
+			void InitMemory(std::shared_ptr<BaseCartridge> _cartridge) override;
 			void InitMemoryState() override;
 
 			void GenerateMemoryTables() override;
@@ -454,7 +419,7 @@ namespace Emulation {
 
 			void ProcessTAC();
 
-			void AllocateMemory(BaseCartridge* _cartridge) override;
+			void AllocateMemory(std::shared_ptr<BaseCartridge> _cartridge) override;
 
 			// controller
 			void SetControlValues(const u8& _data);

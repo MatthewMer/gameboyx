@@ -23,9 +23,15 @@ namespace Emulation {
 
 	class BaseCartridge {
 	public:
+		// clone/assign protection
+		BaseCartridge(BaseCartridge const&) = delete;
+		BaseCartridge(BaseCartridge&&) = delete;
+		BaseCartridge& operator=(BaseCartridge const&) = delete;
+		BaseCartridge& operator=(BaseCartridge&&) = delete;
+
 		static bool check_ext(const std::string& _file_path);
-		static BaseCartridge* new_game(const std::string& _file_path);
-		static BaseCartridge* existing_game(const std::string& _title, const std::string& _file_name, const std::string& _file_path, const Emulation::console_ids& _id, const std::string& _version);
+		static std::shared_ptr<BaseCartridge> new_game(const std::string& _file_path);
+		static std::shared_ptr<BaseCartridge> existing_game(const std::string& _title, const std::string& _file_name, const std::string& _file_path, const Emulation::console_ids& _id, const std::string& _version);
 
 		bool CopyToRomFolder();
 		virtual bool ReadRom() = 0;
@@ -51,14 +57,6 @@ namespace Emulation {
 		bool ramPresent = false;
 		bool timerPresent = false;
 
-		// clone/assign protection
-		BaseCartridge(BaseCartridge const&) = delete;
-		BaseCartridge(BaseCartridge&&) = delete;
-		BaseCartridge& operator=(BaseCartridge const&) = delete;
-		BaseCartridge& operator=(BaseCartridge&&) = delete;
-
-		~BaseCartridge() = default;
-
 	protected:
 		// constructor
 		explicit BaseCartridge(const Emulation::console_ids& _id, const std::string& _file) : console(_id) {
@@ -80,12 +78,12 @@ namespace Emulation {
 			fileName = file_split.back();
 		}
 
+		virtual ~BaseCartridge() = default;
+
 		std::vector<u8> vecRom;
 		bool bootRom = false;
 		std::string bootRomPath = "";
 		std::vector<u8> vecBootRom;
 		console_ids bootRomType = GB;
-
-	private:
 	};
 }

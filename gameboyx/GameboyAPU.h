@@ -23,9 +23,14 @@ namespace Emulation {
 		/* *************************************************************************************************
 			GameboyAPU CLASS
 		************************************************************************************************* */
-		class GameboyAPU : protected BaseAPU {
+		class GameboyAPU : public BaseAPU {
 		public:
 			friend class BaseAPU;
+
+			// constructor
+			GameboyAPU(std::shared_ptr<BaseCartridge> _cartridge);
+			~GameboyAPU() override;
+			void Init() override;
 
 			// members
 			void ProcessAPU(const int& _ticks) override;
@@ -33,25 +38,6 @@ namespace Emulation {
 			void SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) override;
 
 		private:
-			// constructor
-			GameboyAPU(BaseCartridge* _cartridge) : BaseAPU() {
-				memInstance = (GameboyMEM*)BaseMEM::getInstance();
-				soundCtx = memInstance->GetSoundContext();
-
-				virtualChannels = APU_CHANNELS_NUM;
-
-				Backend::virtual_audio_information virt_audio_info = {};
-				virt_audio_info.channels = virtualChannels;
-				virt_audio_info.apu_callback = [this](std::vector<std::complex<float>>& _samples, const int& _num, const int& _sampling_rate) {
-					this->SampleAPU(_samples, _num, _sampling_rate);
-					};
-				Backend::HardwareMgr::StartAudioBackend(virt_audio_info);
-			}
-			// destructor
-			~GameboyAPU() override {
-				Backend::HardwareMgr::StopAudioBackend();
-			}
-
 			alignas(64) std::atomic<float> samplesPerTick = 0;
 
 			int envelopeSweepCounter = 0;
@@ -82,7 +68,7 @@ namespace Emulation {
 
 			void SampleWaveRam(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx);
 
-			GameboyMEM* memInstance = nullptr;
+			std::weak_ptr<GameboyMEM> m_MemInstance;
 			sound_context* soundCtx = nullptr;
 		};
 	}

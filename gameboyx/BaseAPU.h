@@ -7,9 +7,10 @@ namespace Emulation {
 	class BaseAPU {
 	public:
 		// get/reset instance
-		static BaseAPU* getInstance(BaseCartridge* _cartridge);
-		static BaseAPU* getInstance();
-		static void resetInstance();
+		static std::shared_ptr<BaseAPU> s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge);
+		static std::shared_ptr<BaseAPU> s_GetInstance();
+		static void s_ResetInstance();
+		virtual void Init() = 0;
 
 		// clone/assign protection
 		BaseAPU(BaseAPU const&) = delete;
@@ -25,9 +26,9 @@ namespace Emulation {
 	protected:
 		// constructor
 		BaseAPU() {}
-		virtual ~BaseAPU() = default;
+		virtual ~BaseAPU() {}
 
 	private:
-		static BaseAPU* instance;
+		static std::weak_ptr<BaseAPU> m_Instance;
 	};
 }

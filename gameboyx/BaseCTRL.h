@@ -9,8 +9,10 @@ namespace Emulation {
 	class BaseCTRL {
 	public:
 		// get/reset instance
-		static BaseCTRL* getInstance(BaseCartridge* _cartridge);
-		static void resetInstance();
+		static std::shared_ptr<BaseCTRL> s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge);
+		static std::shared_ptr<BaseCTRL> s_GetInstance();
+		static void s_ResetInstance();
+		virtual void Init() = 0;
 
 		// clone/assign protection
 		BaseCTRL(BaseCTRL const&) = delete;
@@ -28,6 +30,6 @@ namespace Emulation {
 		virtual ~BaseCTRL() {}
 
 	private:
-		static BaseCTRL* instance;
+		static std::weak_ptr<BaseCTRL> m_Instance;
 	};
 }

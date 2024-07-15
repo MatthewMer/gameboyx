@@ -18,6 +18,49 @@ namespace Emulation {
         #define LINE_NUM_HEX(x)     (((float)x / DEBUG_MEM_ELEM_PER_LINE) + ((float)(DEBUG_MEM_ELEM_PER_LINE - 1) / DEBUG_MEM_ELEM_PER_LINE))
 
         /* ***********************************************************************************************************
+            CONSTRUCTOR
+        *********************************************************************************************************** */
+        GameboyMEM::GameboyMEM(std::shared_ptr<BaseCartridge> _cartridge) {
+            machineCtx.battery_buffered = _cartridge->batteryBuffered;
+            machineCtx.ram_present = _cartridge->ramPresent;
+            machineCtx.timer_present = _cartridge->timerPresent;
+
+            if (machineCtx.is_cgb) {
+                graphics_ctx.dmg_bgp_color_palette[0] = CGB_DMG_COLOR_WHITE;
+                graphics_ctx.dmg_bgp_color_palette[1] = CGB_DMG_COLOR_LIGHTGREY;
+                graphics_ctx.dmg_bgp_color_palette[2] = CGB_DMG_COLOR_DARKGREY;
+                graphics_ctx.dmg_bgp_color_palette[3] = CGB_DMG_COLOR_BLACK;
+            } else {
+                graphics_ctx.dmg_bgp_color_palette[0] = DMG_COLOR_WHITE_ALT;
+                graphics_ctx.dmg_bgp_color_palette[1] = DMG_COLOR_LIGHTGREY_ALT;
+                graphics_ctx.dmg_bgp_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
+                graphics_ctx.dmg_bgp_color_palette[3] = DMG_COLOR_BLACK_ALT;
+                graphics_ctx.dmg_obp0_color_palette[0] = DMG_COLOR_WHITE_ALT;
+                graphics_ctx.dmg_obp0_color_palette[1] = DMG_COLOR_LIGHTGREY_ALT;
+                graphics_ctx.dmg_obp0_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
+                graphics_ctx.dmg_obp0_color_palette[3] = DMG_COLOR_BLACK_ALT;
+                graphics_ctx.dmg_obp1_color_palette[0] = DMG_COLOR_WHITE_ALT;
+                graphics_ctx.dmg_obp1_color_palette[1] = DMG_COLOR_LIGHTGREY_ALT;
+                graphics_ctx.dmg_obp1_color_palette[2] = DMG_COLOR_DARKGREY_ALT;
+                graphics_ctx.dmg_obp1_color_palette[3] = DMG_COLOR_BLACK_ALT;
+            }
+
+            InitMemory(_cartridge);
+
+            GenerateMemoryTables();
+        };
+
+        GameboyMEM::~GameboyMEM() {
+            if (!machineCtx.battery_buffered && machineCtx.ram_present) {
+                for (auto& n : RAM_N) {
+                    delete[] n;
+                }
+            }
+        }
+
+        void GameboyMEM::Init() {}
+
+        /* ***********************************************************************************************************
             HARDWARE ACCESS
         *********************************************************************************************************** */
         machine_context* GameboyMEM::GetMachineContext() {
@@ -43,7 +86,7 @@ namespace Emulation {
         /* ***********************************************************************************************************
             INITIALIZE MEMORY
         *********************************************************************************************************** */
-        void GameboyMEM::InitMemory(BaseCartridge* _cartridge) {
+        void GameboyMEM::InitMemory(std::shared_ptr<BaseCartridge> _cartridge) {
             romData = _cartridge->GetRom();
 
             machineCtx.is_cgb = romData[ROM_HEAD_CGBFLAG] & 0x80 ? true : false;
@@ -90,7 +133,7 @@ namespace Emulation {
 
             machineCtx.boot_rom_mapped = false;
             if (machineCtx.cgb_compatibility) {
-                ((GameboyGPU*)BaseGPU::getInstance())->SetHardwareMode(GB);
+                std::dynamic_pointer_cast<GameboyGPU>(BaseGPU::s_GetInstance())->SetHardwareMode(GB);
             }
             return true;
         }
@@ -113,7 +156,7 @@ namespace Emulation {
         /* ***********************************************************************************************************
             MANAGE ALLOCATED MEMORY
         *********************************************************************************************************** */
-        void GameboyMEM::AllocateMemory(BaseCartridge* _cartridge) {
+        void GameboyMEM::AllocateMemory(std::shared_ptr<BaseCartridge> _cartridge) {
             ROM_0 = vector<u8>(ROM_0_SIZE, 0);
             ROM_N = vector<vector<u8>>(machineCtx.rom_bank_num - 1);
             for (int i = 0; i < machineCtx.rom_bank_num - 1; i++) {
@@ -658,11 +701,11 @@ namespace Emulation {
 
                 graphics_ctx.vram_dma_ppu_en = graphics_ctx.ppu_enable;
 
-                GameboyCPU* core_instance = (GameboyCPU*)BaseCPU::getInstance();
+                auto m_CoreInstance = std::dynamic_pointer_cast<GameboyCPU>(BaseCPU::s_GetInstance());
 
                 if (_data & 0x80) {
                     // HBLANK DMA
-                    core_instance->TickTimers();
+                    m_CoreInstance->TickTimers();
 
                     if (source_addr < ROM_N_OFFSET) {
                         graphics_ctx.vram_dma_src_addr = source_addr;
@@ -691,7 +734,7 @@ namespace Emulation {
                     graphics_ctx.vram_dma = true;
 
                     if (graphics_ctx.mode == PPU_MODE_0 || !graphics_ctx.ppu_enable) {
-                        ((GameboyGPU*)BaseGPU::getInstance())->VRAMDMANextBlock();
+                        std::dynamic_pointer_cast<GameboyGPU>(BaseGPU::s_GetInstance())->VRAMDMANextBlock();
                     }
 
                     //LOG_WARN("VRAM HBLANK DMA: ", graphics_ctx.dma_length * 0x10);
@@ -702,7 +745,7 @@ namespace Emulation {
 
                     int machine_cycles = ((int)blocks * VRAM_DMA_MC_PER_BLOCK * machineCtx.currentSpeed) + 1;
                     for (int i = 0; i < machine_cycles; i++) {
-                        core_instance->TickTimers();
+                        m_CoreInstance->TickTimers();
                     }
 
                     if (source_addr < ROM_N_OFFSET) {
@@ -730,8 +773,8 @@ namespace Emulation {
         void GameboyMEM::OAM_DMA(const u8& _data) {
             graphics_ctx.oam_dma = false;
     
-            GameboyCPU* core_instance = (GameboyCPU*)BaseCPU::getInstance();
-            core_instance->TickTimers();
+            auto m_CoreInstance = std::dynamic_pointer_cast<GameboyCPU>(BaseCPU::s_GetInstance());
+            m_CoreInstance->TickTimers();
 
             IO[OAM_DMA_ADDR - IO_OFFSET] = _data;
             u16 source_addr = (u16)IO[OAM_DMA_ADDR - IO_OFFSET] << 8;
@@ -931,12 +974,12 @@ namespace Emulation {
                 graphics_ctx.ppu_enable = false;
                 IO[LY_ADDR - IO_OFFSET] = 0x00;
 
-                GameboyGPU* graphics_instance = (GameboyGPU*)BaseGPU::getInstance();
+                auto m_GraphicsInstance = std::dynamic_pointer_cast<GameboyGPU>(BaseGPU::s_GetInstance());
 
-                graphics_instance->SetMode(PPU_MODE_2);
+                m_GraphicsInstance->SetMode(PPU_MODE_2);
 
                 if (graphics_ctx.vram_dma_ppu_en) {
-                    graphics_instance->VRAMDMANextBlock();
+                    m_GraphicsInstance->VRAMDMANextBlock();
                     graphics_ctx.vram_dma_ppu_en = false;             // needs to be investigated if this is correct, docs state that the block transfer happens when ppu was enabled when hdma started and ppu gets disabled afterwards
                 }
             }
@@ -1364,9 +1407,9 @@ namespace Emulation {
                 get<0>(table_entry) = _offset + index;
 
                 data = memory_entry();
-                get<0>(data) = format("{:04x}", _offset + index);
-                get<1>(data) = size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
-                get<2>(data) = &_bank_data[index];
+                get<MEM_ENTRY_ADDR>(data) = format("{:04x}", _offset + index);
+                get<MEM_ENTRY_LEN>(data) = size - index > DEBUG_MEM_ELEM_PER_LINE - 1 ? DEBUG_MEM_ELEM_PER_LINE : size % DEBUG_MEM_ELEM_PER_LINE;
+                get<MEM_ENTRY_REF>(data) = &_bank_data[index];
 
                 get<1>(table_entry) = data;
 

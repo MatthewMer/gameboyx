@@ -143,7 +143,7 @@ namespace GUI {
 
         template <class T> bool Table<T>::AddTableSectionDisposable(TableSection<T>& _table) {
             if (_table.size() > 0) {
-                currentlyVisibleElements += _table.size();
+                currentlyVisibleElements += (int)_table.size();
                 tableSections.emplace_back(std::move(_table));
                 if (currentlyVisibleElements > visibleElements) {
                     currentlyVisibleElements = visibleElements;
@@ -165,7 +165,7 @@ namespace GUI {
             currentTable = tableIterator;
             currentElement = contentIterator;
             counter = 0;
-            currentIndex = bank_index(std::distance(tableSections.begin(), currentTable), get<ST_ENTRY_ADDRESS>(*currentElement));
+            currentIndex = bank_index((int)std::distance(tableSections.begin(), currentTable), get<ST_ENTRY_ADDRESS>(*currentElement));
         }
 
         template <class T> void Table<T>::SwitchTableUp() {
@@ -294,7 +294,7 @@ namespace GUI {
                 currentElement = currentTable->begin();
             }
 
-            currentIndex = bank_index(std::distance(tableSections.begin(), tableIterator), get<ST_ENTRY_ADDRESS>(*currentElement));
+            currentIndex = bank_index((int)std::distance(tableSections.begin(), tableIterator), get<ST_ENTRY_ADDRESS>(*currentElement));
             _entry = get<ST_ENTRY_DATA>(*currentElement);
 
             centre = counter == currentlyVisibleElements / 2;
@@ -311,7 +311,7 @@ namespace GUI {
 
         // search correcponding index(bank,address) by address in current table section
         template <class T> bank_index Table<T>::GetIndexByAddress(const int& _addr) {
-            bank_index index = bank_index(std::distance(tableSections.begin(), tableIterator), _addr);
+            bank_index index = bank_index((int)std::distance(tableSections.begin(), tableIterator), _addr);
             int offset = 0;
             SearchIndex(index, offset);
 
@@ -335,7 +335,7 @@ namespace GUI {
                 }
             }
 
-            return bank_index(std::distance(tableSections.begin(), table), get<ST_ENTRY_ADDRESS>(*element));
+            return bank_index((int)std::distance(tableSections.begin(), table), get<ST_ENTRY_ADDRESS>(*element));
         }
 
         template <class T> bool Table<T>::IsCentre() {

@@ -14,6 +14,7 @@
 #include <array>
 #include <queue>
 #include <mutex>
+#include <memory>
 
 #include "BaseCartridge.h"
 #include "helper_functions.h"
@@ -38,8 +39,8 @@ namespace GUI {
 	class GuiMgr {
 	public:
 		// singleton instance access
-		static GuiMgr* getInstance();
-		static void resetInstance();
+		static std::shared_ptr<GuiMgr> s_GetInstance();
+		static void s_ResetInstance();
 
 		// clone/assign protection
 		GuiMgr(GuiMgr const&) = delete;
@@ -62,9 +63,8 @@ namespace GUI {
 		// constructor
 		GuiMgr();
 		~GuiMgr();
-		static GuiMgr* instance;
-
-		Emulation::VHardwareMgr* vhwmgr;
+		std::shared_ptr<Emulation::VHardwareMgr> m_Vhwmgr;
+		static std::weak_ptr<GuiMgr> m_Instance;
 
 		// special keys
 		bool sdlkCtrlDown = false;
@@ -131,7 +131,7 @@ namespace GUI {
 		// game select
 		int gameSelectedIndex = 0;
 		std::vector<Bool> gamesSelected = std::vector<Bool>();
-		std::vector<Emulation::BaseCartridge*> games = std::vector<Emulation::BaseCartridge*>();
+		std::vector<std::shared_ptr<Emulation::BaseCartridge>> games = {};
 		const int mainColNum = (int)Config::GAMES_COLUMNS.size();
 
 		// debug instructions
@@ -283,7 +283,7 @@ namespace GUI {
 		void ActionSetAudioFilters();
 
 		// helpers
-		void AddGameGuiCtx(Emulation::BaseCartridge* _game_ctx);
+		void AddGameGuiCtx(std::shared_ptr<Emulation::BaseCartridge> _cartridge);
 		void ReloadGamesGuiCtx();
 		void ActionSetBreakPoint(std::vector<GuiTable::bank_index>& _table_breakpoints, const GuiTable::bank_index& _current_index);
 		void StartGame(const bool& _restart);
@@ -303,9 +303,9 @@ namespace GUI {
 	};
 
 	namespace IO {
-		bool read_games_from_config(std::vector<Emulation::BaseCartridge*>& _games);
-		bool write_games_to_config(const std::vector<Emulation::BaseCartridge*>& _games, const bool& _rewrite);
-		bool delete_games_from_config(std::vector<Emulation::BaseCartridge*>& _games);
+		bool read_games_from_config(std::vector<std::shared_ptr<Emulation::BaseCartridge>>& _games);
+		bool write_games_to_config(const std::vector<std::shared_ptr<Emulation::BaseCartridge>>& _games, const bool& _rewrite);
+		bool delete_games_from_config(std::vector<std::shared_ptr<Emulation::BaseCartridge>>& _games);
 
 		void check_and_create_config_folders();
 		void check_and_create_config_files();

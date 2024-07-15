@@ -48,23 +48,6 @@ namespace Emulation {
 		vecRom.clear();
 	}
 
-	BaseCartridge* BaseCartridge::new_game(const std::string& _file_path) {
-		if (!check_ext(_file_path)) {
-			LOG_ERROR("game file not recognized");
-			return nullptr;
-		}
-
-		string ext = Helpers::split_string(_file_path, ".").back();
-		console_ids id = CONSOLE_NONE;
-		for (const auto& [key, value] : FILE_EXTS) {
-			if (ext.compare(value.second) == 0) {
-				id = key;
-			}
-		}
-
-		return new Gameboy::GameboyCartridge(id, _file_path);
-	}
-
 	void BaseCartridge::SetBootRom(const bool& _enable, const std::string& _path, const console_ids& _id) {
 		bootRom = _enable;
 		bootRomPath = _path;
@@ -113,13 +96,38 @@ namespace Emulation {
 		vecBootRom.clear();
 	}
 
-	BaseCartridge* BaseCartridge::existing_game(const std::string& _title, const std::string& _file_name, const std::string& _file_path, const console_ids& _id, const std::string& _version) {
-		BaseCartridge* cartridge;
+	std::shared_ptr<BaseCartridge> BaseCartridge::new_game(const std::string& _file_path) {
+		if (!check_ext(_file_path)) {
+			LOG_ERROR("game file not recognized");
+			return nullptr;
+		}
+
+		string ext = Helpers::split_string(_file_path, ".").back();
+		console_ids id = CONSOLE_NONE;
+		for (const auto& [key, value] : FILE_EXTS) {
+			if (ext.compare(value.second) == 0) {
+				id = key;
+			}
+		}
+
+		std::shared_ptr<BaseCartridge> cartridge;
+		switch (id) {
+		case GB:
+		case GBC:
+			cartridge = std::static_pointer_cast<BaseCartridge>(std::make_shared<Gameboy::GameboyCartridge>(id, _file_path));
+			break;
+		}
+
+		return cartridge;
+	}
+
+	std::shared_ptr<BaseCartridge> BaseCartridge::existing_game(const std::string& _title, const std::string& _file_name, const std::string& _file_path, const console_ids& _id, const std::string& _version) {
+		std::shared_ptr<BaseCartridge> cartridge;
 
 		switch (_id) {
 		case GB:
 		case GBC:
-			cartridge = new Gameboy::GameboyCartridge(_id, _file_path + _file_name);
+			cartridge = std::static_pointer_cast<BaseCartridge>(std::make_shared<Gameboy::GameboyCartridge>(_id, _file_path + _file_name));
 			cartridge->title = _title;
 			cartridge->version = _version;
 			break;

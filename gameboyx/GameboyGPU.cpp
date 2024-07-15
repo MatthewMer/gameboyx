@@ -14,6 +14,35 @@ namespace Emulation {
 	namespace Gameboy {
 #define MC_PER_SCANLINE		(((((BASE_CLOCK_CPU / pow(10, 6)) / 4) * 1000000) / DISPLAY_FREQUENCY) / LCD_SCANLINES_TOTAL)
 
+		GameboyGPU::GameboyGPU(std::shared_ptr<BaseCartridge> _cartridge) : BaseGPU() {}
+
+		GameboyGPU::~GameboyGPU() {
+			Backend::HardwareMgr::DestroyGraphicsBackend();
+		}
+
+		void GameboyGPU::Init() {
+			m_MemInstance = std::dynamic_pointer_cast<GameboyMEM>(BaseMEM::s_GetInstance());
+			m_CoreInstance = std::dynamic_pointer_cast<GameboyCPU>(BaseCPU::s_GetInstance());
+
+			graphicsCtx = m_MemInstance.lock()->GetGraphicsContext();
+			machineCtx = m_MemInstance.lock()->GetMachineContext();
+			if (machineCtx->is_cgb || machineCtx->cgb_compatibility) {
+				SetHardwareMode(GBC);
+			} else {
+				SetHardwareMode(GB);
+			}
+
+			imageData = std::vector<u8>(PPU_SCREEN_X * PPU_SCREEN_Y * TEX2D_CHANNELS);
+
+			Backend::virtual_graphics_information virt_graphics_info = {};
+			virt_graphics_info.is2d = virt_graphics_info.en2d = true;
+			virt_graphics_info.image_data = &imageData;
+			virt_graphics_info.aspect_ratio = LCD_ASPECT_RATIO;
+			virt_graphics_info.lcd_width = PPU_SCREEN_X;
+			virt_graphics_info.lcd_height = PPU_SCREEN_Y;
+			Backend::HardwareMgr::InitGraphicsBackend(virt_graphics_info);
+		}
+
 		// return delta t per frame in microseconds
 		int GameboyGPU::GetDelayTime() const {
 			return (int)((1.f / DISPLAY_FREQUENCY) * pow(10, 6));
@@ -64,9 +93,9 @@ namespace Emulation {
 			if (graphicsCtx->ppu_enable) {
 				int current_ticks = _ticks / machineCtx->currentSpeed;
 
-				u8& ly = memInstance->GetIO(LY_ADDR);
-				const u8& lyc = memInstance->GetIO(LYC_ADDR);
-				u8& stat = memInstance->GetIO(STAT_ADDR);
+				u8& ly = m_MemInstance.lock()->GetIO(LY_ADDR);
+				const u8& lyc = m_MemInstance.lock()->GetIO(LYC_ADDR);
+				u8& stat = m_MemInstance.lock()->GetIO(STAT_ADDR);
 
 				for (; current_ticks > 0; current_ticks -= 2) {
 
@@ -134,7 +163,7 @@ namespace Emulation {
 					}
 
 					if (statSignal && !statSignalPrev) {
-						memInstance->RequestInterrupts(IRQ_LCD_STAT);
+						m_MemInstance.lock()->RequestInterrupts(IRQ_LCD_STAT);
 					}
 					statSignalPrev = statSignal;
 				}
@@ -164,7 +193,7 @@ namespace Emulation {
 		}
 
 		void GameboyGPU::EnterMode3() {
-			u8& ly = memInstance->GetIO(LY_ADDR);
+			u8& ly = m_MemInstance.lock()->GetIO(LY_ADDR);
 
 			SetMode(PPU_MODE_3);
 		}
@@ -178,13 +207,13 @@ namespace Emulation {
 		void GameboyGPU::EnterMode1() {
 			SetMode(PPU_MODE_1);
 
-			memInstance->RequestInterrupts(IRQ_VBLANK);
+			m_MemInstance.lock()->RequestInterrupts(IRQ_VBLANK);
 
 			drawWindow = false;
 		}
 
 		void GameboyGPU::SetMode(const int& _mode) {
-			u8& stat = memInstance->GetIO(STAT_ADDR);
+			u8& stat = m_MemInstance.lock()->GetIO(STAT_ADDR);
 
 			graphicsCtx->mode = _mode;
 			SET_MODE(stat, _mode);
@@ -214,8 +243,8 @@ namespace Emulation {
 			auto tilemap_offset = (int)graphicsCtx->bg_tilemap_offset;
 			int ly = _ly;
 
-			auto scx = (int)memInstance->GetIO(SCX_ADDR);
-			auto scy = (int)memInstance->GetIO(SCY_ADDR);
+			auto scx = (int)m_MemInstance.lock()->GetIO(SCX_ADDR);
+			auto scy = (int)m_MemInstance.lock()->GetIO(SCY_ADDR);
 			int scy_ = (scy + ly) % PPU_TILEMAP_SIZE_1D_PIXELS;
 			int scx_;
 
@@ -242,8 +271,8 @@ namespace Emulation {
 		void GameboyGPU::DrawWindowDMG(const u8& _ly) {
 			int ly = _ly;
 
-			auto wx = ((int)memInstance->GetIO(WX_ADDR));
-			auto wy = (int)memInstance->GetIO(WY_ADDR);
+			auto wx = ((int)m_MemInstance.lock()->GetIO(WX_ADDR));
+			auto wy = (int)m_MemInstance.lock()->GetIO(WY_ADDR);
 			auto wx_ = wx - 7;
 
 			if (!drawWindow && (wy == ly) && (wx_ > -8 && wx_ < PPU_SCREEN_X)) {
@@ -429,8 +458,8 @@ namespace Emulation {
 			auto tilemap_offset = (int)graphicsCtx->bg_tilemap_offset;
 			int ly = _ly;
 
-			auto scx = (int)memInstance->GetIO(SCX_ADDR);
-			auto scy = (int)memInstance->GetIO(SCY_ADDR);
+			auto scx = (int)m_MemInstance.lock()->GetIO(SCX_ADDR);
+			auto scy = (int)m_MemInstance.lock()->GetIO(SCY_ADDR);
 			int scy_ = (scy + ly) % PPU_TILEMAP_SIZE_1D_PIXELS;
 			int scx_;
 
@@ -480,8 +509,8 @@ namespace Emulation {
 		void GameboyGPU::DrawWindowCGB(const u8& _ly) {
 			int ly = _ly;
 
-			auto wx = ((int)memInstance->GetIO(WX_ADDR));
-			auto wy = (int)memInstance->GetIO(WY_ADDR);
+			auto wx = ((int)m_MemInstance.lock()->GetIO(WX_ADDR));
+			auto wy = (int)m_MemInstance.lock()->GetIO(WY_ADDR);
 			auto wx_ = wx - 7;
 
 			if (!drawWindow && (wy == ly) && (wx_ > -8 && wx_ < PPU_SCREEN_X)) {
@@ -744,7 +773,7 @@ namespace Emulation {
 		void GameboyGPU::VRAMDMANextBlock() {
 			if (graphicsCtx->vram_dma) {
 				if (!machineCtx->halted) {
-					u8& hdma5 = memInstance->GetIO(CGB_HDMA5_ADDR);
+					u8& hdma5 = m_MemInstance.lock()->GetIO(CGB_HDMA5_ADDR);
 					int length = (int)(hdma5 & 0x7F) + 1;
 
 					int bank;
@@ -754,22 +783,22 @@ namespace Emulation {
 
 					switch (graphicsCtx->vram_dma_mem) {
 					case MEM_TYPE::ROM0:
-						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(MEM_TYPE::ROM0, 0)[source_addr], 0x10);
+						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &m_MemInstance.lock()->GetBank(MEM_TYPE::ROM0, 0)[source_addr], 0x10);
 						break;
 					case MEM_TYPE::ROMn:
 						bank = machineCtx->rom_bank_selected;
-						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(MEM_TYPE::ROMn, bank)[source_addr], 0x10);
+						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &m_MemInstance.lock()->GetBank(MEM_TYPE::ROMn, bank)[source_addr], 0x10);
 						break;
 					case MEM_TYPE::RAMn:
 						bank = machineCtx->ram_bank_selected;
-						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(MEM_TYPE::RAMn, bank)[source_addr], 0x10);
+						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &m_MemInstance.lock()->GetBank(MEM_TYPE::RAMn, bank)[source_addr], 0x10);
 						break;
 					case MEM_TYPE::WRAM0:
-						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(MEM_TYPE::WRAM0, 0)[source_addr], 0x10);
+						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &m_MemInstance.lock()->GetBank(MEM_TYPE::WRAM0, 0)[source_addr], 0x10);
 						break;
 					case MEM_TYPE::WRAMn:
 						bank = machineCtx->wram_bank_selected;
-						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &memInstance->GetBank(MEM_TYPE::WRAMn, bank)[source_addr], 0x10);
+						memcpy(&graphicsCtx->VRAM_N[machineCtx->vram_bank_selected][dest_addr], &m_MemInstance.lock()->GetBank(MEM_TYPE::WRAMn, bank)[source_addr], 0x10);
 						break;
 					}
 
@@ -777,7 +806,7 @@ namespace Emulation {
 
 					int machine_cycles = (VRAM_DMA_MC_PER_BLOCK * machineCtx->currentSpeed) + 1;
 					for (int i = 0; i < machine_cycles; i++) {
-						coreInstance->TickTimers();
+						m_CoreInstance.lock()->TickTimers();
 					}
 
 					if (length == 0) {
@@ -790,7 +819,7 @@ namespace Emulation {
 						--hdma5;
 					}
 
-					//LOG_INFO("LY: ", std::format("{:d}", memInstance->GetIO(LY_ADDR)), "; source: ", std::format("0x{:04x}", source_addr), "; dest: ", std::format("0x{:04x}", dest_addr), "; remaining: ", length * 0x10);
+					//LOG_INFO("LY: ", std::format("{:d}", m_MemInstance.lock()->GetIO(LY_ADDR)), "; source: ", std::format("0x{:04x}", source_addr), "; dest: ", std::format("0x{:04x}", dest_addr), "; remaining: ", length * 0x10);
 				}
 			}
 		}
@@ -805,22 +834,22 @@ namespace Emulation {
 
 					switch (graphicsCtx->oam_dma_mem) {
 					case MEM_TYPE::ROM0:
-						graphicsCtx->OAM[counter] = memInstance->GetBank(MEM_TYPE::ROM0, 0)[source_addr];
+						graphicsCtx->OAM[counter] = m_MemInstance.lock()->GetBank(MEM_TYPE::ROM0, 0)[source_addr];
 						break;
 					case MEM_TYPE::ROMn:
 						bank = machineCtx->rom_bank_selected;
-						graphicsCtx->OAM[counter] = memInstance->GetBank(MEM_TYPE::ROMn, bank)[source_addr];
+						graphicsCtx->OAM[counter] = m_MemInstance.lock()->GetBank(MEM_TYPE::ROMn, bank)[source_addr];
 						break;
 					case MEM_TYPE::RAMn:
 						bank = machineCtx->ram_bank_selected;
-						graphicsCtx->OAM[counter] = memInstance->GetBank(MEM_TYPE::RAMn, bank)[source_addr];
+						graphicsCtx->OAM[counter] = m_MemInstance.lock()->GetBank(MEM_TYPE::RAMn, bank)[source_addr];
 						break;
 					case MEM_TYPE::WRAM0:
-						graphicsCtx->OAM[counter] = memInstance->GetBank(MEM_TYPE::WRAM0, 0)[source_addr];
+						graphicsCtx->OAM[counter] = m_MemInstance.lock()->GetBank(MEM_TYPE::WRAM0, 0)[source_addr];
 						break;
 					case MEM_TYPE::WRAMn:
 						bank = machineCtx->wram_bank_selected;
-						graphicsCtx->OAM[counter] = memInstance->GetBank(MEM_TYPE::WRAMn, bank)[source_addr];
+						graphicsCtx->OAM[counter] = m_MemInstance.lock()->GetBank(MEM_TYPE::WRAMn, bank)[source_addr];
 						break;
 					}
 

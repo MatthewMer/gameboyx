@@ -17,24 +17,22 @@
 
 namespace Emulation {
 	namespace Gameboy {
-		class GameboyMMU : protected BaseMMU {
+		class GameboyMMU : public BaseMMU {
 		public:
 			friend class BaseMMU;
 
-			static GameboyMMU* getInstance(BaseCartridge* _cartridge);
+			static std::shared_ptr<GameboyMMU> s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge);
+			virtual void Init() override;
 
 			// members
-			void Write8Bit(const u8& _data, const u16& _addr) override {};
-			void Write16Bit(const u16& _data, const u16& _addr) override {};
-			u8 Read8Bit(const u16& _addr) override { return 0xFF; };
+			virtual void Write8Bit(const u8& _data, const u16& _addr) override = 0;
+			virtual void Write16Bit(const u16& _data, const u16& _addr) override = 0;
+			virtual u8 Read8Bit(const u16& _addr) override = 0;
 
 		protected:
+			explicit GameboyMMU(std::shared_ptr<BaseCartridge> _cartridge);
 
-			explicit GameboyMMU(BaseCartridge* _cartridge);
-			// destructor
-			virtual ~GameboyMMU() {}
-
-			GameboyMEM* mem_instance;
+			std::weak_ptr<GameboyMEM> m_MemInstance;
 
 			// hardware info and access
 			machine_context* machineCtx;
@@ -47,7 +45,7 @@ namespace Emulation {
 					auto data = std::vector<char>();
 
 					if (read_data(data, saveFile)) {
-						mem_instance->CopyDataToRAM(data);
+						m_MemInstance.lock()->CopyDataToRAM(data);
 						LOG_INFO("[emu] loaded from ", saveFile);
 					} else {
 						LOG_ERROR("[emu] reading save file ", saveFile);
@@ -73,7 +71,7 @@ namespace Emulation {
 				}
 
 				std::unique_lock<std::mutex> lock_save_time(mutSave);
-				mem_instance->CopyDataFromRAM(saveData);
+				m_MemInstance.lock()->CopyDataFromRAM(saveData);
 				saveTimePrev = steady_clock::now();
 			}
 			*/
@@ -84,23 +82,18 @@ namespace Emulation {
 		*		ROM only
 		*
 		*********************************************************************************************************** */
-		class MmuSM83_ROM : protected GameboyMMU {
+		class MmuSM83_ROM : public GameboyMMU {
 		public:
 			friend class GameboyMMU;
+			// constructor
+			explicit MmuSM83_ROM(std::shared_ptr<BaseCartridge> _cartridge);
+			void Init() override;
 
 			// members
 			void Write8Bit(const u8& _data, const u16& _addr) override;
 			void Write16Bit(const u16& _data, const u16& _addr) override;
 			u8 Read8Bit(const u16& _addr) override;
 			//u16 Read16Bit(const u16& _addr) override;
-
-		private:
-			// constructor
-			explicit MmuSM83_ROM(BaseCartridge* _cartridge);
-			// destructor
-			~MmuSM83_ROM() override {
-				BaseMEM::resetInstance();
-			}
 		};
 
 		/* ***********************************************************************************************************
@@ -108,9 +101,12 @@ namespace Emulation {
 		*		MBC1
 		*
 		*********************************************************************************************************** */
-		class MmuSM83_MBC1 : protected GameboyMMU {
+		class MmuSM83_MBC1 : public GameboyMMU {
 		public:
 			friend class GameboyMMU;
+			// constructor
+			explicit MmuSM83_MBC1(std::shared_ptr<BaseCartridge> _cartridge);
+			void Init() override;
 
 			// members
 			void Write8Bit(const u8& _data, const u16& _addr) override;
@@ -119,13 +115,6 @@ namespace Emulation {
 			//u16 Read16Bit(const u16& _addr) override;
 
 		private:
-			// constructor
-			explicit MmuSM83_MBC1(BaseCartridge* _cartridge);
-			// destructor
-			~MmuSM83_MBC1() override {
-				BaseMEM::resetInstance();
-			}
-
 			// mbc1 control
 			bool ramEnable = false;
 			int ramBankMask = 0x00;
@@ -139,9 +128,12 @@ namespace Emulation {
 		*		MBC3
 		*
 		*********************************************************************************************************** */
-		class MmuSM83_MBC3 : protected GameboyMMU {
+		class MmuSM83_MBC3 : public GameboyMMU {
 		public:
 			friend class GameboyMMU;
+			// constructor
+			explicit MmuSM83_MBC3(std::shared_ptr<BaseCartridge> _cartridge);
+			void Init() override;
 
 			// members
 			void Write8Bit(const u8& _data, const u16& _addr) override;
@@ -150,13 +142,6 @@ namespace Emulation {
 			//u16 Read16Bit(const u16& _addr) override;
 
 		private:
-			// constructor
-			explicit MmuSM83_MBC3(BaseCartridge* _cartridge);
-			// destructor
-			~MmuSM83_MBC3() override {
-				BaseMEM::resetInstance();
-			}
-
 			// mbc3 control
 			bool timerRamEnable = false;
 			u8 rtcRegistersLastWrite = 0x00;
@@ -171,9 +156,12 @@ namespace Emulation {
 		*		MBC5
 		*
 		*********************************************************************************************************** */
-		class MmuSM83_MBC5 : protected GameboyMMU {
+		class MmuSM83_MBC5 : public GameboyMMU {
 		public:
 			friend class GameboyMMU;
+			// constructor
+			explicit MmuSM83_MBC5(std::shared_ptr<BaseCartridge> _cartridge);
+			void Init() override;
 
 			// members
 			void Write8Bit(const u8& _data, const u16& _addr) override;
@@ -182,13 +170,6 @@ namespace Emulation {
 			//u16 Read16Bit(const u16& _addr) override;
 
 		private:
-			// constructor
-			explicit MmuSM83_MBC5(BaseCartridge* _cartridge);
-			// destructor
-			~MmuSM83_MBC5() override {
-				BaseMEM::resetInstance();
-			}
-
 			// mbc1 control
 			bool ramEnable = false;
 			int ramBankMask = 0x00;

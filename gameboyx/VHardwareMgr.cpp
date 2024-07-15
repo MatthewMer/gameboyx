@@ -8,120 +8,128 @@ namespace Emulation {
     /* ***********************************************************************************************************
         (DE)INIT
     *********************************************************************************************************** */
-    VHardwareMgr* VHardwareMgr::instance = nullptr;
+    std::weak_ptr<VHardwareMgr> VHardwareMgr::m_Instance;
 
-    VHardwareMgr* VHardwareMgr::getInstance() {
-        if (instance == nullptr) {
-            instance = new VHardwareMgr();
+    std::shared_ptr<VHardwareMgr> VHardwareMgr::s_GetInstance() {
+        std::shared_ptr<VHardwareMgr> ptr = m_Instance.lock();
+
+        if (!ptr) {
+            struct shared_enabler : public VHardwareMgr {};       // workaround for private constructor/destructor
+            ptr = std::make_shared<shared_enabler>();
+            m_Instance = ptr;
         }
 
-        return instance;
+        return ptr;
     }
 
-    void VHardwareMgr::resetInstance() {
-        if (instance != nullptr) {
-            delete instance;
-            instance = nullptr;
+    void VHardwareMgr::s_ResetInstance() {
+        if (m_Instance.lock()) {
+            m_Instance.reset();
         }
     }
 
     VHardwareMgr::~VHardwareMgr() {
-        BaseCPU::resetInstance();
-        BaseCTRL::resetInstance();
-        BaseGPU::resetInstance();
-        BaseAPU::resetInstance();
+        BaseCPU::s_ResetInstance();
+        BaseCTRL::s_ResetInstance();
+        BaseGPU::s_ResetInstance();
+        BaseAPU::s_ResetInstance();
     }
 
     /* ***********************************************************************************************************
         RUN HARDWARE
     *********************************************************************************************************** */
-    u8 VHardwareMgr::InitHardware(BaseCartridge* _cartridge, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback) {
-        errors = 0x00;
+    u8 VHardwareMgr::InitHardware(emulation_settings& _emu_settings) {
+        errors = Errors::NONE;
         initialized = false;
 
-        if (_reset) {
+        if (_emu_settings.reset) {
             ShutdownHardware();
         }
 
-        if (_cartridge == nullptr) {
-            errors |= VHWMGR_ERR_CART_NULL;
+        if (_emu_settings.cartridge == nullptr) {
+            errors |= Errors::CART_NULL;
         } else {
-            if (_cartridge->ReadRom()) {
-                cart_instance = _cartridge;
+            m_Cartridge = _emu_settings.cartridge;
+            if (m_Cartridge->ReadRom()) {
+                m_CoreInstance = BaseCPU::s_GetInstance(m_Cartridge);
+                m_MmuInstance = BaseMMU::s_GetInstance(m_Cartridge);
+                m_MemInstance = BaseMEM::s_GetInstance(m_Cartridge);
+                m_GraphicsInstance = BaseGPU::s_GetInstance(m_Cartridge);
+                m_SoundInstance = BaseAPU::s_GetInstance(m_Cartridge);
+                m_ControlInstance = BaseCTRL::s_GetInstance(m_Cartridge);
 
-                core_instance = BaseCPU::getInstance(cart_instance);
-                graphics_instance = BaseGPU::getInstance(cart_instance);
-                sound_instance = BaseAPU::getInstance(cart_instance);
-                control_instance = BaseCTRL::getInstance(cart_instance);
+                if (m_CoreInstance != nullptr &&
+                    m_MemInstance != nullptr &&
+                    m_MmuInstance != nullptr &&
+                    m_GraphicsInstance != nullptr &&
+                    m_SoundInstance != nullptr &&
+                    m_ControlInstance != nullptr) {
 
-                if (cart_instance != nullptr &&
-                    core_instance != nullptr &&
-                    graphics_instance != nullptr &&
-                    sound_instance != nullptr &&
-                    control_instance != nullptr) {
-
-                    core_instance->SetInstances();
-                    mmu_instance = BaseMMU::getInstance();
-                    memory_instance = BaseMEM::getInstance();
+                    m_CoreInstance->Init();
+                    m_MmuInstance->Init();
+                    m_MemInstance->Init();
+                    m_GraphicsInstance->Init();
+                    m_SoundInstance->Init();
+                    m_ControlInstance->Init();
 
                     // returns the time per frame in ns
-                    timePerFrame = std::chrono::microseconds(graphics_instance->GetDelayTime());
+                    timePerFrame = std::chrono::microseconds(m_GraphicsInstance->GetDelayTime());
 
                     InitMembers(_emu_settings);
 
-                    dbgCallback = _callback;
+                    dbgCallback = _emu_settings.callback;
                     dbgData = {};
-                    core_instance->UpdateDebugData(&dbgData);
+                    m_CoreInstance->UpdateDebugData(&dbgData);
                     dbgCallback(dbgData);
 
-                    LOG_INFO("[emu] hardware for ", cart_instance->title, " initialized");
+                    LOG_INFO("[emu] hardware for ", m_Cartridge->title, " initialized");
                     initialized = true;
                 } else {
-                    errors |= VHWMGR_ERR_INIT_HW;
+                    errors |= Errors::INIT_HW;
                 }
             } else {
-                errors |= VHWMGR_ERR_READ_ROM;
+                errors |= Errors::READ_ROM;
             }
-            _cartridge->ClearRom();
+            m_Cartridge->ClearRom();
         }
 
         if (errors) {
             string title;
-            if (errors | VHWMGR_ERR_CART_NULL) {
+            if (errors | Errors::CART_NULL) {
                 title = N_A;
             } else {
-                title = cart_instance->title;
+                title = m_Cartridge->title;
             }
             LOG_ERROR("[emu] initializing hardware for ", title);
-            resetInstance();
+            s_ResetInstance();
         }
 
         return errors;
     }
 
     u8 VHardwareMgr::StartHardware() {
-        errors = 0x00;
+        errors = Errors::NONE;
 
         if (initialized) {
             hardwareThread = thread([this]() -> void { ProcessHardware(); });
             if (!hardwareThread.joinable()) {
-                errors |= VHWMGR_ERR_INIT_THREAD;
+                errors |= Errors::INIT_THREAD;
             } else {
-                LOG_INFO("[emu] hardware for ", cart_instance->title, " started");
+                LOG_INFO("[emu] hardware for ", m_Cartridge->title, " started");
             }
         } else {
-            errors |= VHWMGR_ERR_HW_NOT_INIT;
+            errors |= Errors::HW_NOT_INIT;
         }
 
         if (errors) {
             string title;
-            if (errors | VHWMGR_ERR_CART_NULL) {
+            if (errors | Errors::CART_NULL) {
                 title = N_A;
             } else {
-                title = cart_instance->title;
+                title = m_Cartridge->title;
             }
             LOG_ERROR("[emu] starting hardware for ", title);
-            resetInstance();
+            s_ResetInstance();
         }
 
         return errors;
@@ -133,16 +141,18 @@ namespace Emulation {
             hardwareThread.join();
         }
 
-        BaseCTRL::resetInstance();
-        BaseAPU::resetInstance();
-        BaseGPU::resetInstance();
-        BaseCPU::resetInstance();
+        m_GraphicsInstance.reset();
+        m_SoundInstance.reset();
+        m_CoreInstance.reset();
+        m_ControlInstance.reset();
+        m_MmuInstance.reset();
+        m_MemInstance.reset();
 
         string title;
-        if (cart_instance == nullptr) {
+        if (m_Cartridge == nullptr) {
             title = N_A;
         } else {
-            title = cart_instance->title;
+            title = m_Cartridge->title;
         }
 
         LOG_INFO("[emu] hardware for ", title, " stopped");
@@ -153,12 +163,12 @@ namespace Emulation {
 
         while (running.load()) {
             if (debugEnable.load()) {
-                core_instance->UpdateDebugData(&dbgData);
+                m_CoreInstance->UpdateDebugData(&dbgData);
                 dbgCallback(dbgData);
 
                 if (proceedExecution.load()) {
                     lock_hardware.lock();
-                    core_instance->RunCycle();
+                    m_CoreInstance->RunCycle();
                     lock_hardware.unlock();
 
                     proceedExecution.store(false);
@@ -166,7 +176,7 @@ namespace Emulation {
             } else {
                 for (int i = 0; i < emulationSpeed.load(); i++) {
                     lock_hardware.lock();
-                    core_instance->RunCycles();
+                    m_CoreInstance->RunCycles();
                     lock_hardware.unlock();
                 }
                 Delay();
@@ -194,15 +204,15 @@ namespace Emulation {
         timeSecondPrev = timeSecondCur;
 
         if (accumulatedTime > 999999) {
-            clockCount = core_instance->GetClockCycles();
-            frameCount = graphics_instance->GetFrameCount();
+            clockCount = m_CoreInstance->GetClockCycles();
+            frameCount = m_GraphicsInstance->GetFrameCount();
 
             currentFrequency.store((float)clockCount / accumulatedTime);
             currentFramerate.store((float)frameCount / (accumulatedTime / (float)pow(10, 6)));
 
             accumulatedTime = 0;
-            core_instance->ResetClockCycles();
-            graphics_instance->ResetFrameCount();
+            m_CoreInstance->ResetClockCycles();
+            m_GraphicsInstance->ResetFrameCount();
             return true;
         }
         return false;
@@ -229,12 +239,12 @@ namespace Emulation {
 
     void VHardwareMgr::EventButtonDown(const int& _player, const SDL_GameControllerButton& _key) {
         unique_lock<mutex> lock_hardware(mutHardware);
-        control_instance->SetKey(_player, _key);
+        m_ControlInstance->SetKey(_player, _key);
     }
 
     void VHardwareMgr::EventButtonUp(const int& _player, const SDL_GameControllerButton& _key) {
         unique_lock<mutex> lock_hardware(mutHardware);
-        control_instance->ResetKey(_player, _key);
+        m_ControlInstance->ResetKey(_player, _key);
     }
 
     void VHardwareMgr::SetDebugEnabled(const bool& _debug_enabled) {
@@ -250,40 +260,40 @@ namespace Emulation {
     }
 
     assembly_tables& VHardwareMgr::GetAssemblyTables() {
-        return core_instance->GetAssemblyTables();
+        return m_CoreInstance->GetAssemblyTables();
     }
 
     void VHardwareMgr::GenerateTemporaryAssemblyTable(assembly_tables& _table) {
-        core_instance->GenerateTemporaryAssemblyTable(_table);
+        m_CoreInstance->GenerateTemporaryAssemblyTable(_table);
     }
 
     void VHardwareMgr::GetInstrDebugFlags(std::vector<reg_entry>& _reg_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) {
         //unique_lock<mutex> lock_hardware(mutHardware);
-        core_instance->GetInstrDebugFlags(_reg_values, _flag_values, _misc_values);
+        m_CoreInstance->GetInstrDebugFlags(_reg_values, _flag_values, _misc_values);
     }
 
     void VHardwareMgr::GetHardwareInfo(std::vector<data_entry>& _hardware_info) {
         //unique_lock<mutex> lock_hardware(mutHardware);
-        core_instance->GetHardwareInfo(_hardware_info);
+        m_CoreInstance->GetHardwareInfo(_hardware_info);
     }
 
     std::vector<memory_type_tables>& VHardwareMgr::GetMemoryTables() {
-        return memory_instance->GetMemoryTables();
+        return m_MemInstance->GetMemoryTables();
     }
 
     void VHardwareMgr::GetGraphicsDebugSettings(std::vector<std::tuple<int, std::string, bool>>& _settings) {
-        _settings = graphics_instance->GetGraphicsDebugSettings();
+        _settings = m_GraphicsInstance->GetGraphicsDebugSettings();
     }
 
     void VHardwareMgr::SetGraphicsDebugSetting(const bool& _val, const int& _id) {
-        graphics_instance->SetGraphicsDebugSetting(_val, _id);
+        m_GraphicsInstance->SetGraphicsDebugSetting(_val, _id);
     }
 
     int VHardwareMgr::GetPlayerCount() const {
-        return core_instance->GetPlayerCount();
+        return m_CoreInstance->GetPlayerCount();
     }
 
     void VHardwareMgr::GetMemoryTypes(std::map<int, std::string>& _map) const {
-        core_instance->GetMemoryTypes(_map);
+        m_CoreInstance->GetMemoryTypes(_map);
     }
 }

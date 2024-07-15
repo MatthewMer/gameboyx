@@ -2,31 +2,32 @@
 #include "GameboyMEM.h"
 
 namespace Emulation {
-    BaseMEM* BaseMEM::instance = nullptr;
+    std::weak_ptr<BaseMEM> BaseMEM::m_Instance;
 
-    BaseMEM* BaseMEM::getInstance(BaseCartridge* _cartridge) {
-        if (instance == nullptr) {
+    std::shared_ptr<BaseMEM> BaseMEM::s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge) {
+        std::shared_ptr<BaseMEM> ptr = m_Instance.lock();
+
+        if (!ptr) {
             switch (_cartridge->console) {
             case GB:
             case GBC:
-                instance = new Gameboy::GameboyMEM(_cartridge);
+                ptr = std::static_pointer_cast<BaseMEM>(std::make_shared<Gameboy::GameboyMEM>(_cartridge));
                 break;
             }
+
+            m_Instance = ptr;
         }
-        return instance;
+
+        return ptr;
     }
 
-    BaseMEM* BaseMEM::getInstance() {
-        if (instance == nullptr) {
-            LOG_ERROR("[emu] MEM instance is nullptr");
-        }
-        return instance;
+    std::shared_ptr<BaseMEM> BaseMEM::s_GetInstance() {
+        return m_Instance.lock();
     }
 
-    void BaseMEM::resetInstance() {
-        if (instance != nullptr) {
-            delete instance;
-            instance = nullptr;
+    void BaseMEM::s_ResetInstance() {
+        if (m_Instance.lock()) {
+            m_Instance.reset();
         }
     }
 

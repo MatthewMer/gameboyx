@@ -28,9 +28,10 @@ namespace Emulation {
 	class BaseMMU {
 	public:
 		// get/reset instance
-		static BaseMMU* getInstance(BaseCartridge* _cartridge);
-		static BaseMMU* getInstance();
-		static void resetInstance();
+		static std::shared_ptr<BaseMMU> s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge);
+		static std::shared_ptr<BaseMMU> s_GetInstance();
+		static void s_ResetInstance();
+		virtual void Init() = 0;
 
 		// clone/assign protection
 		BaseMMU(BaseMMU const&) = delete;
@@ -44,8 +45,6 @@ namespace Emulation {
 		virtual u8 Read8Bit(const u16& _addr) = 0;
 		//virtual u16 Read16Bit(const u16& _addr) = 0;
 
-		std::vector<char> GetSaveData();
-
 	protected:
 		// constructor
 		BaseMMU() = default;
@@ -54,7 +53,7 @@ namespace Emulation {
 		//virtual void ReadSave() = 0;
 		//virtual void WriteSave() = 0;
 
-		static BaseMMU* instance;
+		static std::weak_ptr<BaseMMU> m_Instance;
 
 		std::thread saveThread;
 		std::vector<char> saveData = std::vector<char>();

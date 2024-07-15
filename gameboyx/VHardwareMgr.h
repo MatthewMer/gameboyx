@@ -30,24 +30,37 @@ namespace Emulation {
     struct emulation_settings {
         bool debug_enabled = false;
         int emulation_speed = 1;
+        std::shared_ptr<BaseCartridge> cartridge;
+        bool reset;
+        std::function<void(debug_data&)> callback;
     };
 
-#define VHWMGR_ERR_READ_ROM			0x01
-#define VHWMGR_ERR_INIT_THREAD		0x02
-#define VHWMGR_ERR_INIT_HW			0x04
-#define VHWMGR_ERR_CART_NULL		0x08
-#define VHWMGR_ERR_THREAD_RUNNING	0x10
-#define VHWMGR_ERR_HW_NOT_INIT      0x20
+    enum Errors {
+        NONE = 0x00,
+        READ_ROM = 0x01,
+        INIT_THREAD = 0x02,
+        INIT_HW = 0x04,
+        CART_NULL = 0x08,
+        THREAD_RUNNING = 0x10,
+        HW_NOT_INIT = 0x20
+    };
 
-    class BaseCartridge;
-    //class GuiMgr;
+    inline Errors operator|(Errors lhs, Errors rhs) {
+        using T = std::underlying_type_t<Errors>;
+        return static_cast<Errors>(static_cast<T>(lhs) | static_cast<T>(rhs));
+    }
+
+    inline Errors& operator|=(Errors& lhs, Errors rhs) {
+        lhs = lhs | rhs;
+        return lhs;
+    }
 
     class VHardwareMgr {
     public:
-        static VHardwareMgr* getInstance();
-        static void resetInstance();
+        static std::shared_ptr<VHardwareMgr> s_GetInstance();
+        static void s_ResetInstance();
 
-        u8 InitHardware(BaseCartridge* _cartridge, emulation_settings& _emu_settings, const bool& _reset, std::function<void(debug_data&)> _callback);
+        u8 InitHardware(emulation_settings& _emu_settings);
         u8 StartHardware();
         void ShutdownHardware();
 
@@ -78,16 +91,16 @@ namespace Emulation {
     private:
         VHardwareMgr() = default;
         ~VHardwareMgr();
-        static VHardwareMgr* instance;
+        static std::weak_ptr<VHardwareMgr> m_Instance;
 
         // hardware instances
-        BaseCPU* core_instance;
-        BaseMMU* mmu_instance;
-        BaseMEM* memory_instance;
-        BaseAPU* sound_instance;
-        BaseGPU* graphics_instance;
-        BaseCTRL* control_instance;
-        BaseCartridge* cart_instance;
+        std::shared_ptr<BaseCPU> m_CoreInstance;
+        std::shared_ptr<BaseMMU> m_MmuInstance;
+        std::shared_ptr<BaseMEM> m_MemInstance;
+        std::shared_ptr<BaseAPU> m_SoundInstance;
+        std::shared_ptr<BaseGPU> m_GraphicsInstance;
+        std::shared_ptr<BaseCTRL>  m_ControlInstance;
+        std::shared_ptr<BaseCartridge> m_Cartridge;
 
         // execution time (e.g. 60FPS -> 1/60th of a second)
         std::chrono::microseconds timePerFrame;
@@ -104,7 +117,7 @@ namespace Emulation {
         u32 accumulatedTime = 0;
         u32 accumulatedTimeTmp = 0;
 
-        u8 errors;
+        Errors errors;
         bool initialized = false;
 
         alignas(64) std::atomic<float> currentFrequency = 0;

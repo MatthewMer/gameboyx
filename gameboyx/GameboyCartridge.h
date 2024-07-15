@@ -22,7 +22,7 @@
 *********************************************************************************************************** */
 namespace Emulation {
 	namespace Gameboy {
-		class GameboyCartridge : protected BaseCartridge {
+		class GameboyCartridge : public BaseCartridge {
 		public:
 			friend class BaseCartridge;
 			// constructor

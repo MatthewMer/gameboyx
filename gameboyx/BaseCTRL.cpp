@@ -4,25 +4,32 @@
 #include "logger.h"
 
 namespace Emulation {
-	BaseCTRL* BaseCTRL::instance = nullptr;
+	std::weak_ptr<BaseCTRL> BaseCTRL::m_Instance;
 
-	BaseCTRL* BaseCTRL::getInstance(BaseCartridge* _cartridge) {
-		if (instance == nullptr) {
+	std::shared_ptr<BaseCTRL> BaseCTRL::s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge) {
+		std::shared_ptr<BaseCTRL> ptr = m_Instance.lock();
+
+		if (!ptr) {
 			switch (_cartridge->console) {
 			case GB:
 			case GBC:
-				instance = new Gameboy::GameboyCTRL(_cartridge);
+				ptr = std::static_pointer_cast<BaseCTRL>(std::make_shared<Gameboy::GameboyCTRL>(_cartridge));
 				break;
 			}
+
+			m_Instance = ptr;
 		}
 
-		return instance;
+		return ptr;
 	}
 
-	void BaseCTRL::resetInstance() {
-		if (instance != nullptr) {
-			delete instance;
-			instance = nullptr;
+	std::shared_ptr<BaseCTRL> BaseCTRL::s_GetInstance() {
+		return m_Instance.lock();
+	}
+
+	void BaseCTRL::s_ResetInstance() {
+		if (m_Instance.lock()) {
+			m_Instance.reset();
 		}
 	}
 }

@@ -33,11 +33,18 @@ namespace Emulation {
 	class BaseMEM {
 	public:
 		// get/reset instance
-		static BaseMEM* getInstance(BaseCartridge* _cartridge);
-		static BaseMEM* getInstance();
-		static void resetInstance();
+		static std::shared_ptr<BaseMEM> s_GetInstance(std::shared_ptr<BaseCartridge> _cartridge);
+		static std::shared_ptr<BaseMEM> s_GetInstance();
+		static void s_ResetInstance();
+		virtual void Init() = 0;
 
 		std::vector<memory_type_tables>& GetMemoryTables();
+
+		// clone/assign protection
+		BaseMEM(BaseMEM const&) = delete;
+		BaseMEM(BaseMEM&&) = delete;
+		BaseMEM& operator=(BaseMEM const&) = delete;
+		BaseMEM& operator=(BaseMEM&&) = delete;
 
 	protected:
 		// constructor
@@ -45,7 +52,7 @@ namespace Emulation {
 		virtual ~BaseMEM() {}
 
 		// members
-		virtual void InitMemory(BaseCartridge* _cartridge) = 0;
+		virtual void InitMemory(std::shared_ptr<BaseCartridge> _cartridge) = 0;
 		virtual void InitMemoryState() = 0;
 		virtual bool ReadRomHeaderInfo(const std::vector<u8>& _vec_rom) = 0;
 		virtual bool InitRom(const std::vector<u8>& _vec_rom) = 0;
@@ -54,11 +61,11 @@ namespace Emulation {
 		virtual void GenerateMemoryTables() = 0;
 		virtual void FillMemoryTable(std::vector<std::tuple<int, memory_entry>>& _table_section, u8* _bank_data, const int& _offset, const size_t& _size) = 0;		
 
-		virtual void AllocateMemory(BaseCartridge* _cartridge) = 0;
+		virtual void AllocateMemory(std::shared_ptr<BaseCartridge> _cartridge) = 0;
 
 		virtual void RequestInterrupts(const u8& isr_flags) = 0;
 
-		static BaseMEM* instance;
+		static std::weak_ptr<BaseMEM> m_Instance;
 
 		std::vector<u8> romData;
 

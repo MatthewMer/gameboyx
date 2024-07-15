@@ -103,9 +103,12 @@ namespace Emulation {
 		/* ***********************************************************************************************************
 			GameboyCPU CLASS DECLARATION
 		*********************************************************************************************************** */
-		class GameboyCPU : protected BaseCPU {
+		class GameboyCPU : public BaseCPU {
 		public:
 			friend class BaseCPU;
+			// constructor
+			explicit GameboyCPU(std::shared_ptr<BaseCartridge> _cartridge);
+			void Init() override;
 
 			void RunCycles() override;
 			void RunCycle() override;
@@ -114,10 +117,8 @@ namespace Emulation {
 			void GetInstrDebugFlags(std::vector<reg_entry>& _register_values, std::vector<reg_entry>& _flag_values, std::vector<reg_entry>& _misc_values) const override;
 			void UpdateDebugData(debug_data* _data) const override;
 
-			void GenerateAssemblyTables(BaseCartridge* _cartridge) override;
+			void GenerateAssemblyTables(std::shared_ptr<BaseCartridge> _cartridge) override;
 			void GenerateTemporaryAssemblyTable(assembly_tables& _table) override;
-
-			void SetInstances() override;
 
 			void TickTimers();
 
@@ -126,13 +127,6 @@ namespace Emulation {
 			void GetMemoryTypes(std::map<int, std::string>& _map) const override;
 
 		private:
-			// constructor
-			explicit GameboyCPU(BaseCartridge* _cartridge);
-			// destructor
-			~GameboyCPU() override {
-				BaseMMU::resetInstance();
-			}
-
 			// instruction data
 			u8 opcode;
 			u16 data;
@@ -186,7 +180,7 @@ namespace Emulation {
 			machine_context* machineCtx;
 			graphics_context* graphics_ctx;
 			sound_context* sound_ctx;
-			GameboyMEM* mem_instance;
+			std::weak_ptr<GameboyMEM> m_MemInstance;
 
 			// basic instructions
 			std::vector<instr_tuple> instrMap;

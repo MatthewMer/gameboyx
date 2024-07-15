@@ -69,7 +69,7 @@ int main(int, char**)
     Backend::HardwareMgr::InitHardware(s_graphics_settings, s_audio_settings, s_control_settings);
     if (Backend::HardwareMgr::GetError() != Backend::HW_ERROR::NONE)   { return -1; }
     
-    GUI::GuiMgr* gui_mgr = GUI::GuiMgr::getInstance();
+    auto gui_mgr = GUI::GuiMgr::s_GetInstance();
 
     // Main loop
     LOG_INFO("[emu] application up and running");
@@ -89,7 +89,7 @@ int main(int, char**)
         }
     }
     
-    gui_mgr->resetInstance();
+    gui_mgr->s_ResetInstance();
     Backend::HardwareMgr::ShutdownHardware();
 
     return 0;
