@@ -256,6 +256,8 @@ namespace Emulation {
 
 			int period = 0;
 
+			bool use_current_state = true;
+
 			std::unordered_map<CH_EXT_TYPE, std::unique_ptr<ch_extension>> exts;
 
 			channel_context() {};

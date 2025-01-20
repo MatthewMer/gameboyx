@@ -106,33 +106,33 @@ namespace Emulation {
 			achieved and why this is necessary: https://www.youtube.com/watch?v=fooSxCuWvZ4&t=421s
 		************************************************************************************************* */
 		void GameboyAPU::SampleWaveRam(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx) {
-			bool enable = _ch_ctx->enable.load();
+			if (_ch_ctx->enable.load() && !_ch_ctx->use_current_state) {
+				ch_ext_waveram* wave_ctx = static_cast<ch_ext_waveram*>(_ch_ctx->exts[WAVE_RAM].get());
 
-			ch_ext_waveram* wave_ctx = static_cast<ch_ext_waveram*>(_ch_ctx->exts[WAVE_RAM].get());
+				float virt_samples_per_tick = (float)(_ch_ctx->sampling_rate.load() / BASE_CLOCK_CPU);
+				float volume = _ch_ctx->volume.load();
 
-			float virt_samples_per_tick = (float)(_ch_ctx->sampling_rate.load() / BASE_CLOCK_CPU);
-			float volume = _ch_ctx->volume.load();
-
-			wave_ctx->sample_count += _ticks * virt_samples_per_tick;
-			while (wave_ctx->sample_count >= 1.f) {
-				wave_ctx->sample_count -= 1.f;
-				++_ch_info->sample_count %= 32;
-			}
-
-			int write_cursor = ch3WriteCursor.load();
-			int read_cursor = ch3ReadCursor.load();
-
-			ch3WaveTickCounter += _ticks * samplesPerTick.load();
-			while (ch3WaveTickCounter >= 1.f) {
-				ch3WaveTickCounter -= 1.f;
-
-				if (write_cursor != read_cursor) {
-					ch3WaveSamples[write_cursor] = wave_ctx->wave_ram[_ch_info->sample_count] * volume;
-					++write_cursor %= CH_4_LFSR_BUFFER_SIZE;
+				wave_ctx->sample_count += _ticks * virt_samples_per_tick;
+				while (wave_ctx->sample_count >= 1.f) {
+					wave_ctx->sample_count -= 1.f;
+					++_ch_info->sample_count %= 32;
 				}
-			}
 
-			ch3WriteCursor.store(write_cursor);
+				int write_cursor = ch3WriteCursor.load();
+				int read_cursor = ch3ReadCursor.load();
+
+				ch3WaveTickCounter += _ticks * samplesPerTick.load();
+				while (ch3WaveTickCounter >= 1.f) {
+					ch3WaveTickCounter -= 1.f;
+
+					if (write_cursor != read_cursor) {
+						ch3WaveSamples[write_cursor] = wave_ctx->wave_ram[_ch_info->sample_count] * volume;
+						++write_cursor %= CH_3_WAVERAM_BUFFER_SIZE;
+					}
+				}
+
+				ch3WriteCursor.store(write_cursor);
+			}
 		}
 
 		/* *************************************************************************************************
@@ -290,6 +290,7 @@ namespace Emulation {
 		* 4. front left
 		*/
 		void GameboyAPU::SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) {
+			// TODO: update sampling rate via callback passed to audio backend
 			samplesPerTick.store((float)(_sampling_rate / BASE_CLOCK_CPU));
 
 			bool right = soundCtx->outRightEnabled.load();
@@ -342,6 +343,9 @@ namespace Emulation {
 				static_cast<ch_ext_pwm*>(ch2_ctx->exts[PWM].get())->duty_cycle_index.load()
 			};
 
+			bool ch3_stable_state = ch3_ctx->use_current_state;
+			ch3_ctx->use_current_state = true;
+
 			auto* wave_ctx = static_cast<ch_ext_waveram*>(ch3_ctx->exts[WAVE_RAM].get());
 
 			unique_lock<mutex> lock_wave_ram(wave_ctx->mut_wave_ram, std::defer_lock);
@@ -371,20 +375,40 @@ namespace Emulation {
 				}
 
 				auto& ch3Info = chInfos[2];
-				int read_cursor = ch3ReadCursor.load();
 
-				if (read_cursor != (ch3WriteCursor.load() - 1) % CH_4_LFSR_BUFFER_SIZE) {
+				if (ch3_stable_state) {
+					ch3Info.virt_samples += sample_steps[2];
+					while (ch3Info.virt_samples > 1.f) {
+						ch3Info.virt_samples -= 1.f;
+						++ch3Info.sample_count %= 32;
+					}
+
 					lock_wave_ram.lock();
 					if (ch_lr_enabled[2][0]) {
-						samples[3] += ch3WaveSamples[read_cursor] * amps[2];
+						samples[3] += wave_ctx->wave_ram[ch3Info.sample_count] * ch_volume[2] * amps[2];
 					}
 					if (ch_lr_enabled[2][1]) {
-						samples[2] += ch3WaveSamples[read_cursor] * amps[2];
+						samples[2] += wave_ctx->wave_ram[ch3Info.sample_count] * ch_volume[2] * amps[2];
 					}
 					lock_wave_ram.unlock();
+				}
+				else {
+					int read_cursor = ch3ReadCursor.load();
+					int write_cursor = (ch3WriteCursor.load() - 1) % CH_3_WAVERAM_BUFFER_SIZE;
 
-					++read_cursor %= CH_4_LFSR_BUFFER_SIZE;
-					ch3ReadCursor.store(read_cursor);
+					if (read_cursor != write_cursor) {
+						lock_wave_ram.lock();
+						if (ch_lr_enabled[2][0]) {
+							samples[3] += ch3WaveSamples[read_cursor] * amps[2];
+						}
+						if (ch_lr_enabled[2][1]) {
+							samples[2] += ch3WaveSamples[read_cursor] * amps[2];
+						}
+						lock_wave_ram.unlock();
+
+						++read_cursor %= CH_3_WAVERAM_BUFFER_SIZE;
+						ch3ReadCursor.store(read_cursor);
+					}
 				}
 
 				{

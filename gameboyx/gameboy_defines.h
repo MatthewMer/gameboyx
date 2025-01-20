@@ -406,6 +406,8 @@
 
 #define CH_3_VOLUME                     0x60
 
+#define CH_3_WAVERAM_BUFFER_SIZE        8192
+
 #define CH_4_CLOCK_SHIFT                0xF0
 #define CH_4_LFSR_WIDTH                 0x08
 #define CH_4_CLOCK_DIVIDER              0x07

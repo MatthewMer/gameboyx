@@ -62,7 +62,7 @@ namespace Emulation {
 
 			float ch3WaveTickCounter = 0;
 			std::mutex mutWaveRam;
-			std::vector<float> ch3WaveSamples = std::vector<float>(CH_4_LFSR_BUFFER_SIZE);
+			std::vector<float> ch3WaveSamples = std::vector<float>(CH_3_WAVERAM_BUFFER_SIZE);
 			alignas(64) std::atomic<int> ch3WriteCursor = 1;			// always points to the next sample to write
 			alignas(64) std::atomic<int> ch3ReadCursor = 0;				// always points to the current sample to read
 

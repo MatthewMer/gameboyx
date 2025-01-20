@@ -1284,6 +1284,8 @@ namespace Emulation {
                 ch_ctx->volume.store(VOLUME_MAP.at(1));
                 break;
             }
+
+            ch_ctx->use_current_state = false;
         }
 
         void GameboyMEM::SetAPUCh3PeriodLow(const u8& _data) {

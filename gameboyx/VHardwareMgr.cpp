@@ -29,10 +29,17 @@ namespace Emulation {
     }
 
     VHardwareMgr::~VHardwareMgr() {
-        BaseCPU::s_ResetInstance();
-        BaseCTRL::s_ResetInstance();
-        BaseGPU::s_ResetInstance();
-        BaseAPU::s_ResetInstance();
+        running.store(false);
+        if (hardwareThread.joinable()) {
+            hardwareThread.join();
+        }
+
+        m_GraphicsInstance.reset();
+        m_SoundInstance.reset();
+        m_CoreInstance.reset();
+        m_ControlInstance.reset();
+        m_MmuInstance.reset();
+        m_MemInstance.reset();
     }
 
     /* ***********************************************************************************************************
