@@ -32,4 +32,12 @@ namespace Emulation {
 			m_Instance.reset();
 		}
 	}
+
+	int BaseAPU::GetChunkId() const {
+		return m_audioChunkId;
+	}
+
+	void BaseAPU::NextChunk() {
+		++m_audioChunkId;
+	}
 }

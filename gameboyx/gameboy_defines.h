@@ -408,6 +408,8 @@
 
 #define CH_3_WAVERAM_BUFFER_SIZE        8192
 
+#define CH_3_MAX_SAMPLING_RATE          (BASE_CLOCK_CPU / 2)
+
 #define CH_4_CLOCK_SHIFT                0xF0
 #define CH_4_LFSR_WIDTH                 0x08
 #define CH_4_CLOCK_DIVIDER              0x07

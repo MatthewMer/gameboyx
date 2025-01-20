@@ -107,24 +107,22 @@ namespace Emulation {
 		************************************************************************************************* */
 		void GameboyAPU::SampleWaveRam(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx) {
 			if (_ch_ctx->enable.load() && !_ch_ctx->use_current_state) {
-				ch_ext_waveram* wave_ctx = static_cast<ch_ext_waveram*>(_ch_ctx->exts[WAVE_RAM].get());
+				auto* wave_ctx = static_cast<ch_ext_waveram*>(_ch_ctx->exts[WAVE_RAM].get());
 
-				float virt_samples_per_tick = (float)(_ch_ctx->sampling_rate.load() / BASE_CLOCK_CPU);
+				int ticks_per_sample = (int)(BASE_CLOCK_CPU / _ch_ctx->sampling_rate.load());
 				float volume = _ch_ctx->volume.load();
 
-				wave_ctx->sample_count += _ticks * virt_samples_per_tick;
-				while (wave_ctx->sample_count >= 1.f) {
-					wave_ctx->sample_count -= 1.f;
+				wave_ctx->sample_tick_count += _ticks;
+				for (; wave_ctx->sample_tick_count >= ticks_per_sample; wave_ctx->sample_tick_count -= ticks_per_sample) {
 					++_ch_info->sample_count %= 32;
 				}
 
 				int write_cursor = ch3WriteCursor.load();
 				int read_cursor = ch3ReadCursor.load();
 
-				ch3WaveTickCounter += _ticks * samplesPerTick.load();
-				while (ch3WaveTickCounter >= 1.f) {
-					ch3WaveTickCounter -= 1.f;
-
+				int ticks_per_sample_phys = ticksPerSample.load();
+				ch3WaveTickCounter += _ticks;
+				for (; ch3WaveTickCounter >= ticks_per_sample_phys; ch3WaveTickCounter -= ticks_per_sample_phys) {
 					if (write_cursor != read_cursor) {
 						ch3WaveSamples[write_cursor] = wave_ctx->wave_ram[_ch_info->sample_count] * volume;
 						++write_cursor %= CH_3_WAVERAM_BUFFER_SIZE;
@@ -290,8 +288,10 @@ namespace Emulation {
 		* 4. front left
 		*/
 		void GameboyAPU::SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) {
+			NextChunk();
+
 			// TODO: update sampling rate via callback passed to audio backend
-			samplesPerTick.store((float)(_sampling_rate / BASE_CLOCK_CPU));
+			ticksPerSample.store((int)((BASE_CLOCK_CPU / _sampling_rate) + .5f));
 
 			bool right = soundCtx->outRightEnabled.load();
 			bool left = soundCtx->outLeftEnabled.load();
@@ -374,37 +374,40 @@ namespace Emulation {
 					}
 				}
 
-				auto& ch3Info = chInfos[2];
+				{
+					auto& ch3Info = chInfos[2];
 
-				if (ch3_stable_state) {
-					ch3Info.virt_samples += sample_steps[2];
-					while (ch3Info.virt_samples > 1.f) {
-						ch3Info.virt_samples -= 1.f;
-						++ch3Info.sample_count %= 32;
+					if (ch3_stable_state) {
+						ch3Info.virt_samples += sample_steps[2];
+						while (ch3Info.virt_samples > 1.f) {
+							ch3Info.virt_samples -= 1.f;
+							++ch3Info.sample_count %= 32;
+						}
+
+						lock_wave_ram.lock();
+						if (ch_lr_enabled[2][0]) {
+							samples[3] += wave_ctx->wave_ram[ch3Info.sample_count] * ch_volume[2] * amps[2];
+						}
+						if (ch_lr_enabled[2][1]) {
+							samples[2] += wave_ctx->wave_ram[ch3Info.sample_count] * ch_volume[2] * amps[2];
+						}
+						lock_wave_ram.unlock();
 					}
 
-					lock_wave_ram.lock();
-					if (ch_lr_enabled[2][0]) {
-						samples[3] += wave_ctx->wave_ram[ch3Info.sample_count] * ch_volume[2] * amps[2];
-					}
-					if (ch_lr_enabled[2][1]) {
-						samples[2] += wave_ctx->wave_ram[ch3Info.sample_count] * ch_volume[2] * amps[2];
-					}
-					lock_wave_ram.unlock();
-				}
-				else {
 					int read_cursor = ch3ReadCursor.load();
 					int write_cursor = (ch3WriteCursor.load() - 1) % CH_3_WAVERAM_BUFFER_SIZE;
 
 					if (read_cursor != write_cursor) {
-						lock_wave_ram.lock();
-						if (ch_lr_enabled[2][0]) {
-							samples[3] += ch3WaveSamples[read_cursor] * amps[2];
+						if (!ch3_stable_state) {
+							lock_wave_ram.lock();
+							if (ch_lr_enabled[2][0]) {
+								samples[3] += ch3WaveSamples[read_cursor] * amps[2];
+							}
+							if (ch_lr_enabled[2][1]) {
+								samples[2] += ch3WaveSamples[read_cursor] * amps[2];
+							}
+							lock_wave_ram.unlock();
 						}
-						if (ch_lr_enabled[2][1]) {
-							samples[2] += ch3WaveSamples[read_cursor] * amps[2];
-						}
-						lock_wave_ram.unlock();
 
 						++read_cursor %= CH_3_WAVERAM_BUFFER_SIZE;
 						ch3ReadCursor.store(read_cursor);
@@ -415,13 +418,14 @@ namespace Emulation {
 					auto& ch4Info = chInfos[3];
 					lock_lfsr_buffer.lock();
 					ch4Info.virt_samples += sample_steps[3];
+
+					int read_cursor = ch4ReadCursor.load();
+					int write_cursor = (ch4WriteCursor.load() - 1) % CH_4_LFSR_BUFFER_SIZE;
 					while (ch4Info.virt_samples > 1.f) {
 						ch4Info.virt_samples -= 1.f;
 
-						int read_cursor = ch4ReadCursor.load();
-
 						// (0 - 1) % 10 = -1 % 10 and is defined as -1 * 10 + 9, where the added value is the remainder (remainder is by definition always positiv)
-						if (read_cursor != (ch4WriteCursor.load() - 1) % CH_4_LFSR_BUFFER_SIZE) {
+						if (read_cursor != write_cursor) {
 							ch4LFSRSamples[read_cursor] = .0f;
 							++read_cursor %= CH_4_LFSR_BUFFER_SIZE;
 							ch4ReadCursor.store(read_cursor);

@@ -5,6 +5,7 @@
 #include "format"
 #include "GameboyGPU.h"
 #include "GameboyCPU.h"
+#include "BaseAPU.h"
 
 #include <iostream>
 
@@ -1267,6 +1268,10 @@ namespace Emulation {
         }
 
         void GameboyMEM::SetAPUCh3Volume(const u8& _data) {
+            static int change_counter = 0;
+            static int prev_chunk_id = BaseAPU::s_GetInstance()->GetChunkId();
+            static int cur_chunk_id = prev_chunk_id;
+
             auto* ch_ctx = &sound_ctx.ch_ctxs[2];
             IO[NR32_ADDR - IO_OFFSET] = _data;
 
@@ -1285,7 +1290,19 @@ namespace Emulation {
                 break;
             }
 
-            ch_ctx->use_current_state = false;
+            if (ch_ctx->use_current_state) {
+                cur_chunk_id = BaseAPU::s_GetInstance()->GetChunkId();
+                if (cur_chunk_id != prev_chunk_id) {
+                    prev_chunk_id = cur_chunk_id;
+                    change_counter = 0;
+                }
+
+                ++change_counter;
+                if (change_counter > 1) {
+                    ch_ctx->use_current_state = false;
+                    change_counter = 0;
+                }
+            }
         }
 
         void GameboyMEM::SetAPUCh3PeriodLow(const u8& _data) {

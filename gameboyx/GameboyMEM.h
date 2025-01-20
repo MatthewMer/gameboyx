@@ -221,7 +221,7 @@ namespace Emulation {
 				.0f, .0f, .0f, .0f, .0f, .0f, .0f, .0f,
 				.0f, .0f, .0f, .0f, .0f, .0f, .0f, .0f
 			};
-			float sample_count = 0;
+			int sample_tick_count = 0;
 
 			~ch_ext_waveram() = default;
 		};

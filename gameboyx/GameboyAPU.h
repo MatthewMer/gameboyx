@@ -38,7 +38,8 @@ namespace Emulation {
 			void SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) override;
 
 		private:
-			alignas(64) std::atomic<float> samplesPerTick = 0;
+			// base clock cpu: 4194304 Hz; sampling rate range: 22050-96000 Hz -> will never go below 44
+			alignas(64) std::atomic<int> ticksPerSample = 0;
 
 			int envelopeSweepCounter = 0;
 			int soundLengthCounter = 0;
@@ -60,7 +61,7 @@ namespace Emulation {
 
 			void TickLFSR(const int& _ticks, channel_info* _ch_info, channel_context* _ch_ctx);
 
-			float ch3WaveTickCounter = 0;
+			int ch3WaveTickCounter = 0;
 			std::mutex mutWaveRam;
 			std::vector<float> ch3WaveSamples = std::vector<float>(CH_3_WAVERAM_BUFFER_SIZE);
 			alignas(64) std::atomic<int> ch3WriteCursor = 1;			// always points to the next sample to write

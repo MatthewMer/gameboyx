@@ -11,6 +11,8 @@ namespace Emulation {
 		static std::shared_ptr<BaseAPU> s_GetInstance();
 		static void s_ResetInstance();
 		virtual void Init() = 0;
+		int GetChunkId() const;
+		void NextChunk();
 
 		// clone/assign protection
 		BaseAPU(BaseAPU const&) = delete;
@@ -29,6 +31,8 @@ namespace Emulation {
 		virtual ~BaseAPU() {}
 
 	private:
+		int m_audioChunkId = 0;
+
 		static std::weak_ptr<BaseAPU> m_Instance;
 	};
 }
