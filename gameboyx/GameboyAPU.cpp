@@ -34,9 +34,17 @@ namespace Emulation {
 
 			Backend::virtual_audio_information virt_audio_info = {};
 			virt_audio_info.channels = virtualChannels;
-			virt_audio_info.apu_callback = [this](std::vector<std::complex<float>>& _samples, const int& _num, const int& _sampling_rate) {
-				this->SampleAPU(_samples, _num, _sampling_rate);
+			virt_audio_info.apu_callback = [this](std::vector<std::complex<float>>& _samples, const int& _num) {
+				this->SampleAPU(_samples, _num);
 				};
+			virt_audio_info.sr_update_callback = [this](int const& _sampling_rate) -> void {
+				m_physSamplingRate = _sampling_rate;
+				ticksPerSample.store((int)((BASE_CLOCK_CPU / m_physSamplingRate) + .5f));
+				};
+
+			m_physSamplingRate = Backend::HardwareMgr::GetAudioSettings().sampling_rate;
+			ticksPerSample.store((int)((BASE_CLOCK_CPU / m_physSamplingRate) + .5f));
+
 			Backend::HardwareMgr::StartAudioBackend(virt_audio_info);
 		}
 
@@ -287,11 +295,8 @@ namespace Emulation {
 		* 3. rear left
 		* 4. front left
 		*/
-		void GameboyAPU::SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) {
+		void GameboyAPU::SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples) {
 			NextChunk();
-
-			// TODO: update sampling rate via callback passed to audio backend
-			ticksPerSample.store((int)((BASE_CLOCK_CPU / _sampling_rate) + .5f));
 
 			bool right = soundCtx->outRightEnabled.load();
 			bool left = soundCtx->outLeftEnabled.load();
@@ -304,10 +309,10 @@ namespace Emulation {
 			channel_context* ch4_ctx = &soundCtx->ch_ctxs[3];
 
 			float sample_steps[4] = {
-				ch1_ctx->sampling_rate.load() / _sampling_rate,
-				ch2_ctx->sampling_rate.load() / _sampling_rate,
-				ch3_ctx->sampling_rate.load() / _sampling_rate,
-				ch4_ctx->sampling_rate.load() / _sampling_rate
+				ch1_ctx->sampling_rate.load() / m_physSamplingRate,
+				ch2_ctx->sampling_rate.load() / m_physSamplingRate,
+				ch3_ctx->sampling_rate.load() / m_physSamplingRate,
+				ch4_ctx->sampling_rate.load() / m_physSamplingRate
 			};
 
 			bool ch_enabled[4] = {

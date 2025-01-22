@@ -35,7 +35,7 @@ namespace Emulation {
 			// members
 			void ProcessAPU(const int& _ticks) override;
 			void GenerateSamples(const int& _ticks) override;
-			void SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples, const int& _sampling_rate) override;
+			void SampleAPU(std::vector<std::complex<float>>& _data, const int& _samples) override;
 
 		private:
 			// base clock cpu: 4194304 Hz; sampling rate range: 22050-96000 Hz -> will never go below 44
